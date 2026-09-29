@@ -58,6 +58,38 @@ export function IconArrowLeft() {
   );
 }
 
+export function IconChevronLeft() {
+  return (
+    <Glyph>
+      <path d="M12 4 6 10l6 6" />
+    </Glyph>
+  );
+}
+
+export function IconChevronRight() {
+  return (
+    <Glyph>
+      <path d="M8 4l6 6-6 6" />
+    </Glyph>
+  );
+}
+
+export function IconChevronUp() {
+  return (
+    <Glyph>
+      <path d="M4 12l6-6 6 6" />
+    </Glyph>
+  );
+}
+
+export function IconChevronDown() {
+  return (
+    <Glyph>
+      <path d="M4 8l6 6 6-6" />
+    </Glyph>
+  );
+}
+
 export function IconMenu() {
   return (
     <Glyph>

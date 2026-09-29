@@ -1,6 +1,6 @@
 import { MAX_PRICE_PER_KILOGRAM_KOPECKS, MAX_WEIGHT_GRAMS } from "@/domain/units";
 
-export const SCHEMA_VERSION = 16 as const;
+export const SCHEMA_VERSION = 17 as const;
 
 export const MAX_LABEL_LENGTH = 200;
 
@@ -198,6 +198,64 @@ export interface ProductionFact {
 }
 
 /**
+ * Остаток на 1-е число месяца. Целые штуки, включая отрицательные.
+ * Со 2-го числа начало не хранится: его даёт конец предыдущего дня.
+ */
+export interface SalesFactOpening {
+  id: string;
+  productId: string;
+  /** На производстве, шт. */
+  productionPieces: number;
+  /** На РЦ, шт. */
+  distributionPieces: number;
+}
+
+/**
+ * Серые клетки дня по товару. Выручка, цены без НДС и остатки сюда не пишутся.
+ * Ноль допустим. Клетка из одних нулей в документ не попадает.
+ */
+export interface SalesFactCell {
+  id: string;
+  productId: string;
+  /** Цена с НДС, копейки за 1 шт. */
+  priceWithVatKopecks: number;
+  /** Объём продаж, шт. */
+  salesPieces: number;
+  /** Объём производства, шт. Не читает факт производства. */
+  outputPieces: number;
+  /** Перемещение на РЦ, шт. */
+  transferPieces: number;
+  /** Питание сотрудников, шт. */
+  staffMealsPieces: number;
+  /** Образцы для клиентов, шт. */
+  samplesPieces: number;
+  /** Возвраты клиентов, шт. В выручку не входят. */
+  returnsPieces: number;
+  /** Списание, шт. Складской документ не создаёт. */
+  writeOffPieces: number;
+}
+
+/** День месяца факта продаж. Пустой день в документ не пишется. */
+export interface SalesFactDay {
+  /** Календарный день этого месяца, `ГГГГ-ММ-ДД`. */
+  occurredOn: string;
+  cells: SalesFactCell[];
+}
+
+/**
+ * Факт продаж на календарный месяц. Лист `Sales&Production`, не сводная строка.
+ * На один месяц — одна рабочая запись. Следующий месяц из конца этого не продолжается.
+ */
+export interface SalesFact {
+  id: string;
+  /** `ГГГГ-ММ`. */
+  month: string;
+  openings: SalesFactOpening[];
+  days: SalesFactDay[];
+  deletedAt: string | null;
+}
+
+/**
  * Единственный сохраняемый документ прототипа.
  * Предметные разделы добавляются полями сюда. Производные суммы сюда не писать.
  */
@@ -212,6 +270,7 @@ export interface PrototypeDocument {
   writeOffs: WriteOff[];
   salesPlans: SalesPlan[];
   productionFacts: ProductionFact[];
+  salesFacts: SalesFact[];
 }
 
 /** Метка мягкого удаления, которую пишет экран через `Date.toISOString()`. */
@@ -1095,6 +1154,239 @@ function parseProductionFacts(
   return facts;
 }
 
+function dateInMonth(date: string, month: string): boolean {
+  return date.startsWith(`${month}-`) && isOccurredOn(date);
+}
+
+function parseSalesFactOpening(
+  value: unknown,
+  derivatives: readonly Derivative[],
+): SalesFactOpening | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const id = parseId(value.id);
+  const productId = parseId(value.productId);
+  const product = derivatives.find((item) => item.id === productId);
+  const productionPieces = parseInteger(
+    value.productionPieces,
+    -MAX_VOLUME_PIECES,
+    MAX_VOLUME_PIECES,
+  );
+  const distributionPieces = parseInteger(
+    value.distributionPieces,
+    -MAX_VOLUME_PIECES,
+    MAX_VOLUME_PIECES,
+  );
+
+  if (
+    !id ||
+    !productId ||
+    !product?.isFinalProduct ||
+    productionPieces === null ||
+    distributionPieces === null ||
+    (productionPieces === 0 && distributionPieces === 0)
+  ) {
+    return null;
+  }
+
+  return { id, productId, productionPieces, distributionPieces };
+}
+
+function parseSalesFactCell(
+  value: unknown,
+  derivatives: readonly Derivative[],
+): SalesFactCell | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const id = parseId(value.id);
+  const productId = parseId(value.productId);
+  const product = derivatives.find((item) => item.id === productId);
+  const priceWithVatKopecks = parseInteger(
+    value.priceWithVatKopecks,
+    0,
+    MAX_PRICE_PER_KILOGRAM_KOPECKS,
+  );
+  const salesPieces = parseInteger(value.salesPieces, 0, MAX_VOLUME_PIECES);
+  const outputPieces = parseInteger(value.outputPieces, 0, MAX_VOLUME_PIECES);
+  const transferPieces = parseInteger(value.transferPieces, 0, MAX_VOLUME_PIECES);
+  const staffMealsPieces = parseInteger(value.staffMealsPieces, 0, MAX_VOLUME_PIECES);
+  const samplesPieces = parseInteger(value.samplesPieces, 0, MAX_VOLUME_PIECES);
+  const returnsPieces = parseInteger(value.returnsPieces, 0, MAX_VOLUME_PIECES);
+  const writeOffPieces = parseInteger(value.writeOffPieces, 0, MAX_VOLUME_PIECES);
+
+  if (
+    !id ||
+    !productId ||
+    !product?.isFinalProduct ||
+    priceWithVatKopecks === null ||
+    salesPieces === null ||
+    outputPieces === null ||
+    transferPieces === null ||
+    staffMealsPieces === null ||
+    samplesPieces === null ||
+    returnsPieces === null ||
+    writeOffPieces === null ||
+    !fitsSafeKopeckProduct(priceWithVatKopecks, salesPieces)
+  ) {
+    return null;
+  }
+
+  const blank =
+    priceWithVatKopecks === 0 &&
+    salesPieces === 0 &&
+    outputPieces === 0 &&
+    transferPieces === 0 &&
+    staffMealsPieces === 0 &&
+    samplesPieces === 0 &&
+    returnsPieces === 0 &&
+    writeOffPieces === 0;
+  if (blank) {
+    return null;
+  }
+
+  return {
+    id,
+    productId,
+    priceWithVatKopecks,
+    salesPieces,
+    outputPieces,
+    transferPieces,
+    staffMealsPieces,
+    samplesPieces,
+    returnsPieces,
+    writeOffPieces,
+  };
+}
+
+function parseSalesFactDay(
+  value: unknown,
+  month: string,
+  derivatives: readonly Derivative[],
+): SalesFactDay | null {
+  if (!isRecord(value) || !Array.isArray(value.cells)) {
+    return null;
+  }
+
+  if (typeof value.occurredOn !== "string" || !dateInMonth(value.occurredOn, month)) {
+    return null;
+  }
+
+  const seenCells = new Set<string>();
+  const seenProducts = new Set<string>();
+  const cells: SalesFactCell[] = [];
+
+  for (const entry of value.cells) {
+    const cell = parseSalesFactCell(entry, derivatives);
+    if (!cell || seenCells.has(cell.id) || seenProducts.has(cell.productId)) {
+      return null;
+    }
+
+    seenCells.add(cell.id);
+    seenProducts.add(cell.productId);
+    cells.push(cell);
+  }
+
+  if (cells.length === 0) {
+    return null;
+  }
+
+  return { occurredOn: value.occurredOn, cells };
+}
+
+function parseSalesFact(
+  value: unknown,
+  derivatives: readonly Derivative[],
+): SalesFact | null {
+  if (!isRecord(value) || !Array.isArray(value.openings) || !Array.isArray(value.days)) {
+    return null;
+  }
+
+  const id = parseId(value.id);
+  const deletedAt = parseDeletedAt(value.deletedAt);
+
+  if (
+    !id ||
+    deletedAt === undefined ||
+    typeof value.month !== "string" ||
+    !isMonthKey(value.month)
+  ) {
+    return null;
+  }
+
+  const seenOpenings = new Set<string>();
+  const seenOpeningProducts = new Set<string>();
+  const openings: SalesFactOpening[] = [];
+
+  for (const entry of value.openings) {
+    const opening = parseSalesFactOpening(entry, derivatives);
+    if (
+      !opening ||
+      seenOpenings.has(opening.id) ||
+      seenOpeningProducts.has(opening.productId)
+    ) {
+      return null;
+    }
+
+    seenOpenings.add(opening.id);
+    seenOpeningProducts.add(opening.productId);
+    openings.push(opening);
+  }
+
+  const seenDays = new Set<string>();
+  const seenCellIds = new Set<string>(seenOpenings);
+  const days: SalesFactDay[] = [];
+
+  for (const entry of value.days) {
+    const day = parseSalesFactDay(entry, value.month, derivatives);
+    if (!day || seenDays.has(day.occurredOn)) {
+      return null;
+    }
+
+    for (const cell of day.cells) {
+      if (seenCellIds.has(cell.id)) {
+        return null;
+      }
+      seenCellIds.add(cell.id);
+    }
+
+    seenDays.add(day.occurredOn);
+    days.push(day);
+  }
+
+  if (openings.length === 0 && days.length === 0) {
+    return null;
+  }
+
+  return { id, month: value.month, openings, days, deletedAt };
+}
+
+function parseSalesFacts(
+  value: unknown,
+  derivatives: readonly Derivative[],
+): SalesFact[] | null {
+  const facts = parseMovementList(value, (entry) => parseSalesFact(entry, derivatives));
+  if (!facts) {
+    return null;
+  }
+
+  const activeMonths = new Set<string>();
+  for (const fact of facts) {
+    if (fact.deletedAt !== null) {
+      continue;
+    }
+    if (activeMonths.has(fact.month)) {
+      return null;
+    }
+    activeMonths.add(fact.month);
+  }
+
+  return facts;
+}
+
 /** Собирает документ только из известных полей. Чужие ключи отбрасываются. */
 export function parsePrototypeDocument(value: unknown): PrototypeDocument | null {
   if (!isRecord(value) || value.schemaVersion !== SCHEMA_VERSION) {
@@ -1156,8 +1448,9 @@ export function parsePrototypeDocument(value: unknown): PrototypeDocument | null
     materialIds,
     derivatives,
   );
+  const salesFacts = parseSalesFacts(value.salesFacts, derivatives);
 
-  if (!deliveries || !writeOffs || !salesPlans || !productionFacts) {
+  if (!deliveries || !writeOffs || !salesPlans || !productionFacts || !salesFacts) {
     return null;
   }
 
@@ -1172,5 +1465,6 @@ export function parsePrototypeDocument(value: unknown): PrototypeDocument | null
     writeOffs,
     salesPlans,
     productionFacts,
+    salesFacts,
   };
 }

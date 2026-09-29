@@ -1,0 +1,458 @@
+A4 fill=4 font=0:theme1 tint= |  | 
+B4 fill=4 font=0:theme1 tint= |  | 
+C4 fill=4 font=0:theme1 tint= |  | 
+D4 fill=4 font=0:theme1 tint= |  | 
+E4 fill=4 font=0:theme1 tint= |  | 
+F4 fill=4 font=13:theme1 tint= | ФАКТИЧЕСКИЕ ПОКАЗАТЕЛИ ПРОДАЖ ЗА ДАТУ   1 | 
+G4 fill=4 font=13:theme1 tint= |  | 
+H4 fill=4 font=13:theme1 tint= |  | 
+I4 fill=4 font=13:theme1 tint= |  | 
+J4 fill=4 font=13:theme1 tint= |  | 
+K4 fill=4 font=13:theme1 tint= |  | 
+L4 fill=4 font=13:theme1 tint= |  | 
+M4 fill=4 font=13:theme1 tint= |  | 
+N4 fill=4 font=13:theme1 tint= |  | 
+O4 fill=4 font=13:theme1 tint= |  | 
+P4 fill=4 font=13:theme1 tint= | ФАКТИЧЕСКИЕ ПОКАЗАТЕЛИ ПРОИЗВОДСТВА ЗА ДАТУ. 1 | 
+Q4 fill=4 font=13:theme1 tint= |  | 
+R4 fill=4 font=13:theme1 tint= |  | 
+S4 fill=4 font=13:theme1 tint= |  | 
+T4 fill=4 font=13:theme1 tint= |  | 
+U4 fill=4 font=13:theme1 tint= |  | 
+V4 fill=4 font=13:theme1 tint= |  | 
+W4 fill=4 font=13:theme1 tint= |  | 
+X4 fill=4 font=0:theme1 tint= |  | 
+Y4 fill=4 font=0:theme1 tint= |  | 
+Z4 fill=4 font=0:theme1 tint= |  | 
+A5 fill=0 font=0:theme1 tint= | АСCОРТИМЕНТ ГОТОВОЙ ПРОДУКЦИИ | 
+B5 fill=0 font=0:theme1 tint= |  | 
+C5 fill=0 font=0:theme1 tint= |  | 
+D5 fill=0 font=0:theme1 tint= | Остаток на начало периода на производстве, шт | D1
+E5 fill=0 font=0:theme1 tint= | Остаток на начало периода на РЦ, шт | E1
+F5 fill=0 font=0:theme1 tint= | Себест, р/ед | 
+G5 fill=0 font=0:theme1 tint= | Рентаб, % | 
+H5 fill=0 font=0:theme1 tint= | Цена с НДС, р/ед | 
+I5 fill=0 font=0:theme1 tint= | Цена ,без НДС, р/ед | 
+J5 fill=0 font=0:theme1 tint= | Объем продаж, шт | 
+K5 fill=0 font=0:theme1 tint= | Выручка с НДС, р | 
+L5 fill=0 font=0:theme1 tint= | Выручка без НДС, р | 
+M5 fill=0 font=0:theme1 tint= | Т-проток, р | 
+N5 fill=0 font=0:theme1 tint= | Себест объема, р | 
+O5 fill=0 font=0:theme1 tint= | НДС, % | 
+P5 fill=0 font=0:theme1 tint= | Себест, р/ед | 
+Q5 fill=0 font=0:theme1 tint= | Объем произв-ва, шт | 
+R5 fill=0 font=0:theme1 tint= | Себест объема произв-ва, р | 
+S5 fill=0 font=0:theme1 tint= | Перемещение готовой продукции на РЦ, шт | S1
+T5 fill=0 font=0:theme1 tint= | Питание сотруд-в, шт | 
+U5 fill=0 font=0:theme1 tint= | Образцы для клиентов, шт | 
+V5 fill=0 font=0:theme1 tint= | Возвраты клиентов, шт | 
+W5 fill=0 font=0:theme1 tint= | Списание, шт | 
+X5 fill=0 font=0:theme1 tint= | Остаток на конец даты на производстве, шт | X1
+Y5 fill=0 font=0:theme1 tint= | Остаток на конец даты на РЦ, шт | Y1
+Z5 fill=4 font=0:theme1 tint= |  | 
+A6 fill=0 font=0:theme1 tint= |  | 
+B6 fill=0 font=0:theme1 tint= |  | 
+C6 fill=0 font=0:theme1 tint= |  | 
+D6 fill=0 font=0:theme1 tint= |  | 
+E6 fill=0 font=0:theme1 tint= |  | 
+F6 fill=0 font=0:theme1 tint= |  | 
+G6 fill=0 font=0:theme1 tint= |  | 
+H6 fill=0 font=0:theme1 tint= |  | 
+I6 fill=0 font=0:theme1 tint= |  | 
+J6 fill=0 font=0:theme1 tint= |  | 
+K6 fill=0 font=0:theme1 tint= |  | 
+L6 fill=0 font=0:theme1 tint= |  | 
+M6 fill=0 font=0:theme1 tint= |  | 
+N6 fill=0 font=0:theme1 tint= |  | 
+O6 fill=0 font=0:theme1 tint= |  | 
+P6 fill=0 font=0:theme1 tint= |  | 
+Q6 fill=0 font=0:theme1 tint= |  | 
+R6 fill=0 font=0:theme1 tint= |  | 
+S6 fill=0 font=0:theme1 tint= |  | 
+T6 fill=0 font=0:theme1 tint= |  | 
+U6 fill=0 font=0:theme1 tint= |  | 
+V6 fill=0 font=0:theme1 tint= |  | 
+W6 fill=0 font=0:theme1 tint= |  | 
+X6 fill=0 font=0:theme1 tint= |  | 
+Y6 fill=0 font=0:theme1 tint= |  | 
+Z6 fill=4 font=0:theme1 tint= |  | 
+A7 fill=0 font=7:theme1 tint= | РИТЕЙЛ | Svod!A13
+B7 fill=0 font=0:theme1 tint= |  | 
+C7 fill=0 font=0:theme1 tint= |  | 
+D7 fill=0 font=7:theme1 tint= | 0 | D8+D24+D55+D76+D92+D113
+E7 fill=0 font=7:theme1 tint= | 0 | E8+E24+E55+E76+E92+E113
+F7 fill=0 font=7:theme1 tint= | 0 | IF(J7=0,0,N7/J7)
+G7 fill=0 font=7:theme1 tint= | 0 | IF(F7=0,0,(I7-F7)/F7*100)
+H7 fill=0 font=7:theme1 tint= | 0 | IF(J7=0,0,K7/J7)
+I7 fill=0 font=7:theme1 tint= | 0 | IF(J7=0,0,L7/J7)
+J7 fill=0 font=7:theme1 tint= | 0 | J8+J24+J55+J76+J92+J113
+K7 fill=0 font=7:theme1 tint= | 0 | K8+K24+K55+K76+K92+K113
+L7 fill=0 font=7:theme1 tint= | 0 | L8+L24+L55+L76+L92+L113
+M7 fill=0 font=7:theme1 tint= | 0 | M8+M24+M55+M76+M92+M113
+N7 fill=0 font=7:theme1 tint= | 0 | N8+N24+N55+N76+N92+N113
+O7 fill=0 font=7:theme1 tint= | 0 | IF(I7=0,0,H7/I7*100-100)
+P7 fill=0 font=7:theme1 tint= | 0 | IF(Q7=0,0,R7/Q7)
+Q7 fill=0 font=7:theme1 tint= | 0 | Q8+Q24+Q55+Q76+Q92+Q113
+R7 fill=0 font=7:theme1 tint= | 0 | 
+S7 fill=0 font=7:theme1 tint= | 0 | 
+T7 fill=0 font=7:theme1 tint= | 0 | 
+U7 fill=0 font=7:theme1 tint= | 0 | 
+V7 fill=0 font=7:theme1 tint= | 30780 | 
+W7 fill=0 font=7:theme1 tint= | 0 | 
+X7 fill=0 font=7:theme1 tint= | 0 | X8+X24+X55+X76+X92+X113
+Y7 fill=0 font=7:theme1 tint= | 30780 | Y8+Y24+Y55+Y76+Y92+Y113
+Z7 fill=4 font=0:theme1 tint= |  | 
+A8 fill=3 font=0:theme1 tint= |  | 
+B8 fill=3 font=0:theme1 tint= | САЛАТЫ | Svod!B14
+C8 fill=3 font=0:theme1 tint= |  | 
+D8 fill=3 font=0:theme1 tint= | 0 | SUM(D9:D23)
+E8 fill=3 font=0:theme1 tint= | 0 | SUM(E9:E23)
+F8 fill=3 font=0:theme1 tint= | 0 | IF(J8=0,0,N8/J8)
+G8 fill=3 font=0:theme1 tint= | 0 | IF(F8=0,0,(I8-F8)/F8*100)
+H8 fill=3 font=0:theme1 tint= | 0 | IF(J8=0,0,K8/J8)
+I8 fill=3 font=0:theme1 tint= | 0 | IF(J8=0,0,L8/J8)
+J8 fill=3 font=0:theme1 tint= | 0 | SUM(J9:J23)
+K8 fill=3 font=0:theme1 tint= | 0 | SUM(K9:K23)
+L8 fill=3 font=0:theme1 tint= | 0 | SUM(L9:L23)
+M8 fill=3 font=0:theme1 tint= | 0 | SUM(M9:M23)
+N8 fill=3 font=0:theme1 tint= | 0 | SUM(N9:N23)
+O8 fill=3 font=0:theme1 tint= | 0 | IF(I8=0,0,H8/I8*100-100)
+P8 fill=3 font=0:theme1 tint= | 0 | IF(Q8=0,0,R8/Q8)
+Q8 fill=3 font=0:theme1 tint= | 0 | SUM(Q9:Q23)
+R8 fill=3 font=0:theme1 tint= | 0 | 
+S8 fill=3 font=0:theme1 tint= | 0 | 
+T8 fill=3 font=0:theme1 tint= | 0 | 
+U8 fill=3 font=0:theme1 tint= | 0 | 
+V8 fill=3 font=0:theme1 tint= | 0 | 
+W8 fill=3 font=0:theme1 tint= | 0 | 
+X8 fill=3 font=0:theme1 tint= | 0 | SUM(X9:X23)
+Y8 fill=3 font=0:theme1 tint= | 0 | SUM(Y9:Y23)
+Z8 fill=4 font=0:theme1 tint= |  | 
+A9 fill=4 font=12:theme1 tint= | 1 | 
+B9 fill=0 font=0:theme1 tint= | 1 | Svod!B15
+C9 fill=0 font=0:theme1 tint= | 0 | Svod!C15
+D9 fill=2 font=0:theme1 tint= |  | 
+E9 fill=2 font=0:theme1 tint= |  | 
+F9 fill=0 font=0:theme1 tint= | 0 | P9
+G9 fill=0 font=0:theme1 tint= | 0 | IF(F9=0,0,(I9-F9)/F9*100)
+H9 fill=2 font=0:theme1 tint= |  | 
+I9 fill=0 font=0:theme1 tint= | 0 | H9/(100+O9)*100
+J9 fill=2 font=0:theme1 tint= |  | 
+K9 fill=0 font=0:theme1 tint= | 0 | J9*H9
+L9 fill=0 font=0:theme1 tint= | 0 | I9*J9
+M9 fill=0 font=0:theme1 tint= | 0 | L9-N9
+N9 fill=0 font=0:theme1 tint= | 0 | F9*J9
+O9 fill=0 font=0:theme1 tint= | 0 | Svod!N15
+P9 fill=0 font=0:theme1 tint= | 0 | Svod!O15
+Q9 fill=2 font=0:theme1 tint= |  | 
+R9 fill=0 font=0:theme1 tint= | 0 | Q9*P9
+S9 fill=2 font=0:theme1 tint= |  | 
+T9 fill=2 font=0:theme1 tint= |  | 
+U9 fill=2 font=0:theme1 tint= |  | 
+V9 fill=2 font=0:theme1 tint= |  | 
+W9 fill=2 font=0:theme1 tint= |  | 
+X9 fill=0 font=0:theme1 tint= | 0 | D9+Q9-S9
+Y9 fill=0 font=0:theme1 tint= | 0 | E9-J9+S9-T9-U9+V9-W9
+Z9 fill=4 font=0:theme1 tint= |  | 
+A23 fill=0 font=12:theme1 tint= |  | 
+B23 fill=0 font=0:theme1 tint= | 15 | Svod!B29
+C23 fill=0 font=0:theme1 tint= | 0 | Svod!C29
+D23 fill=2 font=0:theme1 tint= |  | 
+E23 fill=2 font=0:theme1 tint= |  | 
+F23 fill=0 font=0:theme1 tint= | 0 | 
+G23 fill=0 font=0:theme1 tint= | 0 | 
+H23 fill=2 font=0:theme1 tint= |  | 
+I23 fill=0 font=0:theme1 tint= | 0 | 
+J23 fill=2 font=0:theme1 tint= |  | 
+K23 fill=0 font=0:theme1 tint= | 0 | 
+L23 fill=0 font=0:theme1 tint= | 0 | 
+M23 fill=0 font=0:theme1 tint= | 0 | 
+N23 fill=0 font=0:theme1 tint= | 0 | 
+O23 fill=0 font=0:theme1 tint= | 0 | Svod!N29
+P23 fill=0 font=0:theme1 tint= | 0 | Svod!O29
+Q23 fill=2 font=0:theme1 tint= |  | 
+R23 fill=0 font=0:theme1 tint= | 0 | 
+S23 fill=2 font=0:theme1 tint= |  | 
+T23 fill=2 font=0:theme1 tint= |  | 
+U23 fill=2 font=0:theme1 tint= |  | 
+V23 fill=2 font=0:theme1 tint= |  | 
+W23 fill=2 font=0:theme1 tint= |  | 
+X23 fill=0 font=0:theme1 tint= | 0 | 
+Y23 fill=0 font=0:theme1 tint= | 0 | 
+Z23 fill=4 font=0:theme1 tint= |  | 
+A24 fill=3 font=0:theme1 tint= |  | 
+B24 fill=3 font=0:theme1 tint= | ГОРЯЧИЕ БЛЮДА | Svod!B30
+C24 fill=3 font=0:theme1 tint= |  | 
+D24 fill=3 font=0:theme1 tint= | 0 | SUM(D25:D54)
+E24 fill=3 font=0:theme1 tint= | 0 | SUM(E25:E54)
+F24 fill=3 font=0:theme1 tint= | 0 | IF(J24=0,0,N24/J24)
+G24 fill=3 font=0:theme1 tint= | 0 | IF(F24=0,0,(I24-F24)/F24*100)
+H24 fill=3 font=0:theme1 tint= | 0 | IF(J24=0,0,K24/J24)
+I24 fill=3 font=0:theme1 tint= | 0 | IF(J24=0,0,L24/J24)
+J24 fill=3 font=0:theme1 tint= | 0 | SUM(J25:J54)
+K24 fill=3 font=0:theme1 tint= | 0 | SUM(K25:K54)
+L24 fill=3 font=0:theme1 tint= | 0 | SUM(L25:L54)
+M24 fill=3 font=0:theme1 tint= | 0 | SUM(M25:M54)
+N24 fill=3 font=0:theme1 tint= | 0 | SUM(N25:N54)
+O24 fill=3 font=0:theme1 tint= | 0 | IF(I24=0,0,H24/I24*100-100)
+P24 fill=3 font=0:theme1 tint= | 0 | IF(Q24=0,0,R24/Q24)
+Q24 fill=3 font=0:theme1 tint= | 0 | SUM(Q25:Q54)
+R24 fill=3 font=0:theme1 tint= | 0 | 
+S24 fill=3 font=0:theme1 tint= | 0 | 
+T24 fill=3 font=0:theme1 tint= | 0 | 
+U24 fill=3 font=0:theme1 tint= | 0 | 
+V24 fill=3 font=0:theme1 tint= | 0 | 
+W24 fill=3 font=0:theme1 tint= | 0 | 
+X24 fill=3 font=0:theme1 tint= | 0 | 
+Y24 fill=3 font=0:theme1 tint= | 0 | 
+Z24 fill=4 font=0:theme1 tint= |  | 
+A25 fill=4 font=12:theme1 tint= | 1 | 
+B25 fill=0 font=0:theme1 tint= | 1 | Svod!B31
+C25 fill=0 font=0:theme1 tint= | Гуляш из курицы с рисом | Svod!C31
+D25 fill=2 font=0:theme1 tint= |  | 
+E25 fill=2 font=0:theme1 tint= |  | 
+F25 fill=0 font=0:theme1 tint= | 0 | P25
+G25 fill=0 font=0:theme1 tint= | 0 | IF(F25=0,0,(I25-F25)/F25*100)
+H25 fill=2 font=0:theme1 tint= |  | 
+I25 fill=0 font=0:theme1 tint= | 0 | H25/(100+O25)*100
+J25 fill=2 font=0:theme1 tint= |  | 
+K25 fill=0 font=0:theme1 tint= | 0 | J25*H25
+L25 fill=0 font=0:theme1 tint= | 0 | I25*J25
+M25 fill=0 font=0:theme1 tint= | 0 | L25-N25
+N25 fill=0 font=0:theme1 tint= | 0 | F25*J25
+O25 fill=0 font=0:theme1 tint= | 10 | Svod!N31
+P25 fill=0 font=0:theme1 tint= | 0 | Svod!O31
+Q25 fill=2 font=0:theme1 tint= |  | 
+R25 fill=0 font=0:theme1 tint= | 0 | Q25*P25
+S25 fill=2 font=0:theme1 tint= |  | 
+T25 fill=2 font=0:theme1 tint= |  | 
+U25 fill=2 font=0:theme1 tint= |  | 
+V25 fill=2 font=0:theme1 tint= |  | 
+W25 fill=2 font=0:theme1 tint= |  | 
+X25 fill=0 font=0:theme1 tint= | 0 | D25+Q25-S25
+Y25 fill=0 font=0:theme1 tint= | 0 | E25-J25+S25-T25-U25+V25-W25
+Z25 fill=4 font=0:theme1 tint= |  | 
+A55 fill=3 font=0:theme1 tint= |  | 
+B55 fill=3 font=0:theme1 tint= | РОЛЛЫ И СЭНДВИЧИ | Svod!B61
+C55 fill=3 font=0:theme1 tint= |  | 
+D55 fill=3 font=0:theme1 tint= | 0 | SUM(D56:D75)
+E55 fill=3 font=0:theme1 tint= | 0 | SUM(E56:E75)
+F55 fill=3 font=0:theme1 tint= | 0 | IF(J55=0,0,N55/J55)
+G55 fill=3 font=0:theme1 tint= | 0 | IF(F55=0,0,(I55-F55)/F55*100)
+H55 fill=3 font=0:theme1 tint= | 0 | IF(J55=0,0,K55/J55)
+I55 fill=3 font=0:theme1 tint= | 0 | IF(J55=0,0,L55/J55)
+J55 fill=3 font=0:theme1 tint= | 0 | SUM(J56:J75)
+K55 fill=3 font=0:theme1 tint= | 0 | SUM(K56:K75)
+L55 fill=3 font=0:theme1 tint= | 0 | SUM(L56:L75)
+M55 fill=3 font=0:theme1 tint= | 0 | SUM(M56:M75)
+N55 fill=3 font=0:theme1 tint= | 0 | SUM(N56:N75)
+O55 fill=3 font=0:theme1 tint= | 0 | IF(I55=0,0,H55/I55*100-100)
+P55 fill=3 font=0:theme1 tint= | 0 | IF(Q55=0,0,R55/Q55)
+Q55 fill=3 font=0:theme1 tint= | 0 | SUM(Q56:Q75)
+R55 fill=3 font=0:theme1 tint= | 0 | 
+S55 fill=3 font=0:theme1 tint= | 0 | 
+T55 fill=3 font=0:theme1 tint= | 0 | 
+U55 fill=3 font=0:theme1 tint= | 0 | 
+V55 fill=3 font=0:theme1 tint= | 30780 | 
+W55 fill=3 font=0:theme1 tint= | 0 | 
+X55 fill=3 font=0:theme1 tint= | 0 | 
+Y55 fill=3 font=0:theme1 tint= | 30780 | 
+Z55 fill=4 font=0:theme1 tint= |  | 
+A133 fill=0 font=12:theme1 tint= |  | 
+B133 fill=0 font=0:theme1 tint= | 9 | Svod!B139
+C133 fill=0 font=0:theme1 tint= | 0 | Svod!C139
+D133 fill=2 font=0:theme1 tint= |  | 
+E133 fill=2 font=0:theme1 tint= |  | 
+F133 fill=0 font=0:theme1 tint= | 0 | 
+G133 fill=0 font=0:theme1 tint= | 0 | 
+H133 fill=2 font=0:theme1 tint= |  | 
+I133 fill=0 font=0:theme1 tint= | 0 | 
+J133 fill=2 font=0:theme1 tint= |  | 
+K133 fill=0 font=0:theme1 tint= | 0 | 
+L133 fill=0 font=0:theme1 tint= | 0 | 
+M133 fill=0 font=0:theme1 tint= | 0 | 
+N133 fill=0 font=0:theme1 tint= | 0 | 
+O133 fill=0 font=0:theme1 tint= | 0 | Svod!N139
+P133 fill=0 font=0:theme1 tint= | 0 | Svod!O139
+Q133 fill=2 font=0:theme1 tint= |  | 
+R133 fill=0 font=0:theme1 tint= | 0 | 
+S133 fill=2 font=0:theme1 tint= |  | 
+T133 fill=2 font=0:theme1 tint= |  | 
+U133 fill=2 font=0:theme1 tint= |  | 
+V133 fill=2 font=0:theme1 tint= |  | 
+W133 fill=2 font=0:theme1 tint= |  | 
+X133 fill=0 font=0:theme1 tint= | 0 | 
+Y133 fill=0 font=0:theme1 tint= | 0 | 
+Z133 fill=4 font=0:theme1 tint= |  | 
+A134 fill=0 font=12:theme1 tint= |  | 
+B134 fill=0 font=0:theme1 tint= | 10 | Svod!B140
+C134 fill=0 font=0:theme1 tint= | 0 | Svod!C140
+D134 fill=2 font=0:theme1 tint= |  | 
+E134 fill=2 font=0:theme1 tint= |  | 
+F134 fill=0 font=0:theme1 tint= | 0 | 
+G134 fill=0 font=0:theme1 tint= | 0 | 
+H134 fill=2 font=0:theme1 tint= |  | 
+I134 fill=0 font=0:theme1 tint= | 0 | 
+J134 fill=2 font=0:theme1 tint= |  | 
+K134 fill=0 font=0:theme1 tint= | 0 | 
+L134 fill=0 font=0:theme1 tint= | 0 | 
+M134 fill=0 font=0:theme1 tint= | 0 | 
+N134 fill=0 font=0:theme1 tint= | 0 | 
+O134 fill=0 font=0:theme1 tint= | 0 | Svod!N140
+P134 fill=0 font=0:theme1 tint= | 0 | Svod!O140
+Q134 fill=2 font=0:theme1 tint= |  | 
+R134 fill=0 font=0:theme1 tint= | 0 | 
+S134 fill=2 font=0:theme1 tint= |  | 
+T134 fill=2 font=0:theme1 tint= |  | 
+U134 fill=2 font=0:theme1 tint= |  | 
+V134 fill=2 font=0:theme1 tint= |  | 
+W134 fill=2 font=0:theme1 tint= |  | 
+X134 fill=0 font=0:theme1 tint= | 0 | 
+Y134 fill=0 font=0:theme1 tint= | 0 | 
+Z134 fill=4 font=0:theme1 tint= |  | 
+A143 fill=4 font=12:theme1 tint= | 2 | 
+B143 fill=0 font=0:theme1 tint= | 1 | B9
+C143 fill=0 font=0:theme1 tint= | 0 | C9
+D143 fill=0 font=0:theme1 tint= | 0 | X9
+E143 fill=0 font=0:theme1 tint= | 0 | Y9
+F143 fill=0 font=0:theme1 tint= | 0 | P143
+G143 fill=0 font=0:theme1 tint= | 0 | IF(F143=0,0,(I143-F143)/F143*100)
+H143 fill=2 font=0:theme1 tint= |  | 
+I143 fill=0 font=0:theme1 tint= | 0 | H143/(100+O143)*100
+J143 fill=2 font=0:theme1 tint= |  | 
+K143 fill=0 font=0:theme1 tint= | 0 | J143*H143
+L143 fill=0 font=0:theme1 tint= | 0 | I143*J143
+M143 fill=0 font=0:theme1 tint= | 0 | L143-N143
+N143 fill=0 font=0:theme1 tint= | 0 | F143*J143
+O143 fill=0 font=0:theme1 tint= | 0 | O9
+P143 fill=0 font=0:theme1 tint= | 0 | 
+Q143 fill=2 font=0:theme1 tint= |  | 
+R143 fill=0 font=0:theme1 tint= | 0 | Q143*P143
+S143 fill=2 font=0:theme1 tint= |  | 
+T143 fill=2 font=0:theme1 tint= |  | 
+U143 fill=2 font=0:theme1 tint= |  | 
+V143 fill=2 font=0:theme1 tint= |  | 
+W143 fill=2 font=0:theme1 tint= |  | 
+X143 fill=0 font=0:theme1 tint= | 0 | D143+Q143-S143
+Y143 fill=0 font=0:theme1 tint= | 0 | E143-J143+S143-T143-U143+V143-W143
+Z143 fill=4 font=0:theme1 tint= |  | 
+A157 fill=0 font=12:theme1 tint= |  | 
+B157 fill=0 font=0:theme1 tint= | 15 | 
+C157 fill=0 font=0:theme1 tint= | 0 | 
+D157 fill=0 font=0:theme1 tint= | 0 | 
+E157 fill=0 font=0:theme1 tint= | 0 | 
+F157 fill=0 font=0:theme1 tint= | 0 | 
+G157 fill=0 font=0:theme1 tint= | 0 | 
+H157 fill=2 font=0:theme1 tint= |  | 
+I157 fill=0 font=0:theme1 tint= | 0 | 
+J157 fill=2 font=0:theme1 tint= |  | 
+K157 fill=0 font=0:theme1 tint= | 0 | 
+L157 fill=0 font=0:theme1 tint= | 0 | 
+M157 fill=0 font=0:theme1 tint= | 0 | 
+N157 fill=0 font=0:theme1 tint= | 0 | 
+O157 fill=0 font=0:theme1 tint= | 0 | 
+P157 fill=0 font=0:theme1 tint= | 0 | 
+Q157 fill=2 font=0:theme1 tint= |  | 
+R157 fill=0 font=0:theme1 tint= | 0 | 
+S157 fill=2 font=0:theme1 tint= |  | 
+T157 fill=2 font=0:theme1 tint= |  | 
+U157 fill=2 font=0:theme1 tint= |  | 
+V157 fill=2 font=0:theme1 tint= |  | 
+W157 fill=2 font=0:theme1 tint= |  | 
+X157 fill=0 font=0:theme1 tint= | 0 | 
+Y157 fill=0 font=0:theme1 tint= | 0 | 
+Z157 fill=4 font=0:theme1 tint= |  | 
+A158 fill=3 font=0:theme1 tint= |  | 
+B158 fill=3 font=0:theme1 tint= | ГОРЯЧИЕ БЛЮДА | 
+C158 fill=3 font=0:theme1 tint= |  | 
+D158 fill=3 font=0:theme1 tint= | 0 | SUM(D159:D188)
+E158 fill=3 font=0:theme1 tint= | 0 | SUM(E159:E188)
+F158 fill=3 font=0:theme1 tint= | 0 | IF(J158=0,0,N158/J158)
+G158 fill=3 font=0:theme1 tint= | 0 | IF(F158=0,0,(I158-F158)/F158*100)
+H158 fill=3 font=0:theme1 tint= | 0 | IF(J158=0,0,K158/J158)
+I158 fill=3 font=0:theme1 tint= | 0 | IF(J158=0,0,L158/J158)
+J158 fill=3 font=0:theme1 tint= | 0 | SUM(J159:J188)
+K158 fill=3 font=0:theme1 tint= | 0 | SUM(K159:K188)
+L158 fill=3 font=0:theme1 tint= | 0 | SUM(L159:L188)
+M158 fill=3 font=0:theme1 tint= | 0 | SUM(M159:M188)
+N158 fill=3 font=0:theme1 tint= | 0 | SUM(N159:N188)
+O158 fill=3 font=0:theme1 tint= | 0 | IF(I158=0,0,H158/I158*100-100)
+P158 fill=3 font=0:theme1 tint= | 0 | IF(Q158=0,0,R158/Q158)
+Q158 fill=3 font=0:theme1 tint= | 0 | SUM(Q159:Q188)
+R158 fill=3 font=0:theme1 tint= | 0 | 
+S158 fill=3 font=0:theme1 tint= | 0 | 
+T158 fill=3 font=0:theme1 tint= | 0 | 
+U158 fill=3 font=0:theme1 tint= | 0 | 
+V158 fill=3 font=0:theme1 tint= | 0 | 
+W158 fill=3 font=0:theme1 tint= | 0 | 
+X158 fill=3 font=0:theme1 tint= | 0 | 
+Y158 fill=3 font=0:theme1 tint= | 0 | 
+Z158 fill=4 font=0:theme1 tint= |  | 
+A159 fill=4 font=12:theme1 tint= | 2 | 
+B159 fill=0 font=0:theme1 tint= | 1 | 
+C159 fill=0 font=0:theme1 tint= | Гуляш из курицы с рисом | 
+D159 fill=0 font=0:theme1 tint= | 0 | X25
+E159 fill=0 font=0:theme1 tint= | 0 | 
+F159 fill=0 font=0:theme1 tint= | 0 | P159
+G159 fill=0 font=0:theme1 tint= | 0 | IF(F159=0,0,(I159-F159)/F159*100)
+H159 fill=2 font=0:theme1 tint= |  | 
+I159 fill=0 font=0:theme1 tint= | 0 | H159/(100+O159)*100
+J159 fill=2 font=0:theme1 tint= |  | 
+K159 fill=0 font=0:theme1 tint= | 0 | J159*H159
+L159 fill=0 font=0:theme1 tint= | 0 | I159*J159
+M159 fill=0 font=0:theme1 tint= | 0 | L159-N159
+N159 fill=0 font=0:theme1 tint= | 0 | F159*J159
+O159 fill=0 font=0:theme1 tint= | 10 | O25
+P159 fill=0 font=0:theme1 tint= | 0 | 
+Q159 fill=2 font=0:theme1 tint= |  | 
+R159 fill=0 font=0:theme1 tint= | 0 | Q159*P159
+S159 fill=2 font=0:theme1 tint= |  | 
+T159 fill=2 font=0:theme1 tint= |  | 
+U159 fill=2 font=0:theme1 tint= |  | 
+V159 fill=2 font=0:theme1 tint= |  | 
+W159 fill=2 font=0:theme1 tint= |  | 
+X159 fill=0 font=0:theme1 tint= | 0 | D159+Q159-S159
+Y159 fill=0 font=0:theme1 tint= | 0 | E159-J159+S159-T159-U159+V159-W159
+Z159 fill=4 font=0:theme1 tint= |  | 
+---FONTS---
+0 theme1 tint=
+1 theme1 tint=
+2 theme1 tint=
+3 theme1 tint=
+4 theme1 tint=
+5 theme1 tint=
+6 theme1 tint=
+7 theme1 tint=
+8 theme1 tint=
+9 theme1 tint=
+10 theme1 tint=
+11 theme1 tint=
+12 theme1 tint=
+13 theme1 tint=
+14 FF0070C0
+15 FF0070C0
+16 FFC00000
+17 FF002060
+18 FF00B0F0
+19 FF00B0F0
+20 FF00B0F0
+21 FF00B0F0
+22 theme0 tint=-0.34998626667073579
+23 theme0 tint=-0.34998626667073579
+24 theme0 tint=-0.34998626667073579
+25 theme0 tint=-0.34998626667073579
+26 theme0 tint=-0.34998626667073579
+27 theme0 tint=-0.34998626667073579
+28 theme0 tint=-0.34998626667073579
+29 theme0 tint=-0.34998626667073579
+30 theme1 tint=
+31 FF00B0F0
+32 theme1 tint=
+33 theme1 tint=
+34 FF000000
+35 FF000000
+36 FF002060
+37 theme1 tint=
+38 theme0 tint=
+39 theme1 tint=
+40 FF0070C0

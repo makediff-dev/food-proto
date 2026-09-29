@@ -10,6 +10,7 @@ import { IconMenu, IconUndo } from "@/features/shell/icons";
 
 const SECTIONS = [
   { href: "/", label: "Сводка" },
+  { href: "/sales-fact", label: "Факт продаж" },
   { href: "/production", label: "Производство" },
   { href: "/materials", label: MATERIALS_SECTION_TITLE },
   { href: "/places", label: "Цеха и склады" },

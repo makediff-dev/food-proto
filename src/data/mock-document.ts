@@ -621,6 +621,7 @@ export const mockDocument: PrototypeDocument = {
   writeOffs: [],
   salesPlans,
   productionFacts: septemberProductionFacts(),
+  salesFacts: [],
 };
 
 export function createMockDocument(): PrototypeDocument {
@@ -651,6 +652,14 @@ export function createMockDocument(): PrototypeDocument {
       outputs: item.outputs.map((output) => ({
         ...output,
         uses: output.uses.map((use) => ({ ...use })),
+      })),
+    })),
+    salesFacts: mockDocument.salesFacts.map((item) => ({
+      ...item,
+      openings: item.openings.map((opening) => ({ ...opening })),
+      days: item.days.map((day) => ({
+        ...day,
+        cells: day.cells.map((cell) => ({ ...cell })),
       })),
     })),
   };
