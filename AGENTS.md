@@ -7,3 +7,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# Прототип учёта
+
+Перед задачей прочитай `docs/domain.md`, затем `docs/architecture.md` и `docs/extending-the-prototype.md`.
+
+- Только клиент. Учётные числа живут в `localStorage`, формулы — в `src/domain`.
+- Первый прототип — доходы и себестоимость продукции. Граница и формулы — в `docs/domain.md`. Книга клиента — `inputs/finplan-february.xlsx`.
+- Тестовый экран «Учёт» и поле `probe` удалены. Не возвращать.
+- Учётные сущности не стирать из документа. Удаление мягкое: поле `deletedAt`. Правило — `.cursor/rules/soft-delete.mdc`.
+- Интерфейс русский, в основном чёрно-белый, с боковым меню. Плотность и меню — в правиле интерфейса.
+- После крупных правок запусти `npm run lint` и `npm run format`.
