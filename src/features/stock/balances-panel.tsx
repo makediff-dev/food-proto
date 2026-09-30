@@ -172,10 +172,11 @@ export function BalancesPanel({
 }
 
 function chipClass(current: boolean): string {
-  return `inline-flex h-11 items-center px-4 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${current
+  return `inline-flex h-11 items-center px-4 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
+    current
       ? "bg-ink text-white"
       : "border border-line bg-sheet text-ink hover:border-ink"
-    }`;
+  }`;
 }
 
 function hasMovement(

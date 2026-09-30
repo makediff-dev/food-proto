@@ -58,7 +58,7 @@ export interface SalesFactRow {
   distributionStart: number;
   productionEnd: number;
   distributionEnd: number;
-  /** Десятитысячные доли рубля. На экране 4 знака, в выручку без НДС не подставляются. */
+  /** Десятитысячные доли рубля. На экране до копеек, в выручку без НДС не подставляются. */
   priceExVatTenThousandths: number | null;
   revenueWithVatKopecks: number | null;
   revenueExVatKopecks: number | null;
@@ -461,41 +461,45 @@ function averageKopecks(amount: number | null, volume: number | null): number | 
 }
 
 /**
- * НДС «Всего» из средних цен, уже округлённых до копейки.
- * Повторно делить цену с НДС на ставку товара нельзя: ставки разные.
+ * НДС «Всего»: выручка с НДС / выручка без НДС × 100 − 100.
+ * Через суммы выручек, без промежуточного округления средних цен —
+ * иначе при одной строке ставка уезжает на сотые доли процента.
  */
 function totalVatHundredths(
-  priceWithVatKopecks: number | null,
-  priceExVatKopecks: number | null,
+  revenueWithVatKopecks: number | null,
+  revenueExVatKopecks: number | null,
 ): number | null {
-  if (priceWithVatKopecks === null || priceExVatKopecks === null) {
+  if (revenueWithVatKopecks === null || revenueExVatKopecks === null) {
     return null;
   }
-  if (priceExVatKopecks === 0) {
+  if (revenueExVatKopecks === 0) {
     return 0;
   }
 
   return roundHalfAwayFromZero(
-    (BigInt(priceWithVatKopecks) - BigInt(priceExVatKopecks)) * TEN_THOUSAND,
-    BigInt(priceExVatKopecks),
+    (BigInt(revenueWithVatKopecks) - BigInt(revenueExVatKopecks)) * TEN_THOUSAND,
+    BigInt(revenueExVatKopecks),
   );
 }
 
-/** (цена без НДС − себестоимость продаж без НДС) / эта себестоимость × 100. */
+/**
+ * Рентабельность «Всего»: Т-проток / себестоимость объёма продаж без НДС.
+ * Как на плане — из сумм, не из средних цен, уже округлённых до копейки.
+ */
 function totalProfitabilityHundredths(
-  priceExVatKopecks: number | null,
-  costExVatKopecks: number | null,
+  contributionKopecks: number | null,
+  salesVolumeCostExVatKopecks: number | null,
 ): number | null {
-  if (priceExVatKopecks === null || costExVatKopecks === null) {
+  if (contributionKopecks === null || salesVolumeCostExVatKopecks === null) {
     return null;
   }
-  if (costExVatKopecks === 0) {
+  if (salesVolumeCostExVatKopecks === 0) {
     return 0;
   }
 
   return roundHalfAwayFromZero(
-    (BigInt(priceExVatKopecks) - BigInt(costExVatKopecks)) * TEN_THOUSAND,
-    BigInt(costExVatKopecks),
+    BigInt(contributionKopecks) * TEN_THOUSAND,
+    BigInt(salesVolumeCostExVatKopecks),
   );
 }
 
@@ -629,7 +633,10 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
     contributionKopecks,
     priceWithVatKopecks,
     priceExVatKopecks,
-    vatPercentHundredths: totalVatHundredths(priceWithVatKopecks, priceExVatKopecks),
+    vatPercentHundredths: totalVatHundredths(
+      revenueWithVatKopecks,
+      revenueExVatKopecks,
+    ),
     salesUnitCostWithVatKopecks,
     salesUnitCostExVatKopecks,
     outputUnitCostWithVatKopecks: averageKopecks(
@@ -642,7 +649,10 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
     ),
     profitabilityHundredths:
       salesCostComplete && revenueComplete
-        ? totalProfitabilityHundredths(priceExVatKopecks, salesUnitCostExVatKopecks)
+        ? totalProfitabilityHundredths(
+            contributionKopecks,
+            salesVolumeCostExVatKopecks,
+          )
         : null,
   };
 }

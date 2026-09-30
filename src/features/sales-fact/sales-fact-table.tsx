@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 
 import {
   adjacentDay,
@@ -88,15 +88,12 @@ function ColumnLabel({ label }: { label: string }) {
 }
 
 type ColumnKey =
-  | "productionStart"
-  | "distributionStart"
+  | "opening"
   | "salesUnitCost"
   | "profitability"
-  | "priceWithVat"
-  | "priceExVat"
+  | "price"
   | "salesPieces"
-  | "revenueWithVat"
-  | "revenueExVat"
+  | "revenue"
   | "contribution"
   | "salesVolumeCost"
   | "vat"
@@ -108,49 +105,37 @@ type ColumnKey =
   | "samples"
   | "returns"
   | "writeOff"
-  | "productionEnd"
-  | "distributionEnd";
+  | "closing";
 
 const COLUMNS: { key: ColumnKey; label: string; group: "sales" | "output" }[] = [
-  {
-    key: "productionStart",
-    label: "Остаток на начало на производстве, шт",
-    group: "sales",
-  },
-  { key: "distributionStart", label: "Остаток на начало на РЦ, шт", group: "sales" },
-  { key: "salesUnitCost", label: "Себест, р/ед — продажи", group: "sales" },
-  { key: "profitability", label: "Рентаб, %", group: "sales" },
-  { key: "priceWithVat", label: "Цена с НДС, р/ед", group: "sales" },
-  { key: "priceExVat", label: "Цена без НДС, р/ед", group: "sales" },
-  { key: "salesPieces", label: "Объём продаж, шт", group: "sales" },
-  { key: "revenueWithVat", label: "Выручка с НДС", group: "sales" },
-  { key: "revenueExVat", label: "Выручка без НДС", group: "sales" },
+  { key: "opening", label: "Остаток на начало", group: "sales" },
+  { key: "salesUnitCost", label: "Себест продажи", group: "sales" },
+  { key: "profitability", label: "Рентаб", group: "sales" },
+  { key: "price", label: "Цена", group: "sales" },
+  { key: "salesPieces", label: "Объём продаж", group: "sales" },
+  { key: "revenue", label: "Выручка", group: "sales" },
   { key: "contribution", label: "Т-проток", group: "sales" },
   { key: "salesVolumeCost", label: "Себест объёма", group: "sales" },
-  { key: "vat", label: "НДС, %", group: "sales" },
-  { key: "outputUnitCost", label: "Себест, р/ед — производство", group: "output" },
-  { key: "outputPieces", label: "Объём производства, шт", group: "output" },
-  { key: "outputVolumeCost", label: "Себест объёма производства", group: "output" },
-  { key: "transfer", label: "Перемещение на РЦ, шт", group: "output" },
-  { key: "staffMeals", label: "Питание сотрудников, шт", group: "output" },
-  { key: "samples", label: "Образцы для клиентов, шт", group: "output" },
-  { key: "returns", label: "Возвраты клиентов, шт", group: "output" },
-  { key: "writeOff", label: "Списание, шт", group: "output" },
-  {
-    key: "productionEnd",
-    label: "Остаток на конец на производстве, шт",
-    group: "output",
-  },
-  { key: "distributionEnd", label: "Остаток на конец на РЦ, шт", group: "output" },
+  { key: "vat", label: "НДС", group: "sales" },
+  { key: "outputUnitCost", label: "Себест произв", group: "output" },
+  { key: "outputPieces", label: "Объём произв", group: "output" },
+  { key: "outputVolumeCost", label: "Себест объёма произв", group: "output" },
+  { key: "transfer", label: "Перемещение на РЦ", group: "output" },
+  { key: "staffMeals", label: "Питание сотрудников", group: "output" },
+  { key: "samples", label: "Образцы для клиентов", group: "output" },
+  { key: "returns", label: "Возвраты клиентов", group: "output" },
+  { key: "writeOff", label: "Списание", group: "output" },
+  { key: "closing", label: "Остаток на конец", group: "output" },
 ];
 
 const SALES_SPAN = COLUMNS.filter((column) => column.group === "sales").length;
 const OUTPUT_SPAN = COLUMNS.length - SALES_SPAN;
+const LAST_SALES_KEY = COLUMNS.filter((column) => column.group === "sales").at(-1)?.key;
 
 const INPUTS: Partial<
   Record<ColumnKey, { field: keyof SalesFactInputs; kind: "price" | "pieces" }>
 > = {
-  priceWithVat: { field: "priceWithVatKopecks", kind: "price" },
+  price: { field: "priceWithVatKopecks", kind: "price" },
   salesPieces: { field: "salesPieces", kind: "pieces" },
   outputPieces: { field: "outputPieces", kind: "pieces" },
   transfer: { field: "transferPieces", kind: "pieces" },
@@ -159,6 +144,12 @@ const INPUTS: Partial<
   returns: { field: "returnsPieces", kind: "pieces" },
   writeOff: { field: "writeOffPieces", kind: "pieces" },
 };
+
+function sectionRightClass(column: ColumnKey): string {
+  return column === LAST_SALES_KEY
+    ? "border-r-[1.5px] border-r-muted"
+    : "border-r border-r-line";
+}
 
 export function SalesFactTable({
   days,
@@ -186,19 +177,19 @@ export function SalesFactTable({
           <tr>
             <th
               colSpan={2}
-              className="sticky left-0 z-40 border-r border-b border-line bg-paper"
+              className="sticky left-0 z-40 border-b border-b-line border-r-[1.5px] border-r-muted bg-paper"
             />
             <th
               colSpan={SALES_SPAN}
               scope="colgroup"
-              className="border-r border-b border-line bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
+              className="border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
             >
               {keepWithNext("Фактические показатели продаж за дату")}
             </th>
             <th
               colSpan={OUTPUT_SPAN}
               scope="colgroup"
-              className="border-b border-line bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
+              className="border-b border-b-line bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
             >
               {keepWithNext("Фактические показатели производства за дату")}
             </th>
@@ -206,13 +197,13 @@ export function SalesFactTable({
           <tr>
             <th
               scope="col"
-              className="sticky left-0 z-40 w-10 max-w-10 border-r border-b border-line bg-paper p-0"
+              className="sticky left-0 z-40 w-10 max-w-10 border-r border-r-line border-b border-b-line bg-paper p-0"
             >
               <span className="sr-only">Дата</span>
             </th>
             <th
               scope="col"
-              className="sticky left-10 z-40 w-px max-w-max whitespace-nowrap border-r border-b border-line bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-muted"
+              className="sticky left-10 z-40 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-muted"
             >
               Товар
             </th>
@@ -220,86 +211,103 @@ export function SalesFactTable({
               <th
                 key={column.key}
                 scope="col"
-                className="w-px whitespace-normal border-r border-b border-line bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0"
+                className={`w-px whitespace-normal border-b border-b-line ${sectionRightClass(column.key)} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
               >
                 <ColumnLabel label={column.label} />
               </th>
             ))}
           </tr>
         </thead>
-        {days.map((day) => (
-          <tbody key={day.occurredOn}>
-            {day.rows.map((row, index) => (
-              <tr key={`${day.occurredOn}:${row.productId}`}>
-                {index === 0 ? (
+        {days.map((day, dayIndex) => {
+          const dayBreak = days.length > 1 && dayIndex < days.length - 1;
+          return (
+            <tbody key={day.occurredOn}>
+              {day.rows.map((row, index) => (
+                <tr key={`${day.occurredOn}:${row.productId}`}>
+                  {index === 0 ? (
+                    <th
+                      scope="rowgroup"
+                      rowSpan={day.rows.length + 1}
+                      className={`sticky left-0 z-10 h-px w-10 max-w-10 border-r border-r-line bg-sheet p-0 align-middle font-normal ${
+                        dayBreak
+                          ? "border-b-[3px] border-b-muted"
+                          : "border-b border-b-line"
+                      }`}
+                    >
+                      <DayLabel
+                        occurredOn={day.occurredOn}
+                        showArrows={showDayArrows}
+                        onDay={onDay}
+                      />
+                    </th>
+                  ) : null}
                   <th
-                    scope="rowgroup"
-                    rowSpan={day.rows.length + 1}
-                    className="sticky left-0 z-10 h-px w-10 max-w-10 border-r border-b border-line bg-sheet p-0 align-middle font-normal"
+                    scope="row"
+                    className="sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle font-normal"
                   >
-                    <DayLabel
-                      occurredOn={day.occurredOn}
-                      showArrows={showDayArrows}
-                      onDay={onDay}
-                    />
+                    <ProductName row={row} />
                   </th>
-                ) : null}
+                  {COLUMNS.map((column) => {
+                    const canEdit =
+                      Boolean(INPUTS[column.key]) && editable && !row.deleted;
+                    const highlightCell = canEdit && column.key !== "price";
+                    return (
+                      <td
+                        key={column.key}
+                        className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass(column.key)} ${
+                          highlightCell ? editableCellClassName : ""
+                        }`}
+                        onClick={(event) => {
+                          if (!canEdit) {
+                            return;
+                          }
+                          const field = event.currentTarget.querySelector("input");
+                          if (
+                            field instanceof HTMLInputElement &&
+                            document.activeElement !== field
+                          ) {
+                            field.focus();
+                          }
+                        }}
+                      >
+                        <RowCell
+                          column={column.key}
+                          row={row}
+                          editable={editable && !row.deleted}
+                          onCommit={(inputs) =>
+                            onCell(day.occurredOn, row.productId, inputs)
+                          }
+                        />
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+              <tr>
                 <th
                   scope="row"
-                  className="sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-r border-b border-line bg-sheet px-3 py-2 text-left align-middle font-normal"
+                  className={`sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-t-[1.5px] border-t-muted border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink ${
+                    dayBreak ? "border-b-[3px] border-b-muted" : "border-b border-b-line"
+                  }`}
                 >
-                  <ProductName row={row} />
+                  Всего
                 </th>
-                {COLUMNS.map((column) => {
-                  const canEdit = Boolean(INPUTS[column.key]) && editable && !row.deleted;
-                  return (
-                    <td
-                      key={column.key}
-                      className={`w-px border-r border-b border-line px-1.5 py-2 text-right align-middle last:border-r-0 ${canEdit ? editableCellClassName : ""}`}
-                      onClick={(event) => {
-                        if (!canEdit) {
-                          return;
-                        }
-                        const field = event.currentTarget.querySelector("input");
-                        if (
-                          field instanceof HTMLInputElement &&
-                          document.activeElement !== field
-                        ) {
-                          field.focus();
-                        }
-                      }}
-                    >
-                      <RowCell
-                        column={column.key}
-                        row={row}
-                        editable={editable && !row.deleted}
-                        onCommit={(inputs) =>
-                          onCell(day.occurredOn, row.productId, inputs)
-                        }
-                      />
-                    </td>
-                  );
-                })}
+                {COLUMNS.map((column) => (
+                  <td
+                    key={column.key}
+                    className={`w-px border-t-[1.5px] border-t-muted bg-paper px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass(column.key)} ${
+                      dayBreak
+                        ? "border-b-[3px] border-b-muted"
+                        : "border-b border-b-line"
+                    }`}
+                  >
+                    <TotalCell column={column.key} totals={day.totals} />
+                  </td>
+                ))}
               </tr>
-            ))}
-            <tr>
-              <th
-                scope="row"
-                className="sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-r border-b border-line bg-paper px-3 py-2 text-left align-middle font-normal text-ink"
-              >
-                Всего
-              </th>
-              {COLUMNS.map((column) => (
-                <td
-                  key={column.key}
-                  className="w-px border-r border-b border-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0"
-                >
-                  <TotalCell column={column.key} totals={day.totals} />
-                </td>
-              ))}
-            </tr>
-          </tbody>
-        ))}
+            </tbody>
+          );
+        })}
       </table>
     </div>
   );
@@ -392,6 +400,37 @@ function RowCell({
   editable: boolean;
   onCommit: (inputs: SalesFactInputs) => SalesFactRejection | null;
 }) {
+  if (column === "price") {
+    return (
+      <StackedPair
+        topHighlighted={editable}
+        topLabel="с НДС"
+        bottomLabel="без НДС"
+        top={
+          <GridNumber
+            label={`Цена с НДС, ${row.name}`}
+            value={factPriceDraft(row.inputs.priceWithVatKopecks)}
+            disabled={!editable}
+            inputMode="decimal"
+            unit="₽"
+            invalidMessage={SALES_FACT_ERROR.price}
+            parse={parseFactPrice}
+            onCommit={(next) => onCommit({ ...row.inputs, priceWithVatKopecks: next })}
+          />
+        }
+        bottom={
+          row.priceExVatTenThousandths === null ? (
+            <Empty />
+          ) : (
+            <span className="whitespace-nowrap">
+              {formatPriceExVat(row.priceExVatTenThousandths)}
+            </span>
+          )
+        }
+      />
+    );
+  }
+
   const input = INPUTS[column];
   if (input) {
     const value = row.inputs[input.field];
@@ -401,6 +440,7 @@ function RowCell({
         value={input.kind === "price" ? factPriceDraft(value) : factPiecesDraft(value)}
         disabled={!editable}
         inputMode={input.kind === "price" ? "decimal" : "numeric"}
+        unit={input.kind === "pieces" ? "шт" : undefined}
         invalidMessage={
           input.kind === "price" ? SALES_FACT_ERROR.price : SALES_FACT_ERROR.pieces
         }
@@ -411,52 +451,53 @@ function RowCell({
   }
 
   switch (column) {
-    case "productionStart":
-      return <Pieces value={row.productionStart} />;
-    case "distributionStart":
-      return <Pieces value={row.distributionStart} />;
-    case "productionEnd":
-      return <Pieces value={row.productionEnd} />;
-    case "distributionEnd":
-      return <Pieces value={row.distributionEnd} />;
+    case "opening":
+      return (
+        <PlacePair
+          production={row.productionStart}
+          distribution={row.distributionStart}
+        />
+      );
+    case "closing":
+      return (
+        <PlacePair production={row.productionEnd} distribution={row.distributionEnd} />
+      );
     case "salesUnitCost":
     case "outputUnitCost":
       return row.unitCost ? (
-        <CostAmount kopecks={row.unitCost.exVatKopecks} />
+        <VatPair
+          withVat={<MoneyAmount kopecks={row.unitCost.withVatKopecks} />}
+          exVat={<MoneyAmount kopecks={row.unitCost.exVatKopecks} />}
+        />
       ) : (
         <Muted>{keepWithNext("Себестоимость не считается")}</Muted>
       );
     case "salesVolumeCost":
-      return <CostAmountOrEmpty kopecks={row.salesVolumeCostExVatKopecks} />;
+      return (
+        <VatMoneyOrEmpty
+          withVat={row.salesVolumeCostWithVatKopecks}
+          exVat={row.salesVolumeCostExVatKopecks}
+        />
+      );
     case "outputVolumeCost":
-      return <CostAmountOrEmpty kopecks={row.outputVolumeCostExVatKopecks} />;
-    case "priceExVat":
-      return row.priceExVatTenThousandths === null ? (
-        <Empty />
-      ) : (
-        <span className="whitespace-nowrap">
-          {formatPriceExVat(row.priceExVatTenThousandths)}
-        </span>
+      return (
+        <VatMoneyOrEmpty
+          withVat={row.outputVolumeCostWithVatKopecks}
+          exVat={row.outputVolumeCostExVatKopecks}
+        />
       );
-    case "revenueWithVat":
-      return row.revenueWithVatKopecks === null ? (
-        <Empty />
-      ) : (
-        <span className="whitespace-nowrap">
-          {formatMoney(row.revenueWithVatKopecks)}
-        </span>
-      );
-    case "revenueExVat":
-      return row.revenueExVatKopecks === null ? (
-        <Empty />
-      ) : (
-        <span className="whitespace-nowrap">{formatMoney(row.revenueExVatKopecks)}</span>
+    case "revenue":
+      return (
+        <VatMoneyOrEmpty
+          withVat={row.revenueWithVatKopecks}
+          exVat={row.revenueExVatKopecks}
+        />
       );
     case "contribution":
       return row.contributionKopecks === null ? (
         <Empty />
       ) : (
-        <span className="whitespace-nowrap">{formatMoney(row.contributionKopecks)}</span>
+        <MoneyAmount kopecks={row.contributionKopecks} />
       );
     case "profitability":
       return row.profitabilityHundredths === null ? (
@@ -479,14 +520,20 @@ function RowCell({
 
 function TotalCell({ column, totals }: { column: ColumnKey; totals: SalesFactTotals }) {
   switch (column) {
-    case "productionStart":
-      return <Pieces value={totals.productionStart} />;
-    case "distributionStart":
-      return <Pieces value={totals.distributionStart} />;
-    case "productionEnd":
-      return <Pieces value={totals.productionEnd} />;
-    case "distributionEnd":
-      return <Pieces value={totals.distributionEnd} />;
+    case "opening":
+      return (
+        <PlacePair
+          production={totals.productionStart}
+          distribution={totals.distributionStart}
+        />
+      );
+    case "closing":
+      return (
+        <PlacePair
+          production={totals.productionEnd}
+          distribution={totals.distributionEnd}
+        />
+      );
     case "salesPieces":
       return <Pieces value={totals.salesPieces} />;
     case "outputPieces":
@@ -501,35 +548,19 @@ function TotalCell({ column, totals }: { column: ColumnKey; totals: SalesFactTot
       return <Pieces value={totals.returnsPieces} />;
     case "writeOff":
       return <Pieces value={totals.writeOffPieces} />;
-    case "priceWithVat":
-      return totals.priceWithVatKopecks === null ? (
-        <Empty />
-      ) : (
-        <span className="whitespace-nowrap">
-          {formatMoney(totals.priceWithVatKopecks)}
-        </span>
+    case "price":
+      return (
+        <VatMoneyOrEmpty
+          withVat={totals.priceWithVatKopecks}
+          exVat={totals.priceExVatKopecks}
+        />
       );
-    case "priceExVat":
-      return totals.priceExVatKopecks === null ? (
-        <Empty />
-      ) : (
-        <span className="whitespace-nowrap">{formatMoney(totals.priceExVatKopecks)}</span>
-      );
-    case "revenueWithVat":
-      return totals.revenueWithVatKopecks === null ? (
-        <Empty />
-      ) : (
-        <span className="whitespace-nowrap">
-          {formatMoney(totals.revenueWithVatKopecks)}
-        </span>
-      );
-    case "revenueExVat":
-      return totals.revenueExVatKopecks === null ? (
-        <Empty />
-      ) : (
-        <span className="whitespace-nowrap">
-          {formatMoney(totals.revenueExVatKopecks)}
-        </span>
+    case "revenue":
+      return (
+        <VatMoneyOrEmpty
+          withVat={totals.revenueWithVatKopecks}
+          exVat={totals.revenueExVatKopecks}
+        />
       );
     case "contribution":
       return !totals.salesCostComplete || !totals.revenueComplete ? (
@@ -537,14 +568,13 @@ function TotalCell({ column, totals }: { column: ColumnKey; totals: SalesFactTot
       ) : totals.contributionKopecks === null ? (
         <Empty />
       ) : (
-        <span className="whitespace-nowrap">
-          {formatMoney(totals.contributionKopecks)}
-        </span>
+        <MoneyAmount kopecks={totals.contributionKopecks} />
       );
     case "salesUnitCost":
       return (
         <AverageCost
           complete={totals.salesCostComplete}
+          withVat={totals.salesUnitCostWithVatKopecks}
           exVat={totals.salesUnitCostExVatKopecks}
         />
       );
@@ -552,6 +582,7 @@ function TotalCell({ column, totals }: { column: ColumnKey; totals: SalesFactTot
       return (
         <AverageCost
           complete={totals.outputCostComplete}
+          withVat={totals.outputUnitCostWithVatKopecks}
           exVat={totals.outputUnitCostExVatKopecks}
         />
       );
@@ -559,6 +590,7 @@ function TotalCell({ column, totals }: { column: ColumnKey; totals: SalesFactTot
       return (
         <VolumeTotal
           complete={totals.salesCostComplete}
+          withVat={totals.salesVolumeCostWithVatKopecks}
           exVat={totals.salesVolumeCostExVatKopecks}
         />
       );
@@ -566,6 +598,7 @@ function TotalCell({ column, totals }: { column: ColumnKey; totals: SalesFactTot
       return (
         <VolumeTotal
           complete={totals.outputCostComplete}
+          withVat={totals.outputVolumeCostWithVatKopecks}
           exVat={totals.outputVolumeCostExVatKopecks}
         />
       );
@@ -590,23 +623,36 @@ function TotalCell({ column, totals }: { column: ColumnKey; totals: SalesFactTot
   }
 }
 
-function AverageCost({ complete, exVat }: { complete: boolean; exVat: number | null }) {
+function AverageCost({
+  complete,
+  withVat,
+  exVat,
+}: {
+  complete: boolean;
+  withVat: number | null;
+  exVat: number | null;
+}) {
   if (!complete) {
     return <Muted>{keepWithNext("не по всем товарам")}</Muted>;
   }
-  if (exVat === null) {
-    return <Empty />;
-  }
 
-  return <CostAmount kopecks={exVat} />;
+  return <VatMoneyOrEmpty withVat={withVat} exVat={exVat} />;
 }
 
-function VolumeTotal({ complete, exVat }: { complete: boolean; exVat: number | null }) {
+function VolumeTotal({
+  complete,
+  withVat,
+  exVat,
+}: {
+  complete: boolean;
+  withVat: number | null;
+  exVat: number | null;
+}) {
   if (!complete) {
     return <Muted>{keepWithNext("не по всем товарам")}</Muted>;
   }
 
-  return <CostAmountOrEmpty kopecks={exVat} />;
+  return <VatMoneyOrEmpty withVat={withVat} exVat={exVat} />;
 }
 
 function Pieces({ value }: { value: number | null }) {
@@ -614,19 +660,98 @@ function Pieces({ value }: { value: number | null }) {
     return <Empty />;
   }
 
-  return <span className="whitespace-nowrap">{formatSignedPieces(value)}</span>;
+  return <span className="whitespace-nowrap">{formatSignedPieces(value)} шт</span>;
 }
 
-function CostAmount({ kopecks }: { kopecks: number }) {
+function PlacePair({
+  production,
+  distribution,
+}: {
+  production: number | null;
+  distribution: number | null;
+}) {
+  return (
+    <StackedPair
+      topLabel="на произв."
+      bottomLabel="на РЦ"
+      top={<Pieces value={production} />}
+      bottom={<Pieces value={distribution} />}
+    />
+  );
+}
+
+function MoneyAmount({ kopecks }: { kopecks: number }) {
   return <span className="whitespace-nowrap">{formatMoney(kopecks)}</span>;
 }
 
-function CostAmountOrEmpty({ kopecks }: { kopecks: number | null }) {
-  if (kopecks === null) {
+function VatMoneyOrEmpty({
+  withVat,
+  exVat,
+}: {
+  withVat: number | null;
+  exVat: number | null;
+}) {
+  if (withVat === null && exVat === null) {
     return <Empty />;
   }
 
-  return <CostAmount kopecks={kopecks} />;
+  return (
+    <VatPair
+      withVat={withVat === null ? <Empty /> : <MoneyAmount kopecks={withVat} />}
+      exVat={exVat === null ? <Empty /> : <MoneyAmount kopecks={exVat} />}
+    />
+  );
+}
+
+function VatPair({
+  withVat,
+  exVat,
+  withVatHighlighted = false,
+}: {
+  withVat: ReactNode;
+  exVat: ReactNode;
+  withVatHighlighted?: boolean;
+}) {
+  return (
+    <StackedPair
+      topLabel="с НДС"
+      bottomLabel="без НДС"
+      topHighlighted={withVatHighlighted}
+      top={withVat}
+      bottom={exVat}
+    />
+  );
+}
+
+function StackedPair({
+  topLabel,
+  bottomLabel,
+  top,
+  bottom,
+  topHighlighted = false,
+}: {
+  topLabel: string;
+  bottomLabel: string;
+  top: ReactNode;
+  bottom: ReactNode;
+  topHighlighted?: boolean;
+}) {
+  return (
+    <div className="-mx-1.5 -my-2 flex min-w-[4.5rem] flex-col">
+      <div
+        className={`flex flex-col items-end border-b border-line px-1.5 py-1 ${
+          topHighlighted ? editableCellClassName : ""
+        }`}
+      >
+        <span className="text-[0.5rem] leading-none text-muted">{topLabel}</span>
+        {top}
+      </div>
+      <div className="flex flex-col items-end px-1.5 py-1">
+        <span className="text-[0.5rem] leading-none text-muted">{bottomLabel}</span>
+        {bottom}
+      </div>
+    </div>
+  );
 }
 
 function Empty() {
@@ -637,11 +762,32 @@ function Muted({ children }: { children: string }) {
   return <span className="text-sm text-muted">{children}</span>;
 }
 
+/** Оставляет цифры; для цены — ещё одну дробную запятую. Точку приводит к запятой. */
+function sanitizeFactDraft(raw: string, mode: "decimal" | "numeric"): string {
+  let result = "";
+  let hasComma = false;
+
+  for (const char of raw) {
+    if (char >= "0" && char <= "9") {
+      result += char;
+      continue;
+    }
+
+    if (mode === "decimal" && (char === "," || char === ".") && !hasComma) {
+      result += ",";
+      hasComma = true;
+    }
+  }
+
+  return result;
+}
+
 function GridNumber({
   label,
   value,
   disabled,
   inputMode,
+  unit,
   invalidMessage,
   parse,
   onCommit,
@@ -650,6 +796,7 @@ function GridNumber({
   value: string;
   disabled: boolean;
   inputMode: "decimal" | "numeric";
+  unit?: string;
   invalidMessage: string;
   parse: (raw: string) => number | null;
   onCommit: (value: number) => SalesFactRejection | null;
@@ -683,7 +830,10 @@ function GridNumber({
     return (
       <>
         <span className="sr-only">{label}</span>
-        <span className="whitespace-nowrap">{shown}</span>
+        <span className="whitespace-nowrap">
+          {shown}
+          {unit ? ` ${unit}` : ""}
+        </span>
       </>
     );
   }
@@ -693,26 +843,29 @@ function GridNumber({
       <label htmlFor={inputId} className="sr-only">
         {label}
       </label>
-      <input
-        id={inputId}
-        value={shown}
-        inputMode={inputMode}
-        autoComplete="off"
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? errorId : undefined}
-        onFocus={() => {
-          setDraft(value);
-          setError(null);
-        }}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={(event) => commit(event.currentTarget.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.currentTarget.blur();
-          }
-        }}
-        className={gridFieldClassName}
-      />
+      <div className="flex items-baseline justify-end gap-1">
+        <input
+          id={inputId}
+          value={shown}
+          inputMode={inputMode}
+          autoComplete="off"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? errorId : undefined}
+          onFocus={() => {
+            setDraft(sanitizeFactDraft(value, inputMode));
+            setError(null);
+          }}
+          onChange={(event) => setDraft(sanitizeFactDraft(event.target.value, inputMode))}
+          onBlur={(event) => commit(event.currentTarget.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.currentTarget.blur();
+            }
+          }}
+          className={gridFieldClassName}
+        />
+        {unit ? <span className="shrink-0 text-sm text-ink">{unit}</span> : null}
+      </div>
       {error ? (
         <p id={errorId} className="mt-1 text-sm text-ink">
           {error}

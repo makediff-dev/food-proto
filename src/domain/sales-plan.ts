@@ -219,8 +219,9 @@ function multiplyKopecks(unitKopecks: number, volume: number): number | null {
 }
 
 /**
- * Цена без НДС для экрана, 4 знака после запятой.
- * `Svod!G31 = F31 / (100 + N31) * 100`. 99,14 ₽ и НДС 10% → 90,1273 ₽.
+ * Цена без НДС: десятитысячные доли рубля (внутри расчёта).
+ * На экране — до копеек. `Svod!G31 = F31 / (100 + N31) * 100`.
+ * 99,14 ₽ и НДС 10% → 90,1273 ₽ внутри, на экране 90,13 ₽.
  */
 export function priceExVatTenThousandths(
   priceWithVatKopecks: number,

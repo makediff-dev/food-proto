@@ -819,11 +819,11 @@ export function updateDeliveryLine(
     deliveries: document.deliveries.map((item) =>
       item.id === deliveryId
         ? {
-          ...item,
-          lines: item.lines.map((entry) =>
-            entry.id === lineId ? { ...entry, quantity, priceWithVatKopecks } : entry,
-          ),
-        }
+            ...item,
+            lines: item.lines.map((entry) =>
+              entry.id === lineId ? { ...entry, quantity, priceWithVatKopecks } : entry,
+            ),
+          }
         : item,
     ),
   };
@@ -1080,11 +1080,11 @@ export function updateWriteOffLine(
     writeOffs: document.writeOffs.map((item) =>
       item.id === writeOffId
         ? {
-          ...item,
-          lines: item.lines.map((entry) =>
-            entry.id === lineId ? { ...entry, quantity } : entry,
-          ),
-        }
+            ...item,
+            lines: item.lines.map((entry) =>
+              entry.id === lineId ? { ...entry, quantity } : entry,
+            ),
+          }
         : item,
     ),
   };

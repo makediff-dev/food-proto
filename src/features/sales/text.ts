@@ -77,13 +77,13 @@ export function formatPerDay(value: number): string {
   }).format(value);
 }
 
-/** 4 знака: десятитысячные доли рубля. */
+/** Десятитысячные доли рубля на экране — до копеек. */
 export function formatPriceExVat(tenThousandths: number): string {
   return new Intl.NumberFormat("ru-RU", {
     style: "currency",
     currency: "RUB",
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 4,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(tenThousandths / 10_000);
 }
 
