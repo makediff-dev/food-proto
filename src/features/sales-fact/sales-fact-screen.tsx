@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 import { isOccurredOn } from "@/domain/document";
 import {
@@ -36,6 +36,8 @@ import {
   IconChevronLeft,
   IconChevronRight,
   IconEye,
+  IconFullscreen,
+  IconFullscreenExit,
   IconTrash,
   IconUndo,
 } from "@/features/shell/icons";
@@ -126,6 +128,7 @@ function Workspace({
   const sales = useSalesFact();
   const router = useRouter();
   const monthFieldId = useId();
+  const [fullscreen, setFullscreen] = useState(false);
   const fact = readOnly
     ? salesFactById(sales.document, factId)
     : workingSalesFact(sales.document, month);
@@ -149,6 +152,28 @@ function Workspace({
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
   const nextDisabled = nextMonth > currentMonth;
+  const hasTable = products.length > 0;
+  const tableExpanded = fullscreen && hasTable;
+
+  useEffect(() => {
+    if (!tableExpanded) {
+      return;
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setFullscreen(false);
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [tableExpanded]);
 
   function open(next: { month?: string; day?: string; view?: SalesFactView }) {
     const targetMonth = next.month ?? month;
@@ -172,151 +197,196 @@ function Workspace({
   }
 
   return (
-    <PageFrame
-      title={SALES_FACT_SECTION_TITLE}
-      full
-      lede="Дневной факт продаж и выпуска: цена, объём и остатки на производстве и на РЦ."
-    >
-      <div className="flex flex-col gap-4">
-        <div className="border border-line bg-sheet">
-          <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-end">
-            <div className="flex shrink-0 items-end gap-2">
-              <div>
-                <label htmlFor={monthFieldId} className="text-sm text-muted">
-                  Месяц
-                </label>
-                <div className="mt-2 flex items-center gap-2">
-                  {readOnly ? null : (
-                    <MonthStep
-                      label="Предыдущий месяц"
-                      direction="previous"
-                      disabled={!salesFactMonthOpen(previousMonth, today)}
-                      onClick={() => open({ month: previousMonth })}
-                    />
-                  )}
-                  {readOnly ? (
-                    <p className="text-sm text-ink">{formatMonth(month)}</p>
-                  ) : (
-                    <input
-                      id={monthFieldId}
-                      type="month"
-                      min="2000-01"
-                      max={currentMonth}
-                      value={month}
-                      onChange={(event) => {
-                        const next = event.target.value;
-                        if (salesFactMonthOpen(next, today)) {
-                          open({ month: next });
-                        }
-                      }}
-                      className={`w-44 ${fieldClassName}`}
-                    />
-                  )}
-                  {readOnly ? null : (
-                    <MonthStep
-                      label="Следующий месяц"
-                      direction="next"
-                      disabled={nextDisabled}
-                      onClick={() => open({ month: nextMonth })}
-                    />
-                  )}
+    <>
+      <PageFrame
+        title={SALES_FACT_SECTION_TITLE}
+        full
+        lede="Дневной факт продаж и выпуска: цена, объём и остатки на производстве и на РЦ."
+      >
+        <div className="flex flex-col gap-4">
+          <div className="border border-line bg-sheet">
+            <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-end">
+              <div className="flex shrink-0 items-end gap-2">
+                <div>
+                  <label htmlFor={monthFieldId} className="text-sm text-muted">
+                    Месяц
+                  </label>
+                  <div className="mt-2 flex items-center gap-2">
+                    {readOnly ? null : (
+                      <MonthStep
+                        label="Предыдущий месяц"
+                        direction="previous"
+                        disabled={!salesFactMonthOpen(previousMonth, today)}
+                        onClick={() => open({ month: previousMonth })}
+                      />
+                    )}
+                    {readOnly ? (
+                      <p className="text-sm text-ink">{formatMonth(month)}</p>
+                    ) : (
+                      <input
+                        id={monthFieldId}
+                        type="month"
+                        min="2000-01"
+                        max={currentMonth}
+                        value={month}
+                        onChange={(event) => {
+                          const next = event.target.value;
+                          if (salesFactMonthOpen(next, today)) {
+                            open({ month: next });
+                          }
+                        }}
+                        className={`w-44 ${fieldClassName}`}
+                      />
+                    )}
+                    {readOnly ? null : (
+                      <MonthStep
+                        label="Следующий месяц"
+                        direction="next"
+                        disabled={nextDisabled}
+                        onClick={() => open({ month: nextMonth })}
+                      />
+                    )}
+                  </div>
                 </div>
+                {readOnly ? (
+                  <RestoreButton factId={factId} monthLabel={formatMonth(month)} />
+                ) : (
+                  <DeleteMonthButton
+                    factId={fact?.id ?? ""}
+                    monthLabel={formatMonth(month)}
+                    disabled={!sales.hydrated || !fact}
+                  />
+                )}
               </div>
-              {readOnly ? (
-                <RestoreButton factId={factId} monthLabel={formatMonth(month)} />
-              ) : (
-                <DeleteMonthButton
-                  factId={fact?.id ?? ""}
-                  monthLabel={formatMonth(month)}
-                  disabled={!sales.hydrated || !fact}
+              {products.length > 0 ? (
+                <Openings
+                  products={products.map((product) => ({
+                    id: product.id,
+                    name: product.name,
+                    deleted: product.deletedAt !== null,
+                    ...openingOf(fact, product.id),
+                  }))}
+                  editable={editable}
+                  onOpening={(productId, productionPieces, distributionPieces) =>
+                    sales.setOpening(
+                      month,
+                      productId,
+                      productionPieces,
+                      distributionPieces,
+                    )
+                  }
                 />
-              )}
-            </div>
-            {products.length > 0 ? (
-              <Openings
-                products={products.map((product) => ({
-                  id: product.id,
-                  name: product.name,
-                  deleted: product.deletedAt !== null,
-                  ...openingOf(fact, product.id),
-                }))}
-                editable={editable}
-                onOpening={(productId, productionPieces, distributionPieces) =>
-                  sales.setOpening(month, productId, productionPieces, distributionPieces)
-                }
-              />
-            ) : null}
-            <div className="flex shrink-0 flex-col gap-2 border-t border-line pt-4 sm:flex-row sm:items-center lg:ml-auto lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4">
-              <Link
-                href={salesFactHref({
-                  month,
-                  currentMonth,
-                  day: selectedDay,
-                  defaultDay: fallbackDay,
-                  view: "day",
-                  showDeleted: readOnly,
-                  factId: readOnly ? factId : undefined,
-                })}
-                aria-current={view === "day" ? "page" : undefined}
-                className={viewLinkClass(view === "day")}
-              >
-                <IconEye />
-                {formatSalesFactDay(selectedDay)}
-              </Link>
-              <Link
-                href={salesFactHref({
-                  month,
-                  currentMonth,
-                  day: selectedDay,
-                  defaultDay: fallbackDay,
-                  view: "all",
-                  showDeleted: readOnly,
-                  factId: readOnly ? factId : undefined,
-                })}
-                aria-current={view === "all" ? "page" : undefined}
-                className={viewLinkClass(view === "all")}
-              >
-                <IconEye />
-                Все даты
-              </Link>
-              <Link
-                href={salesFactHref({
-                  month: currentMonth,
-                  currentMonth,
-                  showDeleted: true,
-                })}
-                className={quietLinkClassName}
-              >
-                <IconUndo />
-                {readOnly ? "К удалённым" : "Удалённые"}
-                {readOnly || sales.deleted.length === 0 ? "" : ` ${sales.deleted.length}`}
-              </Link>
+              ) : null}
+              <div className="flex shrink-0 flex-col gap-2 border-t border-line pt-4 sm:flex-row sm:items-center lg:ml-auto lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4">
+                <Link
+                  href={salesFactHref({
+                    month,
+                    currentMonth,
+                    day: selectedDay,
+                    defaultDay: fallbackDay,
+                    view: "day",
+                    showDeleted: readOnly,
+                    factId: readOnly ? factId : undefined,
+                  })}
+                  aria-current={view === "day" ? "page" : undefined}
+                  className={viewLinkClass(view === "day")}
+                >
+                  <IconEye />
+                  {formatSalesFactDay(selectedDay)}
+                </Link>
+                <Link
+                  href={salesFactHref({
+                    month,
+                    currentMonth,
+                    day: selectedDay,
+                    defaultDay: fallbackDay,
+                    view: "all",
+                    showDeleted: readOnly,
+                    factId: readOnly ? factId : undefined,
+                  })}
+                  aria-current={view === "all" ? "page" : undefined}
+                  className={viewLinkClass(view === "all")}
+                >
+                  <IconEye />
+                  Все даты
+                </Link>
+                <Link
+                  href={salesFactHref({
+                    month: currentMonth,
+                    currentMonth,
+                    showDeleted: true,
+                  })}
+                  className={quietLinkClassName}
+                >
+                  <IconUndo />
+                  {readOnly ? "К удалённым" : "Удалённые"}
+                  {readOnly || sales.deleted.length === 0
+                    ? ""
+                    : ` ${sales.deleted.length}`}
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
 
-        <p className="text-sm leading-6 text-muted">
-          Себестоимость штуки пока из плановой калькуляции рецепта. Фактической
-          себестоимости ещё нет.
-        </p>
-
-        {products.length === 0 ? (
-          <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-            Сначала добавьте конечный товар. Факт продаж строится по товарам.
+          <p className="text-sm leading-6 text-muted">
+            Себестоимость штуки пока из плановой калькуляции рецепта. Фактической
+            себестоимости ещё нет.
           </p>
-        ) : (
-          <SalesFactTable
-            days={visible}
-            editable={editable}
-            showDayArrows={view === "day"}
-            onDay={(next) => open({ day: next })}
-            onCell={(occurredOn, productId, inputs) =>
-              sales.setCell(month, occurredOn, productId, inputs)
-            }
-          />
-        )}
-      </div>
-    </PageFrame>
+
+          {hasTable ? (
+            <div
+              className={tableExpanded ? "fixed inset-0 z-50 bg-paper" : undefined}
+              role={tableExpanded ? "dialog" : undefined}
+              aria-label={tableExpanded ? "Таблица на весь экран" : undefined}
+              aria-modal={tableExpanded ? true : undefined}
+            >
+              <SalesFactTable
+                days={visible}
+                editable={editable}
+                showDayArrows={view === "day"}
+                expanded={tableExpanded}
+                onDay={(next) => open({ day: next })}
+                onCell={(occurredOn, productId, inputs) =>
+                  sales.setCell(month, occurredOn, productId, inputs)
+                }
+              />
+            </div>
+          ) : (
+            <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
+              Сначала добавьте конечный товар. Факт продаж строится по товарам.
+            </p>
+          )}
+        </div>
+      </PageFrame>
+
+      {hasTable ? (
+        <FullscreenToggle
+          active={tableExpanded}
+          onToggle={() => setFullscreen((current) => !current)}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function FullscreenToggle({
+  active,
+  onToggle,
+}: {
+  active: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={active ? "Обычный режим" : "На весь экран"}
+      aria-pressed={active}
+      title={active ? "Обычный режим" : "На весь экран"}
+      onClick={onToggle}
+      className="fixed right-5 bottom-5 z-[60] inline-flex size-12 items-center justify-center rounded-full border border-line bg-sheet text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+    >
+      {active ? <IconFullscreenExit /> : <IconFullscreen />}
+    </button>
   );
 }
 

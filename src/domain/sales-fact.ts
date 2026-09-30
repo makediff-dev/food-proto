@@ -633,10 +633,7 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
     contributionKopecks,
     priceWithVatKopecks,
     priceExVatKopecks,
-    vatPercentHundredths: totalVatHundredths(
-      revenueWithVatKopecks,
-      revenueExVatKopecks,
-    ),
+    vatPercentHundredths: totalVatHundredths(revenueWithVatKopecks, revenueExVatKopecks),
     salesUnitCostWithVatKopecks,
     salesUnitCostExVatKopecks,
     outputUnitCostWithVatKopecks: averageKopecks(
@@ -649,10 +646,7 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
     ),
     profitabilityHundredths:
       salesCostComplete && revenueComplete
-        ? totalProfitabilityHundredths(
-            contributionKopecks,
-            salesVolumeCostExVatKopecks,
-          )
+        ? totalProfitabilityHundredths(contributionKopecks, salesVolumeCostExVatKopecks)
         : null,
   };
 }

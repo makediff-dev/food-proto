@@ -227,3 +227,19 @@ export function IconLamp() {
     </svg>
   );
 }
+
+export function IconFullscreen() {
+  return (
+    <Glyph>
+      <path d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4" />
+    </Glyph>
+  );
+}
+
+export function IconFullscreenExit() {
+  return (
+    <Glyph>
+      <path d="M7 3v4H3M17 7h-4V3M13 17v-4h4M3 13h4v4" />
+    </Glyph>
+  );
+}
