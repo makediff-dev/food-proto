@@ -19,7 +19,7 @@ export function MaterialsScreen({
         : "Рецептурная карта на партию готового продукта. Выход после обработки задаёт, сколько сырья для этого нужно.";
 
   return (
-    <PageFrame title={MATERIALS_SECTION_TITLE} lede={lede}>
+    <PageFrame title={MATERIALS_SECTION_TITLE} lede={lede} wide ledeFull>
       <MaterialBoard kind={kind} showDeleted={showDeleted} />
     </PageFrame>
   );

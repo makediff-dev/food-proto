@@ -251,10 +251,10 @@ function Workspace({
 function lede(phase: ReturnType<typeof planPhase>, days: number): string {
   const length = `В месяце ${daysPhrase(days)}.`;
   if (phase === "past") {
-    return `Месяц прошёл, план только для просмотра. Факт считается из дней раздела «Факт продаж». ${length}`;
+    return `Месяц прошёл, план только для просмотра. Факт считается из дней раздела «Факт. продажи и производство». ${length}`;
   }
 
-  return `План, факт и отклонение выбранного месяца. Факт считается из дней раздела «Факт продаж». ${length}`;
+  return `План, факт и отклонение выбранного месяца. Факт считается из дней раздела «Факт. продажи и производство». ${length}`;
 }
 
 function resolveMonth(month: string, today: Date): string {

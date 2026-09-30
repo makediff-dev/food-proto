@@ -5,6 +5,7 @@ export function PageFrame({
   lede,
   wide = false,
   full = false,
+  ledeFull = false,
   intro,
   aside,
   children,
@@ -13,6 +14,8 @@ export function PageFrame({
   lede: string;
   wide?: boolean;
   full?: boolean;
+  /** Фраза под заголовком на всю ширину колонки, без узкого max-width. */
+  ledeFull?: boolean;
   /** Под заголовком и фразой, в той же колонке слева. */
   intro?: ReactNode;
   /** Справа, параллельно заголовку, фразе и intro. */
@@ -26,7 +29,7 @@ export function PageFrame({
       </h1>
       <p
         className={
-          full
+          full || ledeFull
             ? "mt-2 w-full max-w-none text-sm leading-6 text-muted"
             : "mt-2 max-w-2xl text-sm leading-6 text-muted"
         }

@@ -6,17 +6,21 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { useDocumentStore } from "@/data/document-store";
 import { MATERIALS_SECTION_TITLE } from "@/features/materials/paths";
+import { SALES_FACT_SECTION_TITLE } from "@/features/sales-fact/paths";
 import { IconMenu, IconUndo } from "@/features/shell/icons";
 
 const SECTIONS = [
   { href: "/", label: "Сводка" },
-  { href: "/sales-fact", label: "Факт продаж" },
+  { href: "/sales-fact", label: SALES_FACT_SECTION_TITLE },
   { href: "/production", label: "Производство" },
   { href: "/materials", label: MATERIALS_SECTION_TITLE },
   { href: "/places", label: "Цеха и склады" },
   { href: "/stock", label: "Складской учет" },
   { href: "/expenses", label: "Операционные расходы" },
 ] as const;
+
+const QUESTIONS_HREF = "/questions";
+const QUESTIONS_LABEL = "Вопросы";
 
 function sectionIsCurrent(pathname: string, href: string): boolean {
   if (href === "/") {
@@ -29,7 +33,10 @@ function sectionIsCurrent(pathname: string, href: string): boolean {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const current = SECTIONS.find((section) => sectionIsCurrent(pathname, section.href));
+  const questionsCurrent = sectionIsCurrent(pathname, QUESTIONS_HREF);
+  const current = questionsCurrent
+    ? { href: QUESTIONS_HREF, label: QUESTIONS_LABEL }
+    : SECTIONS.find((section) => sectionIsCurrent(pathname, section.href));
 
   useEffect(() => {
     if (!menuOpen) {
@@ -110,7 +117,27 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </nav>
 
-        <MockReset />
+        <div className="border-t border-sidebar-line">
+          <MockReset />
+          <Link
+            href={QUESTIONS_HREF}
+            aria-current={questionsCurrent ? "page" : undefined}
+            onClick={() => setMenuOpen(false)}
+            className={`relative mx-2 mb-3 block px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+              questionsCurrent
+                ? "bg-sidebar-active text-white"
+                : "text-sidebar-muted hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            {questionsCurrent ? (
+              <span
+                className="absolute inset-y-2 left-0 w-0.5 bg-mark"
+                aria-hidden="true"
+              />
+            ) : null}
+            {QUESTIONS_LABEL}
+          </Link>
+        </div>
       </aside>
 
       <div className="min-w-0 lg:pl-64">
@@ -149,7 +176,7 @@ function MockReset() {
   }
 
   return (
-    <div className="border-t border-sidebar-line px-4 py-3">
+    <div className="px-4 py-3">
       <p
         className="text-xs leading-5 text-sidebar-muted"
         role={storageError ? "alert" : undefined}

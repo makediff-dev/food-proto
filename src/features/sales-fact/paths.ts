@@ -1,4 +1,4 @@
-export const SALES_FACT_SECTION_TITLE = "Факт продаж";
+export const SALES_FACT_SECTION_TITLE = "Факт. продажи и производство";
 
 export type SalesFactView = "day" | "all";
 

@@ -19,12 +19,19 @@ import {
   gramsFromPieces,
   piecesFromGrams,
 } from "@/domain/units";
+import {
+  Empty,
+  GridNumber,
+  MoneyAmount,
+  VatPair,
+  gridSelectClassName,
+  editableCellClassName,
+} from "@/features/materials/catalog-cells";
 import { formatMoney, formatVatPair } from "@/features/materials/money";
 import {
   FIELD_ERROR,
   componentOptionValue,
   fieldClassName,
-  panelPad,
   parseComponentOption,
   parseGrams,
   parsePieceCount,
@@ -34,57 +41,59 @@ import {
 import { useMaterials } from "@/features/materials/use-materials";
 import { IconPlus, IconTrash, IconUndo } from "@/features/shell/icons";
 
-export function RecipeEditor({ derivative }: { derivative: Derivative }) {
+export function RecipeEditor({
+  derivative,
+  embedded = false,
+  disabled = false,
+}: {
+  derivative: Derivative;
+  embedded?: boolean;
+  disabled?: boolean;
+}) {
   const catalog = useMaterials();
   const recipe = catalog.activeRecipeFor(derivative.id);
   const deleted = catalog.deletedRecipesFor(derivative.id);
   const cost = unitCost(catalog.document, derivative.id);
+  const canEdit = catalog.hydrated && !disabled;
 
-  return (
-    <section className="mt-3 border border-line bg-sheet">
-      <div
-        className={`flex items-center justify-between gap-3 border-b border-line ${panelPad}`}
-      >
-        <div>
-          <h2 className="text-base font-semibold text-ink">Рецептурная карта</h2>
-          <p className="mt-1 text-sm text-muted">
-            {derivative.isFinalProduct ? "Себестоимость 1 шт" : "Себестоимость 1 кг"}
-          </p>
-          {cost ? (
-            <div className="mt-1">
-              <p className="font-figure text-xl leading-tight tracking-tight text-ink">
-                {formatMoney(cost.withVatKopecks)} с НДС
-              </p>
-              <p className="font-figure text-xl leading-tight tracking-tight text-ink">
-                {formatMoney(cost.exVatKopecks)} без НДС
-              </p>
-            </div>
-          ) : (
-            <p className="font-figure text-2xl leading-tight tracking-tight text-ink">
-              {recipe ? "Не считается" : "Нет карты"}
+  const body = (
+    <>
+      {embedded ? null : (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-ink">Рецептурная карта</h2>
+            <p className="mt-1 text-sm text-muted">
+              {derivative.isFinalProduct ? "Себестоимость 1 шт" : "Себестоимость 1 кг"}
             </p>
-          )}
+            {cost ? (
+              <div className="mt-1 text-sm leading-5 text-ink">
+                <p>{formatMoney(cost.withVatKopecks)} с НДС</p>
+                <p>{formatMoney(cost.exVatKopecks)} без НДС</p>
+              </div>
+            ) : (
+              <p className="mt-1 text-sm text-ink">{recipe ? "Не считается" : "Нет карты"}</p>
+            )}
+          </div>
+          {recipe && canEdit ? (
+            <button
+              type="button"
+              aria-label="Удалить рецептурную карту"
+              title="Удалить"
+              onClick={() => {
+                const confirmed = window.confirm(
+                  "Удалить рецептурную карту? Состав пропадёт из работы. Вернуть карту можно среди удалённых.",
+                );
+                if (confirmed) {
+                  catalog.removeRecipe(recipe.id);
+                }
+              }}
+              className="inline-flex size-8 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              <IconTrash />
+            </button>
+          ) : null}
         </div>
-        {recipe ? (
-          <button
-            type="button"
-            aria-label="Удалить рецептурную карту"
-            title="Удалить"
-            disabled={!catalog.hydrated}
-            onClick={() => {
-              const confirmed = window.confirm(
-                "Удалить рецептурную карту? Состав пропадёт из работы. Вернуть карту можно среди удалённых.",
-              );
-              if (confirmed) {
-                catalog.removeRecipe(recipe.id);
-              }
-            }}
-            className="inline-flex size-11 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
-          >
-            <IconTrash />
-          </button>
-        ) : null}
-      </div>
+      )}
 
       {recipe && !derivative.isFinalProduct && recipe.yieldPercent !== null ? (
         <BatchMeter
@@ -96,17 +105,33 @@ export function RecipeEditor({ derivative }: { derivative: Derivative }) {
       ) : null}
 
       {recipe ? (
-        <ActiveRecipe derivative={derivative} recipe={recipe} />
+        <ActiveRecipe derivative={derivative} recipe={recipe} canEdit={canEdit} />
       ) : (
-        <CreateRecipe derivative={derivative} />
+        <CreateRecipe derivative={derivative} canEdit={canEdit} />
       )}
 
-      {deleted.length > 0 ? <DeletedRecipes recipes={deleted} /> : null}
+      {deleted.length > 0 ? <DeletedRecipes recipes={deleted} canEdit={canEdit} /> : null}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="flex flex-col gap-3">{body}</div>;
+  }
+
+  return (
+    <section className="mt-3 flex flex-col gap-3 border border-line bg-sheet px-3 py-3">
+      {body}
     </section>
   );
 }
 
-function CreateRecipe({ derivative }: { derivative: Derivative }) {
+function CreateRecipe({
+  derivative,
+  canEdit,
+}: {
+  derivative: Derivative;
+  canEdit: boolean;
+}) {
   const catalog = useMaterials();
   const yieldId = useId();
   const [yieldRaw, setYieldRaw] = useState("");
@@ -132,20 +157,20 @@ function CreateRecipe({ derivative }: { derivative: Derivative }) {
 
   return (
     <form
-      className={panelPad}
+      className="flex flex-col gap-2"
       onSubmit={(event) => {
         event.preventDefault();
         submit();
       }}
     >
-      <p className="text-sm leading-6 text-muted">
+      <p className="text-sm leading-5 text-muted">
         {derivative.isFinalProduct
           ? "Карты ещё нет. Состав задаётся на партию штук — базу можно сменить после создания."
           : "Карты ещё нет. Состав задаётся на партию готового продукта — базу и выход можно сменить после создания."}
       </p>
-      {derivative.isFinalProduct ? null : (
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div>
+      <div className="flex flex-wrap items-end gap-3">
+        {derivative.isFinalProduct ? null : (
+          <div className="w-40">
             <label htmlFor={yieldId} className="text-sm text-muted">
               Выход после обработки, %
             </label>
@@ -153,27 +178,27 @@ function CreateRecipe({ derivative }: { derivative: Derivative }) {
               id={yieldId}
               value={yieldRaw}
               inputMode="numeric"
-              disabled={!catalog.hydrated}
+              disabled={!canEdit}
               autoComplete="off"
               placeholder="80"
               onChange={(event) => {
                 setYieldRaw(event.target.value);
                 setError(null);
               }}
-              className={`mt-1.5 ${fieldClassName}`}
+              className={`mt-1 ${fieldClassName} h-9`}
             />
           </div>
-        </div>
-      )}
-      {error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
-      <button
-        type="submit"
-        disabled={!catalog.hydrated}
-        className={`mt-3 w-full sm:w-auto ${primaryButtonClassName}`}
-      >
-        <IconPlus />
-        Создать рецептурную карту
-      </button>
+        )}
+        <button
+          type="submit"
+          disabled={!canEdit}
+          className={`h-9 ${primaryButtonClassName}`}
+        >
+          <IconPlus />
+          Создать карту
+        </button>
+      </div>
+      {error ? <p className="text-sm text-ink">{error}</p> : null}
     </form>
   );
 }
@@ -181,9 +206,11 @@ function CreateRecipe({ derivative }: { derivative: Derivative }) {
 function ActiveRecipe({
   derivative,
   recipe,
+  canEdit,
 }: {
   derivative: Derivative;
   recipe: RecipeCard;
+  canEdit: boolean;
 }) {
   const per = derivative.isFinalProduct ? "1 шт" : "1 кг";
   const batchLabel = formatBatchLabel(
@@ -191,31 +218,67 @@ function ActiveRecipe({
     derivative.isFinalProduct,
     derivative.pieceWeightGrams,
   );
+  const showPieces = derivative.isFinalProduct;
 
   return (
-    <div>
-      <RecipeBatchFields derivative={derivative} recipe={recipe} />
-      <div className={`border-b border-line ${panelPad}`}>
-        <h3 className="text-sm font-semibold text-ink">Состав на {batchLabel}</h3>
-        {recipe.lines.length === 0 ? (
-          <p className="mt-2 text-sm text-muted">
-            В составе пока пусто. Добавьте сырьё или другую производную.
-          </p>
-        ) : (
-          <ul className="mt-2">
-            {recipe.lines.map((line) => (
-              <RecipeLineRow
-                key={line.id}
-                derivative={derivative}
+    <div className="flex flex-col gap-3">
+      <RecipeBatchFields derivative={derivative} recipe={recipe} canEdit={canEdit} />
+      <div className="overflow-auto border border-line">
+        <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
+          <caption className="sr-only">Состав на {batchLabel}</caption>
+          <thead>
+            <tr>
+              <th className="border-b border-b-line border-r border-r-line bg-paper px-2 py-1.5 text-left font-normal text-muted">
+                Компонент
+              </th>
+              <th className="border-b border-b-line border-r border-r-line bg-paper px-2 py-1.5 text-right font-normal text-muted">
+                Количество
+              </th>
+              {showPieces ? (
+                <th className="border-b border-b-line border-r border-r-line bg-paper px-2 py-1.5 text-right font-normal text-muted">
+                  Количество, шт
+                </th>
+              ) : null}
+              <th className="border-b border-b-line border-r border-r-line bg-paper px-2 py-1.5 text-right font-normal text-muted">
+                Вклад в {per}
+              </th>
+              <th className="border-b border-b-line bg-paper px-2 py-1.5 text-center font-normal text-muted">
+                <span className="sr-only">Убрать</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {recipe.lines.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={showPieces ? 5 : 4}
+                  className="border-b border-b-line px-2 py-2 text-sm text-muted"
+                >
+                  В составе пока пусто. Добавьте сырьё или другую производную.
+                </td>
+              </tr>
+            ) : (
+              recipe.lines.map((line) => (
+                <RecipeLineRow
+                  key={line.id}
+                  derivative={derivative}
+                  recipeId={recipe.id}
+                  line={line}
+                  showPieces={showPieces}
+                  canEdit={canEdit}
+                />
+              ))
+            )}
+            {canEdit ? (
+              <AddLineRow
+                derivativeId={derivative.id}
                 recipeId={recipe.id}
-                line={line}
-                per={per}
+                showPieces={showPieces}
               />
-            ))}
-          </ul>
-        )}
+            ) : null}
+          </tbody>
+        </table>
       </div>
-      <AddLineForm derivativeId={derivative.id} recipeId={recipe.id} />
     </div>
   );
 }
@@ -242,22 +305,27 @@ function formatBatchLabel(
 function RecipeBatchFields({
   derivative,
   recipe,
+  canEdit,
 }: {
   derivative: Derivative;
   recipe: RecipeCard;
+  canEdit: boolean;
 }) {
   return (
-    <div className={`border-b border-line ${panelPad}`}>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {derivative.isFinalProduct ? null : (
-          <YieldField recipeId={recipe.id} yieldPercent={recipe.yieldPercent ?? 0} />
-        )}
-        <BatchSizeField
+    <div className="flex flex-wrap items-end gap-3">
+      {derivative.isFinalProduct ? null : (
+        <YieldField
           recipeId={recipe.id}
-          batchSize={recipe.batchSize}
-          isFinalProduct={derivative.isFinalProduct}
+          yieldPercent={recipe.yieldPercent ?? 0}
+          canEdit={canEdit}
         />
-      </div>
+      )}
+      <BatchSizeField
+        recipeId={recipe.id}
+        batchSize={recipe.batchSize}
+        isFinalProduct={derivative.isFinalProduct}
+        canEdit={canEdit}
+      />
     </div>
   );
 }
@@ -265,66 +333,40 @@ function RecipeBatchFields({
 function YieldField({
   recipeId,
   yieldPercent,
+  canEdit,
 }: {
   recipeId: string;
   yieldPercent: number;
+  canEdit: boolean;
 }) {
   const catalog = useMaterials();
-  const inputId = useId();
-  const [draft, setDraft] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const shown = draft ?? String(yieldPercent);
-
-  function commit(raw: string) {
-    const parsed = parseWholePercent(raw);
-    if (parsed === null || parsed < 1 || parsed > 100) {
-      setError(FIELD_ERROR.yield);
-      setDraft(raw);
-      return;
-    }
-    if (parsed === yieldPercent) {
-      setDraft(null);
-      setError(null);
-      return;
-    }
-
-    const rejection = catalog.setYield(recipeId, parsed);
-    if (rejection) {
-      setError(FIELD_ERROR[rejection]);
-      setDraft(raw);
-      return;
-    }
-
-    setDraft(null);
-    setError(null);
-  }
-
   return (
-    <div>
-      <label htmlFor={inputId} className="text-sm text-muted">
-        Выход после обработки, %
-      </label>
-      <input
-        id={inputId}
-        value={shown}
-        inputMode="numeric"
-        disabled={!catalog.hydrated}
-        autoComplete="off"
-        aria-invalid={error ? true : undefined}
-        onFocus={() => {
-          setDraft(String(yieldPercent));
-          setError(null);
-        }}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={(event) => commit(event.currentTarget.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.currentTarget.blur();
-          }
-        }}
-        className={`mt-1.5 ${fieldClassName}`}
-      />
-      {error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
+    <div className="w-36">
+      <p className="text-sm text-muted">Выход после обработки, %</p>
+      <div className={`mt-1 px-2 py-1 ${canEdit ? editableCellClassName : ""}`}>
+        <GridNumber
+          label="Выход после обработки"
+          value={String(yieldPercent)}
+          disabled={!canEdit}
+          inputMode="numeric"
+          unit="%"
+          invalidMessage={FIELD_ERROR.yield}
+          parse={(raw) => {
+            const parsed = parseWholePercent(raw);
+            if (parsed === null || parsed < 1 || parsed > 100) {
+              return null;
+            }
+            return parsed;
+          }}
+          onCommit={(next) => {
+            if (next === yieldPercent) {
+              return null;
+            }
+            const rejection = catalog.setYield(recipeId, next);
+            return rejection ? FIELD_ERROR[rejection] : null;
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -333,70 +375,37 @@ function BatchSizeField({
   recipeId,
   batchSize,
   isFinalProduct,
+  canEdit,
 }: {
   recipeId: string;
   batchSize: number;
   isFinalProduct: boolean;
+  canEdit: boolean;
 }) {
   const catalog = useMaterials();
-  const inputId = useId();
-  const [draft, setDraft] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const shown =
-    draft ?? (isFinalProduct ? String(batchSize) : formatKilogramsFromGrams(batchSize));
-
-  function commit(raw: string) {
-    const parsed = isFinalProduct ? parsePieceCount(raw) : parseGrams(raw);
-    if (parsed === null) {
-      setError(FIELD_ERROR["batch-size"]);
-      setDraft(raw);
-      return;
-    }
-    if (parsed === batchSize) {
-      setDraft(null);
-      setError(null);
-      return;
-    }
-
-    const rejection = catalog.setBatchSize(recipeId, parsed);
-    if (rejection) {
-      setError(FIELD_ERROR[rejection]);
-      setDraft(raw);
-      return;
-    }
-
-    setDraft(null);
-    setError(null);
-  }
-
   return (
-    <div>
-      <label htmlFor={inputId} className="text-sm text-muted">
+    <div className="w-44">
+      <p className="text-sm text-muted">
         {isFinalProduct ? "Норма закладки, шт" : "Партия готового продукта, кг"}
-      </label>
-      <input
-        id={inputId}
-        value={shown}
-        inputMode={isFinalProduct ? "numeric" : "decimal"}
-        disabled={!catalog.hydrated}
-        autoComplete="off"
-        aria-invalid={error ? true : undefined}
-        onFocus={() => {
-          setDraft(
-            isFinalProduct ? String(batchSize) : formatKilogramsFromGrams(batchSize),
-          );
-          setError(null);
-        }}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={(event) => commit(event.currentTarget.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.currentTarget.blur();
-          }
-        }}
-        className={`mt-1.5 ${fieldClassName}`}
-      />
-      {error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
+      </p>
+      <div className={`mt-1 px-2 py-1 ${canEdit ? editableCellClassName : ""}`}>
+        <GridNumber
+          label={isFinalProduct ? "Норма закладки" : "Партия готового продукта"}
+          value={isFinalProduct ? String(batchSize) : formatKilogramsFromGrams(batchSize)}
+          disabled={!canEdit}
+          inputMode={isFinalProduct ? "numeric" : "decimal"}
+          unit={isFinalProduct ? "шт" : "кг"}
+          invalidMessage={FIELD_ERROR["batch-size"]}
+          parse={isFinalProduct ? parsePieceCount : parseGrams}
+          onCommit={(next) => {
+            if (next === batchSize) {
+              return null;
+            }
+            const rejection = catalog.setBatchSize(recipeId, next);
+            return rejection ? FIELD_ERROR[rejection] : null;
+          }}
+        />
+      </div>
     </div>
   );
 }
@@ -405,18 +414,16 @@ function RecipeLineRow({
   derivative,
   recipeId,
   line,
-  per,
+  showPieces,
+  canEdit,
 }: {
   derivative: Derivative;
   recipeId: string;
   line: RecipeLine;
-  per: string;
+  showPieces: boolean;
+  canEdit: boolean;
 }) {
   const catalog = useMaterials();
-  const kgId = useId();
-  const piecesId = useId();
-  const [kgDraft, setKgDraft] = useState<string | null>(null);
-  const [piecesDraft, setPiecesDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const piece = isPieceLine(catalog.document, line);
   const componentDerivative =
@@ -431,252 +438,138 @@ function RecipeLineRow({
       ? componentDerivative.pieceWeightGrams
       : null;
   const dual = pieceWeightGrams !== null && pieceWeightGrams !== undefined;
-  const piecesShown =
-    piecesDraft ??
-    (dual && pieceWeightGrams
-      ? String(piecesFromGrams(line.quantityGrams, pieceWeightGrams) ?? "")
-      : "");
-  const kgShown =
-    kgDraft ??
-    (piece ? String(line.quantityGrams) : formatKilogramsFromGrams(line.quantityGrams));
   const component = describeComponent(catalog.document, line);
   const contribution = lineContribution(catalog.document, derivative.id, line.id);
+  const kgValue = piece
+    ? String(line.quantityGrams)
+    : formatKilogramsFromGrams(line.quantityGrams);
+  const piecesValue =
+    dual && pieceWeightGrams
+      ? String(piecesFromGrams(line.quantityGrams, pieceWeightGrams) ?? "")
+      : "";
 
-  function commitGrams(grams: number, rawKg: string, rawPieces: string | null) {
+  function rejectGrams(grams: number): string | null {
     if (grams === line.quantityGrams) {
-      setKgDraft(null);
-      setPiecesDraft(null);
-      setError(null);
-      return;
+      return null;
     }
-
     const rejection = catalog.updateLine(recipeId, line.id, grams);
-    if (rejection) {
-      const active = catalog.activeRecipeFor(derivative.id);
-      setError(
-        rejection === "batch" && active && active.yieldPercent !== null
-          ? overflowText(
-              compositionGrams(active.lines.filter((item) => item.id !== line.id)),
-              inputGramsForFinishedBatch(active.yieldPercent, active.batchSize),
-              active.batchSize,
-              derivative.pieceWeightGrams,
-            )
-          : FIELD_ERROR[rejection],
-      );
-      setKgDraft(rawKg);
-      if (rawPieces !== null) {
-        setPiecesDraft(rawPieces);
-      }
-      return;
+    if (!rejection) {
+      setError(null);
+      return null;
     }
-
-    setKgDraft(null);
-    setPiecesDraft(null);
-    setError(null);
-  }
-
-  function commitFromKg(raw: string) {
-    if (piece) {
-      const grams = parsePieceCount(raw);
-      if (grams === null) {
-        setError(FIELD_ERROR.quantity);
-        setKgDraft(raw);
-        return;
-      }
-      commitGrams(grams, raw, null);
-      return;
-    }
-
-    const grams = parseGrams(raw);
-    if (grams === null) {
-      setError(FIELD_ERROR.quantity);
-      setKgDraft(raw);
-      return;
-    }
-
-    if (dual && pieceWeightGrams) {
-      const pieces = piecesFromGrams(grams, pieceWeightGrams);
-      setPiecesDraft(pieces === null ? "" : String(pieces));
-    }
-
-    commitGrams(grams, raw, piecesDraft);
-  }
-
-  function commitFromPieces(raw: string) {
-    if (!dual || !pieceWeightGrams) {
-      return;
-    }
-
-    const pieces = parsePieceCount(raw);
-    if (pieces === null) {
-      setError(FIELD_ERROR.quantity);
-      setPiecesDraft(raw);
-      return;
-    }
-
-    const grams = gramsFromPieces(pieces, pieceWeightGrams);
-    if (grams === null) {
-      setError(FIELD_ERROR.quantity);
-      setPiecesDraft(raw);
-      return;
-    }
-
-    setKgDraft(formatKilogramsFromGrams(grams));
-    commitGrams(grams, formatKilogramsFromGrams(grams), raw);
+    const active = catalog.activeRecipeFor(derivative.id);
+    const message =
+      rejection === "batch" && active && active.yieldPercent !== null
+        ? overflowText(
+            compositionGrams(active.lines.filter((item) => item.id !== line.id)),
+            inputGramsForFinishedBatch(active.yieldPercent, active.batchSize),
+            active.batchSize,
+            derivative.pieceWeightGrams,
+          )
+        : FIELD_ERROR[rejection];
+    setError(message);
+    return message;
   }
 
   return (
-    <li className="border-t border-line py-3 first:border-t-0">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold text-ink">{component.name}</p>
-          <p className="mt-1 text-sm text-muted">
-            {component.kind}
-            {component.deleted ? ", удалён" : ""}
-            {component.price ? ` · ${component.price}` : ""}
-          </p>
-        </div>
-        <button
-          type="button"
-          aria-label={`Убрать «${component.name}» из состава`}
-          title="Убрать"
-          disabled={!catalog.hydrated}
-          onClick={() => {
-            const confirmed = window.confirm(`Убрать «${component.name}» из состава?`);
-            if (confirmed) {
-              catalog.removeLine(recipeId, line.id);
-            }
-          }}
-          className="inline-flex size-11 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
+    <tr>
+      <td className="border-b border-b-line border-r border-r-line px-2 py-1.5 align-middle">
+        <p className="font-semibold text-ink">{component.name}</p>
+        <p className="text-sm text-muted">
+          {component.kind}
+          {component.deleted ? ", удалён" : ""}
+          {component.price ? ` · ${component.price}` : ""}
+        </p>
+        {error ? <p className="mt-1 text-sm text-ink">{error}</p> : null}
+      </td>
+      <td
+        className={`border-b border-b-line border-r border-r-line px-2 py-1.5 text-right align-middle ${
+          canEdit ? editableCellClassName : ""
+        }`}
+      >
+        <GridNumber
+          label={`Количество, ${component.name}`}
+          value={kgValue}
+          disabled={!canEdit}
+          inputMode={piece ? "numeric" : "decimal"}
+          unit={piece ? "шт" : "кг"}
+          invalidMessage={FIELD_ERROR.quantity}
+          parse={piece ? parsePieceCount : parseGrams}
+          onCommit={(grams) => rejectGrams(grams)}
+        />
+      </td>
+      {showPieces ? (
+        <td
+          className={`border-b border-b-line border-r border-r-line px-2 py-1.5 text-right align-middle ${
+            canEdit && dual ? editableCellClassName : ""
+          }`}
         >
-          <IconTrash />
-        </button>
-      </div>
-      <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="w-full sm:w-44">
-          <label htmlFor={kgId} className="text-sm text-muted">
-            Количество, {piece ? "шт" : "кг"}
-          </label>
-          <input
-            id={kgId}
-            value={kgShown}
-            inputMode={piece ? "numeric" : "decimal"}
-            disabled={!catalog.hydrated}
-            autoComplete="off"
-            aria-invalid={error ? true : undefined}
-            onFocus={() => {
-              setKgDraft(
-                piece
-                  ? String(line.quantityGrams)
-                  : formatKilogramsFromGrams(line.quantityGrams),
-              );
-              if (dual && pieceWeightGrams) {
-                setPiecesDraft(
-                  String(piecesFromGrams(line.quantityGrams, pieceWeightGrams) ?? ""),
-                );
-              }
-              setError(null);
-            }}
-            onChange={(event) => {
-              const raw = event.target.value;
-              setKgDraft(raw);
-              if (!dual || !pieceWeightGrams) {
-                return;
-              }
-              const grams = parseGrams(raw);
-              if (grams === null) {
-                return;
-              }
-              const pieces = piecesFromGrams(grams, pieceWeightGrams);
-              setPiecesDraft(pieces === null ? "" : String(pieces));
-            }}
-            onBlur={(event) => commitFromKg(event.currentTarget.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.currentTarget.blur();
-              }
-            }}
-            className={`mt-1.5 ${fieldClassName}`}
-          />
-          {!dual && error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
-        </div>
-        {dual ? (
-          <div className="w-full sm:w-44">
-            <label htmlFor={piecesId} className="text-sm text-muted">
-              Количество, шт
-            </label>
-            <input
-              id={piecesId}
-              value={piecesShown}
+          {dual && pieceWeightGrams ? (
+            <GridNumber
+              label={`Количество в штуках, ${component.name}`}
+              value={piecesValue}
+              disabled={!canEdit}
               inputMode="numeric"
-              disabled={!catalog.hydrated}
-              autoComplete="off"
-              aria-invalid={error ? true : undefined}
-              onFocus={() => {
-                if (pieceWeightGrams) {
-                  setPiecesDraft(
-                    String(piecesFromGrams(line.quantityGrams, pieceWeightGrams) ?? ""),
-                  );
-                  setKgDraft(formatKilogramsFromGrams(line.quantityGrams));
-                }
-                setError(null);
-              }}
-              onChange={(event) => {
-                const raw = event.target.value;
-                setPiecesDraft(raw);
-                if (!pieceWeightGrams) {
-                  return;
-                }
-                const pieces = parsePieceCount(raw);
-                if (pieces === null) {
-                  return;
-                }
+              unit="шт"
+              invalidMessage={FIELD_ERROR.quantity}
+              parse={parsePieceCount}
+              onCommit={(pieces) => {
                 const grams = gramsFromPieces(pieces, pieceWeightGrams);
-                if (grams !== null) {
-                  setKgDraft(formatKilogramsFromGrams(grams));
+                if (grams === null) {
+                  return FIELD_ERROR.quantity;
                 }
+                return rejectGrams(grams);
               }}
-              onBlur={(event) => commitFromPieces(event.currentTarget.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.currentTarget.blur();
-                }
-              }}
-              className={`mt-1.5 ${fieldClassName}`}
             />
-            {error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
-          </div>
-        ) : null}
-        <div>
-          <p className="text-sm text-muted">Вклад в {per}</p>
-          {contribution === null ? (
-            <p className="mt-1.5 flex h-11 items-center text-base text-ink">
-              Не считается
-            </p>
           ) : (
-            <div className="mt-1.5 text-sm leading-5 text-ink">
-              <p>{formatMoney(contribution.withVatKopecks)} с НДС</p>
-              <p>{formatMoney(contribution.exVatKopecks)} без НДС</p>
-            </div>
+            <Empty />
           )}
-        </div>
-      </div>
-    </li>
+        </td>
+      ) : null}
+      <td className="border-b border-b-line border-r border-r-line px-2 py-1.5 text-right align-middle">
+        {contribution === null ? (
+          <span className="text-muted">Не считается</span>
+        ) : (
+          <VatPair
+            withVat={<MoneyAmount kopecks={contribution.withVatKopecks} />}
+            exVat={<MoneyAmount kopecks={contribution.exVatKopecks} />}
+          />
+        )}
+      </td>
+      <td className="border-b border-b-line px-1 py-1.5 text-center align-middle">
+        {canEdit ? (
+          <button
+            type="button"
+            aria-label={`Убрать «${component.name}» из состава`}
+            title="Убрать"
+            onClick={() => {
+              const confirmed = window.confirm(`Убрать «${component.name}» из состава?`);
+              if (confirmed) {
+                catalog.removeLine(recipeId, line.id);
+              }
+            }}
+            className="inline-flex size-8 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            <IconTrash />
+          </button>
+        ) : null}
+      </td>
+    </tr>
   );
 }
 
-function AddLineForm({
+function AddLineRow({
   derivativeId,
   recipeId,
+  showPieces,
 }: {
   derivativeId: string;
   recipeId: string;
+  showPieces: boolean;
 }) {
   const catalog = useMaterials();
   const choices = recipeComponentChoices(catalog.document, derivativeId);
   const componentId = useId();
-  const quantityId = useId();
-  const piecesId = useId();
   const [component, setComponent] = useState("");
   const [quantity, setQuantity] = useState("");
   const [pieces, setPieces] = useState("");
@@ -757,22 +650,12 @@ function AddLineForm({
   }
 
   return (
-    <form
-      className={panelPad}
-      onSubmit={(event) => {
-        event.preventDefault();
-        submit();
-      }}
-    >
-      <div
-        className={`grid items-end gap-3 ${
-          dual
-            ? "md:grid-cols-[minmax(0,1fr)_11rem_11rem_auto]"
-            : "md:grid-cols-[minmax(0,1fr)_11rem_auto]"
-        }`}
-      >
-        <div>
-          <label htmlFor={componentId} className="text-sm text-muted">
+    <>
+      <tr>
+        <td
+          className={`border-b border-b-line border-r border-r-line px-2 py-1.5 ${editableCellClassName}`}
+        >
+          <label htmlFor={componentId} className="sr-only">
             Компонент
           </label>
           <select
@@ -785,7 +668,7 @@ function AddLineForm({
               setPieces("");
               setError(null);
             }}
-            className={`mt-1.5 ${fieldClassName}`}
+            className={gridSelectClassName}
           >
             <option value="">Выберите сырьё или производную</option>
             {choices.materials.length > 0 ? (
@@ -810,18 +693,17 @@ function AddLineForm({
               </optgroup>
             ) : null}
           </select>
-        </div>
-        <div>
-          <label htmlFor={quantityId} className="text-sm text-muted">
-            Количество, {piece ? "шт" : "кг"}
-          </label>
+        </td>
+        <td
+          className={`border-b border-b-line border-r border-r-line px-2 py-1.5 ${editableCellClassName}`}
+        >
           <input
-            id={quantityId}
             value={quantity}
             inputMode={piece ? "numeric" : "decimal"}
             disabled={!catalog.hydrated || empty}
             autoComplete="off"
-            placeholder="0"
+            placeholder={piece ? "шт" : "кг"}
+            aria-label="Количество"
             onChange={(event) => {
               const raw = event.target.value;
               setQuantity(raw);
@@ -834,57 +716,70 @@ function AddLineForm({
               }
               setError(null);
             }}
-            className={`mt-1.5 ${fieldClassName}`}
+            className="w-full min-w-16 bg-transparent p-0 text-right text-sm text-ink outline-none"
           />
-        </div>
-        {dual ? (
-          <div>
-            <label htmlFor={piecesId} className="text-sm text-muted">
-              Количество, шт
-            </label>
-            <input
-              id={piecesId}
-              value={pieces}
-              inputMode="numeric"
-              disabled={!catalog.hydrated || empty}
-              autoComplete="off"
-              placeholder="0"
-              onChange={(event) => {
-                const raw = event.target.value;
-                setPieces(raw);
-                if (pieceWeightGrams) {
-                  const count = parsePieceCount(raw);
-                  if (count !== null) {
-                    const grams = gramsFromPieces(count, pieceWeightGrams);
-                    if (grams !== null) {
-                      setQuantity(formatKilogramsFromGrams(grams));
+        </td>
+        {showPieces ? (
+          <td
+            className={`border-b border-b-line border-r border-r-line px-2 py-1.5 ${
+              dual ? editableCellClassName : ""
+            }`}
+          >
+            {dual ? (
+              <input
+                value={pieces}
+                inputMode="numeric"
+                disabled={!catalog.hydrated || empty}
+                autoComplete="off"
+                placeholder="шт"
+                aria-label="Количество, шт"
+                onChange={(event) => {
+                  const raw = event.target.value;
+                  setPieces(raw);
+                  if (pieceWeightGrams) {
+                    const count = parsePieceCount(raw);
+                    if (count !== null) {
+                      const grams = gramsFromPieces(count, pieceWeightGrams);
+                      if (grams !== null) {
+                        setQuantity(formatKilogramsFromGrams(grams));
+                      }
                     }
                   }
-                }
-                setError(null);
-              }}
-              className={`mt-1.5 ${fieldClassName}`}
-            />
-          </div>
+                  setError(null);
+                }}
+                className="w-full min-w-16 bg-transparent p-0 text-right text-sm text-ink outline-none"
+              />
+            ) : (
+              <Empty />
+            )}
+          </td>
         ) : null}
-        <button
-          type="submit"
-          disabled={!catalog.hydrated || empty}
-          className={`w-full md:w-auto ${primaryButtonClassName}`}
-        >
-          <IconPlus />
-          Добавить в состав
-        </button>
-      </div>
-      {empty ? (
-        <p className="mt-2 text-sm leading-5 text-muted">
-          Нет сырья и производных, которые можно положить в эту карту.
-        </p>
-      ) : (
-        <BatchRoom derivativeId={derivativeId} />
-      )}
-      {error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
-    </form>
+        <td className="border-b border-b-line border-r border-r-line px-2 py-1.5" />
+        <td className="border-b border-b-line px-1 py-1.5 text-center">
+          <button
+            type="button"
+            disabled={!catalog.hydrated || empty}
+            onClick={submit}
+            className="inline-flex h-8 items-center justify-center gap-1 bg-ink px-2 text-sm text-white outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:bg-line disabled:text-muted"
+          >
+            <IconPlus />
+            Добавить
+          </button>
+        </td>
+      </tr>
+      <tr>
+        <td colSpan={showPieces ? 5 : 4} className="px-2 py-1.5">
+          {empty ? (
+            <p className="text-sm leading-5 text-muted">
+              Нет сырья и производных, которые можно положить в эту карту.
+            </p>
+          ) : (
+            <BatchRoom derivativeId={derivativeId} />
+          )}
+          {error ? <p className="mt-1 text-sm text-ink">{error}</p> : null}
+        </td>
+      </tr>
+    </>
   );
 }
 
@@ -901,14 +796,12 @@ function BatchRoom({ derivativeId }: { derivativeId: string }) {
   const batchLabel = formatBatchLabel(recipe.batchSize, false, owner.pieceWeightGrams);
   if (left <= 0) {
     return (
-      <p className="mt-2 text-sm leading-5 text-muted">
-        Состав на {batchLabel} уже полный.
-      </p>
+      <p className="text-sm leading-5 text-muted">Состав на {batchLabel} уже полный.</p>
     );
   }
 
   return (
-    <p className="mt-2 text-sm leading-5 text-muted">
+    <p className="text-sm leading-5 text-muted">
       Свободно ещё {formatKilogramsFromGrams(left)} кг до{" "}
       {formatKilogramsFromGrams(target)} кг.
     </p>
@@ -934,17 +827,17 @@ function BatchMeter({
   const batchLabel = formatBatchLabel(batchSize, false, pieceWeightGrams);
 
   return (
-    <div className={`border-b border-line ${panelPad}`}>
+    <div>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <p className="text-sm text-muted">На {batchLabel}</p>
         <p className="text-sm text-ink">
           {formatKilogramsFromGrams(grams)} из {formatKilogramsFromGrams(target)} кг
         </p>
       </div>
-      <div className="mt-2 h-1 bg-line" aria-hidden="true">
+      <div className="mt-1.5 h-1 bg-line" aria-hidden="true">
         <div className="h-full bg-ink" style={{ width: `${width}%` }} />
       </div>
-      <p className="mt-2 text-sm leading-5 text-ink">
+      <p className="mt-1.5 text-sm leading-5 text-ink">
         {ready
           ? "Состав собран. Себестоимость 1 кг считается из этой закладки."
           : missing > 0
@@ -969,18 +862,24 @@ function overflowText(
   return `В этой строке можно указать не больше ${formatKilogramsFromGrams(left)} кг.`;
 }
 
-function DeletedRecipes({ recipes }: { recipes: RecipeCard[] }) {
+function DeletedRecipes({
+  recipes,
+  canEdit,
+}: {
+  recipes: RecipeCard[];
+  canEdit: boolean;
+}) {
   const catalog = useMaterials();
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <div className={`border-t border-line ${panelPad}`}>
+    <div>
       <h3 className="text-sm font-semibold text-ink">Удалённые карты</h3>
-      <ul className="mt-2">
+      <ul className="mt-1">
         {recipes.map((recipe) => (
           <li
             key={recipe.id}
-            className="flex items-center justify-between gap-3 border-t border-line py-3 first:border-t-0"
+            className="flex items-center justify-between gap-3 border-t border-line py-1.5 first:border-t-0"
           >
             <p className="text-sm text-muted">
               {recipe.lines.length === 0
@@ -990,23 +889,24 @@ function DeletedRecipes({ recipes }: { recipes: RecipeCard[] }) {
                     .join(", ")}
               {recipe.yieldPercent === null ? "" : ` · выход ${recipe.yieldPercent}%`}
             </p>
-            <button
-              type="button"
-              aria-label="Вернуть рецептурную карту"
-              title="Вернуть"
-              disabled={!catalog.hydrated}
-              onClick={() => {
-                const rejection = catalog.restoreRecipe(recipe.id);
-                setError(rejection ? FIELD_ERROR[rejection] : null);
-              }}
-              className="inline-flex size-11 items-center justify-center text-ink outline-none hover:bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
-            >
-              <IconUndo />
-            </button>
+            {canEdit ? (
+              <button
+                type="button"
+                aria-label="Вернуть рецептурную карту"
+                title="Вернуть"
+                onClick={() => {
+                  const rejection = catalog.restoreRecipe(recipe.id);
+                  setError(rejection ? FIELD_ERROR[rejection] : null);
+                }}
+                className="inline-flex size-8 items-center justify-center text-ink outline-none hover:bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              >
+                <IconUndo />
+              </button>
+            ) : null}
           </li>
         ))}
       </ul>
-      {error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
+      {error ? <p className="mt-1 text-sm text-ink">{error}</p> : null}
     </div>
   );
 }

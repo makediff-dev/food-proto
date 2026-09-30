@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useId, useState, type ReactNode } from "react";
 
 import { priceExVatKopecks } from "@/domain/cost";
@@ -17,7 +16,7 @@ import {
   parseWholePercent,
   primaryButtonClassName,
 } from "@/features/materials/fields";
-import { derivativeDetailHref, type MaterialKind } from "@/features/materials/paths";
+import { type MaterialKind } from "@/features/materials/paths";
 import { useMaterials } from "@/features/materials/use-materials";
 import { Dialog } from "@/features/shell/dialog";
 import { IconPlus } from "@/features/shell/icons";
@@ -36,9 +35,11 @@ type FieldKey =
 export function CreateEntryDialog({
   kind,
   onClose,
+  onCreated,
 }: {
   kind: MaterialKind;
   onClose: () => void;
+  onCreated?: (id: string) => void;
 }) {
   const title =
     kind === "materials"
@@ -50,15 +51,25 @@ export function CreateEntryDialog({
   return (
     <Dialog title={title} onClose={onClose}>
       {kind === "materials" ? (
-        <MaterialFields onClose={onClose} />
+        <MaterialFields onClose={onClose} onCreated={onCreated} />
       ) : (
-        <DerivativeFields onClose={onClose} isFinalProduct={kind === "products"} />
+        <DerivativeFields
+          onClose={onClose}
+          onCreated={onCreated}
+          isFinalProduct={kind === "products"}
+        />
       )}
     </Dialog>
   );
 }
 
-function MaterialFields({ onClose }: { onClose: () => void }) {
+function MaterialFields({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated?: (id: string) => void;
+}) {
   const catalog = useMaterials();
   const warehouses = activeWarehouses(catalog.document);
   const nameId = useId();
@@ -152,7 +163,8 @@ function MaterialFields({ onClose }: { onClose: () => void }) {
       return;
     }
 
-    const rejection = catalog.addMaterial(`material:${crypto.randomUUID()}`, {
+    const id = `material:${crypto.randomUUID()}`;
+    const rejection = catalog.addMaterial(id, {
       name,
       brand,
       warehouseId: warehouse,
@@ -167,6 +179,7 @@ function MaterialFields({ onClose }: { onClose: () => void }) {
       return;
     }
 
+    onCreated?.(id);
     onClose();
   }
 
@@ -338,13 +351,14 @@ function MaterialFields({ onClose }: { onClose: () => void }) {
 
 function DerivativeFields({
   onClose,
+  onCreated,
   isFinalProduct,
 }: {
   onClose: () => void;
+  onCreated?: (id: string) => void;
   isFinalProduct: boolean;
 }) {
   const catalog = useMaterials();
-  const router = useRouter();
   const warehouses = activeWarehouses(catalog.document);
   const workshops = activeWorkshops(catalog.document);
   const nameId = useId();
@@ -407,8 +421,8 @@ function DerivativeFields({
       return;
     }
 
+    onCreated?.(id);
     onClose();
-    router.push(derivativeDetailHref(id));
   }
 
   return (
