@@ -71,7 +71,9 @@ export function RecipeEditor({
                 <p>{formatMoney(cost.exVatKopecks)} без НДС</p>
               </div>
             ) : (
-              <p className="mt-1 text-sm text-ink">{recipe ? "Не считается" : "Нет карты"}</p>
+              <p className="mt-1 text-sm text-ink">
+                {recipe ? "Не считается" : "Нет карты"}
+              </p>
             )}
           </div>
           {recipe && canEdit ? (
@@ -105,7 +107,12 @@ export function RecipeEditor({
       ) : null}
 
       {recipe ? (
-        <ActiveRecipe derivative={derivative} recipe={recipe} canEdit={canEdit} />
+        <ActiveRecipe
+          derivative={derivative}
+          recipe={recipe}
+          canEdit={canEdit}
+          showBatchFields={!embedded}
+        />
       ) : (
         <CreateRecipe derivative={derivative} canEdit={canEdit} />
       )}
@@ -207,10 +214,12 @@ function ActiveRecipe({
   derivative,
   recipe,
   canEdit,
+  showBatchFields,
 }: {
   derivative: Derivative;
   recipe: RecipeCard;
   canEdit: boolean;
+  showBatchFields: boolean;
 }) {
   const per = derivative.isFinalProduct ? "1 шт" : "1 кг";
   const batchLabel = formatBatchLabel(
@@ -222,7 +231,9 @@ function ActiveRecipe({
 
   return (
     <div className="flex flex-col gap-3">
-      <RecipeBatchFields derivative={derivative} recipe={recipe} canEdit={canEdit} />
+      {showBatchFields ? (
+        <RecipeBatchFields derivative={derivative} recipe={recipe} canEdit={canEdit} />
+      ) : null}
       <div className="overflow-auto border border-line">
         <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
           <caption className="sr-only">Состав на {batchLabel}</caption>
@@ -232,7 +243,7 @@ function ActiveRecipe({
                 Компонент
               </th>
               <th className="border-b border-b-line border-r border-r-line bg-paper px-2 py-1.5 text-right font-normal text-muted">
-                Количество
+                {showPieces ? "Количество, кг" : "Количество"}
               </th>
               {showPieces ? (
                 <th className="border-b border-b-line border-r border-r-line bg-paper px-2 py-1.5 text-right font-normal text-muted">
@@ -438,6 +449,7 @@ function RecipeLineRow({
       ? componentDerivative.pieceWeightGrams
       : null;
   const dual = pieceWeightGrams !== null && pieceWeightGrams !== undefined;
+  const pieceInOwnColumn = showPieces && piece;
   const component = describeComponent(catalog.document, line);
   const contribution = lineContribution(catalog.document, derivative.id, line.id);
   const kgValue = piece
@@ -484,24 +496,28 @@ function RecipeLineRow({
       </td>
       <td
         className={`border-b border-b-line border-r border-r-line px-2 py-1.5 text-right align-middle ${
-          canEdit ? editableCellClassName : ""
+          canEdit && !pieceInOwnColumn ? editableCellClassName : ""
         }`}
       >
-        <GridNumber
-          label={`Количество, ${component.name}`}
-          value={kgValue}
-          disabled={!canEdit}
-          inputMode={piece ? "numeric" : "decimal"}
-          unit={piece ? "шт" : "кг"}
-          invalidMessage={FIELD_ERROR.quantity}
-          parse={piece ? parsePieceCount : parseGrams}
-          onCommit={(grams) => rejectGrams(grams)}
-        />
+        {pieceInOwnColumn ? (
+          <Empty />
+        ) : (
+          <GridNumber
+            label={`Количество, ${component.name}`}
+            value={kgValue}
+            disabled={!canEdit}
+            inputMode={piece ? "numeric" : "decimal"}
+            unit={piece ? "шт" : "кг"}
+            invalidMessage={FIELD_ERROR.quantity}
+            parse={piece ? parsePieceCount : parseGrams}
+            onCommit={(grams) => rejectGrams(grams)}
+          />
+        )}
       </td>
       {showPieces ? (
         <td
           className={`border-b border-b-line border-r border-r-line px-2 py-1.5 text-right align-middle ${
-            canEdit && dual ? editableCellClassName : ""
+            canEdit && (dual || piece) ? editableCellClassName : ""
           }`}
         >
           {dual && pieceWeightGrams ? (
@@ -520,6 +536,17 @@ function RecipeLineRow({
                 }
                 return rejectGrams(grams);
               }}
+            />
+          ) : piece ? (
+            <GridNumber
+              label={`Количество, ${component.name}`}
+              value={String(line.quantityGrams)}
+              disabled={!canEdit}
+              inputMode="numeric"
+              unit="шт"
+              invalidMessage={FIELD_ERROR.quantity}
+              parse={parsePieceCount}
+              onCommit={(count) => rejectGrams(count)}
             />
           ) : (
             <Empty />
@@ -586,6 +613,7 @@ function AddLineRow({
       ? catalog.document.derivatives.find((item) => item.id === choice.id)
       : undefined;
   const piece = selectedMaterial?.unit === "piece";
+  const pieceInOwnColumn = showPieces && piece;
   const pieceWeightGrams =
     owner?.isFinalProduct && selectedDerivative && !selectedDerivative.isFinalProduct
       ? selectedDerivative.pieceWeightGrams
@@ -601,7 +629,7 @@ function AddLineRow({
 
     let amount: number | null = null;
     if (piece) {
-      amount = parsePieceCount(quantity);
+      amount = parsePieceCount(pieceInOwnColumn ? pieces : quantity);
     } else if (
       dual &&
       pieceWeightGrams &&
@@ -695,37 +723,43 @@ function AddLineRow({
           </select>
         </td>
         <td
-          className={`border-b border-b-line border-r border-r-line px-2 py-1.5 ${editableCellClassName}`}
+          className={`border-b border-b-line border-r border-r-line px-2 py-1.5 ${
+            pieceInOwnColumn ? "" : editableCellClassName
+          }`}
         >
-          <input
-            value={quantity}
-            inputMode={piece ? "numeric" : "decimal"}
-            disabled={!catalog.hydrated || empty}
-            autoComplete="off"
-            placeholder={piece ? "шт" : "кг"}
-            aria-label="Количество"
-            onChange={(event) => {
-              const raw = event.target.value;
-              setQuantity(raw);
-              if (dual && pieceWeightGrams) {
-                const grams = parseGrams(raw);
-                if (grams !== null) {
-                  const count = piecesFromGrams(grams, pieceWeightGrams);
-                  setPieces(count === null ? "" : String(count));
+          {pieceInOwnColumn ? (
+            <Empty />
+          ) : (
+            <input
+              value={quantity}
+              inputMode={piece ? "numeric" : "decimal"}
+              disabled={!catalog.hydrated || empty}
+              autoComplete="off"
+              placeholder={piece ? "шт" : "кг"}
+              aria-label="Количество"
+              onChange={(event) => {
+                const raw = event.target.value;
+                setQuantity(raw);
+                if (dual && pieceWeightGrams) {
+                  const grams = parseGrams(raw);
+                  if (grams !== null) {
+                    const count = piecesFromGrams(grams, pieceWeightGrams);
+                    setPieces(count === null ? "" : String(count));
+                  }
                 }
-              }
-              setError(null);
-            }}
-            className="w-full min-w-16 bg-transparent p-0 text-right text-sm text-ink outline-none"
-          />
+                setError(null);
+              }}
+              className="w-full min-w-16 bg-transparent p-0 text-right text-sm text-ink outline-none"
+            />
+          )}
         </td>
         {showPieces ? (
           <td
             className={`border-b border-b-line border-r border-r-line px-2 py-1.5 ${
-              dual ? editableCellClassName : ""
+              dual || piece ? editableCellClassName : ""
             }`}
           >
-            {dual ? (
+            {dual || piece ? (
               <input
                 value={pieces}
                 inputMode="numeric"
@@ -736,7 +770,7 @@ function AddLineRow({
                 onChange={(event) => {
                   const raw = event.target.value;
                   setPieces(raw);
-                  if (pieceWeightGrams) {
+                  if (dual && pieceWeightGrams) {
                     const count = parsePieceCount(raw);
                     if (count !== null) {
                       const grams = gramsFromPieces(count, pieceWeightGrams);

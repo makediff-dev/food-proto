@@ -18,7 +18,13 @@ import {
   RowAction,
   VatPair,
 } from "@/features/materials/catalog-cells";
-import { FIELD_ERROR, parsePieceWeightGrams } from "@/features/materials/fields";
+import {
+  FIELD_ERROR,
+  parseGrams,
+  parsePieceCount,
+  parsePieceWeightGrams,
+  parseWholePercent,
+} from "@/features/materials/fields";
 import { RecipeEditor } from "@/features/materials/recipe-editor";
 import { useMaterials } from "@/features/materials/use-materials";
 import { IconChevronDown, IconChevronRight } from "@/features/shell/icons";
@@ -40,6 +46,7 @@ export function MadeTable({
   const editable = catalog.hydrated && !showDeleted;
   const caption = isFinalProduct ? "Товары" : "Производные";
   const extraLabel = isFinalProduct ? "НДС" : "Вес\u00A01\u00A0шт";
+  const columnCount = isFinalProduct ? 8 : 9;
 
   return (
     <CatalogTable caption={caption}>
@@ -61,6 +68,14 @@ export function MadeTable({
           <HeadCell label="Склад" />
           <HeadCell label="Цех" />
           <HeadCell label={extraLabel} />
+          {isFinalProduct ? (
+            <HeadCell label="Норма закладки, шт" />
+          ) : (
+            <>
+              <HeadCell label="Выход после обработки, %" />
+              <HeadCell label="Партия готового продукта, кг" />
+            </>
+          )}
           <HeadCell
             label={
               isFinalProduct
@@ -68,10 +83,7 @@ export function MadeTable({
                 : "Себестоимость\u00A01\u00A0кг"
             }
           />
-          <th
-            scope="col"
-            className="border-b border-b-line bg-paper px-1.5 py-2"
-          >
+          <th scope="col" className="border-b border-b-line bg-paper px-1.5 py-2">
             <span className="sr-only">Действие</span>
           </th>
         </tr>
@@ -86,6 +98,7 @@ export function MadeTable({
               open={open}
               editable={editable}
               showDeleted={showDeleted}
+              columnCount={columnCount}
               onToggle={() => onToggle(item.id)}
             />
           );
@@ -100,12 +113,14 @@ function MadeBlock({
   open,
   editable,
   showDeleted,
+  columnCount,
   onToggle,
 }: {
   item: Derivative;
   open: boolean;
   editable: boolean;
   showDeleted: boolean;
+  columnCount: number;
   onToggle: () => void;
 }) {
   return (
@@ -119,7 +134,7 @@ function MadeBlock({
       />
       {open ? (
         <tr>
-          <td colSpan={7} className="border-b border-b-line bg-paper px-3 py-3">
+          <td colSpan={columnCount} className="border-b border-b-line bg-paper px-3 py-3">
             <RecipeEditor derivative={item} embedded disabled={!editable} />
           </td>
         </tr>
@@ -255,6 +270,83 @@ function MadeRow({
           />
         )}
       </DataCell>
+      {item.isFinalProduct ? (
+        <DataCell editable={editable && recipe !== null}>
+          {recipe ? (
+            <GridNumber
+              label={`Норма закладки, ${item.name}`}
+              value={String(recipe.batchSize)}
+              disabled={!editable}
+              inputMode="numeric"
+              unit="шт"
+              invalidMessage={FIELD_ERROR["batch-size"]}
+              parse={parsePieceCount}
+              onCommit={(next) => {
+                if (next === recipe.batchSize) {
+                  return null;
+                }
+                const rejection = catalog.setBatchSize(recipe.id, next);
+                return rejection ? FIELD_ERROR[rejection] : null;
+              }}
+            />
+          ) : (
+            <span className="text-muted">—</span>
+          )}
+        </DataCell>
+      ) : (
+        <>
+          <DataCell editable={editable && recipe !== null}>
+            {recipe ? (
+              <GridNumber
+                label={`Выход после обработки, ${item.name}`}
+                value={recipe.yieldPercent === null ? "" : String(recipe.yieldPercent)}
+                disabled={!editable}
+                inputMode="numeric"
+                unit="%"
+                invalidMessage={FIELD_ERROR.yield}
+                parse={(raw) => {
+                  const parsed = parseWholePercent(raw);
+                  if (parsed === null || parsed < 1 || parsed > 100) {
+                    return null;
+                  }
+                  return parsed;
+                }}
+                onCommit={(next) => {
+                  if (next === recipe.yieldPercent) {
+                    return null;
+                  }
+                  const rejection = catalog.setYield(recipe.id, next);
+                  return rejection ? FIELD_ERROR[rejection] : null;
+                }}
+              />
+            ) : (
+              <span className="text-muted">—</span>
+            )}
+          </DataCell>
+          <DataCell editable={editable && recipe !== null}>
+            {recipe ? (
+              <GridNumber
+                label={`Партия готового продукта, ${item.name}`}
+                value={formatKilogramsFromGrams(recipe.batchSize)}
+                disabled={!editable}
+                inputMode="decimal"
+                unit="кг"
+                invalidMessage={FIELD_ERROR["batch-size"]}
+                parse={parseGrams}
+                onCommit={(next) => {
+                  if (next === recipe.batchSize) {
+                    return null;
+                  }
+                  const rejection = catalog.setBatchSize(recipe.id, next);
+                  return rejection ? FIELD_ERROR[rejection] : null;
+                }}
+              />
+            ) : (
+              <span className="text-muted">—</span>
+            )}
+          </DataCell>
+        </>
+      )}
       <DataCell>
         {cost ? (
           <VatPair
