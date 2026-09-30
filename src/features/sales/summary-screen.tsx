@@ -1,393 +1,584 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useId, useMemo, useState } from "react";
 
-import type { SalesPlan } from "@/domain/document";
 import {
-  availablePlanMonths,
-  compareSalesPlans,
+  activeFinalProducts,
   daysInMonth,
+  missingPlanProducts,
+  monthKeyFromDate,
   planPhase,
-  salesPlanTotals,
-  type SalesPlanRejection,
+  shiftMonth,
+  suggestedPriceWithVatKopecks,
+  workingSalesPlan,
 } from "@/domain/sales-plan";
-import { fieldClassName, primaryButtonClassName } from "@/features/materials/fields";
-import { formatMoney } from "@/features/materials/money";
-import { CreatePlanDialog } from "@/features/sales/create-plan-dialog";
-import { planHref, summaryHref } from "@/features/sales/paths";
 import {
-  daysPhrase,
-  formatContribution,
-  formatMoneyPair,
-  formatMonth,
-  formatPerDay,
-  formatPieces,
-  monthYear,
-  phaseLabel,
-  productCountPhrase,
-  SALES_PLAN_ERROR,
-} from "@/features/sales/text";
+  canCreatePlanForMonth,
+  lastHorizonMonth,
+  monthSummary,
+  summaryMonthOpen,
+} from "@/domain/summary";
+import {
+  FIELD_ERROR,
+  fieldClassName,
+  primaryButtonClassName,
+} from "@/features/materials/fields";
+import { materialListHref } from "@/features/materials/paths";
+import { summaryHref } from "@/features/sales/paths";
+import { SummaryTable } from "@/features/sales/summary-table";
+import { daysPhrase, formatMonth, SALES_PLAN_ERROR } from "@/features/sales/text";
 import { useSales } from "@/features/sales/use-sales";
-import { IconClose, IconPlan, IconUndo } from "@/features/shell/icons";
+import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconFullscreen,
+  IconFullscreenExit,
+  IconPlan,
+  IconPlus,
+  IconTrash,
+  IconUndo,
+} from "@/features/shell/icons";
 import { PageFrame } from "@/features/shell/page-frame";
 
-type PhaseFilter = "all" | "ahead" | "past";
-
-export function SummaryScreen({ showDeleted }: { showDeleted: boolean }) {
+export function SummaryScreen({
+  month,
+  showDeleted,
+  planId,
+}: {
+  month: string;
+  showDeleted: boolean;
+  planId: string;
+}) {
   const sales = useSales();
   const today = useMemo(() => new Date(), []);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [year, setYear] = useState("");
-  const [phase, setPhase] = useState<PhaseFilter>("all");
-  const source = showDeleted ? sales.deletedPlans : sales.plans;
-  const plans = source
-    .slice()
-    .sort((left, right) => compareSalesPlans(left, right, today));
-  const years = Array.from(new Set(plans.map((item) => monthYear(item.month)))).sort();
-  const available = availablePlanMonths(sales.document, today);
-  const filtersOn = query.trim().length > 0 || year.length > 0 || phase !== "all";
-  const visible = plans.filter((item) => matches(item, query, year, phase, today));
+  const currentMonth = monthKeyFromDate(today);
 
-  function resetFilters() {
-    setQuery("");
-    setYear("");
-    setPhase("all");
+  if (showDeleted && !planId) {
+    return <DeletedList />;
+  }
+
+  const opened = planId
+    ? (sales.document.salesPlans.find((item) => item.id === planId) ?? null)
+    : null;
+  const readOnly = showDeleted;
+  const selectedMonth = readOnly
+    ? (opened?.month ?? currentMonth)
+    : resolveMonth(month, today);
+  const plan = readOnly
+    ? opened && opened.deletedAt !== null
+      ? opened
+      : null
+    : workingSalesPlan(sales.document, selectedMonth);
+
+  if (readOnly && !plan) {
+    return (
+      <PageFrame
+        title="Сводка"
+        full
+        lede="План, факт и отклонение выбранного месяца. Факт считается из дней раздела «Факт продаж»."
+      >
+        <p className="border border-line bg-sheet px-4 py-4 text-sm text-ink">
+          Запись не найдена.
+        </p>
+        <Link href={summaryHref({ showDeleted: true })} className={quietLinkClassName}>
+          <IconUndo />К удалённым
+        </Link>
+      </PageFrame>
+    );
   }
 
   return (
-    <PageFrame
-      title="Сводка"
-      wide
-      lede="Планы продаж по месяцам: цена, объём, выручка, себестоимость и Т-проток."
-    >
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            {showDeleted ? null : available.length === 0 ? (
-              <p className="text-sm leading-6 text-muted">
-                Планы на ближайшие два года уже есть.
-              </p>
-            ) : (
-              <button
-                type="button"
-                disabled={!sales.hydrated}
-                onClick={() => setCreateOpen(true)}
-                className={`w-full sm:w-auto ${primaryButtonClassName}`}
+    <Workspace
+      month={selectedMonth}
+      currentMonth={currentMonth}
+      today={today}
+      readOnly={readOnly}
+      planId={plan?.id ?? ""}
+    />
+  );
+}
+
+function Workspace({
+  month,
+  currentMonth,
+  today,
+  readOnly,
+  planId,
+}: {
+  month: string;
+  currentMonth: string;
+  today: Date;
+  readOnly: boolean;
+  planId: string;
+}) {
+  const sales = useSales();
+  const router = useRouter();
+  const monthFieldId = useId();
+  const [fullscreen, setFullscreen] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
+  const plan = readOnly
+    ? (sales.document.salesPlans.find((item) => item.id === planId) ?? null)
+    : workingSalesPlan(sales.document, month);
+  const summary = useMemo(
+    () => monthSummary(sales.document, month, plan),
+    [sales.document, month, plan],
+  );
+  const products = activeFinalProducts(sales.document);
+  const phase = planPhase(month, today);
+  const editable = sales.hydrated && !readOnly && Boolean(plan) && phase !== "past";
+  const vatEditable = sales.hydrated && !readOnly;
+  const canCreate =
+    sales.hydrated && !readOnly && canCreatePlanForMonth(sales.document, month, today);
+  const missing = editable && plan ? missingPlanProducts(sales.document, plan) : [];
+  const previousMonth = shiftMonth(month, -1);
+  const nextMonth = shiftMonth(month, 1);
+  const horizonEnd = lastHorizonMonth(today);
+  const hasTable = summary.rows.length > 0;
+  const tableExpanded = fullscreen && hasTable;
+
+  useEffect(() => {
+    if (!tableExpanded) {
+      return;
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setFullscreen(false);
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [tableExpanded]);
+
+  function open(nextMonthKey: string) {
+    router.push(
+      summaryHref({
+        month: nextMonthKey,
+        currentMonth,
+        showDeleted: readOnly,
+        planId: readOnly ? planId : undefined,
+      }),
+      { scroll: false },
+    );
+  }
+
+  function createPlan() {
+    if (!canCreate || products.length === 0) {
+      return;
+    }
+
+    const id = `sales-plan:${crypto.randomUUID()}`;
+    const lines = products.map((product) => ({
+      id: `sales-plan-line:${crypto.randomUUID()}`,
+      productId: product.id,
+      priceWithVatKopecks: suggestedPriceWithVatKopecks(
+        sales.document,
+        product.id,
+        month,
+      ),
+      volumePieces: 0,
+    }));
+    const rejection = sales.addPlan(id, month, lines);
+    setCreateError(rejection ? SALES_PLAN_ERROR[rejection] : null);
+  }
+
+  function addMissing() {
+    if (!plan) {
+      return;
+    }
+
+    const lines = missing.map((product) => ({
+      id: `sales-plan-line:${crypto.randomUUID()}`,
+      productId: product.id,
+    }));
+    const rejection = sales.addMissing(plan.id, lines);
+    setAddError(rejection ? SALES_PLAN_ERROR[rejection] : null);
+  }
+
+  return (
+    <>
+      <PageFrame
+        title="Сводка"
+        full
+        lede={lede(readOnly, phase, daysInMonth(month), Boolean(plan))}
+      >
+        <div className="flex flex-col gap-4">
+          <div className="border border-line bg-sheet">
+            <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="flex shrink-0 flex-wrap items-end gap-2">
+                <div>
+                  <label htmlFor={monthFieldId} className="text-sm text-muted">
+                    Месяц
+                  </label>
+                  <div className="mt-2 flex items-center gap-2">
+                    {readOnly ? null : (
+                      <MonthStep
+                        label="Предыдущий месяц"
+                        direction="previous"
+                        disabled={!summaryMonthOpen(previousMonth, today)}
+                        onClick={() => open(previousMonth)}
+                      />
+                    )}
+                    {readOnly ? (
+                      <p className="text-sm text-ink">{formatMonth(month)}</p>
+                    ) : (
+                      <input
+                        id={monthFieldId}
+                        type="month"
+                        min="2000-01"
+                        max={horizonEnd}
+                        value={month}
+                        onChange={(event) => {
+                          const next = event.target.value;
+                          if (summaryMonthOpen(next, today)) {
+                            open(next);
+                          }
+                        }}
+                        className={`w-44 ${fieldClassName}`}
+                      />
+                    )}
+                    {readOnly ? null : (
+                      <MonthStep
+                        label="Следующий месяц"
+                        direction="next"
+                        disabled={nextMonth > horizonEnd}
+                        onClick={() => open(nextMonth)}
+                      />
+                    )}
+                  </div>
+                </div>
+                {readOnly ? (
+                  <RestoreButton
+                    planId={planId}
+                    month={month}
+                    monthLabel={formatMonth(month)}
+                  />
+                ) : plan ? (
+                  <DeletePlanButton
+                    planId={plan.id}
+                    monthLabel={formatMonth(month)}
+                    disabled={!sales.hydrated}
+                  />
+                ) : canCreate && products.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={createPlan}
+                    className={primaryButtonClassName}
+                  >
+                    <IconPlan />
+                    Создать план
+                  </button>
+                ) : null}
+              </div>
+              <Link
+                href={summaryHref({ showDeleted: true })}
+                className={quietLinkClassName}
               >
-                <IconPlan />
-                Создать план
-              </button>
-            )}
+                <IconUndo />
+                {readOnly ? "К удалённым" : "Удалённые"}
+                {readOnly || sales.deletedPlans.length === 0
+                  ? ""
+                  : ` ${sales.deletedPlans.length}`}
+              </Link>
+            </div>
           </div>
-          <Link
-            href={summaryHref(!showDeleted)}
-            aria-current={showDeleted ? "page" : undefined}
-            className={`inline-flex h-11 items-center justify-center gap-2 border px-3 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
-              showDeleted
-                ? "border-ink bg-ink text-white"
-                : "border-line bg-sheet text-ink hover:border-ink"
-            }`}
-          >
-            <IconUndo />
-            Удалённые
-            {sales.deletedPlans.length > 0 ? ` ${sales.deletedPlans.length}` : ""}
-          </Link>
+
+          {createError ? <p className="text-sm text-ink">{createError}</p> : null}
+
+          {missing.length > 0 ? (
+            <div className="flex flex-col gap-3 border border-line bg-sheet p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm leading-6 text-ink">
+                В справочнике есть товары, которых нет в этом плане.
+              </p>
+              <div className="flex flex-col gap-2 sm:items-end">
+                <button
+                  type="button"
+                  onClick={addMissing}
+                  className={`w-full sm:w-auto ${primaryButtonClassName}`}
+                >
+                  <IconPlus />
+                  Добавить новые товары
+                </button>
+                {addError ? <p className="text-sm text-ink">{addError}</p> : null}
+              </div>
+            </div>
+          ) : null}
+
+          {products.length === 0 && summary.rows.length === 0 ? (
+            <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
+              Сначала добавьте конечный товар.{" "}
+              <Link
+                href={materialListHref("products", false)}
+                className="text-ink underline outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              >
+                К товарам
+              </Link>
+            </p>
+          ) : hasTable ? (
+            <div
+              className={tableExpanded ? "fixed inset-0 z-50 bg-paper" : undefined}
+              role={tableExpanded ? "dialog" : undefined}
+              aria-label={tableExpanded ? "Таблица на весь экран" : undefined}
+              aria-modal={tableExpanded ? true : undefined}
+            >
+              <SummaryTable
+                rows={summary.rows}
+                planTotals={summary.planTotalsSide}
+                factTotals={summary.factTotals}
+                variance={summary.variance}
+                editable={editable}
+                vatEditable={vatEditable}
+                expanded={tableExpanded}
+                onPlanLineAction={(lineId, priceWithVatKopecks, volumePieces) => {
+                  if (!plan) {
+                    return "missing";
+                  }
+
+                  return sales.updateLine(
+                    plan.id,
+                    lineId,
+                    priceWithVatKopecks,
+                    volumePieces,
+                  );
+                }}
+                onProductVatAction={(productId, vatPercent) => {
+                  const rejection = sales.updateProductVat(productId, vatPercent);
+                  return rejection ? FIELD_ERROR[rejection] : null;
+                }}
+              />
+            </div>
+          ) : (
+            <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
+              Сначала добавьте конечный товар. Сводка строится по товарам.
+            </p>
+          )}
         </div>
+      </PageFrame>
 
-        {createOpen ? <CreatePlanDialog onClose={() => setCreateOpen(false)} /> : null}
+      {hasTable ? (
+        <FullscreenToggle
+          active={tableExpanded}
+          onToggle={() => setFullscreen((current) => !current)}
+        />
+      ) : null}
+    </>
+  );
+}
 
-        {plans.length === 0 ? (
+function lede(
+  deleted: boolean,
+  phase: ReturnType<typeof planPhase>,
+  days: number,
+  hasPlan: boolean,
+): string {
+  const length = `В месяце ${daysPhrase(days)}.`;
+  if (deleted) {
+    return `План удалён, только просмотр. Факт считается из дней раздела «Факт продаж». ${length}`;
+  }
+  if (!hasPlan) {
+    return `Плана на этот месяц нет. Факт считается из дней раздела «Факт продаж». ${length}`;
+  }
+  if (phase === "past") {
+    return `Месяц прошёл, план только для просмотра. Факт считается из дней раздела «Факт продаж». ${length}`;
+  }
+
+  return `План, факт и отклонение выбранного месяца. Факт считается из дней раздела «Факт продаж». ${length}`;
+}
+
+function resolveMonth(month: string, today: Date): string {
+  if (summaryMonthOpen(month, today)) {
+    return month;
+  }
+
+  return monthKeyFromDate(today);
+}
+
+function MonthStep({
+  label,
+  direction,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  direction: "previous" | "next";
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className="inline-flex size-11 items-center justify-center border border-line bg-sheet text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {direction === "previous" ? <IconChevronLeft /> : <IconChevronRight />}
+    </button>
+  );
+}
+
+function FullscreenToggle({
+  active,
+  onToggle,
+}: {
+  active: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={active ? "Обычный режим" : "На весь экран"}
+      aria-pressed={active}
+      title={active ? "Обычный режим" : "На весь экран"}
+      onClick={onToggle}
+      className="fixed right-5 bottom-5 z-60 inline-flex size-12 items-center justify-center rounded-full border border-line bg-sheet text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+    >
+      {active ? <IconFullscreenExit /> : <IconFullscreen />}
+    </button>
+  );
+}
+
+function DeletePlanButton({
+  planId,
+  monthLabel,
+  disabled,
+}: {
+  planId: string;
+  monthLabel: string;
+  disabled: boolean;
+}) {
+  const sales = useSales();
+
+  return (
+    <button
+      type="button"
+      aria-label={`Удалить план ${monthLabel}`}
+      title="Удалить"
+      disabled={disabled}
+      onClick={() => {
+        const confirmed = window.confirm(
+          `Удалить план за ${monthLabel}? Он пропадёт из рабочего месяца. Вернуть можно среди удалённых.`,
+        );
+        if (confirmed) {
+          sales.removePlan(planId);
+        }
+      }}
+      className="inline-flex size-11 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-40"
+    >
+      <IconTrash />
+    </button>
+  );
+}
+
+function RestoreButton({
+  planId,
+  month,
+  monthLabel,
+}: {
+  planId: string;
+  month: string;
+  monthLabel: string;
+}) {
+  const sales = useSales();
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const today = useMemo(() => new Date(), []);
+  const currentMonth = monthKeyFromDate(today);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <button
+        type="button"
+        disabled={!sales.hydrated}
+        onClick={() => {
+          const rejection = sales.restorePlan(planId);
+          if (rejection) {
+            setError(SALES_PLAN_ERROR[rejection]);
+            return;
+          }
+          router.push(summaryHref({ month, currentMonth }));
+        }}
+        className="inline-flex h-11 items-center justify-center gap-2 border border-line bg-sheet px-4 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
+      >
+        <IconUndo />
+        Вернуть {monthLabel}
+      </button>
+      {error ? <p className="text-sm text-ink">{error}</p> : null}
+    </div>
+  );
+}
+
+function DeletedList() {
+  const sales = useSales();
+  const today = useMemo(() => new Date(), []);
+  const currentMonth = monthKeyFromDate(today);
+  const [error, setError] = useState<string | null>(null);
+  const deleted = sales.deletedPlans
+    .slice()
+    .sort((left, right) => right.month.localeCompare(left.month));
+
+  return (
+    <PageFrame title="Сводка" full lede="Удалённые планы можно открыть и вернуть.">
+      <div className="flex flex-col gap-4">
+        <Link
+          href={summaryHref({ month: currentMonth, currentMonth })}
+          className={`w-full sm:w-auto ${quietLinkClassName}`}
+        >
+          <IconUndo />К рабочему месяцу
+        </Link>
+        {error ? <p className="text-sm text-ink">{error}</p> : null}
+        {deleted.length === 0 ? (
           <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-            {showDeleted
-              ? "Удалённых планов нет."
-              : "Планов нет. Создайте план на текущий или будущий месяц."}
+            Удалённых планов нет.
           </p>
         ) : (
-          <>
-            <PlanFilters
-              query={query}
-              year={year}
-              phase={phase}
-              years={years}
-              visibleCount={visible.length}
-              totalCount={plans.length}
-              filtersOn={filtersOn}
-              onQuery={setQuery}
-              onYear={setYear}
-              onPhase={setPhase}
-              onReset={resetFilters}
-            />
-            {visible.length === 0 ? (
-              <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-                Ничего не найдено. Измените поиск или сбросьте фильтр.
-              </p>
-            ) : (
-              <ul className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {visible.map((item) => (
-                  <PlanCard
-                    key={item.id}
-                    plan={item}
-                    today={today}
-                    showDeleted={showDeleted}
+          <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {deleted.map((item) => (
+              <li key={item.id} className="border border-line bg-sheet p-4">
+                <p className="text-sm text-ink">{formatMonth(item.month)}</p>
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                  <Link
+                    href={summaryHref({
+                      month: item.month,
+                      currentMonth,
+                      showDeleted: true,
+                      planId: item.id,
+                    })}
+                    className={quietLinkClassName}
+                  >
+                    <IconPlan />
+                    Открыть
+                  </Link>
+                  <button
+                    type="button"
                     disabled={!sales.hydrated}
-                    onRestore={() => sales.restorePlan(item.id)}
-                  />
-                ))}
-              </ul>
-            )}
-          </>
+                    onClick={() => {
+                      const rejection = sales.restorePlan(item.id);
+                      setError(rejection ? SALES_PLAN_ERROR[rejection] : null);
+                    }}
+                    className={quietLinkClassName}
+                  >
+                    <IconUndo />
+                    Вернуть
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </PageFrame>
   );
 }
 
-function matches(
-  plan: SalesPlan,
-  query: string,
-  year: string,
-  phase: PhaseFilter,
-  today: Date,
-): boolean {
-  if (year && monthYear(plan.month) !== year) {
-    return false;
-  }
-
-  const current = planPhase(plan.month, today);
-  if (phase === "ahead" && current === "past") {
-    return false;
-  }
-  if (phase === "past" && current !== "past") {
-    return false;
-  }
-
-  const needle = query.trim().toLocaleLowerCase("ru-RU");
-  if (!needle) {
-    return true;
-  }
-
-  const haystack = [formatMonth(plan.month), plan.month, phaseLabel(current)]
-    .join("\n")
-    .toLocaleLowerCase("ru-RU");
-  return haystack.includes(needle);
-}
-
-function PlanFilters({
-  query,
-  year,
-  phase,
-  years,
-  visibleCount,
-  totalCount,
-  filtersOn,
-  onQuery,
-  onYear,
-  onPhase,
-  onReset,
-}: {
-  query: string;
-  year: string;
-  phase: PhaseFilter;
-  years: string[];
-  visibleCount: number;
-  totalCount: number;
-  filtersOn: boolean;
-  onQuery: (value: string) => void;
-  onYear: (value: string) => void;
-  onPhase: (value: PhaseFilter) => void;
-  onReset: () => void;
-}) {
-  const searchId = useId();
-  const yearId = useId();
-  const phases: { id: PhaseFilter; label: string }[] = [
-    { id: "all", label: "Все" },
-    { id: "ahead", label: "Впереди" },
-    { id: "past", label: "Прошедшие" },
-  ];
-
-  return (
-    <div className="flex flex-col gap-4 border border-line bg-sheet p-4">
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(9rem,0.6fr)]">
-        <div className="min-w-0">
-          <label htmlFor={searchId} className="text-sm text-muted">
-            Поиск
-          </label>
-          <input
-            id={searchId}
-            type="search"
-            value={query}
-            autoComplete="off"
-            placeholder="Месяц, например сент"
-            onChange={(event) => onQuery(event.target.value)}
-            className={`mt-1.5 ${fieldClassName}`}
-          />
-        </div>
-        <div className="min-w-0">
-          <label htmlFor={yearId} className="text-sm text-muted">
-            Год
-          </label>
-          <select
-            id={yearId}
-            value={year}
-            onChange={(event) => onYear(event.target.value)}
-            className={`mt-1.5 ${fieldClassName}`}
-          >
-            <option value="">Все годы</option>
-            {years.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <div className="grid grid-cols-3 border border-line bg-paper p-1">
-        {phases.map((item) => {
-          const selected = item.id === phase;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => onPhase(item.id)}
-              className={`inline-flex h-11 items-center justify-center px-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
-                selected ? "bg-ink text-white" : "text-muted hover:text-ink"
-              }`}
-            >
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted">
-          Показано {visibleCount} из {totalCount}
-        </p>
-        {filtersOn ? (
-          <button
-            type="button"
-            onClick={onReset}
-            className="inline-flex h-11 items-center justify-center gap-2 border border-line bg-paper px-4 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-          >
-            <IconClose />
-            Сбросить
-          </button>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function PlanCard({
-  plan,
-  today,
-  showDeleted,
-  disabled,
-  onRestore,
-}: {
-  plan: SalesPlan;
-  today: Date;
-  showDeleted: boolean;
-  disabled: boolean;
-  onRestore: () => SalesPlanRejection | null;
-}) {
-  const sales = useSales();
-  const [error, setError] = useState<string | null>(null);
-  const title = formatMonth(plan.month);
-  const totals = salesPlanTotals(sales.document, plan);
-  const phase = planPhase(plan.month, today);
-
-  return (
-    <li className="relative border border-line bg-sheet">
-      <Link
-        href={planHref(plan.id)}
-        aria-label={`План ${title}`}
-        className="absolute inset-0 z-0 outline-none hover:bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-      />
-      <div className="pointer-events-none relative z-10 flex items-start gap-2 p-4">
-        <div className="flex min-w-0 flex-1 flex-col gap-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <span className="text-base font-semibold text-ink">{title}</span>
-            <span className="text-sm text-muted">{phaseLabel(phase)}</span>
-          </div>
-          <p className="text-sm text-muted">{daysPhrase(daysInMonth(plan.month))}</p>
-          <dl className="flex flex-col gap-2 text-sm">
-            <Fact label="Объём" value={volumeFact(totals)} />
-            <Fact label="Выручка" value={revenueFact(totals)} />
-            <Fact label="Т-проток" value={contributionFact(totals)} />
-          </dl>
-          <p className="text-sm text-muted">
-            {productCountPhrase(totals.productsWithVolume, totals.lineCount)}
-          </p>
-          {showDeleted ? <p className="text-sm text-muted">Удалён</p> : null}
-        </div>
-        {showDeleted ? (
-          <button
-            type="button"
-            aria-label={`Вернуть план ${title}`}
-            title="Вернуть"
-            disabled={disabled}
-            onClick={() => {
-              const rejection = onRestore();
-              setError(rejection ? SALES_PLAN_ERROR[rejection] : null);
-            }}
-            className="pointer-events-auto inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
-          >
-            <IconUndo />
-          </button>
-        ) : null}
-      </div>
-      {error ? (
-        <p className="pointer-events-none relative z-10 px-4 pb-4 text-sm text-ink">
-          {error}
-        </p>
-      ) : null}
-    </li>
-  );
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-      <dt className="text-muted">{label}</dt>
-      <dd className="break-words text-ink sm:text-right">{value}</dd>
-    </div>
-  );
-}
-
-function volumeFact(totals: ReturnType<typeof salesPlanTotals>): string {
-  if (totals.volumePieces === null) {
-    return "—";
-  }
-
-  const pieces = `${formatPieces(totals.volumePieces)} шт`;
-  if (totals.perDay === null) {
-    return pieces;
-  }
-
-  return `${pieces} · ${formatPerDay(totals.perDay)} в сутки`;
-}
-
-function revenueFact(totals: ReturnType<typeof salesPlanTotals>): string {
-  if (totals.revenueWithVatKopecks === null) {
-    return "—";
-  }
-  if (totals.revenueExVatKopecks === null) {
-    return `${formatMoney(totals.revenueWithVatKopecks)} с НДС · без НДС не считается`;
-  }
-
-  return formatMoneyPair(totals.revenueWithVatKopecks, totals.revenueExVatKopecks);
-}
-
-function contributionFact(totals: ReturnType<typeof salesPlanTotals>): string {
-  if (!totals.costComplete || !totals.revenueComplete) {
-    return "не по всем товарам";
-  }
-  if (totals.contributionKopecks === null) {
-    return "—";
-  }
-
-  return formatContribution(totals.contributionKopecks);
-}
+const quietLinkClassName =
+  "inline-flex h-11 items-center justify-center gap-2 border border-line bg-sheet px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";

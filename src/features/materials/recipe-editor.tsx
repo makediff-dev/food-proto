@@ -14,7 +14,11 @@ import {
   inputGramsForFinishedBatch,
   recipeComponentChoices,
 } from "@/domain/materials";
-import { formatKilogramsFromGrams } from "@/domain/units";
+import {
+  formatKilogramsFromGrams,
+  gramsFromPieces,
+  piecesFromGrams,
+} from "@/domain/units";
 import { formatMoney, formatVatPair } from "@/features/materials/money";
 import {
   FIELD_ERROR,
@@ -83,7 +87,12 @@ export function RecipeEditor({ derivative }: { derivative: Derivative }) {
       </div>
 
       {recipe && !derivative.isFinalProduct && recipe.yieldPercent !== null ? (
-        <BatchMeter lines={recipe.lines} yieldPercent={recipe.yieldPercent} />
+        <BatchMeter
+          lines={recipe.lines}
+          yieldPercent={recipe.yieldPercent}
+          batchSize={recipe.batchSize}
+          pieceWeightGrams={derivative.pieceWeightGrams}
+        />
       ) : null}
 
       {recipe ? (
@@ -131,8 +140,8 @@ function CreateRecipe({ derivative }: { derivative: Derivative }) {
     >
       <p className="text-sm leading-6 text-muted">
         {derivative.isFinalProduct
-          ? "Карты ещё нет. Состав задаётся на 1000 шт."
-          : "Карты ещё нет. Состав задаётся на 100 кг готового продукта. Выход после обработки показывает, сколько сырья для этого нужно."}
+          ? "Карты ещё нет. Состав задаётся на партию штук — базу можно сменить после создания."
+          : "Карты ещё нет. Состав задаётся на партию готового продукта — базу и выход можно сменить после создания."}
       </p>
       {derivative.isFinalProduct ? null : (
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -177,22 +186,17 @@ function ActiveRecipe({
   recipe: RecipeCard;
 }) {
   const per = derivative.isFinalProduct ? "1 шт" : "1 кг";
+  const batchLabel = formatBatchLabel(
+    recipe.batchSize,
+    derivative.isFinalProduct,
+    derivative.pieceWeightGrams,
+  );
 
   return (
     <div>
-      {derivative.isFinalProduct ? (
-        <p className={`border-b border-line text-sm leading-6 text-muted ${panelPad}`}>
-          Норма закладки — на 1000 шт.
-        </p>
-      ) : (
-        <YieldField recipeId={recipe.id} yieldPercent={recipe.yieldPercent ?? 0} />
-      )}
+      <RecipeBatchFields derivative={derivative} recipe={recipe} />
       <div className={`border-b border-line ${panelPad}`}>
-        <h3 className="text-sm font-semibold text-ink">
-          {derivative.isFinalProduct
-            ? "Состав на 1000 шт"
-            : "Состав на 100 кг готового продукта"}
-        </h3>
+        <h3 className="text-sm font-semibold text-ink">Состав на {batchLabel}</h3>
         {recipe.lines.length === 0 ? (
           <p className="mt-2 text-sm text-muted">
             В составе пока пусто. Добавьте сырьё или другую производную.
@@ -212,6 +216,48 @@ function ActiveRecipe({
         )}
       </div>
       <AddLineForm derivativeId={derivative.id} recipeId={recipe.id} />
+    </div>
+  );
+}
+
+function formatBatchLabel(
+  batchSize: number,
+  isFinalProduct: boolean,
+  pieceWeightGrams: number | null = null,
+): string {
+  if (isFinalProduct) {
+    return `${batchSize.toLocaleString("ru-RU")} шт`;
+  }
+
+  const kilograms = formatKilogramsFromGrams(batchSize);
+  const pieces =
+    pieceWeightGrams === null ? null : piecesFromGrams(batchSize, pieceWeightGrams);
+  if (pieces === null) {
+    return `${kilograms} кг готового продукта`;
+  }
+
+  return `${kilograms} кг/${pieces.toLocaleString("ru-RU")} шт готового продукта`;
+}
+
+function RecipeBatchFields({
+  derivative,
+  recipe,
+}: {
+  derivative: Derivative;
+  recipe: RecipeCard;
+}) {
+  return (
+    <div className={`border-b border-line ${panelPad}`}>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {derivative.isFinalProduct ? null : (
+          <YieldField recipeId={recipe.id} yieldPercent={recipe.yieldPercent ?? 0} />
+        )}
+        <BatchSizeField
+          recipeId={recipe.id}
+          batchSize={recipe.batchSize}
+          isFinalProduct={derivative.isFinalProduct}
+        />
+      </div>
     </div>
   );
 }
@@ -254,35 +300,103 @@ function YieldField({
   }
 
   return (
-    <div className={`border-b border-line ${panelPad}`}>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <label htmlFor={inputId} className="text-sm text-muted">
-            Выход после обработки, %
-          </label>
-          <input
-            id={inputId}
-            value={shown}
-            inputMode="numeric"
-            disabled={!catalog.hydrated}
-            autoComplete="off"
-            aria-invalid={error ? true : undefined}
-            onFocus={() => {
-              setDraft(String(yieldPercent));
-              setError(null);
-            }}
-            onChange={(event) => setDraft(event.target.value)}
-            onBlur={(event) => commit(event.currentTarget.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.currentTarget.blur();
-              }
-            }}
-            className={`mt-1.5 ${fieldClassName}`}
-          />
-          {error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
-        </div>
-      </div>
+    <div>
+      <label htmlFor={inputId} className="text-sm text-muted">
+        Выход после обработки, %
+      </label>
+      <input
+        id={inputId}
+        value={shown}
+        inputMode="numeric"
+        disabled={!catalog.hydrated}
+        autoComplete="off"
+        aria-invalid={error ? true : undefined}
+        onFocus={() => {
+          setDraft(String(yieldPercent));
+          setError(null);
+        }}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={(event) => commit(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.currentTarget.blur();
+          }
+        }}
+        className={`mt-1.5 ${fieldClassName}`}
+      />
+      {error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
+    </div>
+  );
+}
+
+function BatchSizeField({
+  recipeId,
+  batchSize,
+  isFinalProduct,
+}: {
+  recipeId: string;
+  batchSize: number;
+  isFinalProduct: boolean;
+}) {
+  const catalog = useMaterials();
+  const inputId = useId();
+  const [draft, setDraft] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const shown =
+    draft ?? (isFinalProduct ? String(batchSize) : formatKilogramsFromGrams(batchSize));
+
+  function commit(raw: string) {
+    const parsed = isFinalProduct ? parsePieceCount(raw) : parseGrams(raw);
+    if (parsed === null) {
+      setError(FIELD_ERROR["batch-size"]);
+      setDraft(raw);
+      return;
+    }
+    if (parsed === batchSize) {
+      setDraft(null);
+      setError(null);
+      return;
+    }
+
+    const rejection = catalog.setBatchSize(recipeId, parsed);
+    if (rejection) {
+      setError(FIELD_ERROR[rejection]);
+      setDraft(raw);
+      return;
+    }
+
+    setDraft(null);
+    setError(null);
+  }
+
+  return (
+    <div>
+      <label htmlFor={inputId} className="text-sm text-muted">
+        {isFinalProduct ? "Норма закладки, шт" : "Партия готового продукта, кг"}
+      </label>
+      <input
+        id={inputId}
+        value={shown}
+        inputMode={isFinalProduct ? "numeric" : "decimal"}
+        disabled={!catalog.hydrated}
+        autoComplete="off"
+        aria-invalid={error ? true : undefined}
+        onFocus={() => {
+          setDraft(
+            isFinalProduct ? String(batchSize) : formatKilogramsFromGrams(batchSize),
+          );
+          setError(null);
+        }}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={(event) => commit(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.currentTarget.blur();
+          }
+        }}
+        className={`mt-1.5 ${fieldClassName}`}
+      />
+      {error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
     </div>
   );
 }
@@ -299,51 +413,116 @@ function RecipeLineRow({
   per: string;
 }) {
   const catalog = useMaterials();
-  const inputId = useId();
-  const [draft, setDraft] = useState<string | null>(null);
+  const kgId = useId();
+  const piecesId = useId();
+  const [kgDraft, setKgDraft] = useState<string | null>(null);
+  const [piecesDraft, setPiecesDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const piece = isPieceLine(catalog.document, line);
-  const shown =
-    draft ??
+  const componentDerivative =
+    line.kind === "derivative"
+      ? catalog.document.derivatives.find((item) => item.id === line.refId)
+      : undefined;
+  const pieceWeightGrams =
+    derivative.isFinalProduct &&
+    line.kind === "derivative" &&
+    componentDerivative &&
+    !componentDerivative.isFinalProduct
+      ? componentDerivative.pieceWeightGrams
+      : null;
+  const dual = pieceWeightGrams !== null && pieceWeightGrams !== undefined;
+  const piecesShown =
+    piecesDraft ??
+    (dual && pieceWeightGrams
+      ? String(piecesFromGrams(line.quantityGrams, pieceWeightGrams) ?? "")
+      : "");
+  const kgShown =
+    kgDraft ??
     (piece ? String(line.quantityGrams) : formatKilogramsFromGrams(line.quantityGrams));
   const component = describeComponent(catalog.document, line);
   const contribution = lineContribution(catalog.document, derivative.id, line.id);
 
-  function commit(raw: string) {
-    const grams = piece ? parsePieceCount(raw) : parseGrams(raw);
-    if (grams === null) {
-      setError(FIELD_ERROR.quantity);
-      setDraft(raw);
-      return;
-    }
+  function commitGrams(grams: number, rawKg: string, rawPieces: string | null) {
     if (grams === line.quantityGrams) {
-      setDraft(null);
+      setKgDraft(null);
+      setPiecesDraft(null);
       setError(null);
       return;
     }
 
     const rejection = catalog.updateLine(recipeId, line.id, grams);
     if (rejection) {
+      const active = catalog.activeRecipeFor(derivative.id);
       setError(
-        rejection === "batch"
+        rejection === "batch" && active && active.yieldPercent !== null
           ? overflowText(
-              compositionGrams(
-                catalog
-                  .activeRecipeFor(derivative.id)
-                  ?.lines.filter((item) => item.id !== line.id) ?? [],
-              ),
-              inputGramsForFinishedBatch(
-                catalog.activeRecipeFor(derivative.id)?.yieldPercent ?? 100,
-              ),
+              compositionGrams(active.lines.filter((item) => item.id !== line.id)),
+              inputGramsForFinishedBatch(active.yieldPercent, active.batchSize),
+              active.batchSize,
+              derivative.pieceWeightGrams,
             )
           : FIELD_ERROR[rejection],
       );
-      setDraft(raw);
+      setKgDraft(rawKg);
+      if (rawPieces !== null) {
+        setPiecesDraft(rawPieces);
+      }
       return;
     }
 
-    setDraft(null);
+    setKgDraft(null);
+    setPiecesDraft(null);
     setError(null);
+  }
+
+  function commitFromKg(raw: string) {
+    if (piece) {
+      const grams = parsePieceCount(raw);
+      if (grams === null) {
+        setError(FIELD_ERROR.quantity);
+        setKgDraft(raw);
+        return;
+      }
+      commitGrams(grams, raw, null);
+      return;
+    }
+
+    const grams = parseGrams(raw);
+    if (grams === null) {
+      setError(FIELD_ERROR.quantity);
+      setKgDraft(raw);
+      return;
+    }
+
+    if (dual && pieceWeightGrams) {
+      const pieces = piecesFromGrams(grams, pieceWeightGrams);
+      setPiecesDraft(pieces === null ? "" : String(pieces));
+    }
+
+    commitGrams(grams, raw, piecesDraft);
+  }
+
+  function commitFromPieces(raw: string) {
+    if (!dual || !pieceWeightGrams) {
+      return;
+    }
+
+    const pieces = parsePieceCount(raw);
+    if (pieces === null) {
+      setError(FIELD_ERROR.quantity);
+      setPiecesDraft(raw);
+      return;
+    }
+
+    const grams = gramsFromPieces(pieces, pieceWeightGrams);
+    if (grams === null) {
+      setError(FIELD_ERROR.quantity);
+      setPiecesDraft(raw);
+      return;
+    }
+
+    setKgDraft(formatKilogramsFromGrams(grams));
+    commitGrams(grams, formatKilogramsFromGrams(grams), raw);
   }
 
   return (
@@ -375,26 +554,43 @@ function RecipeLineRow({
       </div>
       <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="w-full sm:w-44">
-          <label htmlFor={inputId} className="text-sm text-muted">
+          <label htmlFor={kgId} className="text-sm text-muted">
             Количество, {piece ? "шт" : "кг"}
           </label>
           <input
-            id={inputId}
-            value={shown}
-            inputMode="decimal"
+            id={kgId}
+            value={kgShown}
+            inputMode={piece ? "numeric" : "decimal"}
             disabled={!catalog.hydrated}
             autoComplete="off"
             aria-invalid={error ? true : undefined}
             onFocus={() => {
-              setDraft(
+              setKgDraft(
                 piece
                   ? String(line.quantityGrams)
                   : formatKilogramsFromGrams(line.quantityGrams),
               );
+              if (dual && pieceWeightGrams) {
+                setPiecesDraft(
+                  String(piecesFromGrams(line.quantityGrams, pieceWeightGrams) ?? ""),
+                );
+              }
               setError(null);
             }}
-            onChange={(event) => setDraft(event.target.value)}
-            onBlur={(event) => commit(event.currentTarget.value)}
+            onChange={(event) => {
+              const raw = event.target.value;
+              setKgDraft(raw);
+              if (!dual || !pieceWeightGrams) {
+                return;
+              }
+              const grams = parseGrams(raw);
+              if (grams === null) {
+                return;
+              }
+              const pieces = piecesFromGrams(grams, pieceWeightGrams);
+              setPiecesDraft(pieces === null ? "" : String(pieces));
+            }}
+            onBlur={(event) => commitFromKg(event.currentTarget.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.currentTarget.blur();
@@ -402,8 +598,55 @@ function RecipeLineRow({
             }}
             className={`mt-1.5 ${fieldClassName}`}
           />
-          {error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
+          {!dual && error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
         </div>
+        {dual ? (
+          <div className="w-full sm:w-44">
+            <label htmlFor={piecesId} className="text-sm text-muted">
+              Количество, шт
+            </label>
+            <input
+              id={piecesId}
+              value={piecesShown}
+              inputMode="numeric"
+              disabled={!catalog.hydrated}
+              autoComplete="off"
+              aria-invalid={error ? true : undefined}
+              onFocus={() => {
+                if (pieceWeightGrams) {
+                  setPiecesDraft(
+                    String(piecesFromGrams(line.quantityGrams, pieceWeightGrams) ?? ""),
+                  );
+                  setKgDraft(formatKilogramsFromGrams(line.quantityGrams));
+                }
+                setError(null);
+              }}
+              onChange={(event) => {
+                const raw = event.target.value;
+                setPiecesDraft(raw);
+                if (!pieceWeightGrams) {
+                  return;
+                }
+                const pieces = parsePieceCount(raw);
+                if (pieces === null) {
+                  return;
+                }
+                const grams = gramsFromPieces(pieces, pieceWeightGrams);
+                if (grams !== null) {
+                  setKgDraft(formatKilogramsFromGrams(grams));
+                }
+              }}
+              onBlur={(event) => commitFromPieces(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.currentTarget.blur();
+                }
+              }}
+              className={`mt-1.5 ${fieldClassName}`}
+            />
+            {error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
+          </div>
+        ) : null}
         <div>
           <p className="text-sm text-muted">Вклад в {per}</p>
           {contribution === null ? (
@@ -433,39 +676,65 @@ function AddLineForm({
   const choices = recipeComponentChoices(catalog.document, derivativeId);
   const componentId = useId();
   const quantityId = useId();
+  const piecesId = useId();
   const [component, setComponent] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [pieces, setPieces] = useState("");
   const [error, setError] = useState<string | null>(null);
   const empty = choices.materials.length === 0 && choices.derivatives.length === 0;
   const choice = parseComponentOption(component);
+  const owner = catalog.document.derivatives.find((item) => item.id === derivativeId);
   const selectedMaterial =
     choice?.kind === "material"
       ? catalog.document.materials.find((item) => item.id === choice.id)
       : undefined;
+  const selectedDerivative =
+    choice?.kind === "derivative"
+      ? catalog.document.derivatives.find((item) => item.id === choice.id)
+      : undefined;
   const piece = selectedMaterial?.unit === "piece";
+  const pieceWeightGrams =
+    owner?.isFinalProduct && selectedDerivative && !selectedDerivative.isFinalProduct
+      ? selectedDerivative.pieceWeightGrams
+      : null;
+  const dual = pieceWeightGrams !== null && pieceWeightGrams !== undefined;
 
   function submit() {
     const picked = parseComponentOption(component);
-    const amount = piece ? parsePieceCount(quantity) : parseGrams(quantity);
     if (!picked) {
       setError(FIELD_ERROR.component);
       return;
     }
+
+    let amount: number | null = null;
+    if (piece) {
+      amount = parsePieceCount(quantity);
+    } else if (
+      dual &&
+      pieceWeightGrams &&
+      pieces.trim().length > 0 &&
+      quantity.trim().length === 0
+    ) {
+      const count = parsePieceCount(pieces);
+      amount = count === null ? null : gramsFromPieces(count, pieceWeightGrams);
+    } else {
+      amount = parseGrams(quantity);
+    }
+
     if (amount === null) {
       setError(FIELD_ERROR.quantity);
       return;
     }
 
-    const owner = catalog.document.derivatives.find((item) => item.id === derivativeId);
     const recipe = catalog.activeRecipeFor(derivativeId);
     const limit =
       recipe?.yieldPercent === null || recipe?.yieldPercent === undefined
         ? null
-        : inputGramsForFinishedBatch(recipe.yieldPercent);
+        : inputGramsForFinishedBatch(recipe.yieldPercent, recipe.batchSize);
     if (owner && !owner.isFinalProduct && recipe && !piece && limit !== null) {
       const placed = compositionGrams(recipe.lines);
       if (placed + amount > limit) {
-        setError(overflowText(placed, limit));
+        setError(overflowText(placed, limit, recipe.batchSize, owner.pieceWeightGrams));
         return;
       }
     }
@@ -483,6 +752,7 @@ function AddLineForm({
 
     setComponent("");
     setQuantity("");
+    setPieces("");
     setError(null);
   }
 
@@ -494,7 +764,13 @@ function AddLineForm({
         submit();
       }}
     >
-      <div className="grid items-end gap-3 md:grid-cols-[minmax(0,1fr)_11rem_auto]">
+      <div
+        className={`grid items-end gap-3 ${
+          dual
+            ? "md:grid-cols-[minmax(0,1fr)_11rem_11rem_auto]"
+            : "md:grid-cols-[minmax(0,1fr)_11rem_auto]"
+        }`}
+      >
         <div>
           <label htmlFor={componentId} className="text-sm text-muted">
             Компонент
@@ -505,6 +781,8 @@ function AddLineForm({
             disabled={!catalog.hydrated || empty}
             onChange={(event) => {
               setComponent(event.target.value);
+              setQuantity("");
+              setPieces("");
               setError(null);
             }}
             className={`mt-1.5 ${fieldClassName}`}
@@ -540,17 +818,55 @@ function AddLineForm({
           <input
             id={quantityId}
             value={quantity}
-            inputMode="decimal"
+            inputMode={piece ? "numeric" : "decimal"}
             disabled={!catalog.hydrated || empty}
             autoComplete="off"
             placeholder="0"
             onChange={(event) => {
-              setQuantity(event.target.value);
+              const raw = event.target.value;
+              setQuantity(raw);
+              if (dual && pieceWeightGrams) {
+                const grams = parseGrams(raw);
+                if (grams !== null) {
+                  const count = piecesFromGrams(grams, pieceWeightGrams);
+                  setPieces(count === null ? "" : String(count));
+                }
+              }
               setError(null);
             }}
             className={`mt-1.5 ${fieldClassName}`}
           />
         </div>
+        {dual ? (
+          <div>
+            <label htmlFor={piecesId} className="text-sm text-muted">
+              Количество, шт
+            </label>
+            <input
+              id={piecesId}
+              value={pieces}
+              inputMode="numeric"
+              disabled={!catalog.hydrated || empty}
+              autoComplete="off"
+              placeholder="0"
+              onChange={(event) => {
+                const raw = event.target.value;
+                setPieces(raw);
+                if (pieceWeightGrams) {
+                  const count = parsePieceCount(raw);
+                  if (count !== null) {
+                    const grams = gramsFromPieces(count, pieceWeightGrams);
+                    if (grams !== null) {
+                      setQuantity(formatKilogramsFromGrams(grams));
+                    }
+                  }
+                }
+                setError(null);
+              }}
+              className={`mt-1.5 ${fieldClassName}`}
+            />
+          </div>
+        ) : null}
         <button
           type="submit"
           disabled={!catalog.hydrated || empty}
@@ -580,12 +896,13 @@ function BatchRoom({ derivativeId }: { derivativeId: string }) {
     return null;
   }
 
-  const target = inputGramsForFinishedBatch(recipe.yieldPercent);
+  const target = inputGramsForFinishedBatch(recipe.yieldPercent, recipe.batchSize);
   const left = target - compositionGrams(recipe.lines);
+  const batchLabel = formatBatchLabel(recipe.batchSize, false, owner.pieceWeightGrams);
   if (left <= 0) {
     return (
       <p className="mt-2 text-sm leading-5 text-muted">
-        Состав на 100 кг готового продукта уже полный.
+        Состав на {batchLabel} уже полный.
       </p>
     );
   }
@@ -601,20 +918,25 @@ function BatchRoom({ derivativeId }: { derivativeId: string }) {
 function BatchMeter({
   lines,
   yieldPercent,
+  batchSize,
+  pieceWeightGrams,
 }: {
   lines: { quantityGrams: number }[];
   yieldPercent: number;
+  batchSize: number;
+  pieceWeightGrams: number | null;
 }) {
   const grams = compositionGrams(lines);
-  const target = inputGramsForFinishedBatch(yieldPercent);
+  const target = inputGramsForFinishedBatch(yieldPercent, batchSize);
   const ready = grams === target;
   const width = Math.min(100, (grams / target) * 100);
   const missing = target - grams;
+  const batchLabel = formatBatchLabel(batchSize, false, pieceWeightGrams);
 
   return (
     <div className={`border-b border-line ${panelPad}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <p className="text-sm text-muted">На 100 кг готового продукта</p>
+        <p className="text-sm text-muted">На {batchLabel}</p>
         <p className="text-sm text-ink">
           {formatKilogramsFromGrams(grams)} из {formatKilogramsFromGrams(target)} кг
         </p>
@@ -626,17 +948,22 @@ function BatchMeter({
         {ready
           ? "Состав собран. Себестоимость 1 кг считается из этой закладки."
           : missing > 0
-            ? `Не хватает ${formatKilogramsFromGrams(missing)} кг. При выходе ${yieldPercent}% на 100 кг готового продукта нужно ${formatKilogramsFromGrams(target)} кг сырья.`
+            ? `Не хватает ${formatKilogramsFromGrams(missing)} кг. При выходе ${yieldPercent}% на ${batchLabel} нужно ${formatKilogramsFromGrams(target)} кг сырья.`
             : `В составе на ${formatKilogramsFromGrams(-missing)} кг больше, чем нужно при выходе ${yieldPercent}%.`}
       </p>
     </div>
   );
 }
 
-function overflowText(placedGrams: number, limitGrams: number): string {
+function overflowText(
+  placedGrams: number,
+  limitGrams: number,
+  batchGrams: number,
+  pieceWeightGrams: number | null = null,
+): string {
   const left = limitGrams - placedGrams;
   if (left <= 0) {
-    return "На 100 кг готового продукта состав уже полный.";
+    return `На ${formatBatchLabel(batchGrams, false, pieceWeightGrams)} состав уже полный.`;
   }
 
   return `В этой строке можно указать не больше ${formatKilogramsFromGrams(left)} кг.`;

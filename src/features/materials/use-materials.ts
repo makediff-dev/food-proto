@@ -2,6 +2,7 @@
 
 import { useDocumentStore } from "@/data/document-store";
 import type { PrototypeDocument } from "@/domain/document";
+import { MAX_WEIGHT_GRAMS } from "@/domain/units";
 import {
   activeDerivatives,
   activeMaterials,
@@ -18,6 +19,8 @@ import {
   deletedRecipesFor,
   deleteRecipe as removeRecipeRecord,
   derivativeDraftRejection,
+  FINAL_BATCH_PIECES,
+  FINISHED_BATCH_GRAMS,
   inputGramsForFinishedBatch,
   materialDraftRejection,
   lineQuantityRejection,
@@ -27,6 +30,7 @@ import {
   restoreMaterial,
   restoreRecipe,
   restoreRecipeRejection,
+  setRecipeBatchSize,
   setRecipeYield,
   updateDerivative,
   updateMaterial,
@@ -121,6 +125,9 @@ export function useMaterials() {
             warehouseId: draft.warehouseId,
             workshopId: draft.workshopId,
             vatPercent: draft.isFinalProduct ? (draft.vatPercent ?? null) : null,
+            pieceWeightGrams: draft.isFinalProduct
+              ? null
+              : (draft.pieceWeightGrams ?? null),
             deletedAt: null,
           }),
         (current) => derivativeDraftRejection(current, draft) ?? "missing",
@@ -158,14 +165,19 @@ export function useMaterials() {
     addRecipe(id: string, derivativeId: string, yieldPercent: number | null) {
       return commit(
         updateDocument,
-        (current) =>
-          addRecipe(current, {
+        (current) => {
+          const derivative = current.derivatives.find((item) => item.id === derivativeId);
+          return addRecipe(current, {
             id,
             derivativeId,
+            batchSize: derivative?.isFinalProduct
+              ? FINAL_BATCH_PIECES
+              : FINISHED_BATCH_GRAMS,
             yieldPercent,
             lines: [],
             deletedAt: null,
-          }),
+          });
+        },
         (current) => {
           const derivative = current.derivatives.find((item) => item.id === derivativeId);
           if (!derivative) {
@@ -196,10 +208,36 @@ export function useMaterials() {
           if (!derivative || derivative.isFinalProduct) {
             return "yield";
           }
-          if (compositionGrams(recipe.lines) > inputGramsForFinishedBatch(yieldPercent)) {
+          if (
+            compositionGrams(recipe.lines) >
+            inputGramsForFinishedBatch(yieldPercent, recipe.batchSize)
+          ) {
             return "batch";
           }
           return "yield";
+        },
+      );
+    },
+    setBatchSize(recipeId: string, batchSize: number) {
+      return commit(
+        updateDocument,
+        (current) => setRecipeBatchSize(current, recipeId, batchSize),
+        (current) => {
+          const recipe = current.recipes.find((item) => item.id === recipeId);
+          if (!recipe) {
+            return "missing";
+          }
+          if (
+            !Number.isInteger(batchSize) ||
+            batchSize < 1 ||
+            batchSize > MAX_WEIGHT_GRAMS
+          ) {
+            return "batch-size";
+          }
+          if (recipe.batchSize === batchSize) {
+            return "batch-size";
+          }
+          return "quantity";
         },
       );
     },

@@ -257,6 +257,7 @@ const recipes: RecipeCard[] = [
   {
     id: "recipe-cutlet",
     derivativeId: "derivative-cutlet",
+    batchSize: 100_000,
     yieldPercent: 80,
     deletedAt: null,
     lines: [
@@ -268,6 +269,7 @@ const recipes: RecipeCard[] = [
   {
     id: "recipe-bun",
     derivativeId: "derivative-bun",
+    batchSize: 100_000,
     yieldPercent: 83,
     deletedAt: null,
     lines: [
@@ -282,6 +284,7 @@ const recipes: RecipeCard[] = [
   {
     id: "recipe-ketchup",
     derivativeId: "derivative-ketchup",
+    batchSize: 100_000,
     yieldPercent: 100,
     deletedAt: null,
     lines: [
@@ -292,6 +295,7 @@ const recipes: RecipeCard[] = [
   {
     id: "recipe-mustard",
     derivativeId: "derivative-mustard",
+    batchSize: 100_000,
     yieldPercent: 100,
     deletedAt: null,
     lines: [
@@ -302,6 +306,7 @@ const recipes: RecipeCard[] = [
   {
     id: "recipe-onion",
     derivativeId: "derivative-onion",
+    batchSize: 100_000,
     yieldPercent: 80,
     deletedAt: null,
     lines: [line("line-onion-raw", "material-onion", 125_000)],
@@ -309,6 +314,7 @@ const recipes: RecipeCard[] = [
   {
     id: "recipe-burger",
     derivativeId: "derivative-burger",
+    batchSize: 1000,
     yieldPercent: null,
     deletedAt: null,
     lines: [
@@ -368,8 +374,8 @@ function recipeOf(derivativeId: string): RecipeCard {
   return recipe;
 }
 
-function scaledQuantity(norm: number, output: number, isFinalProduct: boolean): number {
-  const quantity = scaleRecipeQuantity(norm, output, recipeBatch(isFinalProduct));
+function scaledQuantity(norm: number, output: number, recipe: RecipeCard): number {
+  const quantity = scaleRecipeQuantity(norm, output, recipeBatch(recipe));
   if (quantity === null) {
     throw new Error("norm");
   }
@@ -393,7 +399,6 @@ function driftedQuantity(quantity: number, percent: number): number {
 function factUses(
   recipe: RecipeCard,
   outputQuantity: number,
-  isFinalProduct: boolean,
   driftPercent: number,
   idPrefix: string,
 ): ProductionFactUse[] {
@@ -402,7 +407,7 @@ function factUses(
     kind: entry.kind,
     refId: entry.refId,
     quantity: driftedQuantity(
-      scaledQuantity(entry.quantityGrams, outputQuantity, isFinalProduct),
+      scaledQuantity(entry.quantityGrams, outputQuantity, recipe),
       driftPercent,
     ),
   }));
@@ -421,7 +426,7 @@ function septemberProductionFacts(): ProductionFact[] {
         id: burgerOutputId,
         refId: "derivative-burger",
         quantity: pieces,
-        uses: factUses(burger, pieces, true, driftPercent, burgerOutputId),
+        uses: factUses(burger, pieces, driftPercent, burgerOutputId),
       },
     ];
 
@@ -430,13 +435,13 @@ function septemberProductionFacts(): ProductionFact[] {
         continue;
       }
 
-      const grams = scaledQuantity(entry.quantityGrams, pieces, true);
+      const grams = scaledQuantity(entry.quantityGrams, pieces, burger);
       const outputId = `fact-${occurredOn}-${entry.refId.slice("derivative-".length)}`;
       outputs.push({
         id: outputId,
         refId: entry.refId,
         quantity: grams,
-        uses: factUses(recipeOf(entry.refId), grams, false, driftPercent, outputId),
+        uses: factUses(recipeOf(entry.refId), grams, driftPercent, outputId),
       });
     }
 
@@ -567,6 +572,7 @@ export const mockDocument: PrototypeDocument = {
       warehouseId: "warehouse-4",
       workshopId: "workshop-meat",
       vatPercent: null,
+      pieceWeightGrams: 40,
       deletedAt: null,
     },
     {
@@ -576,6 +582,7 @@ export const mockDocument: PrototypeDocument = {
       warehouseId: "warehouse-1",
       workshopId: "workshop-bakery",
       vatPercent: null,
+      pieceWeightGrams: 50,
       deletedAt: null,
     },
     {
@@ -585,6 +592,7 @@ export const mockDocument: PrototypeDocument = {
       warehouseId: "warehouse-2",
       workshopId: "workshop-vegetables",
       vatPercent: null,
+      pieceWeightGrams: 10,
       deletedAt: null,
     },
     {
@@ -594,6 +602,7 @@ export const mockDocument: PrototypeDocument = {
       warehouseId: "warehouse-2",
       workshopId: "workshop-vegetables",
       vatPercent: null,
+      pieceWeightGrams: 5,
       deletedAt: null,
     },
     {
@@ -603,6 +612,7 @@ export const mockDocument: PrototypeDocument = {
       warehouseId: "warehouse-2",
       workshopId: "workshop-vegetables",
       vatPercent: null,
+      pieceWeightGrams: 5,
       deletedAt: null,
     },
     {
@@ -613,6 +623,7 @@ export const mockDocument: PrototypeDocument = {
       workshopId: "workshop-final",
       /** `Svod!N63`, роллы и сэндвичи. */
       vatPercent: 20,
+      pieceWeightGrams: null,
       deletedAt: null,
     },
   ],

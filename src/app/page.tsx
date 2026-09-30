@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { parseSummaryQuery } from "@/features/sales/paths";
 import { SummaryScreen } from "@/features/sales/summary-screen";
 
 export const metadata: Metadata = {
@@ -9,8 +10,15 @@ export const metadata: Metadata = {
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ deleted?: string }>;
+  searchParams: Promise<{ month?: string; deleted?: string; plan?: string }>;
 }) {
   const params = await searchParams;
-  return <SummaryScreen showDeleted={params.deleted === "1"} />;
+  const query = parseSummaryQuery(params);
+  return (
+    <SummaryScreen
+      month={query.month}
+      showDeleted={query.showDeleted}
+      planId={query.planId}
+    />
+  );
 }

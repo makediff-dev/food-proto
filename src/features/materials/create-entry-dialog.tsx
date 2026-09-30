@@ -12,6 +12,7 @@ import {
   FIELD_ERROR,
   fieldClassName,
   parseKopecks,
+  parsePieceWeightGrams,
   parseStockQuantity,
   parseWholePercent,
   primaryButtonClassName,
@@ -22,7 +23,15 @@ import { Dialog } from "@/features/shell/dialog";
 import { IconPlus } from "@/features/shell/icons";
 
 type FieldKey =
-  "name" | "brand" | "warehouse" | "workshop" | "price" | "vat" | "minStock" | "maxStock";
+  | "name"
+  | "brand"
+  | "warehouse"
+  | "workshop"
+  | "price"
+  | "vat"
+  | "pieceWeight"
+  | "minStock"
+  | "maxStock";
 
 export function CreateEntryDialog({
   kind,
@@ -341,11 +350,11 @@ function DerivativeFields({
   const nameId = useId();
   const warehouseId = useId();
   const workshopId = useId();
-  const vatId = useId();
+  const pieceWeightId = useId();
   const [name, setName] = useState("");
   const [warehouse, setWarehouse] = useState("");
   const [workshop, setWorkshop] = useState("");
-  const [vat, setVat] = useState("");
+  const [pieceWeight, setPieceWeight] = useState("");
   const [errors, setErrors] = useState<Partial<Record<FieldKey, string>>>({});
 
   function clear(key: FieldKey) {
@@ -374,14 +383,10 @@ function DerivativeFields({
     } else if (!workshop) {
       next.workshop = FIELD_ERROR.workshop;
     }
-    const vatPercent = isFinalProduct ? parseWholePercent(vat) : null;
-    if (
-      isFinalProduct &&
-      (vatPercent === null ||
-        vatPercent < MIN_VAT_PERCENT ||
-        vatPercent > MAX_VAT_PERCENT)
-    ) {
-      next.vat = FIELD_ERROR.vat;
+    const vatPercent = isFinalProduct ? 20 : null;
+    const pieceWeightGrams = isFinalProduct ? null : parsePieceWeightGrams(pieceWeight);
+    if (!isFinalProduct && pieceWeightGrams === null) {
+      next.pieceWeight = FIELD_ERROR["piece-weight"];
     }
     if (Object.keys(next).length > 0) {
       setErrors(next);
@@ -395,6 +400,7 @@ function DerivativeFields({
       warehouseId: warehouse,
       workshopId: workshop,
       vatPercent,
+      pieceWeightGrams,
     });
     if (rejection) {
       setErrors(placeDerivativeError(rejection));
@@ -469,22 +475,26 @@ function DerivativeFields({
         </select>
       </FormField>
       {isFinalProduct ? (
-        <FormField id={vatId} label="НДС, %" error={errors.vat}>
+        <p className="text-sm leading-6 text-muted">
+          Ставка НДС по умолчанию — 20 %. Её можно изменить в «Сводке».
+        </p>
+      ) : (
+        <FormField id={pieceWeightId} label="Вес 1 шт, г" error={errors.pieceWeight}>
           <input
-            id={vatId}
-            value={vat}
+            id={pieceWeightId}
+            value={pieceWeight}
             inputMode="numeric"
             autoComplete="off"
-            placeholder="20"
-            aria-invalid={errors.vat ? true : undefined}
+            placeholder="40"
+            aria-invalid={errors.pieceWeight ? true : undefined}
             onChange={(event) => {
-              setVat(event.target.value);
-              clear("vat");
+              setPieceWeight(event.target.value);
+              clear("pieceWeight");
             }}
             className={fieldClassName}
           />
         </FormField>
-      ) : null}
+      )}
       <button
         type="submit"
         disabled={!catalog.hydrated}
@@ -528,6 +538,9 @@ function placeDerivativeError(
   }
   if (rejection === "warehouse" || rejection === "workshop" || rejection === "vat") {
     return { [rejection]: FIELD_ERROR[rejection] };
+  }
+  if (rejection === "piece-weight") {
+    return { pieceWeight: FIELD_ERROR["piece-weight"] };
   }
   return { name: FIELD_ERROR[rejection] };
 }

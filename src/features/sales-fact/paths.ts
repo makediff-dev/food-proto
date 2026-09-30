@@ -18,7 +18,7 @@ export function parseSalesFactQuery(params: {
   return {
     month: params.month ?? "",
     day: params.day ?? "",
-    view: params.view === "all" ? "all" : "day",
+    view: params.view === "day" ? "day" : "all",
     showDeleted: params.deleted === "1",
     factId: params.fact ?? "",
   };
@@ -48,8 +48,8 @@ export function salesFactHref(options: {
   if (options.day && options.day !== options.defaultDay) {
     params.set("day", options.day);
   }
-  if (options.view === "all") {
-    params.set("view", "all");
+  if (options.view === "day") {
+    params.set("view", "day");
   }
 
   const query = params.toString();

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { isOccurredOn } from "@/domain/document";
 import {
@@ -38,10 +38,13 @@ import {
   IconEye,
   IconFullscreen,
   IconFullscreenExit,
+  IconPlan,
   IconTrash,
   IconUndo,
 } from "@/features/shell/icons";
 import { PageFrame } from "@/features/shell/page-frame";
+
+const WEEKDAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"] as const;
 
 export function SalesFactScreen({
   month,
@@ -278,22 +281,13 @@ function Workspace({
                 />
               ) : null}
               <div className="flex shrink-0 flex-col gap-2 border-t border-line pt-4 sm:flex-row sm:items-center lg:ml-auto lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4">
-                <Link
-                  href={salesFactHref({
-                    month,
-                    currentMonth,
-                    day: selectedDay,
-                    defaultDay: fallbackDay,
-                    view: "day",
-                    showDeleted: readOnly,
-                    factId: readOnly ? factId : undefined,
-                  })}
-                  aria-current={view === "day" ? "page" : undefined}
-                  className={viewLinkClass(view === "day")}
-                >
-                  <IconEye />
-                  {formatSalesFactDay(selectedDay)}
-                </Link>
+                <DayDateControl
+                  key={month}
+                  month={month}
+                  selectedDay={selectedDay}
+                  active={view === "day"}
+                  onPick={(next) => open({ day: next, view: "day" })}
+                />
                 <Link
                   href={salesFactHref({
                     month,
@@ -716,6 +710,120 @@ function DeletedList() {
       </div>
     </PageFrame>
   );
+}
+
+function DayDateControl({
+  month,
+  selectedDay,
+  active,
+  onPick,
+}: {
+  month: string;
+  selectedDay: string;
+  active: boolean;
+  onPick: (day: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const dates = useMemo(() => monthDates(month), [month]);
+  const lead = useMemo(() => mondayLeadForMonth(month), [month]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function onPointerDown(event: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        aria-current={active ? "page" : undefined}
+        className={viewLinkClass(active)}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <IconPlan />
+        {formatSalesFactDay(selectedDay)}
+      </button>
+      {open ? (
+        <div
+          role="dialog"
+          aria-label="Выбор даты"
+          className="absolute top-full left-0 z-30 mt-2 w-[17.5rem] border border-line bg-sheet p-3"
+        >
+          <div className="grid grid-cols-7 gap-1">
+            {WEEKDAY_LABELS.map((label) => (
+              <span
+                key={label}
+                className="flex size-8 items-center justify-center text-xs text-muted"
+              >
+                {label}
+              </span>
+            ))}
+            {Array.from({ length: lead }, (_, index) => (
+              <span key={`pad-${index}`} className="size-8" aria-hidden="true" />
+            ))}
+            {dates.map((occurredOn) => {
+              const selected = active && occurredOn === selectedDay;
+              const dayNumber = Number(occurredOn.slice(8, 10));
+              return (
+                <button
+                  key={occurredOn}
+                  type="button"
+                  aria-label={formatSalesFactDay(occurredOn)}
+                  aria-pressed={selected}
+                  onClick={() => {
+                    setOpen(false);
+                    onPick(occurredOn);
+                  }}
+                  className={`flex size-8 items-center justify-center text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
+                    selected
+                      ? "bg-ink text-white"
+                      : "text-ink hover:border hover:border-ink"
+                  }`}
+                >
+                  {dayNumber}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Сколько пустых клеток перед 1-м числом, если неделя с понедельника. */
+function mondayLeadForMonth(month: string): number {
+  const year = Number(month.slice(0, 4));
+  const monthIndex = Number(month.slice(5, 7)) - 1;
+  if (!Number.isInteger(year) || !Number.isInteger(monthIndex)) {
+    return 0;
+  }
+
+  const weekday = new Date(year, monthIndex, 1).getDay();
+  return (weekday + 6) % 7;
 }
 
 function viewLinkClass(selected: boolean): string {

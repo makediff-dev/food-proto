@@ -3,6 +3,11 @@
 import { useDocumentStore } from "@/data/document-store";
 import type { PrototypeDocument, SalesPlanLine } from "@/domain/document";
 import {
+  finalProductVatRejection,
+  setFinalProductVat,
+  type FieldRejection,
+} from "@/domain/materials";
+import {
   activeSalesPlans,
   addMissingPlanLines,
   addMissingPlanLinesRejection,
@@ -77,6 +82,14 @@ export function useSales() {
             today,
           ),
       );
+    },
+    updateProductVat(id: string, vatPercent: number): FieldRejection | null {
+      const rejection = finalProductVatRejection(document, id, vatPercent);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => setFinalProductVat(current, id, vatPercent));
+      return null;
     },
     addMissing(planId: string, lines: readonly { id: string; productId: string }[]) {
       const today = new Date();

@@ -306,7 +306,11 @@ function derivativeEntry(
 
 function derivativeFigure(
   item: Derivative,
-  recipe: { lines: { quantityGrams: number }[]; yieldPercent: number | null } | null,
+  recipe: {
+    lines: { quantityGrams: number }[];
+    yieldPercent: number | null;
+    batchSize: number;
+  } | null,
   cost: { withVatKopecks: number; exVatKopecks: number; per: "kg" | "piece" } | null,
 ): string {
   if (!recipe) {
@@ -317,7 +321,7 @@ function derivativeFigure(
     if (recipe.yieldPercent === null) {
       return "Нет выхода после обработки";
     }
-    const target = inputGramsForFinishedBatch(recipe.yieldPercent);
+    const target = inputGramsForFinishedBatch(recipe.yieldPercent, recipe.batchSize);
     const grams = compositionGrams(recipe.lines);
     if (grams !== target) {
       return `В составе ${formatKilogramsFromGrams(grams)} из ${formatKilogramsFromGrams(target)} кг`;

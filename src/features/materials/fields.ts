@@ -30,8 +30,10 @@ export const FIELD_ERROR: Record<FieldRejection, string> = {
   "duplicate-line": "Этот компонент уже есть в составе.",
   "recipe-exists": "Рабочая рецептурная карта уже есть.",
   "used-as-component": "Сначала уберите эту производную из других рецептурных карт.",
-  batch: "На 100 кг готового продукта столько сырья не помещается.",
+  batch: "На партию готового продукта столько сырья не помещается.",
+  "batch-size": "Укажите базу закладки больше нуля.",
   piece: "Штучное сырьё можно положить только в конечный товар.",
+  "piece-weight": "Укажите вес одной штуки целыми граммами.",
   unit: "Единицу нельзя сменить: сырьё уже есть в составе или в складском учёте.",
   stock: "Укажите нормативный остаток.",
   "stock-range": "Минимальный остаток не может быть больше максимального.",
@@ -61,6 +63,21 @@ export function parseWholePercent(raw: string): number | null {
 export function parsePieceCount(raw: string): number | null {
   const value = parseDecimal(raw);
   if (value === null || !Number.isInteger(value) || value < 1) {
+    return null;
+  }
+
+  return value;
+}
+
+/** Вес одной штуки производной: целые граммы от 1. */
+export function parsePieceWeightGrams(raw: string): number | null {
+  const value = parseDecimal(raw);
+  if (
+    value === null ||
+    !Number.isInteger(value) ||
+    value < 1 ||
+    value > MAX_WEIGHT_GRAMS
+  ) {
     return null;
   }
 

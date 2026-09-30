@@ -1,6 +1,6 @@
 import { MAX_PRICE_PER_KILOGRAM_KOPECKS, MAX_WEIGHT_GRAMS } from "@/domain/units";
 
-export const SCHEMA_VERSION = 17 as const;
+export const SCHEMA_VERSION = 19 as const;
 
 export const MAX_LABEL_LENGTH = 200;
 
@@ -71,6 +71,11 @@ export interface Derivative extends DeletableRecord {
    * У производной `null`: выручку планируют по товару.
    */
   vatPercent: number | null;
+  /**
+   * Вес одной штуки, целые граммы. Только у производной.
+   * У конечного товара `null`: штуки товара — база закладки карты, не граммы.
+   */
+  pieceWeightGrams: number | null;
 }
 
 export type RecipeComponentKind = "material" | "derivative";
@@ -81,9 +86,8 @@ export interface RecipeLine {
   kind: RecipeComponentKind;
   refId: string;
   /**
-   * Количество на партию карты.
-   * Килограммы хранятся граммами: производная — на 100 кг готового продукта,
-   * товар — на 1000 шт. Штучное сырьё — целыми штуками на 1000 шт товара.
+   * Количество на партию карты (`batchSize`).
+   * Килограммы хранятся граммами. Штучное сырьё у товара — целыми штуками.
    */
   quantityGrams: number;
 }
@@ -95,6 +99,11 @@ export interface RecipeLine {
 export interface RecipeCard {
   id: string;
   derivativeId: string;
+  /**
+   * База закладки: у производной — граммы готового выхода, у товара — штуки.
+   * По умолчанию 100 кг или 1000 шт.
+   */
+  batchSize: number;
   yieldPercent: number | null;
   lines: RecipeLine[];
   deletedAt: string | null;
@@ -520,6 +529,18 @@ function parseDerivative(
     return null;
   }
 
+  const pieceWeightGrams = value.isFinalProduct
+    ? value.pieceWeightGrams === null
+      ? null
+      : undefined
+    : parseInteger(value.pieceWeightGrams, 1, MAX_WEIGHT_GRAMS);
+  if (
+    pieceWeightGrams === undefined ||
+    (!value.isFinalProduct && pieceWeightGrams === null)
+  ) {
+    return null;
+  }
+
   return {
     id,
     name: value.name,
@@ -527,6 +548,7 @@ function parseDerivative(
     warehouseId,
     workshopId,
     vatPercent,
+    pieceWeightGrams,
     deletedAt,
   };
 }
@@ -589,6 +611,12 @@ function parseRecipe(
     yieldPercent = parsed;
   }
 
+  // У производной — граммы, у товара — штуки; потолок один.
+  const batchSize = parseInteger(value.batchSize, 1, MAX_WEIGHT_GRAMS);
+  if (batchSize === null) {
+    return null;
+  }
+
   const seenLines = new Set<string>();
   const seenRefs = new Set<string>();
   const lines: RecipeLine[] = [];
@@ -604,7 +632,7 @@ function parseRecipe(
     lines.push(line);
   }
 
-  return { id, derivativeId, yieldPercent, lines, deletedAt };
+  return { id, derivativeId, batchSize, yieldPercent, lines, deletedAt };
 }
 
 function recipesMatchDerivatives(

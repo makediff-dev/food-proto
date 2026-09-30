@@ -1,6 +1,5 @@
 import type { PrototypeDocument, RawMaterial, RecipeLine } from "@/domain/document";
 import {
-  FINISHED_BATCH_GRAMS,
   activeRecipeFor,
   compositionGrams,
   inputGramsForFinishedBatch,
@@ -11,7 +10,6 @@ const ONE = BigInt(1);
 const TWO = BigInt(2);
 const HUNDRED = BigInt(100);
 const THOUSAND = BigInt(1000);
-const MILLION = BigInt(1_000_000);
 
 interface Ratio {
   num: bigint;
@@ -104,13 +102,16 @@ function isPieceLine(document: PrototypeDocument, line: RecipeLine): boolean {
   return document.materials.find((item) => item.id === line.refId)?.unit === "piece";
 }
 
-/** Штуки на 1000 шт товара делятся на 1000. Килограммы — на 1 000 000, потому что хранятся граммами. */
+/** Штуки делятся на базу карты. Килограммы — на базу × 1000, потому что хранятся граммами. */
 function finalLinePart(
   document: PrototypeDocument,
   line: RecipeLine,
   price: Ratio,
+  batchSize: number,
 ): Ratio {
-  const divisor = isPieceLine(document, line) ? THOUSAND : MILLION;
+  const divisor = isPieceLine(document, line)
+    ? BigInt(batchSize)
+    : BigInt(batchSize) * THOUSAND;
   return ratio(BigInt(line.quantityGrams) * price.num, price.den * divisor);
 }
 
@@ -156,13 +157,13 @@ function componentPrices(
 
 /**
  * Вклад ингредиента в 1 кг готовой производной.
- * Количество задано на 100 кг готового продукта, поэтому делитель — 100 кг, не выход.
+ * Количество задано на партию `batchSize` граммов готового продукта, делитель — база, не выход.
  * Книга хранила закладку на 100 кг сырья и делила на выход:
  * `Rec&Calc Meat!G42 = количество на 100 кг сырья * цена / выход_%`.
- * 32,4 кг при выходе 80% в прототипе записываются как 40,5 кг; вклад тот же, 257,727… ₽.
+ * 32,4 кг при выходе 80% в прототипе записываются как 40,5 кг на 100 кг; вклад тот же, 257,727… ₽.
  */
-function finishedKilogramPart(grams: number, price: Ratio): Ratio {
-  return ratio(BigInt(grams) * price.num, price.den * BigInt(FINISHED_BATCH_GRAMS));
+function finishedKilogramPart(grams: number, price: Ratio, batchGrams: number): Ratio {
+  return ratio(BigInt(grams) * price.num, price.den * BigInt(batchGrams));
 }
 
 function costPerKilogram(
@@ -184,9 +185,10 @@ function costPerKilogram(
     return null;
   }
 
-  // Неполная закладка на 100 кг готового продукта — не себестоимость.
+  // Неполная закладка на партию готового продукта — не себестоимость.
   if (
-    compositionGrams(recipe.lines) !== inputGramsForFinishedBatch(recipe.yieldPercent)
+    compositionGrams(recipe.lines) !==
+    inputGramsForFinishedBatch(recipe.yieldPercent, recipe.batchSize)
   ) {
     return null;
   }
@@ -202,8 +204,8 @@ function costPerKilogram(
     }
 
     total = addPair(total, {
-      withVat: finishedKilogramPart(line.quantityGrams, price.withVat),
-      exVat: finishedKilogramPart(line.quantityGrams, price.exVat),
+      withVat: finishedKilogramPart(line.quantityGrams, price.withVat, recipe.batchSize),
+      exVat: finishedKilogramPart(line.quantityGrams, price.exVat, recipe.batchSize),
     });
   }
 
@@ -212,7 +214,7 @@ function costPerKilogram(
 
 /**
  * Себестоимость 1 шт конечного товара.
- * `Rec&Calc Final Products!G160 = количество на 1000 шт / 1000 * цена`.
+ * `Rec&Calc Final Products!G160 = количество на партию / batchSize * цена`.
  * Выход после обработки в эту формулу не входит. Цена берётся и с НДС, и без НДС.
  */
 function costPerPiece(
@@ -245,8 +247,8 @@ function costPerPiece(
     }
 
     total = addPair(total, {
-      withVat: finalLinePart(document, line, price.withVat),
-      exVat: finalLinePart(document, line, price.exVat),
+      withVat: finalLinePart(document, line, price.withVat, recipe.batchSize),
+      exVat: finalLinePart(document, line, price.exVat, recipe.batchSize),
     });
   }
 
@@ -315,12 +317,16 @@ export function lineContribution(
 
   const part = derivative.isFinalProduct
     ? {
-        withVat: finalLinePart(document, line, price.withVat),
-        exVat: finalLinePart(document, line, price.exVat),
+        withVat: finalLinePart(document, line, price.withVat, recipe.batchSize),
+        exVat: finalLinePart(document, line, price.exVat, recipe.batchSize),
       }
     : {
-        withVat: finishedKilogramPart(line.quantityGrams, price.withVat),
-        exVat: finishedKilogramPart(line.quantityGrams, price.exVat),
+        withVat: finishedKilogramPart(
+          line.quantityGrams,
+          price.withVat,
+          recipe.batchSize,
+        ),
+        exVat: finishedKilogramPart(line.quantityGrams, price.exVat, recipe.batchSize),
       };
 
   return roundPair(part);

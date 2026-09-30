@@ -50,6 +50,44 @@ export function formatKilogramsFromGrams(grams: number): string {
   }).format(grams / 1000);
 }
 
+/** Граммы из целых штук и веса одной штуки. */
+export function gramsFromPieces(pieces: number, pieceWeightGrams: number): number | null {
+  if (
+    !Number.isInteger(pieces) ||
+    !Number.isInteger(pieceWeightGrams) ||
+    pieces < 1 ||
+    pieceWeightGrams < 1 ||
+    pieceWeightGrams > MAX_WEIGHT_GRAMS
+  ) {
+    return null;
+  }
+
+  const grams = pieces * pieceWeightGrams;
+  if (!Number.isSafeInteger(grams) || grams > MAX_WEIGHT_GRAMS) {
+    return null;
+  }
+
+  return grams;
+}
+
+/** Целые штуки из граммов: половина вверх. */
+export function piecesFromGrams(grams: number, pieceWeightGrams: number): number | null {
+  if (
+    !Number.isInteger(grams) ||
+    !Number.isInteger(pieceWeightGrams) ||
+    grams < 1 ||
+    pieceWeightGrams < 1 ||
+    grams > MAX_WEIGHT_GRAMS ||
+    pieceWeightGrams > MAX_WEIGHT_GRAMS
+  ) {
+    return null;
+  }
+
+  return Number(
+    (BigInt(grams) + BigInt(pieceWeightGrams) / BigInt(2)) / BigInt(pieceWeightGrams),
+  );
+}
+
 export function formatRublesFromKopecks(kopecks: number, withCurrency = false): string {
   return new Intl.NumberFormat("ru-RU", {
     style: withCurrency ? "currency" : "decimal",

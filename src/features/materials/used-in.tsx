@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 
 import type { DeletableRecord } from "@/domain/document";
 import { recipeUsages } from "@/domain/materials";
-import { formatKilogramsFromGrams } from "@/domain/units";
+import { formatKilogramsFromGrams, piecesFromGrams } from "@/domain/units";
 import { fieldClassName } from "@/features/materials/fields";
 import { derivativeDetailHref } from "@/features/materials/paths";
 import { useMaterials } from "@/features/materials/use-materials";
@@ -27,6 +27,10 @@ export function UsedIn({
         usage.owner.name.toLocaleLowerCase("ru-RU").includes(needle),
       )
     : usages;
+  const componentWeight =
+    kind === "derivative"
+      ? catalog.document.derivatives.find((item) => item.id === refId)?.pieceWeightGrams
+      : null;
 
   return (
     <section className="mt-3 flex flex-col gap-3">
@@ -65,12 +69,20 @@ export function UsedIn({
                   catalog.document.workshops,
                   usage.owner.workshopId,
                 );
+                const pieces =
+                  usage.owner.isFinalProduct &&
+                  componentWeight !== null &&
+                  componentWeight !== undefined
+                    ? piecesFromGrams(usage.quantityGrams, componentWeight)
+                    : null;
                 const quantity = usage.piece
                   ? `${usage.quantityGrams.toLocaleString("ru-RU")} шт`
-                  : `${formatKilogramsFromGrams(usage.quantityGrams)} кг`;
+                  : pieces !== null
+                    ? `${formatKilogramsFromGrams(usage.quantityGrams)} кг · ${pieces.toLocaleString("ru-RU")} шт`
+                    : `${formatKilogramsFromGrams(usage.quantityGrams)} кг`;
                 const norm = usage.owner.isFinalProduct
-                  ? "на 1000 шт"
-                  : "на 100 кг готового продукта";
+                  ? `на ${usage.batchSize.toLocaleString("ru-RU")} шт`
+                  : `на ${formatKilogramsFromGrams(usage.batchSize)} кг готового продукта`;
 
                 return (
                   <li key={usage.owner.id}>

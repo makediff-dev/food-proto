@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useId, useState } from "react";
 
-import { MAX_LABEL_LENGTH, MAX_VAT_PERCENT, MIN_VAT_PERCENT } from "@/domain/document";
+import { MAX_LABEL_LENGTH } from "@/domain/document";
 import { activeWarehouses, activeWorkshops, normalizeName } from "@/domain/directory";
 import type { FieldRejection } from "@/domain/materials";
 import {
   FIELD_ERROR,
   fieldClassName,
-  parseWholePercent,
+  parsePieceWeightGrams,
 } from "@/features/materials/fields";
 import { materialListHref } from "@/features/materials/paths";
 import { RecipeEditor } from "@/features/materials/recipe-editor";
@@ -49,8 +49,8 @@ export function DerivativeDetailScreen({ id }: { id: string }) {
         deleted
           ? "Запись удалена. Её можно вернуть в рабочий список."
           : item.isFinalProduct
-            ? "Конечный товар делается в одном цехе. Ставка НДС нужна, чтобы планировать выручку."
-            : "Производная делается в одном цехе. Состав задаётся на 100 кг готового продукта, выход после обработки задаёт массу сырья."
+            ? "Конечный товар делается в одном цехе. Ставку НДС задают в «Сводке»."
+            : "Производная делается в одном цехе. Состав задаётся на партию готового продукта, выход после обработки задаёт массу сырья."
       }
     >
       <BackLink
@@ -101,10 +101,10 @@ function IdentityFields({ id }: { id: string }) {
   const nameId = useId();
   const warehouseId = useId();
   const workshopId = useId();
-  const vatId = useId();
+  const pieceWeightId = useId();
   const [nameDraft, setNameDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [vatDraft, setVatDraft] = useState<string | null>(null);
+  const [pieceWeightDraft, setPieceWeightDraft] = useState<string | null>(null);
 
   if (!item) {
     return null;
@@ -126,6 +126,7 @@ function IdentityFields({ id }: { id: string }) {
     warehouseId?: string;
     workshopId?: string;
     vatPercent?: number | null;
+    pieceWeightGrams?: number | null;
   }): FieldRejection | null {
     if (!item) {
       return "missing";
@@ -142,6 +143,12 @@ function IdentityFields({ id }: { id: string }) {
           : item.isFinalProduct
             ? item.vatPercent
             : null,
+      pieceWeightGrams:
+        patch.pieceWeightGrams !== undefined
+          ? patch.pieceWeightGrams
+          : item.isFinalProduct
+            ? null
+            : item.pieceWeightGrams,
     });
   }
 
@@ -180,49 +187,50 @@ function IdentityFields({ id }: { id: string }) {
       </div>
       {item.isFinalProduct ? (
         <div className="border-t border-line px-4 py-3">
-          <label htmlFor={vatId} className="text-sm text-muted">
-            НДС, %
+          <p className="text-sm text-muted">НДС, %</p>
+          <p className="mt-1.5 text-sm text-ink">{item.vatPercent ?? "—"} %</p>
+        </div>
+      ) : (
+        <div className="border-t border-line px-4 py-3">
+          <label htmlFor={pieceWeightId} className="text-sm text-muted">
+            Вес 1 шт, г
           </label>
           <input
-            id={vatId}
-            value={vatDraft ?? String(item.vatPercent ?? "")}
+            id={pieceWeightId}
+            value={pieceWeightDraft ?? String(item.pieceWeightGrams ?? "")}
             inputMode="numeric"
             disabled={!catalog.hydrated}
             autoComplete="off"
             onFocus={() => {
-              setVatDraft(String(item.vatPercent ?? ""));
+              setPieceWeightDraft(String(item.pieceWeightGrams ?? ""));
               setError(null);
             }}
-            onChange={(event) => setVatDraft(event.target.value)}
+            onChange={(event) => setPieceWeightDraft(event.target.value)}
             onBlur={(event) => {
-              const parsed = parseWholePercent(event.currentTarget.value);
-              if (
-                parsed === null ||
-                parsed < MIN_VAT_PERCENT ||
-                parsed > MAX_VAT_PERCENT
-              ) {
-                setError(FIELD_ERROR.vat);
-                setVatDraft(event.currentTarget.value);
+              const parsed = parsePieceWeightGrams(event.currentTarget.value);
+              if (parsed === null) {
+                setError(FIELD_ERROR["piece-weight"]);
+                setPieceWeightDraft(event.currentTarget.value);
                 return;
               }
-              if (parsed === item.vatPercent) {
-                setVatDraft(null);
+              if (parsed === item.pieceWeightGrams) {
+                setPieceWeightDraft(null);
                 setError(null);
                 return;
               }
-              const rejection = save({ vatPercent: parsed });
+              const rejection = save({ pieceWeightGrams: parsed });
               if (rejection) {
                 setError(FIELD_ERROR[rejection]);
-                setVatDraft(event.currentTarget.value);
+                setPieceWeightDraft(event.currentTarget.value);
                 return;
               }
-              setVatDraft(null);
+              setPieceWeightDraft(null);
               setError(null);
             }}
             className={`mt-1.5 ${fieldClassName}`}
           />
         </div>
-      ) : null}
+      )}
       <PlaceSelect
         id={warehouseId}
         label="Склад хранения"

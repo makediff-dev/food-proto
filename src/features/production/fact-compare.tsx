@@ -24,6 +24,7 @@ import {
   materialQuantityPhrase,
   moneyLines,
 } from "@/features/production/text";
+import { monthKeyFromDate } from "@/domain/sales-plan";
 import { summaryHref } from "@/features/sales/paths";
 import { daysPhrase } from "@/features/sales/text";
 import { Dialog } from "@/features/shell/dialog";
@@ -80,7 +81,10 @@ export function FactCompare({ month, part }: { month: string; part: ProductionPa
           <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
             Факт за месяц всё равно суммируется. Колонка плана пустая, пока плана нет.
           </p>
-          <Link href={summaryHref()} className={`mt-4 ${quietButtonClassName}`}>
+          <Link
+            href={summaryHref({ month, currentMonth: monthKeyFromDate(new Date()) })}
+            className={`mt-4 ${quietButtonClassName}`}
+          >
             <IconPlan />К сводке
           </Link>
         </div>

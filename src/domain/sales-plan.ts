@@ -165,6 +165,13 @@ export function activeSalesPlans(document: PrototypeDocument): SalesPlan[] {
   return document.salesPlans.filter((item) => item.deletedAt === null);
 }
 
+export function workingSalesPlan(
+  document: PrototypeDocument,
+  month: string,
+): SalesPlan | null {
+  return activeSalesPlans(document).find((item) => item.month === month) ?? null;
+}
+
 export function deletedSalesPlans(document: PrototypeDocument): SalesPlan[] {
   return document.salesPlans.filter((item) => item.deletedAt !== null);
 }

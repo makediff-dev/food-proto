@@ -18,15 +18,21 @@ import {
 import { normalizeName, rejectName, type NameRejection } from "@/domain/directory";
 import { MAX_PRICE_PER_KILOGRAM_KOPECKS, MAX_WEIGHT_GRAMS } from "@/domain/units";
 
-/** 100 кг готовой производной. Сырьё на эту партию зависит от выхода. */
+/** Дефолт базы производной: 100 кг готового выхода. */
 export const FINISHED_BATCH_GRAMS = 100_000;
 
+/** Дефолт базы товара: 1000 шт. */
+export const FINAL_BATCH_PIECES = 1000;
+
 /**
- * Сколько граммов сырья нужно на 100 кг готового продукта.
- * Выход 80% — 125 кг: 100 / 0,8. Граммы округляются половиной вверх.
+ * Сколько граммов сырья нужно на партию готового продукта.
+ * Выход 80% на 100 кг — 125 кг: batch / 0,8. Граммы округляются половиной вверх.
  */
-export function inputGramsForFinishedBatch(yieldPercent: number): number {
-  const numerator = BigInt(FINISHED_BATCH_GRAMS) * BigInt(100);
+export function inputGramsForFinishedBatch(
+  yieldPercent: number,
+  batchGrams: number = FINISHED_BATCH_GRAMS,
+): number {
+  const numerator = BigInt(batchGrams) * BigInt(100);
   const denominator = BigInt(yieldPercent);
   return Number((numerator + denominator / BigInt(2)) / denominator);
 }
@@ -48,7 +54,9 @@ export type FieldRejection =
   | "recipe-exists"
   | "used-as-component"
   | "batch"
+  | "batch-size"
   | "piece"
+  | "piece-weight"
   | "unit"
   | "stock"
   | "stock-range"
@@ -75,8 +83,13 @@ export interface DerivativeDraft {
   isFinalProduct: boolean;
   warehouseId: string;
   workshopId: string;
-  /** НДС продажи. Есть только у конечного товара. */
+  /** НДС продажи. У конечного товара задаётся в «Сводке». */
   vatPercent?: number | null;
+  /**
+   * Вес одной штуки, граммы. Обязателен у производной.
+   * У конечного товара сбрасывается в `null`.
+   */
+  pieceWeightGrams?: number | null;
   /**
    * Выход, который запишется в карты, если производная перестаёт быть конечным товаром.
    * Пока флаг не меняется, карты не трогаем.
@@ -117,12 +130,58 @@ function isQuantity(value: number): boolean {
   return Number.isInteger(value) && value >= 1 && value <= MAX_WEIGHT_GRAMS;
 }
 
+function isBatchSize(value: number): boolean {
+  return Number.isInteger(value) && value >= 1 && value <= MAX_WEIGHT_GRAMS;
+}
+
+/** Масштаб количества при смене базы: trunc, без half-up. */
+function scaleBatchQuantity(
+  quantity: number,
+  oldBatch: number,
+  newBatch: number,
+): number {
+  return Number((BigInt(quantity) * BigInt(newBatch)) / BigInt(oldBatch));
+}
+
 export function activeMaterials(document: PrototypeDocument): RawMaterial[] {
   return document.materials.filter((item) => item.deletedAt === null);
 }
 
 export function deletedMaterials(document: PrototypeDocument): RawMaterial[] {
   return document.materials.filter((item) => item.deletedAt !== null);
+}
+
+export function finalProductVatRejection(
+  document: PrototypeDocument,
+  id: string,
+  vatPercent: number,
+): FieldRejection | null {
+  const product = document.derivatives.find((item) => item.id === id);
+  if (!product || !product.isFinalProduct) {
+    return "missing";
+  }
+  if (!isVat(vatPercent)) {
+    return "vat";
+  }
+
+  return null;
+}
+
+export function setFinalProductVat(
+  document: PrototypeDocument,
+  id: string,
+  vatPercent: number,
+): PrototypeDocument {
+  if (finalProductVatRejection(document, id, vatPercent)) {
+    return document;
+  }
+
+  return {
+    ...document,
+    derivatives: document.derivatives.map((item) =>
+      item.id === id ? { ...item, vatPercent } : item,
+    ),
+  };
 }
 
 export function activeDerivatives(document: PrototypeDocument): Derivative[] {
@@ -136,8 +195,10 @@ export function deletedDerivatives(document: PrototypeDocument): Derivative[] {
 export interface RecipeUsage {
   owner: Derivative;
   quantityGrams: number;
-  /** Штуки на 1000 шт товара. Килограммы хранятся граммами. */
+  /** Штуки на партию товара. Килограммы хранятся граммами. */
   piece: boolean;
+  /** База закладки карты владельца. */
+  batchSize: number;
 }
 
 /** Где позиция входит в рабочую рецептурную карту: при производстве чего её берут. */
@@ -166,7 +227,12 @@ export function recipeUsages(
       continue;
     }
 
-    usages.push({ owner, quantityGrams: line.quantityGrams, piece });
+    usages.push({
+      owner,
+      quantityGrams: line.quantityGrams,
+      piece,
+      batchSize: recipe.batchSize,
+    });
   }
 
   return usages;
@@ -447,6 +513,10 @@ export function derivativeDraftRejection(
     return "vat";
   }
 
+  if (!draft.isFinalProduct && !isPieceWeight(draft.pieceWeightGrams)) {
+    return "piece-weight";
+  }
+
   if (draft.isFinalProduct && current && !current.isFinalProduct) {
     if (derivativeReferenced(document, current.id)) {
       return "used-as-component";
@@ -466,13 +536,25 @@ export function derivativeDraftRejection(
   return null;
 }
 
+function isPieceWeight(value: number | null | undefined): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 1 &&
+    value <= MAX_WEIGHT_GRAMS
+  );
+}
+
 function replaceRecipes(
   document: PrototypeDocument,
   derivativeId: string,
   yieldPercent: number | null,
+  batchSize: number,
 ): RecipeCard[] {
   return document.recipes.map((recipe) =>
-    recipe.derivativeId === derivativeId ? { ...recipe, yieldPercent } : recipe,
+    recipe.derivativeId === derivativeId
+      ? { ...recipe, yieldPercent, batchSize }
+      : recipe,
   );
 }
 
@@ -502,6 +584,9 @@ export function addDerivative(
         warehouseId: derivative.warehouseId,
         workshopId: derivative.workshopId,
         vatPercent: derivative.isFinalProduct ? (derivative.vatPercent ?? null) : null,
+        pieceWeightGrams: derivative.isFinalProduct
+          ? null
+          : (derivative.pieceWeightGrams ?? null),
         deletedAt: null,
       },
     ],
@@ -525,6 +610,7 @@ export function updateDerivative(
     warehouseId: draft.warehouseId,
     workshopId: draft.workshopId,
     vatPercent: draft.isFinalProduct ? (draft.vatPercent ?? null) : null,
+    pieceWeightGrams: draft.isFinalProduct ? null : (draft.pieceWeightGrams ?? null),
   };
 
   const unchanged =
@@ -532,7 +618,8 @@ export function updateDerivative(
     next.isFinalProduct === current.isFinalProduct &&
     next.warehouseId === current.warehouseId &&
     next.workshopId === current.workshopId &&
-    next.vatPercent === current.vatPercent;
+    next.vatPercent === current.vatPercent &&
+    next.pieceWeightGrams === current.pieceWeightGrams;
 
   if (unchanged) {
     return document;
@@ -544,6 +631,7 @@ export function updateDerivative(
       document,
       id,
       next.isFinalProduct ? null : (draft.yieldPercent ?? null),
+      next.isFinalProduct ? FINAL_BATCH_PIECES : FINISHED_BATCH_GRAMS,
     );
   }
 
@@ -639,7 +727,7 @@ function batchLimitGrams(document: PrototypeDocument, ownerId: string): number |
     return null;
   }
 
-  return inputGramsForFinishedBatch(recipe.yieldPercent);
+  return inputGramsForFinishedBatch(recipe.yieldPercent, recipe.batchSize);
 }
 
 function batchOverflow(
@@ -752,6 +840,12 @@ export function addRecipe(
     return document;
   }
 
+  const batchSize = isBatchSize(recipe.batchSize)
+    ? recipe.batchSize
+    : derivative.isFinalProduct
+      ? FINAL_BATCH_PIECES
+      : FINISHED_BATCH_GRAMS;
+
   return {
     ...document,
     recipes: [
@@ -759,6 +853,7 @@ export function addRecipe(
       {
         id: recipe.id,
         derivativeId: derivative.id,
+        batchSize,
         yieldPercent: derivative.isFinalProduct ? null : recipe.yieldPercent,
         lines: [],
         deletedAt: null,
@@ -782,7 +877,10 @@ export function setRecipeYield(
     return document;
   }
 
-  if (compositionGrams(recipe.lines) > inputGramsForFinishedBatch(yieldPercent)) {
+  if (
+    compositionGrams(recipe.lines) >
+    inputGramsForFinishedBatch(yieldPercent, recipe.batchSize)
+  ) {
     return document;
   }
 
@@ -790,6 +888,54 @@ export function setRecipeYield(
     ...document,
     recipes: document.recipes.map((item) =>
       item.id === recipeId ? { ...item, yieldPercent } : item,
+    ),
+  };
+}
+
+/**
+ * Меняет базу закладки и пропорционально масштабирует строки (trunc).
+ * Если после масштаба количество строки вне диапазона или партия переполнена — отказ.
+ */
+export function setRecipeBatchSize(
+  document: PrototypeDocument,
+  recipeId: string,
+  batchSize: number,
+): PrototypeDocument {
+  const recipe = document.recipes.find((item) => item.id === recipeId);
+  if (!recipe || !isBatchSize(batchSize) || recipe.batchSize === batchSize) {
+    return document;
+  }
+
+  const derivative = document.derivatives.find((item) => item.id === recipe.derivativeId);
+  if (!derivative) {
+    return document;
+  }
+
+  const lines: RecipeLine[] = [];
+  for (const line of recipe.lines) {
+    const quantityGrams = scaleBatchQuantity(
+      line.quantityGrams,
+      recipe.batchSize,
+      batchSize,
+    );
+    if (!isQuantity(quantityGrams)) {
+      return document;
+    }
+    lines.push({ ...line, quantityGrams });
+  }
+
+  if (
+    !derivative.isFinalProduct &&
+    recipe.yieldPercent !== null &&
+    compositionGrams(lines) > inputGramsForFinishedBatch(recipe.yieldPercent, batchSize)
+  ) {
+    return document;
+  }
+
+  return {
+    ...document,
+    recipes: document.recipes.map((item) =>
+      item.id === recipeId ? { ...item, batchSize, lines } : item,
     ),
   };
 }

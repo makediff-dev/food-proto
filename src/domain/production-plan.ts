@@ -3,10 +3,10 @@ import type {
   Derivative,
   MaterialUnit,
   PrototypeDocument,
+  RecipeCard,
   RecipeLine,
 } from "@/domain/document";
 import {
-  FINISHED_BATCH_GRAMS,
   activeRecipeFor,
   compositionGrams,
   inputGramsForFinishedBatch,
@@ -18,12 +18,9 @@ const ZERO = BigInt(0);
 const TWO = BigInt(2);
 const THOUSAND = BigInt(1000);
 
-/** Норма конечного товара на 1000 шт. `Rec&Calc Final Products`. */
-const FINAL_BATCH_PIECES = BigInt(1000);
-
-/** Партия нормы: товар — 1000 шт, производная — 100 кг готового продукта. */
-export function recipeBatch(isFinalProduct: boolean): bigint {
-  return isFinalProduct ? FINAL_BATCH_PIECES : BigInt(FINISHED_BATCH_GRAMS);
+/** Партия нормы с карты: товар — штуки, производная — граммы готового продукта. */
+export function recipeBatch(recipe: RecipeCard): bigint {
+  return BigInt(recipe.batchSize);
 }
 
 export type ProductionRecipeGap =
@@ -140,7 +137,7 @@ function ownerOf(document: PrototypeDocument, id: string): Derivative | null {
 
 /**
  * Норма уже лежит на готовый выход, выход второй раз не делим.
- * Товар: `норма * штуки / 1000`. Производная: `норма * граммы / 100_000`.
+ * Товар: `норма * штуки / batchSize`. Производная: `норма * граммы / batchSize`.
  */
 export function scaleRecipeQuantity(
   norm: number,
@@ -189,7 +186,8 @@ function structuralGap(
   if (!owner.isFinalProduct) {
     if (
       recipe.yieldPercent === null ||
-      compositionGrams(recipe.lines) !== inputGramsForFinishedBatch(recipe.yieldPercent)
+      compositionGrams(recipe.lines) !==
+        inputGramsForFinishedBatch(recipe.yieldPercent, recipe.batchSize)
     ) {
       return "unbalanced";
     }
@@ -531,7 +529,7 @@ export function productionPlan(
         continue;
       }
 
-      const batch = recipeBatch(owner.isFinalProduct);
+      const batch = recipeBatch(recipe);
       const shares: ProductionShare[] = [];
       let failed = false;
       for (const line of recipe.lines) {

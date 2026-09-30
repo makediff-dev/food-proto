@@ -26,7 +26,15 @@ export function PageFrame({
       <h1 className="font-figure text-2xl leading-tight tracking-tight text-ink">
         {title}
       </h1>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{lede}</p>
+      <p
+        className={
+          full
+            ? "mt-2 w-full max-w-none text-sm leading-6 text-muted"
+            : "mt-2 max-w-2xl text-sm leading-6 text-muted"
+        }
+      >
+        {lede}
+      </p>
       {children ? <div className={wide || full ? "mt-4" : "mt-3"}>{children}</div> : null}
     </div>
   );

@@ -319,16 +319,12 @@ function normQuantity(
   outputQuantity: number,
   line: RecipeLine,
 ): number | null {
-  const owner = ownerOf(document, ownerId);
-  if (!owner) {
+  const recipe = activeRecipeFor(document, ownerId);
+  if (!recipe) {
     return null;
   }
 
-  return scaleRecipeQuantity(
-    line.quantityGrams,
-    outputQuantity,
-    recipeBatch(owner.isFinalProduct),
-  );
+  return scaleRecipeQuantity(line.quantityGrams, outputQuantity, recipeBatch(recipe));
 }
 
 export function activeProductionFacts(document: PrototypeDocument): ProductionFact[] {

@@ -19,7 +19,7 @@ import {
   type ProductionSheet,
   type ProductionView,
 } from "@/features/production/paths";
-import { planHref, summaryHref } from "@/features/sales/paths";
+import { summaryHref } from "@/features/sales/paths";
 import { formatMonth } from "@/features/sales/text";
 import { IconFact, IconFlow, IconPlan, IconWorkshop } from "@/features/shell/icons";
 import { PageFrame } from "@/features/shell/page-frame";
@@ -120,7 +120,10 @@ export function ProductionScreen({
               </select>
             </div>
             {planId ? (
-              <Link href={planHref(planId)} className={headerLinkClassName}>
+              <Link
+                href={summaryHref({ month: selected, currentMonth })}
+                className={headerLinkClassName}
+              >
                 <IconPlan />
                 Открыть план
               </Link>
@@ -218,7 +221,11 @@ export function ProductionScreen({
               totals={result.totals}
             />
           ) : (
-            <MissingPlan status={result.status} />
+            <MissingPlan
+              status={result.status}
+              month={selected}
+              currentMonth={currentMonth}
+            />
           )
         ) : null}
       </div>
@@ -261,13 +268,24 @@ function TabLink({
   );
 }
 
-function MissingPlan({ status }: { status: "missing-plan" | "empty-volume" }) {
+function MissingPlan({
+  status,
+  month,
+  currentMonth,
+}: {
+  status: "missing-plan" | "empty-volume";
+  month: string;
+  currentMonth: string;
+}) {
   return (
     <div className="border border-line bg-sheet px-5 py-8 sm:px-6">
       <p className="text-base text-ink">
         {status === "missing-plan" ? "Сначала задайте план." : "В плане нет объёма."}
       </p>
-      <Link href={summaryHref()} className={`mt-6 ${quietLinkClassName}`}>
+      <Link
+        href={summaryHref({ month, currentMonth })}
+        className={`mt-6 ${quietLinkClassName}`}
+      >
         <IconPlan />К сводке
       </Link>
     </div>
