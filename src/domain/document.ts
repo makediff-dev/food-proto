@@ -1,6 +1,6 @@
 import { MAX_PRICE_PER_KILOGRAM_KOPECKS, MAX_WEIGHT_GRAMS } from "@/domain/units";
 
-export const SCHEMA_VERSION = 19 as const;
+export const SCHEMA_VERSION = 20 as const;
 
 export const MAX_LABEL_LENGTH = 200;
 
@@ -8,6 +8,15 @@ export const MAX_ID_LENGTH = 80;
 
 /** Потолок объёма плана, штуки. Произведение с ценой остаётся безопасным целым. */
 export const MAX_VOLUME_PIECES = 100_000_000;
+
+/**
+ * Потолок суммы операционных расходов, копейки.
+ * На своде одна сумма за месяц, без построчного разбиения листа Operation Expense.
+ */
+export const MAX_OPERATING_EXPENSE_KOPECKS = 100_000_000_000;
+
+/** Ставка налога на прибыль, %. `Svod!C6`. */
+export const PROFIT_TAX_PERCENT = 20;
 
 export const MIN_VAT_PERCENT = 0;
 
@@ -265,6 +274,20 @@ export interface SalesFact {
 }
 
 /**
+ * Операционные расходы месяца одной суммой.
+ * В книге это итог `Operation Expense!E62` / `F62` на своде `Svod!G4` / `I4`.
+ * Сумма без НДС: прибыль = Т-проток − эта сумма.
+ */
+export interface MonthOperatingExpense {
+  /** `ГГГГ-ММ`. На один месяц — одна запись. */
+  month: string;
+  /** Копейки без НДС. План. */
+  planExVatKopecks: number;
+  /** Копейки без НДС. Факт. */
+  factExVatKopecks: number;
+}
+
+/**
  * Единственный сохраняемый документ прототипа.
  * Предметные разделы добавляются полями сюда. Производные суммы сюда не писать.
  */
@@ -280,6 +303,7 @@ export interface PrototypeDocument {
   salesPlans: SalesPlan[];
   productionFacts: ProductionFact[];
   salesFacts: SalesFact[];
+  operatingExpenses: MonthOperatingExpense[];
 }
 
 /** Метка мягкого удаления, которую пишет экран через `Date.toISOString()`. */
@@ -1036,6 +1060,58 @@ function parseSalesPlans(
   return plans;
 }
 
+function parseOperatingExpense(value: unknown): MonthOperatingExpense | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  if (typeof value.month !== "string" || !isMonthKey(value.month)) {
+    return null;
+  }
+
+  const planExVatKopecks = parseInteger(
+    value.planExVatKopecks,
+    0,
+    MAX_OPERATING_EXPENSE_KOPECKS,
+  );
+  const factExVatKopecks = parseInteger(
+    value.factExVatKopecks,
+    0,
+    MAX_OPERATING_EXPENSE_KOPECKS,
+  );
+
+  if (planExVatKopecks === null || factExVatKopecks === null) {
+    return null;
+  }
+
+  return {
+    month: value.month,
+    planExVatKopecks,
+    factExVatKopecks,
+  };
+}
+
+function parseOperatingExpenses(value: unknown): MonthOperatingExpense[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const seen = new Set<string>();
+  const items: MonthOperatingExpense[] = [];
+
+  for (const entry of value) {
+    const item = parseOperatingExpense(entry);
+    if (!item || seen.has(item.month)) {
+      return null;
+    }
+
+    seen.add(item.month);
+    items.push(item);
+  }
+
+  return items;
+}
+
 function parseProductionFactUse(
   value: unknown,
   materialIds: ReadonlySet<string>,
@@ -1477,8 +1553,16 @@ export function parsePrototypeDocument(value: unknown): PrototypeDocument | null
     derivatives,
   );
   const salesFacts = parseSalesFacts(value.salesFacts, derivatives);
+  const operatingExpenses = parseOperatingExpenses(value.operatingExpenses);
 
-  if (!deliveries || !writeOffs || !salesPlans || !productionFacts || !salesFacts) {
+  if (
+    !deliveries ||
+    !writeOffs ||
+    !salesPlans ||
+    !productionFacts ||
+    !salesFacts ||
+    !operatingExpenses
+  ) {
     return null;
   }
 
@@ -1494,5 +1578,6 @@ export function parsePrototypeDocument(value: unknown): PrototypeDocument | null
     salesPlans,
     productionFacts,
     salesFacts,
+    operatingExpenses,
   };
 }

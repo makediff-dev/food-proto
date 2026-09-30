@@ -172,6 +172,53 @@ export function workingSalesPlan(
   return activeSalesPlans(document).find((item) => item.month === month) ?? null;
 }
 
+/** Строки нулевого плана: все рабочие конечные товары, цена из прошлого или 0. */
+export function defaultSalesPlanLines(
+  document: PrototypeDocument,
+  month: string,
+): SalesPlanLine[] {
+  return activeFinalProducts(document).map((product) => ({
+    id: `sales-plan-line:${month}:${product.id}`,
+    productId: product.id,
+    priceWithVatKopecks: suggestedPriceWithVatKopecks(document, product.id, month),
+    volumePieces: 0,
+  }));
+}
+
+/**
+ * Рабочий план месяца или виртуальный нулевой.
+ * Виртуальный в документ не пишется, пока его не материализуют через `ensureSalesPlan`.
+ */
+export function salesPlanForMonth(document: PrototypeDocument, month: string): SalesPlan {
+  return (
+    workingSalesPlan(document, month) ?? {
+      id: `sales-plan:${month}`,
+      month,
+      lines: defaultSalesPlanLines(document, month),
+      deletedAt: null,
+    }
+  );
+}
+
+/** Пишет нулевой план, если рабочего ещё нет и месяц в горизонте. */
+export function ensureSalesPlan(
+  document: PrototypeDocument,
+  id: string,
+  month: string,
+  today: Date,
+): PrototypeDocument {
+  if (workingSalesPlan(document, month)) {
+    return document;
+  }
+
+  const lines = defaultSalesPlanLines(document, month);
+  if (lines.length === 0) {
+    return document;
+  }
+
+  return addSalesPlan(document, id, month, lines, today);
+}
+
 export function deletedSalesPlans(document: PrototypeDocument): SalesPlan[] {
   return document.salesPlans.filter((item) => item.deletedAt !== null);
 }

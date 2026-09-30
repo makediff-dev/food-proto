@@ -243,3 +243,21 @@ export function IconFullscreenExit() {
     </Glyph>
   );
 }
+
+export function IconRuble({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+      className={className ?? "size-4 shrink-0"}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+    >
+      <path d="M7 4h5.5a3.5 3.5 0 0 1 0 7H7" />
+      <path d="M7 4v13M5.5 11H12M5.5 14H11" />
+    </svg>
+  );
+}

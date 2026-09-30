@@ -1,26 +1,27 @@
 "use client";
 
 import { useDocumentStore } from "@/data/document-store";
-import type { PrototypeDocument, SalesPlanLine } from "@/domain/document";
+import type { PrototypeDocument } from "@/domain/document";
 import {
   finalProductVatRejection,
   setFinalProductVat,
   type FieldRejection,
 } from "@/domain/materials";
 import {
-  activeSalesPlans,
   addMissingPlanLines,
   addMissingPlanLinesRejection,
-  addSalesPlan,
-  addSalesPlanRejection,
-  deletedSalesPlans,
-  deleteSalesPlan,
-  restoreSalesPlan,
-  restoreSalesPlanRejection,
+  ensureSalesPlan,
   updateSalesPlanLine,
   updateSalesPlanLineRejection,
+  workingSalesPlan,
   type SalesPlanRejection,
 } from "@/domain/sales-plan";
+import {
+  setOperatingExpense,
+  setOperatingExpenseRejection,
+  type OperatingExpenseRejection,
+  type OperatingExpenseSide,
+} from "@/domain/summary";
 
 function commit(
   updateDocument: (recipe: (current: PrototypeDocument) => PrototypeDocument) => void,
@@ -44,18 +45,8 @@ export function useSales() {
   return {
     hydrated,
     document,
-    plans: activeSalesPlans(document),
-    deletedPlans: deletedSalesPlans(document),
-    addPlan(id: string, month: string, lines: readonly SalesPlanLine[]) {
-      const today = new Date();
-      return commit(
-        updateDocument,
-        (current) => addSalesPlan(current, id, month, lines, today),
-        (current) => addSalesPlanRejection(current, id, month, lines, today),
-      );
-    },
-    updateLine(
-      planId: string,
+    updateMonthLine(
+      month: string,
       lineId: string,
       priceWithVatKopecks: number,
       volumePieces: number,
@@ -63,24 +54,63 @@ export function useSales() {
       const today = new Date();
       return commit(
         updateDocument,
-        (current) =>
-          updateSalesPlanLine(
-            current,
-            planId,
+        (current) => {
+          let next = current;
+          if (!workingSalesPlan(next, month)) {
+            next = ensureSalesPlan(
+              next,
+              `sales-plan:${crypto.randomUUID()}`,
+              month,
+              today,
+            );
+          }
+          const plan = workingSalesPlan(next, month);
+          if (!plan) {
+            return current;
+          }
+          return updateSalesPlanLine(
+            next,
+            plan.id,
             lineId,
             priceWithVatKopecks,
             volumePieces,
             today,
-          ),
-        (current) =>
-          updateSalesPlanLineRejection(
+          );
+        },
+        (current) => {
+          const plan = workingSalesPlan(current, month);
+          if (!plan) {
+            const ensured = ensureSalesPlan(
+              current,
+              `sales-plan:${crypto.randomUUID()}`,
+              month,
+              today,
+            );
+            if (ensured === current) {
+              return "month";
+            }
+            const created = workingSalesPlan(ensured, month);
+            if (!created) {
+              return "missing";
+            }
+            return updateSalesPlanLineRejection(
+              ensured,
+              created.id,
+              lineId,
+              priceWithVatKopecks,
+              volumePieces,
+              today,
+            );
+          }
+          return updateSalesPlanLineRejection(
             current,
-            planId,
+            plan.id,
             lineId,
             priceWithVatKopecks,
             volumePieces,
             today,
-          ),
+          );
+        },
       );
     },
     updateProductVat(id: string, vatPercent: number): FieldRejection | null {
@@ -91,22 +121,31 @@ export function useSales() {
       updateDocument((current) => setFinalProductVat(current, id, vatPercent));
       return null;
     },
+    updateOperatingExpense(
+      month: string,
+      side: OperatingExpenseSide,
+      amountExVatKopecks: number,
+    ): OperatingExpenseRejection | null {
+      const rejection = setOperatingExpenseRejection(
+        document,
+        month,
+        side,
+        amountExVatKopecks,
+      );
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) =>
+        setOperatingExpense(current, month, side, amountExVatKopecks),
+      );
+      return null;
+    },
     addMissing(planId: string, lines: readonly { id: string; productId: string }[]) {
       const today = new Date();
       return commit(
         updateDocument,
         (current) => addMissingPlanLines(current, planId, lines, today),
         (current) => addMissingPlanLinesRejection(current, planId, lines, today),
-      );
-    },
-    removePlan(id: string) {
-      updateDocument((current) => deleteSalesPlan(current, id, new Date().toISOString()));
-    },
-    restorePlan(id: string) {
-      return commit(
-        updateDocument,
-        (current) => restoreSalesPlan(current, id),
-        (current) => restoreSalesPlanRejection(current, id),
       );
     },
   };

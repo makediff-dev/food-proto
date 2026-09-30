@@ -20,17 +20,10 @@ export function PlanRedirect({ id }: { id: string }) {
     }
 
     const plan = sales.document.salesPlans.find((item) => item.id === id);
-    if (!plan) {
-      router.replace(summaryHref({ month: currentMonth, currentMonth }));
-      return;
-    }
-
     router.replace(
       summaryHref({
-        month: plan.month,
+        month: plan?.month ?? currentMonth,
         currentMonth,
-        showDeleted: plan.deletedAt !== null,
-        planId: plan.deletedAt ? plan.id : undefined,
       }),
     );
   }, [currentMonth, id, router, sales.document.salesPlans, sales.hydrated]);

@@ -1,9 +1,10 @@
 import type { PrototypeDocument } from "@/domain/document";
 import type { PlanPhase, SalesPlanRejection } from "@/domain/sales-plan";
-import { MAX_VOLUME_PIECES } from "@/domain/document";
+import { MAX_OPERATING_EXPENSE_KOPECKS, MAX_VOLUME_PIECES } from "@/domain/document";
 import { parseDecimal } from "@/domain/units";
 import { formatMoney } from "@/features/materials/money";
 import { parseKopecks } from "@/features/materials/fields";
+import type { OperatingExpenseRejection } from "@/domain/summary";
 
 export const SALES_PLAN_ERROR: Record<SalesPlanRejection, string> = {
   missing: "Запись не найдена.",
@@ -16,6 +17,11 @@ export const SALES_PLAN_ERROR: Record<SalesPlanRejection, string> = {
   "duplicate-line": "Этот товар уже есть в плане.",
   locked: "Удалённый товар в плане не меняется.",
   closed: "Месяц прошёл, план только для просмотра.",
+};
+
+export const OPERATING_EXPENSE_ERROR: Record<OperatingExpenseRejection, string> = {
+  month: "Этот месяц выбрать нельзя.",
+  amount: "Укажите сумму операционных расходов без НДС.",
 };
 
 const MONTHS = [
@@ -118,6 +124,25 @@ export function parseVolumePieces(raw: string): number | null {
 
 export function parsePlanPrice(raw: string): number | null {
   return parseKopecks(raw);
+}
+
+/** Операционные расходы свода: рубли → копейки, ноль допустим. */
+export function parseOperatingExpense(raw: string): number | null {
+  const rubles = parseDecimal(raw);
+  if (rubles === null) {
+    return null;
+  }
+
+  const kopecks = Math.round(rubles * 100);
+  if (
+    !Number.isInteger(kopecks) ||
+    kopecks < 0 ||
+    kopecks > MAX_OPERATING_EXPENSE_KOPECKS
+  ) {
+    return null;
+  }
+
+  return kopecks;
 }
 
 export function priceDraft(kopecks: number): string {

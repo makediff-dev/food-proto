@@ -10,15 +10,9 @@ export const metadata: Metadata = {
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; deleted?: string; plan?: string }>;
+  searchParams: Promise<{ month?: string }>;
 }) {
   const params = await searchParams;
   const query = parseSummaryQuery(params);
-  return (
-    <SummaryScreen
-      month={query.month}
-      showDeleted={query.showDeleted}
-      planId={query.planId}
-    />
-  );
+  return <SummaryScreen month={query.month} />;
 }

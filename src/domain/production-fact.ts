@@ -145,8 +145,8 @@ export interface FactComparisonTotals {
 }
 
 export interface FactComparison {
-  planStatus: "missing-plan" | "empty-volume" | "ready";
-  planId: string | null;
+  planStatus: "empty-volume" | "ready";
+  planId: string;
   outputs: FactComparisonRow[];
   inputs: FactComparisonRow[];
   totals: FactComparisonTotals;
@@ -1273,7 +1273,7 @@ export function productionFactComparison(
 
   return {
     planStatus: plan.status,
-    planId: plan.status === "missing-plan" ? null : plan.planId,
+    planId: plan.planId,
     outputs: factOutputs.sort(byName),
     inputs: inputs.sort(byName),
     totals: {

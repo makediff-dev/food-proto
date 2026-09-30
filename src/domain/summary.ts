@@ -1,6 +1,8 @@
 import { ratioKopecks, unitCost, type UnitCost } from "@/domain/cost";
 import {
   isMonthKey,
+  MAX_OPERATING_EXPENSE_KOPECKS,
+  PROFIT_TAX_PERCENT,
   type Derivative,
   type PrototypeDocument,
   type SalesFact,
@@ -14,18 +16,18 @@ import {
 } from "@/domain/sales-fact";
 import {
   daysInMonth,
-  horizonMonths,
   monthKeyFromDate,
   PLAN_HORIZON_MONTHS,
   profitabilityHundredths,
+  salesPlanForMonth,
   salesPlanLineMetrics,
   salesPlanTotals,
   shiftMonth,
-  workingSalesPlan,
   type SalesPlanTotals,
 } from "@/domain/sales-plan";
 
 const TEN_THOUSAND = BigInt(10_000);
+const HUNDRED = BigInt(100);
 const TWO = BigInt(2);
 const ZERO = BigInt(0);
 
@@ -78,7 +80,49 @@ export interface SummaryView {
   planTotalsSide: SummarySide | null;
   factTotals: SummarySide;
   variance: SummaryVariance;
+  /** Верхний блок `Svod!D2:L8` без факторинга. */
+  headline: SummaryHeadline;
 }
+
+/** Одна колонка верхнего блока: план или факт. */
+export interface SummaryHeadlineSide {
+  /** `Svod!G2` / `I2` без Factoring: сумма выручки с НДС по товарам. */
+  revenueWithVatKopecks: number | null;
+  /** `Svod!G3` / `I3` без Factoring: сумма Т-протока. */
+  contributionKopecks: number | null;
+  /** `Svod!G4` / `I4`: операционные расходы без НДС. */
+  operatingExpenseExVatKopecks: number;
+  /** `Svod!G5` / `I5` = Т-проток − операционные расходы. */
+  profitKopecks: number | null;
+  /** `Svod!G6` / `I6` = прибыль × `Svod!C6` / 100. */
+  profitTaxKopecks: number | null;
+  /** `Svod!G7` / `I7` = прибыль − налог. */
+  netProfitKopecks: number | null;
+  /**
+   * `Svod!G8` / `I8`: чистая прибыль / выручка без НДС × 100.
+   * Хранится в сотых долях процента, как рентабельность строки.
+   */
+  netProfitabilityHundredths: number | null;
+}
+
+export interface SummaryHeadline {
+  plan: SummaryHeadlineSide;
+  fact: SummaryHeadlineSide;
+  variance: {
+    revenueWithVatKopecks: number | null;
+    contributionKopecks: number | null;
+    operatingExpenseExVatKopecks: number;
+    profitKopecks: number | null;
+    profitTaxKopecks: number | null;
+    netProfitKopecks: number | null;
+    netProfitabilityHundredths: number | null;
+  };
+  taxPercent: number;
+}
+
+export type OperatingExpenseSide = "plan" | "fact";
+
+export type OperatingExpenseRejection = "month" | "amount";
 
 function toSafeNumber(value: bigint): number | null {
   if (
@@ -193,16 +237,6 @@ export function lastHorizonMonth(today: Date): string {
 /** Сводка: с 2000-01 до горизонта плана. Будущий месяц открыт. */
 export function summaryMonthOpen(month: string, today: Date): boolean {
   return isMonthKey(month) && month >= "2000-01" && month <= lastHorizonMonth(today);
-}
-
-export function canCreatePlanForMonth(
-  document: PrototypeDocument,
-  month: string,
-  today: Date,
-): boolean {
-  return (
-    horizonMonths(today).includes(month) && workingSalesPlan(document, month) === null
-  );
 }
 
 export function summaryGridProducts(
@@ -462,14 +496,170 @@ function planTotalsAsSide(totals: SalesPlanTotals): SummarySide {
   };
 }
 
+/** Операционные расходы месяца. Нет записи — ноль. */
+export function monthOperatingExpenseAmounts(
+  document: PrototypeDocument,
+  month: string,
+): { planExVatKopecks: number; factExVatKopecks: number } {
+  const row = document.operatingExpenses.find((item) => item.month === month);
+  return {
+    planExVatKopecks: row?.planExVatKopecks ?? 0,
+    factExVatKopecks: row?.factExVatKopecks ?? 0,
+  };
+}
+
+function headlineSide(
+  totals: SummarySide | null,
+  operatingExpenseExVatKopecks: number,
+): SummaryHeadlineSide {
+  const revenueWithVatKopecks = totals?.revenueWithVatKopecks ?? null;
+  const revenueExVatKopecks = totals?.revenueExVatKopecks ?? null;
+  const contributionKopecks = totals?.contributionKopecks ?? null;
+  const profitKopecks =
+    contributionKopecks === null
+      ? null
+      : contributionKopecks - operatingExpenseExVatKopecks;
+  const profitTaxKopecks =
+    profitKopecks === null
+      ? null
+      : roundHalfAwayFromZero(
+          BigInt(profitKopecks) * BigInt(PROFIT_TAX_PERCENT),
+          HUNDRED,
+        );
+  const netProfitKopecks =
+    profitKopecks === null || profitTaxKopecks === null
+      ? null
+      : profitKopecks - profitTaxKopecks;
+  const netProfitabilityHundredths =
+    netProfitKopecks === null || revenueExVatKopecks === null
+      ? null
+      : revenueExVatKopecks === 0
+        ? 0
+        : roundHalfAwayFromZero(
+            BigInt(netProfitKopecks) * TEN_THOUSAND,
+            BigInt(revenueExVatKopecks),
+          );
+
+  return {
+    revenueWithVatKopecks,
+    contributionKopecks,
+    operatingExpenseExVatKopecks,
+    profitKopecks,
+    profitTaxKopecks,
+    netProfitKopecks,
+    netProfitabilityHundredths,
+  };
+}
+
 /**
- * Строки и итог сводки месяца. План — рабочая или явно открытая запись.
+ * Верхний блок свода `Svod!D2:L8`.
+ * Выручка и Т-проток — суммы по товарам, без вычета Factoring.
+ * Операционные расходы — ввод на сводке, без листа Operation Expense.
+ */
+export function summaryHeadline(
+  planTotals: SummarySide | null,
+  factTotals: SummarySide,
+  operatingExpensePlanExVatKopecks: number,
+  operatingExpenseFactExVatKopecks: number,
+): SummaryHeadline {
+  const plan = headlineSide(planTotals, operatingExpensePlanExVatKopecks);
+  const fact = headlineSide(factTotals, operatingExpenseFactExVatKopecks);
+
+  return {
+    plan,
+    fact,
+    variance: {
+      revenueWithVatKopecks: minus(
+        fact.revenueWithVatKopecks,
+        plan.revenueWithVatKopecks,
+      ),
+      contributionKopecks: minus(fact.contributionKopecks, plan.contributionKopecks),
+      operatingExpenseExVatKopecks:
+        fact.operatingExpenseExVatKopecks - plan.operatingExpenseExVatKopecks,
+      profitKopecks: minus(fact.profitKopecks, plan.profitKopecks),
+      profitTaxKopecks: minus(fact.profitTaxKopecks, plan.profitTaxKopecks),
+      netProfitKopecks: minus(fact.netProfitKopecks, plan.netProfitKopecks),
+      netProfitabilityHundredths: minus(
+        fact.netProfitabilityHundredths,
+        plan.netProfitabilityHundredths,
+      ),
+    },
+    taxPercent: PROFIT_TAX_PERCENT,
+  };
+}
+
+export function setOperatingExpenseRejection(
+  document: PrototypeDocument,
+  month: string,
+  side: OperatingExpenseSide,
+  amountExVatKopecks: number,
+): OperatingExpenseRejection | null {
+  void document;
+  void side;
+
+  if (!isMonthKey(month) || month < "2000-01" || month > "2100-12") {
+    return "month";
+  }
+
+  if (
+    !Number.isInteger(amountExVatKopecks) ||
+    amountExVatKopecks < 0 ||
+    amountExVatKopecks > MAX_OPERATING_EXPENSE_KOPECKS
+  ) {
+    return "amount";
+  }
+
+  return null;
+}
+
+/**
+ * Пишет план или факт операционных расходов месяца.
+ * Обе суммы ноль — запись из документа убирается.
+ */
+export function setOperatingExpense(
+  document: PrototypeDocument,
+  month: string,
+  side: OperatingExpenseSide,
+  amountExVatKopecks: number,
+): PrototypeDocument {
+  if (setOperatingExpenseRejection(document, month, side, amountExVatKopecks)) {
+    return document;
+  }
+
+  const current = monthOperatingExpenseAmounts(document, month);
+  const nextPlan = side === "plan" ? amountExVatKopecks : current.planExVatKopecks;
+  const nextFact = side === "fact" ? amountExVatKopecks : current.factExVatKopecks;
+  const withoutMonth = document.operatingExpenses.filter((item) => item.month !== month);
+
+  if (nextPlan === 0 && nextFact === 0) {
+    if (withoutMonth.length === document.operatingExpenses.length) {
+      return document;
+    }
+
+    return { ...document, operatingExpenses: withoutMonth };
+  }
+
+  return {
+    ...document,
+    operatingExpenses: [
+      ...withoutMonth,
+      {
+        month,
+        planExVatKopecks: nextPlan,
+        factExVatKopecks: nextFact,
+      },
+    ],
+  };
+}
+
+/**
+ * Строки и итог сводки месяца. План — рабочая запись или виртуальный нулевой.
  * Факт — сумма дней рабочего факта продаж; в документ ничего не пишется.
  */
 export function monthSummary(
   document: PrototypeDocument,
   month: string,
-  plan: SalesPlan | null = workingSalesPlan(document, month),
+  plan: SalesPlan | null = salesPlanForMonth(document, month),
   fact: SalesFact | null = workingSalesFact(document, month),
 ): SummaryView {
   const days = daysInMonth(month);
@@ -502,6 +692,7 @@ export function monthSummary(
   const planTotals = plan ? salesPlanTotals(document, plan) : null;
   const planTotalsSide = planTotals ? planTotalsAsSide(planTotals) : null;
   const factTotals = factTotalsFromRows(rows, days);
+  const opex = monthOperatingExpenseAmounts(document, month);
 
   return {
     month,
@@ -512,5 +703,11 @@ export function monthSummary(
     planTotalsSide,
     factTotals,
     variance: varianceOf(factTotals, planTotalsSide),
+    headline: summaryHeadline(
+      planTotalsSide,
+      factTotals,
+      opex.planExVatKopecks,
+      opex.factExVatKopecks,
+    ),
   };
 }

@@ -73,13 +73,10 @@ export function FactCompare({ month, part }: { month: string; part: ProductionPa
     <div className="flex flex-col gap-6">
       {comparison.planStatus !== "ready" ? (
         <div className="border border-line bg-sheet px-5 py-5 sm:px-6">
-          <p className="text-base text-ink">
-            {comparison.planStatus === "missing-plan"
-              ? "Сначала задайте план."
-              : "В плане нет объёма."}
-          </p>
+          <p className="text-base text-ink">В плане нет объёма.</p>
           <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
-            Факт за месяц всё равно суммируется. Колонка плана пустая, пока плана нет.
+            Факт за месяц всё равно суммируется. Колонка плана пустая, пока в плане нет
+            объёма.
           </p>
           <Link
             href={summaryHref({ month, currentMonth: monthKeyFromDate(new Date()) })}
@@ -165,7 +162,7 @@ export function FactCompare({ month, part }: { month: string; part: ProductionPa
 
 function emptyCopy(
   part: ProductionPart,
-  status: "missing-plan" | "empty-volume" | "ready",
+  status: "empty-volume" | "ready",
   recordedDays: number,
 ): string {
   if (part === "output" && recordedDays > 0 && status !== "ready") {
@@ -173,9 +170,6 @@ function emptyCopy(
   }
   if (recordedDays === 0 && status !== "ready") {
     return "За этот месяц факта нет. Добавьте день.";
-  }
-  if (status === "missing-plan") {
-    return "Сначала задайте план.";
   }
   if (status === "empty-volume") {
     return "В плане нет объёма.";

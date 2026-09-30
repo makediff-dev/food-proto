@@ -11,7 +11,7 @@ import {
   compositionGrams,
   inputGramsForFinishedBatch,
 } from "@/domain/materials";
-import { activeSalesPlans } from "@/domain/sales-plan";
+import { salesPlanForMonth } from "@/domain/sales-plan";
 import { amountPair, type KopeckPair } from "@/domain/stock";
 
 const ZERO = BigInt(0);
@@ -89,7 +89,6 @@ export interface ProductionTotals {
 }
 
 export type ProductionPlan =
-  | { status: "missing-plan" }
   | { status: "empty-volume"; planId: string }
   | {
       status: "ready";
@@ -481,11 +480,7 @@ export function productionPlan(
   document: PrototypeDocument,
   month: string,
 ): ProductionPlan {
-  const plan = activeSalesPlans(document).find((item) => item.month === month) ?? null;
-  if (!plan) {
-    return { status: "missing-plan" };
-  }
-
+  const plan = salesPlanForMonth(document, month);
   const demanded = plan.lines.filter((line) => line.volumePieces > 0);
   if (demanded.length === 0) {
     return { status: "empty-volume", planId: plan.id };

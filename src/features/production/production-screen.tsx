@@ -77,7 +77,7 @@ export function ProductionScreen({
     return [...values].sort();
   }, [document, selected, today]);
   const result = useMemo(() => productionPlan(document, selected), [document, selected]);
-  const planId = result.status === "missing-plan" ? null : result.planId;
+  const planId = result.planId;
 
   function openMonth(next: string) {
     router.push(
@@ -221,11 +221,7 @@ export function ProductionScreen({
               totals={result.totals}
             />
           ) : (
-            <MissingPlan
-              status={result.status}
-              month={selected}
-              currentMonth={currentMonth}
-            />
+            <MissingPlan month={selected} currentMonth={currentMonth} />
           )
         ) : null}
       </div>
@@ -268,20 +264,10 @@ function TabLink({
   );
 }
 
-function MissingPlan({
-  status,
-  month,
-  currentMonth,
-}: {
-  status: "missing-plan" | "empty-volume";
-  month: string;
-  currentMonth: string;
-}) {
+function MissingPlan({ month, currentMonth }: { month: string; currentMonth: string }) {
   return (
     <div className="border border-line bg-sheet px-5 py-8 sm:px-6">
-      <p className="text-base text-ink">
-        {status === "missing-plan" ? "Сначала задайте план." : "В плане нет объёма."}
-      </p>
+      <p className="text-base text-ink">В плане нет объёма.</p>
       <Link
         href={summaryHref({ month, currentMonth })}
         className={`mt-6 ${quietLinkClassName}`}

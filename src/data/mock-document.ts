@@ -633,6 +633,7 @@ export const mockDocument: PrototypeDocument = {
   salesPlans,
   productionFacts: septemberProductionFacts(),
   salesFacts: [],
+  operatingExpenses: [],
 };
 
 export function createMockDocument(): PrototypeDocument {
@@ -673,5 +674,6 @@ export function createMockDocument(): PrototypeDocument {
         cells: day.cells.map((cell) => ({ ...cell })),
       })),
     })),
+    operatingExpenses: mockDocument.operatingExpenses.map((item) => ({ ...item })),
   };
 }
