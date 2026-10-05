@@ -1,7 +1,7 @@
 import { fitsSafeMoneyProduct } from '@/domain/money';
 import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
-export const SCHEMA_VERSION = 27 as const;
+export const SCHEMA_VERSION = 28 as const;
 
 export const MAX_LABEL_LENGTH = 200;
 
@@ -15,6 +15,12 @@ export const MAX_VOLUME_PIECES = 100_000_000;
  * На своде одна сумма за месяц, без построчного разбиения листа Operation Expense.
  */
 export const MAX_OPERATING_EXPENSE = 100_000_000_000;
+
+/**
+ * Потолок суммы строки продажи, копейки с НДС.
+ * Это итог строки, не цена штуки.
+ */
+export const MAX_SALE_LINE_AMOUNT = 100_000_000_000;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -99,16 +105,14 @@ export interface SalesFactOpening {
 }
 
 /**
- * Серые клетки дня по товару. Выручка, цены без НДС и остатки сюда не пишутся.
+ * Серые клетки дня по товару, кроме продаж.
+ * Цена и объём продаж считаются из журнала продаж и сюда не пишутся.
+ * Выручка, цены без НДС и остатки сюда не пишутся.
  * Ноль допустим. Клетка из одних нулей в документ не попадает.
  */
 export interface SalesFactCell {
   id: string;
   productId: string;
-  /** Цена с НДС, копейки за 1 шт. */
-  priceWithVat: number;
-  /** Объём продаж, шт. */
-  salesPieces: number;
   /** Объём производства, шт. Ввод сетки факта продаж. */
   outputPieces: number;
   /** Перемещение на РЦ, шт. */
@@ -121,6 +125,30 @@ export interface SalesFactCell {
   returnsPieces: number;
   /** Списание, шт. Складской документ не создаёт. */
   writeOffPieces: number;
+}
+
+/** Строка продажи. Цена штуки в документ не пишется. */
+export interface SaleLine {
+  id: string;
+  /** Конечный товар. Ссылка живёт и после удаления товара. */
+  productId: string;
+  /** Объём, шт. От 1. */
+  pieces: number;
+  /** Сумма строки с НДС, копейки. */
+  amountWithVat: number;
+}
+
+/**
+ * Продажа заказчику за календарный день.
+ * Имя заказчика не уникально. Пустая продажа без строк не пишется.
+ */
+export interface Sale {
+  id: string;
+  customerName: string;
+  /** Календарный день, `ГГГГ-ММ-ДД`. */
+  occurredOn: string;
+  lines: SaleLine[];
+  deletedAt: string | null;
 }
 
 /** День месяца факта продаж. Пустой день в документ не пишется. */
@@ -167,6 +195,7 @@ export interface PrototypeDocument {
   products: Product[];
   salesPlans: SalesPlan[];
   salesFacts: SalesFact[];
+  sales: Sale[];
   operatingExpenses: MonthOperatingExpense[];
 }
 
@@ -598,8 +627,6 @@ function parseSalesFactCell(
   const id = parseId(value.id);
   const productId = parseId(value.productId);
   const product = products.find((item) => item.id === productId);
-  const priceWithVat = parseInteger(value.priceWithVat, 0, MAX_PRICE_KOPECKS);
-  const salesPieces = parseInteger(value.salesPieces, 0, MAX_VOLUME_PIECES);
   const outputPieces = parseInteger(value.outputPieces, 0, MAX_VOLUME_PIECES);
   const transferPieces = parseInteger(
     value.transferPieces,
@@ -623,22 +650,19 @@ function parseSalesFactCell(
     !id ||
     !productId ||
     !product ||
-    priceWithVat === null ||
-    salesPieces === null ||
     outputPieces === null ||
     transferPieces === null ||
     staffMealsPieces === null ||
     samplesPieces === null ||
     returnsPieces === null ||
     writeOffPieces === null ||
-    !fitsSafeMoneyProduct(priceWithVat, salesPieces)
+    'priceWithVat' in value ||
+    'salesPieces' in value
   ) {
     return null;
   }
 
   const blank =
-    priceWithVat === 0 &&
-    salesPieces === 0 &&
     outputPieces === 0 &&
     transferPieces === 0 &&
     staffMealsPieces === 0 &&
@@ -652,8 +676,6 @@ function parseSalesFactCell(
   return {
     id,
     productId,
-    priceWithVat,
-    salesPieces,
     outputPieces,
     transferPieces,
     staffMealsPieces,
@@ -797,6 +819,95 @@ function parseSalesFacts(
   return facts;
 }
 
+function parseSaleLine(
+  value: unknown,
+  productIds: ReadonlySet<string>,
+): SaleLine | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const id = parseId(value.id);
+  const productId = parseId(value.productId);
+  const pieces = parseInteger(value.pieces, 1, MAX_VOLUME_PIECES);
+  const amountWithVat = parseInteger(
+    value.amountWithVat,
+    0,
+    MAX_SALE_LINE_AMOUNT,
+  );
+
+  if (
+    !id ||
+    !productId ||
+    !productIds.has(productId) ||
+    pieces === null ||
+    amountWithVat === null
+  ) {
+    return null;
+  }
+
+  return { id, productId, pieces, amountWithVat };
+}
+
+function parseSale(
+  value: unknown,
+  productIds: ReadonlySet<string>,
+): Sale | null {
+  if (!isRecord(value) || !Array.isArray(value.lines)) {
+    return null;
+  }
+
+  const id = parseId(value.id);
+  const deletedAt = parseDeletedAt(value.deletedAt);
+
+  if (
+    !id ||
+    deletedAt === undefined ||
+    typeof value.customerName !== 'string' ||
+    value.customerName.length === 0 ||
+    value.customerName.length > MAX_LABEL_LENGTH ||
+    value.customerName.trim() !== value.customerName ||
+    typeof value.occurredOn !== 'string' ||
+    !isOccurredOn(value.occurredOn)
+  ) {
+    return null;
+  }
+
+  const seenLines = new Set<string>();
+  const seenProducts = new Set<string>();
+  const lines: SaleLine[] = [];
+
+  for (const entry of value.lines) {
+    const line = parseSaleLine(entry, productIds);
+    if (!line || seenLines.has(line.id) || seenProducts.has(line.productId)) {
+      return null;
+    }
+
+    seenLines.add(line.id);
+    seenProducts.add(line.productId);
+    lines.push(line);
+  }
+
+  if (lines.length === 0) {
+    return null;
+  }
+
+  return {
+    id,
+    customerName: value.customerName,
+    occurredOn: value.occurredOn,
+    lines,
+    deletedAt,
+  };
+}
+
+function parseSales(
+  value: unknown,
+  productIds: ReadonlySet<string>,
+): Sale[] | null {
+  return parseMovementList(value, (entry) => parseSale(entry, productIds));
+}
+
 /** Собирает документ только из известных полей. Чужие ключи отбрасываются. */
 export function parsePrototypeDocument(
   value: unknown,
@@ -831,9 +942,10 @@ export function parsePrototypeDocument(
   const productIds = new Set(products.map((item) => item.id));
   const salesPlans = parseSalesPlans(value.salesPlans, productIds);
   const salesFacts = parseSalesFacts(value.salesFacts, products);
+  const sales = parseSales(value.sales, productIds);
   const operatingExpenses = parseOperatingExpenses(value.operatingExpenses);
 
-  if (!salesPlans || !salesFacts || !operatingExpenses) {
+  if (!salesPlans || !salesFacts || !sales || !operatingExpenses) {
     return null;
   }
 
@@ -843,6 +955,7 @@ export function parsePrototypeDocument(
     products,
     salesPlans,
     salesFacts,
+    sales,
     operatingExpenses,
   };
 }

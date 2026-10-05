@@ -26,7 +26,6 @@ import {
   daysInMonth,
   monthKeyFromDate,
   PLAN_HORIZON_MONTHS,
-  profitabilityHundredths,
   type SalesPlanTotals,
   salesPlanForMonth,
   salesPlanLineMetrics,
@@ -187,9 +186,10 @@ export function summaryGridProducts(
   document: PrototypeDocument,
   plan: SalesPlan | null,
   fact: SalesFact | null,
+  month: string,
 ): Product[] {
   const referenced = new Set(plan?.lines.map((line) => line.productId) ?? []);
-  const fromFact = salesFactGridProducts(document, fact);
+  const fromFact = salesFactGridProducts(document, fact, month);
   const seen = new Set(fromFact.map((item) => item.id));
 
   const extra = document.products.filter(
@@ -267,10 +267,10 @@ function factFromRows(
   const cost = unitCost(document, product.id);
 
   for (const row of rows) {
-    volume += BigInt(row.inputs.salesPieces);
+    volume += BigInt(row.salesPieces);
 
     if (row.revenueWithVat === null || row.revenueExVat === null) {
-      if (row.inputs.salesPieces > 0) {
+      if (row.salesPieces > 0) {
         revenueComplete = false;
       }
     } else {
@@ -279,7 +279,7 @@ function factFromRows(
     }
 
     if (
-      row.inputs.salesPieces > 0 &&
+      row.salesPieces > 0 &&
       (row.salesVolumeCostWithVat === null ||
         row.salesVolumeCostExVat === null ||
         row.contribution === null)
@@ -324,9 +324,7 @@ function factFromRows(
     contribution: volumeAndEmptyCost ? null : contribution,
     profitabilityHundredths: volumeAndEmptyCost
       ? null
-      : priceWithVat === null || cost === null
-        ? null
-        : profitabilityHundredths(priceWithVat, product.vatPercent, cost.exVat),
+      : percentHundredths(contribution, volumeCostExVat),
     vatPercent: product.vatPercent,
     vatPercentHundredths: null,
     costComplete: !volumeAndEmptyCost,
@@ -614,7 +612,7 @@ export function monthSummary(
   fact: SalesFact | null = workingSalesFact(document, month),
 ): SummaryView {
   const days = daysInMonth(month);
-  const products = summaryGridProducts(document, plan, fact);
+  const products = summaryGridProducts(document, plan, fact, month);
   const factDays = salesFactMonth(document, fact, month);
   const rowByProduct = new Map<string, SummaryRow>();
 

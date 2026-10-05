@@ -124,13 +124,13 @@ export function IconMenu() {
 //   );
 // }
 //
-// export function IconCheck() {
-//   return (
-//     <Glyph>
-//       <path d="M4 10l4 4 8-8" />
-//     </Glyph>
-//   );
-// }
+export function IconCheck() {
+  return (
+    <Glyph>
+      <path d="M4 10l4 4 8-8" />
+    </Glyph>
+  );
+}
 
 export function IconPlan() {
   return (

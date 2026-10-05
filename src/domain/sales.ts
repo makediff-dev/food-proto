@@ -1,0 +1,375 @@
+import {
+  isDeletionMark,
+  isMonthKey,
+  isOccurredOn,
+  MAX_ID_LENGTH,
+  MAX_LABEL_LENGTH,
+  MAX_SALE_LINE_AMOUNT,
+  MAX_VOLUME_PIECES,
+  type PrototypeDocument,
+  type Sale,
+  type SaleLine,
+} from '@/domain/document';
+import { amountExVat, toSafeNumber } from '@/domain/money';
+import { monthKeyFromDate } from '@/domain/sales-plan';
+
+const ZERO = BigInt(0);
+
+export type SaleRejection =
+  | 'missing'
+  | 'month'
+  | 'date'
+  | 'customer'
+  | 'lines'
+  | 'product'
+  | 'duplicate-line'
+  | 'pieces'
+  | 'amount'
+  | 'locked';
+
+export interface SaleTotals {
+  pieces: number | null;
+  revenueWithVat: number | null;
+  revenueExVat: number | null;
+}
+
+function saleMonthOpen(month: string, today: Date): boolean {
+  return (
+    isMonthKey(month) && month <= monthKeyFromDate(today) && month >= '2000-01'
+  );
+}
+
+function isEntityId(value: string): boolean {
+  return (
+    value.length > 0 && value.length <= MAX_ID_LENGTH && value === value.trim()
+  );
+}
+
+function normalizeCustomer(name: string): string {
+  return name.trim();
+}
+
+function saleById(document: PrototypeDocument, id: string): Sale | null {
+  return document.sales.find((item) => item.id === id) ?? null;
+}
+
+export function workingSales(document: PrototypeDocument): Sale[] {
+  return document.sales.filter((item) => item.deletedAt === null);
+}
+
+export function deletedSales(document: PrototypeDocument): Sale[] {
+  return document.sales
+    .filter((item) => item.deletedAt !== null)
+    .sort((left, right) => {
+      const byDate = right.occurredOn.localeCompare(left.occurredOn);
+      if (byDate !== 0) {
+        return byDate;
+      }
+      return right.customerName.localeCompare(left.customerName, 'ru');
+    });
+}
+
+export function workingSalesInMonth(
+  document: PrototypeDocument,
+  month: string,
+): Sale[] {
+  return workingSales(document)
+    .filter((item) => item.occurredOn.startsWith(`${month}-`))
+    .sort((left, right) => {
+      const byDate = left.occurredOn.localeCompare(right.occurredOn);
+      if (byDate !== 0) {
+        return byDate;
+      }
+      return left.customerName.localeCompare(right.customerName, 'ru');
+    });
+}
+
+export function saleTotals(
+  document: PrototypeDocument,
+  sale: Sale,
+): SaleTotals {
+  let pieces = ZERO;
+  let revenueWith = ZERO;
+  let revenueEx = ZERO;
+  let revenueComplete = true;
+
+  for (const line of sale.lines) {
+    pieces += BigInt(line.pieces);
+    revenueWith += BigInt(line.amountWithVat);
+    const product = document.products.find(
+      (item) => item.id === line.productId,
+    );
+    const ex =
+      product === undefined
+        ? null
+        : amountExVat(line.amountWithVat, product.vatPercent);
+    if (ex === null) {
+      revenueComplete = false;
+    } else {
+      revenueEx += BigInt(ex);
+    }
+  }
+
+  return {
+    pieces: toSafeNumber(pieces),
+    revenueWithVat: toSafeNumber(revenueWith),
+    revenueExVat: revenueComplete ? toSafeNumber(revenueEx) : null,
+  };
+}
+
+function lineRejection(
+  document: PrototypeDocument,
+  lines: readonly SaleLine[],
+  previous: Sale | null,
+): SaleRejection | null {
+  if (lines.length === 0) {
+    return 'lines';
+  }
+
+  const seenLines = new Set<string>();
+  const seenProducts = new Set<string>();
+  const previousProducts = new Set(
+    previous?.lines.map((line) => line.productId) ?? [],
+  );
+
+  for (const line of lines) {
+    if (!isEntityId(line.id)) {
+      return 'missing';
+    }
+    if (seenLines.has(line.id)) {
+      return 'duplicate-line';
+    }
+    if (seenProducts.has(line.productId)) {
+      return 'duplicate-line';
+    }
+
+    const product = document.products.find(
+      (item) => item.id === line.productId,
+    );
+    if (!product) {
+      return 'product';
+    }
+    if (product.deletedAt !== null && !previousProducts.has(line.productId)) {
+      return 'locked';
+    }
+    if (
+      !Number.isInteger(line.pieces) ||
+      line.pieces < 1 ||
+      line.pieces > MAX_VOLUME_PIECES
+    ) {
+      return 'pieces';
+    }
+    if (
+      !Number.isInteger(line.amountWithVat) ||
+      line.amountWithVat < 0 ||
+      line.amountWithVat > MAX_SALE_LINE_AMOUNT
+    ) {
+      return 'amount';
+    }
+
+    seenLines.add(line.id);
+    seenProducts.add(line.productId);
+  }
+
+  return null;
+}
+
+function writeRejection(
+  document: PrototypeDocument,
+  id: string,
+  customerName: string,
+  occurredOn: string,
+  lines: readonly SaleLine[],
+  today: Date,
+  previous: Sale | null,
+): SaleRejection | null {
+  if (!isEntityId(id)) {
+    return 'missing';
+  }
+  if (!previous && document.sales.some((item) => item.id === id)) {
+    return 'missing';
+  }
+
+  const customer = normalizeCustomer(customerName);
+  if (customer.length === 0 || customer.length > MAX_LABEL_LENGTH) {
+    return 'customer';
+  }
+  if (!isOccurredOn(occurredOn)) {
+    return 'date';
+  }
+
+  const month = occurredOn.slice(0, 7);
+  if (!saleMonthOpen(month, today)) {
+    return 'month';
+  }
+
+  return lineRejection(document, lines, previous);
+}
+
+function replaceSales(
+  document: PrototypeDocument,
+  sales: Sale[],
+): PrototypeDocument {
+  return { ...document, sales };
+}
+
+export function addSaleRejection(
+  document: PrototypeDocument,
+  id: string,
+  customerName: string,
+  occurredOn: string,
+  lines: readonly SaleLine[],
+  today: Date,
+): SaleRejection | null {
+  return writeRejection(
+    document,
+    id,
+    customerName,
+    occurredOn,
+    lines,
+    today,
+    null,
+  );
+}
+
+export function addSale(
+  document: PrototypeDocument,
+  id: string,
+  customerName: string,
+  occurredOn: string,
+  lines: readonly SaleLine[],
+  today: Date,
+): PrototypeDocument {
+  if (addSaleRejection(document, id, customerName, occurredOn, lines, today)) {
+    return document;
+  }
+
+  const sale: Sale = {
+    id,
+    customerName: normalizeCustomer(customerName),
+    occurredOn,
+    lines: lines.map((line) => ({ ...line })),
+    deletedAt: null,
+  };
+
+  return replaceSales(document, [...document.sales, sale]);
+}
+
+export function updateSaleRejection(
+  document: PrototypeDocument,
+  id: string,
+  customerName: string,
+  occurredOn: string,
+  lines: readonly SaleLine[],
+  today: Date,
+): SaleRejection | null {
+  const current = saleById(document, id);
+  if (!current || current.deletedAt !== null) {
+    return 'missing';
+  }
+
+  return writeRejection(
+    document,
+    id,
+    customerName,
+    occurredOn,
+    lines,
+    today,
+    current,
+  );
+}
+
+export function updateSale(
+  document: PrototypeDocument,
+  id: string,
+  customerName: string,
+  occurredOn: string,
+  lines: readonly SaleLine[],
+  today: Date,
+): PrototypeDocument {
+  if (
+    updateSaleRejection(document, id, customerName, occurredOn, lines, today)
+  ) {
+    return document;
+  }
+
+  return replaceSales(
+    document,
+    document.sales.map((item) =>
+      item.id === id
+        ? {
+            ...item,
+            customerName: normalizeCustomer(customerName),
+            occurredOn,
+            lines: lines.map((line) => ({ ...line })),
+          }
+        : item,
+    ),
+  );
+}
+
+export function deleteSale(
+  document: PrototypeDocument,
+  id: string,
+  deletedAt: string,
+): PrototypeDocument {
+  if (!isDeletionMark(deletedAt)) {
+    return document;
+  }
+
+  const current = saleById(document, id);
+  if (!current || current.deletedAt !== null) {
+    return document;
+  }
+
+  return replaceSales(
+    document,
+    document.sales.map((item) =>
+      item.id === id ? { ...item, deletedAt } : item,
+    ),
+  );
+}
+
+export function restoreSaleRejection(
+  document: PrototypeDocument,
+  id: string,
+): SaleRejection | null {
+  const current = saleById(document, id);
+  if (!current || current.deletedAt === null) {
+    return 'missing';
+  }
+
+  return null;
+}
+
+export function restoreSale(
+  document: PrototypeDocument,
+  id: string,
+): PrototypeDocument {
+  if (restoreSaleRejection(document, id)) {
+    return document;
+  }
+
+  return replaceSales(
+    document,
+    document.sales.map((item) =>
+      item.id === id ? { ...item, deletedAt: null } : item,
+    ),
+  );
+}
+
+export function saleByIdOrNull(
+  document: PrototypeDocument,
+  id: string,
+): Sale | null {
+  return saleById(document, id);
+}
+
+export function defaultSaleDay(month: string, today: Date): string {
+  const todayKey = `${monthKeyFromDate(today)}-${String(today.getDate()).padStart(2, '0')}`;
+  if (todayKey.startsWith(`${month}-`) && isOccurredOn(todayKey)) {
+    return todayKey;
+  }
+
+  return `${month}-01`;
+}

@@ -55,3 +55,19 @@ export function salesFactHref(options: {
   const query = params.toString();
   return query ? `/sales-fact?${query}` : '/sales-fact';
 }
+
+export function saleNewHref(day?: string): string {
+  if (!day) {
+    return '/sales-fact/sales/new';
+  }
+
+  return `/sales-fact/sales/new?day=${encodeURIComponent(day)}`;
+}
+
+export function saleHref(id: string): string {
+  return `/sales-fact/sales/${id}`;
+}
+
+export function deletedSalesHref(): string {
+  return '/sales-fact/sales/deleted';
+}

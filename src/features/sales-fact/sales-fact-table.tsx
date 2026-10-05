@@ -12,16 +12,11 @@ import {
   type SalesFactTotals,
 } from '@/domain/sales-fact';
 import { formatMoney } from '@/features/sales/money';
-import {
-  formatPercentHundredths,
-  formatPriceExVat,
-} from '@/features/sales/text';
+import { formatPercentHundredths } from '@/features/sales/text';
 import {
   factPiecesDraft,
-  factPriceDraft,
   formatSignedPieces,
   parseFactPieces,
-  parseFactPrice,
   SALES_FACT_ERROR,
 } from '@/features/sales-fact/text';
 import {
@@ -144,10 +139,8 @@ const LAST_SALES_KEY = COLUMNS.filter((column) => column.group === 'sales').at(
 )?.key;
 
 const INPUTS: Partial<
-  Record<ColumnKey, { field: keyof SalesFactInputs; kind: 'price' | 'pieces' }>
+  Record<ColumnKey, { field: keyof SalesFactInputs; kind: 'pieces' }>
 > = {
-  price: { field: 'priceWithVat', kind: 'price' },
-  salesPieces: { field: 'salesPieces', kind: 'pieces' },
   outputPieces: { field: 'outputPieces', kind: 'pieces' },
   transfer: { field: 'transferPieces', kind: 'pieces' },
   staffMeals: { field: 'staffMealsPieces', kind: 'pieces' },
@@ -421,7 +414,7 @@ function ProductRow({
       </th>
       {COLUMNS.map((column) => {
         const canEdit = Boolean(INPUTS[column.key]) && editable && !row.deleted;
-        const highlightCell = canEdit && column.key !== 'price';
+        const highlightCell = canEdit;
         return (
           <td
             key={column.key}
@@ -558,33 +551,12 @@ function RowCell({
 }) {
   if (column === 'price') {
     return (
-      <StackedPair
-        topHighlighted={editable}
-        topLabel="с НДС"
-        bottomLabel="без НДС"
-        top={
-          <GridNumber
-            label={`Цена с НДС, ${row.name}`}
-            value={factPriceDraft(row.inputs.priceWithVat)}
-            disabled={!editable}
-            inputMode="decimal"
-            unit="₽"
-            invalidMessage={SALES_FACT_ERROR.price}
-            parse={parseFactPrice}
-            onCommit={(next) => onCommit({ ...row.inputs, priceWithVat: next })}
-          />
-        }
-        bottom={
-          row.priceExVatTenThousandths === null ? (
-            <Empty />
-          ) : (
-            <span className="whitespace-nowrap">
-              {formatPriceExVat(row.priceExVatTenThousandths)}
-            </span>
-          )
-        }
-      />
+      <VatMoneyOrEmpty withVat={row.priceWithVat} exVat={row.priceExVat} />
     );
+  }
+
+  if (column === 'salesPieces') {
+    return <Pieces value={row.salesPieces} />;
   }
 
   const input = INPUTS[column];
@@ -593,20 +565,12 @@ function RowCell({
     return (
       <GridNumber
         label={`${COLUMNS.find((item) => item.key === column)?.label ?? ''}, ${row.name}`}
-        value={
-          input.kind === 'price'
-            ? factPriceDraft(value)
-            : factPiecesDraft(value)
-        }
+        value={factPiecesDraft(value)}
         disabled={!editable}
-        inputMode={input.kind === 'price' ? 'decimal' : 'numeric'}
-        unit={input.kind === 'pieces' ? 'шт' : undefined}
-        invalidMessage={
-          input.kind === 'price'
-            ? SALES_FACT_ERROR.price
-            : SALES_FACT_ERROR.pieces
-        }
-        parse={input.kind === 'price' ? parseFactPrice : parseFactPieces}
+        inputMode="numeric"
+        unit="шт"
+        invalidMessage={SALES_FACT_ERROR.pieces}
+        parse={parseFactPieces}
         onCommit={(next) => onCommit({ ...row.inputs, [input.field]: next })}
       />
     );

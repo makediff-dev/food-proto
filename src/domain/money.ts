@@ -56,6 +56,16 @@ export function fitsSafeMoneyProduct(price: number, volume: number): boolean {
 }
 
 /** Сотые доли процента: часть / целое × 100. Нет числа — пусто. Ноль целого — 0. */
+const HUNDRED = BigInt(100);
+
+/** Сумма без НДС, копейки, половина вверх. */
+export function amountExVat(
+  amountWithVat: number,
+  vatPercent: number,
+): number | null {
+  return ratioRound(BigInt(amountWithVat) * HUNDRED, BigInt(100 + vatPercent));
+}
+
 export function percentHundredths(
   part: number | null,
   whole: number | null,

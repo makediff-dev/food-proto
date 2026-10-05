@@ -22,8 +22,15 @@ export function parseDecimal(raw: string): number | null {
 }
 
 export function fromRubles(rubles: number): number | null {
+  return fromRublesUpTo(rubles, MAX_PRICE_KOPECKS);
+}
+
+export function fromRublesUpTo(
+  rubles: number,
+  maxKopecks: number,
+): number | null {
   const amount = Math.round(rubles * 100);
-  if (!Number.isInteger(amount) || amount < 0 || amount > MAX_PRICE_KOPECKS) {
+  if (!Number.isInteger(amount) || amount < 0 || amount > maxKopecks) {
     return null;
   }
 

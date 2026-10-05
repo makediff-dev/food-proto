@@ -11,6 +11,7 @@ import {
   type PrototypeDocument,
   type SalesFact,
 } from '@/domain/document';
+import { saleTotals, workingSalesInMonth } from '@/domain/sales';
 import {
   defaultSalesFactDay,
   monthDates,
@@ -23,16 +24,24 @@ import {
   workingSalesFact,
 } from '@/domain/sales-fact';
 import { monthKeyFromDate, shiftMonth } from '@/domain/sales-plan';
-import { fieldClassName } from '@/features/sales/fields';
+import {
+  fieldClassName,
+  primaryButtonClassName,
+} from '@/features/sales/fields';
+import { formatMoney } from '@/features/sales/money';
 import { formatMonth } from '@/features/sales/text';
 import {
+  deletedSalesHref,
   SALES_FACT_SECTION_TITLE,
   type SalesFactView,
+  saleHref,
+  saleNewHref,
   salesFactHref,
 } from '@/features/sales-fact/paths';
 import { SalesFactTable } from '@/features/sales-fact/sales-fact-table';
 import {
   factPiecesDraft,
+  formatSaleDate,
   formatSalesFactDay,
   parseSignedPieces,
   SALES_FACT_ERROR,
@@ -45,6 +54,7 @@ import {
   IconFullscreen,
   IconFullscreenExit,
   IconPlan,
+  IconPlus,
   IconTrash,
   IconUndo,
 } from '@/features/shell/icons';
@@ -145,7 +155,7 @@ function Workspace({
   const fact = readOnly
     ? salesFactById(sales.document, factId)
     : workingSalesFact(sales.document, month);
-  const products = salesFactGridProducts(sales.document, fact);
+  const products = salesFactGridProducts(sales.document, fact, month);
   const days = useMemo(
     () =>
       salesFactMonth(
@@ -337,6 +347,8 @@ function Workspace({
             </div>
           </div>
 
+          {readOnly ? null : <SalesJournal month={month} day={selectedDay} />}
+
           {hasTable ? (
             <section
               className={
@@ -379,6 +391,62 @@ function Workspace({
         />
       ) : null}
     </>
+  );
+}
+
+function SalesJournal({ month, day }: { month: string; day: string }) {
+  const sales = useSalesFact();
+  const items = workingSalesInMonth(sales.document, month);
+  const deletedCount = sales.document.sales.filter(
+    (item) => item.deletedAt !== null,
+  ).length;
+
+  return (
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Link href={saleNewHref(day)} className={primaryButtonClassName}>
+          <IconPlus />
+          Добавить продажу
+        </Link>
+        <Link href={deletedSalesHref()} className={quietLinkClassName}>
+          <IconUndo />
+          Удалённые продажи
+          {deletedCount === 0 ? '' : ` ${deletedCount}`}
+        </Link>
+      </div>
+      {items.length === 0 ? (
+        <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
+          Добавьте продажу: заказчик, дата и товары. Она попадёт в таблицу факта
+          за этот день.
+        </p>
+      ) : (
+        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {items.map((item) => {
+            const totals = saleTotals(sales.document, item);
+            return (
+              <li key={item.id}>
+                <Link
+                  href={saleHref(item.id)}
+                  className="block border border-line bg-sheet p-4 outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                >
+                  <p className="text-sm text-ink">{item.customerName}</p>
+                  <p className="mt-1 text-sm text-muted">
+                    {formatSaleDate(item.occurredOn)}
+                  </p>
+                  {totals.revenueWithVat !== null &&
+                  totals.revenueExVat !== null ? (
+                    <p className="mt-2 text-sm text-ink">
+                      {formatMoney(totals.revenueWithVat)} с НДС ·{' '}
+                      {formatMoney(totals.revenueExVat)} без НДС
+                    </p>
+                  ) : null}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
 

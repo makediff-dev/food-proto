@@ -12,22 +12,15 @@ import {
   type SalesFactCell,
 } from '@/domain/document';
 import {
+  amountExVat,
   averageAmount,
-  fitsSafeMoneyProduct,
   multiplyAmount,
   percentHundredths,
   toSafeNumber,
   vatPercentHundredths,
 } from '@/domain/money';
-import {
-  daysInMonth,
-  monthKeyFromDate,
-  priceExVatTenThousandths,
-  profitabilityHundredths,
-  revenueExVat,
-  revenueWithVat,
-} from '@/domain/sales-plan';
-import { MAX_PRICE_KOPECKS } from '@/domain/units';
+import { workingSales } from '@/domain/sales';
+import { daysInMonth, monthKeyFromDate } from '@/domain/sales-plan';
 
 const ZERO = BigInt(0);
 
@@ -37,16 +30,12 @@ export type SalesFactRejection =
   | 'date'
   | 'product'
   | 'locked'
-  | 'price'
   | 'pieces'
   | 'opening'
-  | 'overflow'
   | 'taken';
 
-/** Серые вводы дня. На экране пустой день — нули, в документ он не пишется. */
+/** Серые вводы дня, кроме продаж. На экране пустой день — нули, в документ он не пишется. */
 export interface SalesFactInputs {
-  priceWithVat: number;
-  salesPieces: number;
   outputPieces: number;
   transferPieces: number;
   staffMealsPieces: number;
@@ -55,18 +44,26 @@ export interface SalesFactInputs {
   writeOffPieces: number;
 }
 
+export interface SaleDayProduct {
+  pieces: number;
+  revenueWithVat: number | null;
+  revenueExVat: number | null;
+}
+
 export interface SalesFactRow {
   productId: string;
   name: string;
   deleted: boolean;
   vatPercent: number | null;
   inputs: SalesFactInputs;
+  salesPieces: number;
   productionStart: number;
   distributionStart: number;
   productionEnd: number;
   distributionEnd: number;
-  /** Десятитысячные доли рубля. На экране до копеек, в выручку без НДС не подставляются. */
-  priceExVatTenThousandths: number | null;
+  /** Выручка / объём, копейки. Нет объёма — пусто. */
+  priceWithVat: number | null;
+  priceExVat: number | null;
   revenueWithVat: number | null;
   revenueExVat: number | null;
   /** Себестоимость 1 шт с товара. Обе колонки «Себест, р/ед» совпадают. */
@@ -146,10 +143,6 @@ function isEntityId(value: string): boolean {
   );
 }
 
-function isPrice(value: number): boolean {
-  return Number.isInteger(value) && value >= 0 && value <= MAX_PRICE_KOPECKS;
-}
-
 function isPieces(value: number): boolean {
   return Number.isInteger(value) && value >= 0 && value <= MAX_VOLUME_PIECES;
 }
@@ -164,8 +157,6 @@ function isOpening(value: number): boolean {
 
 export function blankInputs(): SalesFactInputs {
   return {
-    priceWithVat: 0,
-    salesPieces: 0,
     outputPieces: 0,
     transferPieces: 0,
     staffMealsPieces: 0,
@@ -177,8 +168,6 @@ export function blankInputs(): SalesFactInputs {
 
 export function inputsAreBlank(inputs: SalesFactInputs): boolean {
   return (
-    inputs.priceWithVat === 0 &&
-    inputs.salesPieces === 0 &&
     inputs.outputPieces === 0 &&
     inputs.transferPieces === 0 &&
     inputs.staffMealsPieces === 0 &&
@@ -190,8 +179,6 @@ export function inputsAreBlank(inputs: SalesFactInputs): boolean {
 
 function inputsFromCell(cell: SalesFactCell): SalesFactInputs {
   return {
-    priceWithVat: cell.priceWithVat,
-    salesPieces: cell.salesPieces,
     outputPieces: cell.outputPieces,
     transferPieces: cell.transferPieces,
     staffMealsPieces: cell.staffMealsPieces,
@@ -203,8 +190,6 @@ function inputsFromCell(cell: SalesFactCell): SalesFactInputs {
 
 function sameInputs(left: SalesFactInputs, right: SalesFactInputs): boolean {
   return (
-    left.priceWithVat === right.priceWithVat &&
-    left.salesPieces === right.salesPieces &&
     left.outputPieces === right.outputPieces &&
     left.transferPieces === right.transferPieces &&
     left.staffMealsPieces === right.staffMealsPieces &&
@@ -293,10 +278,61 @@ function productById(
   return document.products.find((item) => item.id === productId) ?? null;
 }
 
-/** Рабочие товары и те, на которые в этом месяце уже есть шапка или серый ввод. */
+function salesInMonth(
+  document: PrototypeDocument,
+  month: string,
+): ReturnType<typeof workingSales> {
+  return workingSales(document).filter((item) =>
+    item.occurredOn.startsWith(`${month}-`),
+  );
+}
+
+export function saleDayProduct(
+  document: PrototypeDocument,
+  occurredOn: string,
+  productId: string,
+): SaleDayProduct {
+  let pieces = ZERO;
+  let revenueWith = ZERO;
+  let revenueEx = ZERO;
+  let revenueComplete = true;
+  const product = productById(document, productId);
+
+  for (const sale of workingSales(document)) {
+    if (sale.occurredOn !== occurredOn) {
+      continue;
+    }
+    for (const line of sale.lines) {
+      if (line.productId !== productId) {
+        continue;
+      }
+      pieces += BigInt(line.pieces);
+      revenueWith += BigInt(line.amountWithVat);
+      const ex =
+        product === null
+          ? null
+          : amountExVat(line.amountWithVat, product.vatPercent);
+      if (ex === null) {
+        revenueComplete = false;
+      } else {
+        revenueEx += BigInt(ex);
+      }
+    }
+  }
+
+  const salesPieces = toSafeNumber(pieces) ?? 0;
+  return {
+    pieces: salesPieces,
+    revenueWithVat: toSafeNumber(revenueWith),
+    revenueExVat: revenueComplete ? toSafeNumber(revenueEx) : null,
+  };
+}
+
+/** Рабочие товары и те, на которые в этом месяце уже есть шапка, серый ввод или продажа. */
 export function salesFactGridProducts(
   document: PrototypeDocument,
   fact: SalesFact | null,
+  month: string,
 ): Product[] {
   const referenced = new Set<string>();
   if (fact) {
@@ -307,6 +343,11 @@ export function salesFactGridProducts(
       for (const cell of day.cells) {
         referenced.add(cell.productId);
       }
+    }
+  }
+  for (const sale of salesInMonth(document, month)) {
+    for (const line of sale.lines) {
+      referenced.add(line.productId);
     }
   }
 
@@ -329,6 +370,9 @@ function inputsOn(
 interface DayStock {
   occurredOn: string;
   inputs: SalesFactInputs;
+  salesPieces: number;
+  revenueWithVat: number | null;
+  revenueExVat: number | null;
   productionStart: number;
   distributionStart: number;
   productionEnd: number;
@@ -342,6 +386,7 @@ interface DayStock {
  * Конец на РЦ = начало − продажи + перемещение − питание − образцы + возвраты − списание.
  */
 function stockChain(
+  document: PrototypeDocument,
   fact: SalesFact | null,
   month: string,
   productId: string,
@@ -353,13 +398,14 @@ function stockChain(
 
   for (const occurredOn of monthDates(month)) {
     const inputs = inputsOn(fact, occurredOn, productId);
+    const sold = saleDayProduct(document, occurredOn, productId);
     const productionStart = production;
     const distributionStart = distribution;
     const productionEnd =
       productionStart + inputs.outputPieces - inputs.transferPieces;
     const distributionEnd =
       distributionStart -
-      inputs.salesPieces +
+      sold.pieces +
       inputs.transferPieces -
       inputs.staffMealsPieces -
       inputs.samplesPieces +
@@ -368,6 +414,9 @@ function stockChain(
     chain.push({
       occurredOn,
       inputs,
+      salesPieces: sold.pieces,
+      revenueWithVat: sold.revenueWithVat,
+      revenueExVat: sold.revenueExVat,
       productionStart,
       distributionStart,
       productionEnd,
@@ -388,17 +437,13 @@ function rowMetrics(
   const inputs = stock.inputs;
   const vat = product.vatPercent;
   const cost = unitCost(document, product.id);
-  const revenueWith = revenueWithVat(inputs.priceWithVat, inputs.salesPieces);
-  const revenueEx =
-    vat === null
-      ? inputs.salesPieces === 0
-        ? 0
-        : null
-      : revenueExVat(inputs.priceWithVat, vat, inputs.salesPieces);
+  const salesPieces = stock.salesPieces;
+  const revenueWith = stock.revenueWithVat;
+  const revenueEx = stock.revenueExVat;
   const salesVolumeWith =
-    cost === null ? null : multiplyAmount(cost.withVat, inputs.salesPieces);
+    cost === null ? null : multiplyAmount(cost.withVat, salesPieces);
   const salesVolumeEx =
-    cost === null ? null : multiplyAmount(cost.exVat, inputs.salesPieces);
+    cost === null ? null : multiplyAmount(cost.exVat, salesPieces);
   const outputVolumeWith =
     cost === null ? null : multiplyAmount(cost.withVat, inputs.outputPieces);
   const outputVolumeEx =
@@ -414,12 +459,13 @@ function rowMetrics(
     deleted: product.deletedAt !== null,
     vatPercent: vat,
     inputs,
+    salesPieces,
     productionStart: stock.productionStart,
     distributionStart: stock.distributionStart,
     productionEnd: stock.productionEnd,
     distributionEnd: stock.distributionEnd,
-    priceExVatTenThousandths:
-      vat === null ? null : priceExVatTenThousandths(inputs.priceWithVat, vat),
+    priceWithVat: averageAmount(revenueWith, salesPieces),
+    priceExVat: averageAmount(revenueEx, salesPieces),
     revenueWithVat: revenueWith,
     revenueExVat: revenueEx,
     unitCost: cost,
@@ -429,9 +475,9 @@ function rowMetrics(
     outputVolumeCostExVat: outputVolumeEx,
     contribution: contribution,
     profitabilityHundredths:
-      cost === null || vat === null
+      contribution === null || salesVolumeEx === null
         ? null
-        : profitabilityHundredths(inputs.priceWithVat, vat, cost.exVat),
+        : percentHundredths(contribution, salesVolumeEx),
   };
 }
 
@@ -461,7 +507,7 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
   for (const row of rows) {
     productionStart += BigInt(row.productionStart);
     distributionStart += BigInt(row.distributionStart);
-    salesPieces += BigInt(row.inputs.salesPieces);
+    salesPieces += BigInt(row.salesPieces);
     outputPieces += BigInt(row.inputs.outputPieces);
     transferPieces += BigInt(row.inputs.transferPieces);
     staffMealsPieces += BigInt(row.inputs.staffMealsPieces);
@@ -472,7 +518,7 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
     distributionEnd += BigInt(row.distributionEnd);
 
     if (row.revenueWithVat === null || row.revenueExVat === null) {
-      if (row.inputs.salesPieces > 0) {
+      if (row.salesPieces > 0) {
         revenueComplete = false;
       }
     } else {
@@ -481,7 +527,7 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
     }
 
     if (
-      row.inputs.salesPieces > 0 &&
+      row.salesPieces > 0 &&
       (row.salesVolumeCostWithVat === null ||
         row.salesVolumeCostExVat === null ||
         row.contribution === null)
@@ -605,11 +651,11 @@ export function salesFactMonth(
   fact: SalesFact | null,
   month: string,
 ): SalesFactDayView[] {
-  const products = salesFactGridProducts(document, fact);
+  const products = salesFactGridProducts(document, fact, month);
   const chains = new Map(
     products.map((product) => [
       product.id,
-      stockChain(fact, month, product.id),
+      stockChain(document, fact, month, product.id),
     ]),
   );
 
@@ -618,6 +664,9 @@ export function salesFactMonth(
       const stock = chains.get(product.id)?.[index] ?? {
         occurredOn,
         inputs: blankInputs(),
+        salesPieces: 0,
+        revenueWithVat: 0,
+        revenueExVat: 0,
         productionStart: 0,
         distributionStart: 0,
         productionEnd: 0,
@@ -638,12 +687,7 @@ export function salesFactMonth(
 }
 
 function inputRejection(inputs: SalesFactInputs): SalesFactRejection | null {
-  if (!isPrice(inputs.priceWithVat)) {
-    return 'price';
-  }
-
   const pieces = [
-    inputs.salesPieces,
     inputs.outputPieces,
     inputs.transferPieces,
     inputs.staffMealsPieces,
@@ -653,9 +697,6 @@ function inputRejection(inputs: SalesFactInputs): SalesFactRejection | null {
   ];
   if (pieces.some((value) => !isPieces(value))) {
     return 'pieces';
-  }
-  if (!fitsSafeMoneyProduct(inputs.priceWithVat, inputs.salesPieces)) {
-    return 'overflow';
   }
 
   return null;
