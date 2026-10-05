@@ -4,19 +4,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
-import { activeCategories } from '@/domain/categories';
-import {
-  isOccurredOn,
-  type Product,
-  type PrototypeDocument,
-  type SalesFact,
-} from '@/domain/document';
+import { isOccurredOn } from '@/domain/document';
 import { saleTotals, workingSalesInMonth } from '@/domain/sales';
 import {
   defaultSalesFactDay,
   monthDates,
-  openingOf,
-  type SalesFactRejection,
   salesFactById,
   salesFactGridProducts,
   salesFactMonth,
@@ -40,10 +32,8 @@ import {
 } from '@/features/sales-fact/paths';
 import { SalesFactTable } from '@/features/sales-fact/sales-fact-table';
 import {
-  factPiecesDraft,
   formatSaleDate,
   formatSalesFactDay,
-  parseSignedPieces,
   SALES_FACT_ERROR,
 } from '@/features/sales-fact/text';
 import { useSalesFact } from '@/features/sales-fact/use-sales-fact';
@@ -231,7 +221,7 @@ function Workspace({
       >
         <div className="flex flex-col gap-4">
           <div className="border border-line bg-sheet">
-            <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-end">
+            <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="flex shrink-0 items-end gap-2">
                 <div>
                   <label htmlFor={monthFieldId} className="text-sm text-muted">
@@ -287,25 +277,7 @@ function Workspace({
                   />
                 )}
               </div>
-              {products.length > 0 ? (
-                <Openings
-                  groups={openingGroups(sales.document, products, fact)}
-                  editable={editable}
-                  onOpening={(
-                    productId,
-                    productionPieces,
-                    distributionPieces,
-                  ) =>
-                    sales.setOpening(
-                      month,
-                      productId,
-                      productionPieces,
-                      distributionPieces,
-                    )
-                  }
-                />
-              ) : null}
-              <div className="flex shrink-0 flex-col gap-2 border-t border-line pt-4 sm:flex-row sm:items-center lg:ml-auto lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4">
+              <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
                 <DayDateControl
                   key={month}
                   month={month}
@@ -522,191 +494,6 @@ function MonthStep({
     >
       {direction === 'previous' ? <IconChevronLeft /> : <IconChevronRight />}
     </button>
-  );
-}
-
-function openingGroups(
-  document: PrototypeDocument,
-  products: readonly Product[],
-  fact: SalesFact | null,
-) {
-  return activeCategories(document).flatMap((category) => {
-    const items = products
-      .filter((product) => product.categoryId === category.id)
-      .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
-      .map((product) => ({
-        id: product.id,
-        name: product.name,
-        deleted: product.deletedAt !== null,
-        ...openingOf(fact, product.id),
-      }));
-    return items.length === 0
-      ? []
-      : [{ id: category.id, name: category.name, products: items }];
-  });
-}
-
-function Openings({
-  groups,
-  editable,
-  onOpening,
-}: {
-  groups: {
-    id: string;
-    name: string;
-    products: {
-      id: string;
-      name: string;
-      deleted: boolean;
-      productionPieces: number;
-      distributionPieces: number;
-    }[];
-  }[];
-  editable: boolean;
-  onOpening: (
-    productId: string,
-    productionPieces: number,
-    distributionPieces: number,
-  ) => SalesFactRejection | null;
-}) {
-  return (
-    <section className="border-t border-line pt-3 lg:shrink-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4">
-      <h2 className="text-xs text-muted">Остатки на 1-е число</h2>
-      <ul className="mt-1.5 flex flex-col gap-3">
-        {groups.map((group) => (
-          <li key={group.id}>
-            <p className="text-sm font-semibold text-ink">
-              {group.name} ({group.products.length})
-            </p>
-            <ul className="mt-1.5 flex flex-col gap-1.5">
-              {group.products.map((product) => (
-                <li
-                  key={product.id}
-                  className="flex flex-wrap items-center gap-x-2 gap-y-1"
-                >
-                  <p className="text-sm text-ink">
-                    {product.name}
-                    {product.deleted ? (
-                      <span className="text-muted"> · удалён</span>
-                    ) : null}
-                  </p>
-                  <OpeningField
-                    label={`Остаток на начало на производстве, ${product.name}`}
-                    caption="На произв., шт"
-                    value={product.productionPieces}
-                    disabled={!editable || product.deleted}
-                    onCommit={(productionPieces) =>
-                      onOpening(
-                        product.id,
-                        productionPieces,
-                        product.distributionPieces,
-                      )
-                    }
-                  />
-                  <OpeningField
-                    label={`Остаток на начало на РЦ, ${product.name}`}
-                    caption="На РЦ, шт"
-                    value={product.distributionPieces}
-                    disabled={!editable || product.deleted}
-                    onCommit={(distributionPieces) =>
-                      onOpening(
-                        product.id,
-                        product.productionPieces,
-                        distributionPieces,
-                      )
-                    }
-                  />
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function OpeningField({
-  label,
-  caption,
-  value,
-  disabled,
-  onCommit,
-}: {
-  label: string;
-  caption: string;
-  value: number;
-  disabled: boolean;
-  onCommit: (value: number) => SalesFactRejection | null;
-}) {
-  const inputId = useId();
-  const errorId = useId();
-  const [draft, setDraft] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const shown = draft ?? factPiecesDraft(value);
-
-  function commit(raw: string) {
-    const parsed = parseSignedPieces(raw);
-    if (parsed === null) {
-      setError(SALES_FACT_ERROR.opening);
-      setDraft(raw);
-      return;
-    }
-
-    const rejection = onCommit(parsed);
-    if (rejection) {
-      setError(SALES_FACT_ERROR[rejection]);
-      setDraft(raw);
-      return;
-    }
-
-    setDraft(null);
-    setError(null);
-  }
-
-  return (
-    <div>
-      <label
-        htmlFor={inputId}
-        className={`flex w-max flex-col gap-0.5 border border-line bg-paper px-1.5 py-1 outline-none focus-within:border-ink focus-within:bg-sheet focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink ${
-          disabled ? 'opacity-60' : ''
-        }`}
-      >
-        <span className="text-xs leading-none whitespace-nowrap text-muted">
-          {caption}
-          <span className="sr-only">, {label}</span>
-        </span>
-        <input
-          id={inputId}
-          value={shown}
-          inputMode="text"
-          disabled={disabled}
-          autoComplete="off"
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-          onFocus={() => {
-            setDraft(factPiecesDraft(value));
-            setError(null);
-          }}
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={(event) => commit(event.currentTarget.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              event.stopPropagation();
-              event.currentTarget.blur();
-            }
-          }}
-          className="min-w-0 bg-transparent text-sm leading-none text-ink outline-none"
-          style={{ width: `${Math.max(shown.length, 1)}ch` }}
-        />
-      </label>
-      {error ? (
-        <p id={errorId} className="mt-1 text-xs text-ink">
-          {error}
-        </p>
-      ) : null}
-    </div>
   );
 }
 

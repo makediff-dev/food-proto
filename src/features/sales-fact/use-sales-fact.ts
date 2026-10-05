@@ -12,8 +12,6 @@ import {
   type SalesFactRejection,
   setSalesFactCell,
   setSalesFactCellRejection,
-  setSalesFactOpening,
-  setSalesFactOpeningRejection,
 } from '@/domain/sales-fact';
 
 function commit(
@@ -75,38 +73,6 @@ export function useSalesFact() {
             occurredOn,
             productId,
             inputs,
-            ids,
-            today,
-          ),
-      );
-    },
-    setOpening(
-      month: string,
-      productId: string,
-      productionPieces: number,
-      distributionPieces: number,
-    ) {
-      const today = new Date();
-      const ids = freshIds();
-      return commit(
-        updateDocument,
-        (current) =>
-          setSalesFactOpening(
-            current,
-            month,
-            productId,
-            productionPieces,
-            distributionPieces,
-            ids,
-            today,
-          ),
-        (current) =>
-          setSalesFactOpeningRejection(
-            current,
-            month,
-            productId,
-            productionPieces,
-            distributionPieces,
             ids,
             today,
           ),

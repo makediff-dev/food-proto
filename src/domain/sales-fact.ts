@@ -20,9 +20,18 @@ import {
   vatPercentHundredths,
 } from '@/domain/money';
 import { workingSales } from '@/domain/sales';
-import { daysInMonth, monthKeyFromDate } from '@/domain/sales-plan';
+import { daysInMonth, monthKeyFromDate, shiftMonth } from '@/domain/sales-plan';
 
 const ZERO = BigInt(0);
+
+/**
+ * Остатки живут с октября 2026.
+ * Более ранний месяц начинает оба остатка с нуля и в октябрь не переходит.
+ */
+export const STOCK_SEED_MONTH = '2026-10';
+
+/** На 1 октября 2026 у каждого товара, шт на РЦ. На производстве в этот день — 0. */
+export const STOCK_SEED_DISTRIBUTION_PIECES = 100;
 
 export type SalesFactRejection =
   | 'missing'
@@ -31,7 +40,6 @@ export type SalesFactRejection =
   | 'product'
   | 'locked'
   | 'pieces'
-  | 'opening'
   | 'taken';
 
 /** Серые вводы дня, кроме продаж. На экране пустой день — нули, в документ он не пишется. */
@@ -147,14 +155,6 @@ function isPieces(value: number): boolean {
   return Number.isInteger(value) && value >= 0 && value <= MAX_VOLUME_PIECES;
 }
 
-function isOpening(value: number): boolean {
-  return (
-    Number.isInteger(value) &&
-    value >= -MAX_VOLUME_PIECES &&
-    value <= MAX_VOLUME_PIECES
-  );
-}
-
 export function blankInputs(): SalesFactInputs {
   return {
     outputPieces: 0,
@@ -260,17 +260,6 @@ export function adjacentDay(date: string, offset: -1 | 1): string | null {
   return iso;
 }
 
-export function openingOf(
-  fact: SalesFact | null,
-  productId: string,
-): { productionPieces: number; distributionPieces: number } {
-  const opening = fact?.openings.find((item) => item.productId === productId);
-  return {
-    productionPieces: opening?.productionPieces ?? 0,
-    distributionPieces: opening?.distributionPieces ?? 0,
-  };
-}
-
 function productById(
   document: PrototypeDocument,
   productId: string,
@@ -328,7 +317,10 @@ export function saleDayProduct(
   };
 }
 
-/** Рабочие товары и те, на которые в этом месяце уже есть шапка, серый ввод или продажа. */
+/**
+ * Рабочие товары и те, на которые в этом месяце есть серый ввод, продажа
+ * или ненулевой остаток на 1-е число.
+ */
 export function salesFactGridProducts(
   document: PrototypeDocument,
   fact: SalesFact | null,
@@ -336,9 +328,6 @@ export function salesFactGridProducts(
 ): Product[] {
   const referenced = new Set<string>();
   if (fact) {
-    for (const opening of fact.openings) {
-      referenced.add(opening.productId);
-    }
     for (const day of fact.days) {
       for (const cell of day.cells) {
         referenced.add(cell.productId);
@@ -351,9 +340,14 @@ export function salesFactGridProducts(
     }
   }
 
-  return document.products.filter(
-    (item) => item.deletedAt === null || referenced.has(item.id),
-  );
+  return document.products.filter((item) => {
+    if (item.deletedAt === null || referenced.has(item.id)) {
+      return true;
+    }
+
+    const opening = monthOpening(document, month, item.id);
+    return opening.productionPieces !== 0 || opening.distributionPieces !== 0;
+  });
 }
 
 function inputsOn(
@@ -379,11 +373,70 @@ interface DayStock {
   distributionEnd: number;
 }
 
+interface StockPieces {
+  productionPieces: number;
+  distributionPieces: number;
+}
+
+function dayEnds(
+  productionStart: number,
+  distributionStart: number,
+  inputs: SalesFactInputs,
+  salesPieces: number,
+): { productionEnd: number; distributionEnd: number } {
+  return {
+    productionEnd:
+      productionStart + inputs.outputPieces - inputs.transferPieces,
+    distributionEnd:
+      distributionStart -
+      salesPieces +
+      inputs.transferPieces -
+      inputs.staffMealsPieces -
+      inputs.samplesPieces +
+      inputs.returnsPieces -
+      inputs.writeOffPieces,
+  };
+}
+
+/**
+ * Остаток на 1-е число. На 1 октября 2026 — 0 на производстве и 100 на РЦ.
+ * Позже — конец предыдущего месяца. Раньше октября 2026 — нули.
+ * В перенос входят рабочие продажи и рабочая запись месяца.
+ */
+export function monthOpening(
+  document: PrototypeDocument,
+  month: string,
+  productId: string,
+): StockPieces {
+  if (month < STOCK_SEED_MONTH) {
+    return { productionPieces: 0, distributionPieces: 0 };
+  }
+
+  let production = 0;
+  let distribution = STOCK_SEED_DISTRIBUTION_PIECES;
+  let cursor = STOCK_SEED_MONTH;
+
+  while (cursor < month) {
+    const fact = workingSalesFact(document, cursor);
+    for (const occurredOn of monthDates(cursor)) {
+      const inputs = inputsOn(fact, occurredOn, productId);
+      const sold = saleDayProduct(document, occurredOn, productId);
+      const ends = dayEnds(production, distribution, inputs, sold.pieces);
+      production = ends.productionEnd;
+      distribution = ends.distributionEnd;
+    }
+    cursor = shiftMonth(cursor, 1);
+  }
+
+  return { productionPieces: production, distributionPieces: distribution };
+}
+
 /**
  * Цепочка календарных дней. Пропуск в документе не перескакивает остаток:
- * 1-е число берёт шапку, каждый следующий день — конец предыдущего.
+ * 1-е число берёт остаток месяца, каждый следующий день — конец предыдущего.
  * Конец на производстве = начало + выпуск − перемещение на РЦ.
  * Конец на РЦ = начало − продажи + перемещение − питание − образцы + возвраты − списание.
+ * Клетки дня берутся из переданной записи, остаток на 1-е — из рабочей цепочки.
  */
 function stockChain(
   document: PrototypeDocument,
@@ -391,7 +444,7 @@ function stockChain(
   month: string,
   productId: string,
 ): DayStock[] {
-  const opening = openingOf(fact, productId);
+  const opening = monthOpening(document, month, productId);
   let production = opening.productionPieces;
   let distribution = opening.distributionPieces;
   const chain: DayStock[] = [];
@@ -401,16 +454,12 @@ function stockChain(
     const sold = saleDayProduct(document, occurredOn, productId);
     const productionStart = production;
     const distributionStart = distribution;
-    const productionEnd =
-      productionStart + inputs.outputPieces - inputs.transferPieces;
-    const distributionEnd =
-      distributionStart -
-      sold.pieces +
-      inputs.transferPieces -
-      inputs.staffMealsPieces -
-      inputs.samplesPieces +
-      inputs.returnsPieces -
-      inputs.writeOffPieces;
+    const ends = dayEnds(
+      productionStart,
+      distributionStart,
+      inputs,
+      sold.pieces,
+    );
     chain.push({
       occurredOn,
       inputs,
@@ -419,11 +468,11 @@ function stockChain(
       revenueExVat: sold.revenueExVat,
       productionStart,
       distributionStart,
-      productionEnd,
-      distributionEnd,
+      productionEnd: ends.productionEnd,
+      distributionEnd: ends.distributionEnd,
     });
-    production = productionEnd;
-    distribution = distributionEnd;
+    production = ends.productionEnd;
+    distribution = ends.distributionEnd;
   }
 
   return chain;
@@ -731,7 +780,7 @@ function replaceFacts(
 }
 
 function withoutBlank(fact: SalesFact): SalesFact | null {
-  if (fact.openings.length === 0 && fact.days.length === 0) {
+  if (fact.days.length === 0) {
     return null;
   }
 
@@ -756,7 +805,6 @@ function upsertFact(
     const created = update({
       id: factId,
       month,
-      openings: [],
       days: [],
       deletedAt: null,
     });
@@ -826,10 +874,6 @@ export function setSalesFactCellRejection(
   ) {
     return 'missing';
   }
-  if (fact?.openings.some((item) => item.id === ids.recordId) && !cell) {
-    return 'missing';
-  }
-
   return null;
 }
 
@@ -885,110 +929,6 @@ export function setSalesFactCell(
     }
     days.sort((left, right) => (left.occurredOn < right.occurredOn ? -1 : 1));
     return withoutBlank({ ...current, days });
-  });
-
-  return next ?? document;
-}
-
-export function setSalesFactOpeningRejection(
-  document: PrototypeDocument,
-  month: string,
-  productId: string,
-  productionPieces: number,
-  distributionPieces: number,
-  ids: SalesFactIds,
-  today: Date,
-): SalesFactRejection | null {
-  const locked = editableProduct(document, month, productId, today);
-  if (locked) {
-    return locked;
-  }
-  if (!isOpening(productionPieces) || !isOpening(distributionPieces)) {
-    return 'opening';
-  }
-
-  const fact = workingSalesFact(document, month);
-  const opening = fact?.openings.find((item) => item.productId === productId);
-  const blank = productionPieces === 0 && distributionPieces === 0;
-  if (!opening && blank) {
-    return null;
-  }
-  if (!fact && !isEntityId(ids.factId)) {
-    return 'missing';
-  }
-  if (!opening && !isEntityId(ids.recordId)) {
-    return 'missing';
-  }
-  if (
-    fact &&
-    !opening &&
-    fact.openings.some((item) => item.id === ids.recordId)
-  ) {
-    return 'missing';
-  }
-  if (
-    fact &&
-    !opening &&
-    fact.days.some((day) => day.cells.some((cell) => cell.id === ids.recordId))
-  ) {
-    return 'missing';
-  }
-
-  return null;
-}
-
-export function setSalesFactOpening(
-  document: PrototypeDocument,
-  month: string,
-  productId: string,
-  productionPieces: number,
-  distributionPieces: number,
-  ids: SalesFactIds,
-  today: Date,
-): PrototypeDocument {
-  if (
-    setSalesFactOpeningRejection(
-      document,
-      month,
-      productId,
-      productionPieces,
-      distributionPieces,
-      ids,
-      today,
-    )
-  ) {
-    return document;
-  }
-
-  const fact = workingSalesFact(document, month);
-  const existing = fact?.openings.find((item) => item.productId === productId);
-  if (
-    existing &&
-    existing.productionPieces === productionPieces &&
-    existing.distributionPieces === distributionPieces
-  ) {
-    return document;
-  }
-  if (!existing && productionPieces === 0 && distributionPieces === 0) {
-    return document;
-  }
-
-  const next = upsertFact(document, month, ids.factId, (current) => {
-    const openings = current.openings.filter(
-      (item) => item.productId !== productId,
-    );
-    if (productionPieces !== 0 || distributionPieces !== 0) {
-      const kept = current.openings.find(
-        (item) => item.productId === productId,
-      );
-      openings.push({
-        id: kept?.id ?? ids.recordId,
-        productId,
-        productionPieces,
-        distributionPieces,
-      });
-    }
-    return withoutBlank({ ...current, openings });
   });
 
   return next ?? document;

@@ -114,7 +114,6 @@ export function createMockDocument(): PrototypeDocument {
     })),
     salesFacts: mockDocument.salesFacts.map((item) => ({
       ...item,
-      openings: item.openings.map((opening) => ({ ...opening })),
       days: item.days.map((day) => ({
         ...day,
         cells: day.cells.map((cell) => ({ ...cell })),

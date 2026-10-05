@@ -16,7 +16,6 @@ export const SALES_FACT_ERROR: Record<SalesFactRejection, string> = {
   product: 'Выберите конечный товар.',
   locked: 'Удалённый товар в факте не меняется.',
   pieces: 'Укажите целое число штук от нуля.',
-  opening: 'Укажите остаток целым числом штук.',
   taken: 'На этот месяц уже есть рабочая запись.',
 };
 
@@ -39,24 +38,6 @@ export function formatSalesFactDay(iso: string): string {
 
 export function formatSignedPieces(value: number): string {
   return formatPieces(value);
-}
-
-export function parseSignedPieces(raw: string): number | null {
-  const normalized = raw.trim().replace(/\s/g, '').replace(',', '.');
-  if (!/^-?\d+$/.test(normalized)) {
-    return null;
-  }
-
-  const value = Number(normalized);
-  if (
-    !Number.isInteger(value) ||
-    value < -MAX_VOLUME_PIECES ||
-    value > MAX_VOLUME_PIECES
-  ) {
-    return null;
-  }
-
-  return value;
 }
 
 export function parseFactPrice(raw: string): number | null {

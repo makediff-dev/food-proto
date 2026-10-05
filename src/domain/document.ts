@@ -1,7 +1,7 @@
 import { fitsSafeMoneyProduct } from '@/domain/money';
 import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
-export const SCHEMA_VERSION = 28 as const;
+export const SCHEMA_VERSION = 29 as const;
 
 export const MAX_LABEL_LENGTH = 200;
 
@@ -92,19 +92,6 @@ export interface SalesPlan {
 }
 
 /**
- * Остаток на 1-е число месяца. Целые штуки, включая отрицательные.
- * Со 2-го числа начало не хранится: его даёт конец предыдущего дня.
- */
-export interface SalesFactOpening {
-  id: string;
-  productId: string;
-  /** На производстве, шт. */
-  productionPieces: number;
-  /** На РЦ, шт. */
-  distributionPieces: number;
-}
-
-/**
  * Серые клетки дня по товару, кроме продаж.
  * Цена и объём продаж считаются из журнала продаж и сюда не пишутся.
  * Выручка, цены без НДС и остатки сюда не пишутся.
@@ -160,13 +147,13 @@ export interface SalesFactDay {
 
 /**
  * Факт продаж на календарный месяц. Лист `Sales&Production`, не сводная строка.
- * На один месяц — одна рабочая запись. Следующий месяц из конца этого не продолжается.
+ * На один месяц — одна рабочая запись. Остатки в документ не пишутся:
+ * их считает `src/domain/sales-fact.ts`.
  */
 export interface SalesFact {
   id: string;
   /** `ГГГГ-ММ`. */
   month: string;
-  openings: SalesFactOpening[];
   days: SalesFactDay[];
   deletedAt: string | null;
 }
@@ -580,42 +567,6 @@ function dateInMonth(date: string, month: string): boolean {
   return date.startsWith(`${month}-`) && isOccurredOn(date);
 }
 
-function parseSalesFactOpening(
-  value: unknown,
-  products: readonly Product[],
-): SalesFactOpening | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const id = parseId(value.id);
-  const productId = parseId(value.productId);
-  const product = products.find((item) => item.id === productId);
-  const productionPieces = parseInteger(
-    value.productionPieces,
-    -MAX_VOLUME_PIECES,
-    MAX_VOLUME_PIECES,
-  );
-  const distributionPieces = parseInteger(
-    value.distributionPieces,
-    -MAX_VOLUME_PIECES,
-    MAX_VOLUME_PIECES,
-  );
-
-  if (
-    !id ||
-    !productId ||
-    !product ||
-    productionPieces === null ||
-    distributionPieces === null ||
-    (productionPieces === 0 && distributionPieces === 0)
-  ) {
-    return null;
-  }
-
-  return { id, productId, productionPieces, distributionPieces };
-}
-
 function parseSalesFactCell(
   value: unknown,
   products: readonly Product[],
@@ -727,11 +678,7 @@ function parseSalesFact(
   value: unknown,
   products: readonly Product[],
 ): SalesFact | null {
-  if (
-    !isRecord(value) ||
-    !Array.isArray(value.openings) ||
-    !Array.isArray(value.days)
-  ) {
+  if (!isRecord(value) || !Array.isArray(value.days) || 'openings' in value) {
     return null;
   }
 
@@ -747,27 +694,8 @@ function parseSalesFact(
     return null;
   }
 
-  const seenOpenings = new Set<string>();
-  const seenOpeningProducts = new Set<string>();
-  const openings: SalesFactOpening[] = [];
-
-  for (const entry of value.openings) {
-    const opening = parseSalesFactOpening(entry, products);
-    if (
-      !opening ||
-      seenOpenings.has(opening.id) ||
-      seenOpeningProducts.has(opening.productId)
-    ) {
-      return null;
-    }
-
-    seenOpenings.add(opening.id);
-    seenOpeningProducts.add(opening.productId);
-    openings.push(opening);
-  }
-
   const seenDays = new Set<string>();
-  const seenCellIds = new Set<string>(seenOpenings);
+  const seenCellIds = new Set<string>();
   const days: SalesFactDay[] = [];
 
   for (const entry of value.days) {
@@ -787,11 +715,11 @@ function parseSalesFact(
     days.push(day);
   }
 
-  if (openings.length === 0 && days.length === 0) {
+  if (days.length === 0) {
     return null;
   }
 
-  return { id, month: value.month, openings, days, deletedAt };
+  return { id, month: value.month, days, deletedAt };
 }
 
 function parseSalesFacts(
