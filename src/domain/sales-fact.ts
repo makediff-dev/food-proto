@@ -1,4 +1,4 @@
-import { activeCategories } from '@/domain/categories';
+import { visibleCategories } from '@/domain/categories';
 import { type UnitCost, unitCost } from '@/domain/cost';
 import {
   isDeletionMark,
@@ -125,10 +125,11 @@ export interface SalesFactTotals {
   profitabilityHundredths: number | null;
 }
 
-/** Строка группы как на сводке. Пустая категория тоже входит. */
+/** Строка группы как на сводке. Пустая рабочая категория тоже входит. */
 export interface SalesFactGroup {
   categoryId: string;
   name: string;
+  deleted: boolean;
   rows: SalesFactRow[];
   totals: SalesFactTotals;
 }
@@ -676,7 +677,7 @@ function salesFactGroups(
 ): SalesFactGroup[] {
   const byId = new Map(rows.map((row) => [row.productId, row]));
 
-  return activeCategories(document).map((category) => {
+  return visibleCategories(document, products).map((category) => {
     const groupRows = products
       .filter((item) => item.categoryId === category.id)
       .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
@@ -688,6 +689,7 @@ function salesFactGroups(
     return {
       categoryId: category.id,
       name: category.name,
+      deleted: category.deletedAt !== null,
       rows: groupRows,
       totals: dayTotals(groupRows),
     };

@@ -1,7 +1,7 @@
 import { fitsSafeMoneyProduct } from '@/domain/money';
 import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
-export const SCHEMA_VERSION = 29 as const;
+export const SCHEMA_VERSION = 30 as const;
 
 export const MAX_LABEL_LENGTH = 200;
 
@@ -41,20 +41,17 @@ export interface DeletableRecord {
   deletedAt: string | null;
 }
 
-/** Категория ассортимента. Строка группы на `Svod`. Список только из мока. */
-export interface ProductCategory {
-  id: string;
-  name: string;
-}
+/** Категория ассортимента. Строка группы на `Svod`. */
+export type ProductCategory = DeletableRecord;
 
-/** Шесть категорий ритейла из `docs/domain.md`. Не добавляются и не удаляются. */
+/** Шесть категорий ритейла из `docs/domain.md`. Мок; на экране их правят. */
 export const PRODUCT_CATEGORIES: ProductCategory[] = [
-  { id: 'category-salads', name: 'Салаты' },
-  { id: 'category-hot', name: 'Горячие блюда' },
-  { id: 'category-rolls', name: 'Роллы и сэндвичи' },
-  { id: 'category-breakfast', name: 'Завтраки' },
-  { id: 'category-desserts', name: 'Десерты и выпечка' },
-  { id: 'category-semifinished', name: 'Полуфабрикаты' },
+  { id: 'category-salads', name: 'Салаты', deletedAt: null },
+  { id: 'category-hot', name: 'Горячие блюда', deletedAt: null },
+  { id: 'category-rolls', name: 'Роллы и сэндвичи', deletedAt: null },
+  { id: 'category-breakfast', name: 'Завтраки', deletedAt: null },
+  { id: 'category-desserts', name: 'Десерты и выпечка', deletedAt: null },
+  { id: 'category-semifinished', name: 'Полуфабрикаты', deletedAt: null },
 ];
 
 export function catalogCategories(): ProductCategory[] {
@@ -63,7 +60,7 @@ export function catalogCategories(): ProductCategory[] {
 
 /** Конечный товар. Себестоимость единицы с НДС вводится на сводке. */
 export interface Product extends DeletableRecord {
-  /** Категория из справочника мока. */
+  /** Категория ассортимента. Ссылка живёт и после удаления категории. */
   categoryId: string;
   /** НДС продажи, целые проценты. `Svod!N`. */
   vatPercent: number;
@@ -291,9 +288,11 @@ function parseCategory(value: unknown): ProductCategory | null {
   }
 
   const id = parseId(value.id);
+  const deletedAt = parseDeletedAt(value.deletedAt);
 
   if (
     !id ||
+    deletedAt === undefined ||
     typeof value.name !== 'string' ||
     value.name.length > MAX_LABEL_LENGTH ||
     value.name.trim().length === 0
@@ -301,29 +300,11 @@ function parseCategory(value: unknown): ProductCategory | null {
     return null;
   }
 
-  return { id, name: value.name };
+  return { id, name: value.name, deletedAt };
 }
 
-/** Категории не правятся: в документе должен лежать справочник мока. */
 function parseCatalogCategories(value: unknown): ProductCategory[] | null {
-  if (!Array.isArray(value) || value.length !== PRODUCT_CATEGORIES.length) {
-    return null;
-  }
-
-  for (let index = 0; index < PRODUCT_CATEGORIES.length; index += 1) {
-    const expected = PRODUCT_CATEGORIES[index];
-    const item = parseCategory(value[index]);
-    if (
-      !expected ||
-      !item ||
-      item.id !== expected.id ||
-      item.name !== expected.name
-    ) {
-      return null;
-    }
-  }
-
-  return catalogCategories();
+  return parseNamedList(value, parseCategory);
 }
 
 function parseProduct(

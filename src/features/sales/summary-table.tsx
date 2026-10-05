@@ -157,6 +157,8 @@ export function SummaryTable({
   onProductCostAction,
   onRenameProduct,
   onDeleteProduct,
+  onRenameCategory,
+  onDeleteCategory,
   onAddProduct,
 }: {
   groups: SummaryGroup[];
@@ -178,6 +180,8 @@ export function SummaryTable({
   ) => string | null;
   onRenameProduct: (productId: string, name: string) => string | null;
   onDeleteProduct: (productId: string, name: string) => void;
+  onRenameCategory: (categoryId: string, name: string) => string | null;
+  onDeleteCategory: (categoryId: string, name: string) => void;
   onAddProduct: (categoryId: string) => void;
 }) {
   return (
@@ -265,6 +269,8 @@ export function SummaryTable({
               onProductCostAction={onProductCostAction}
               onRenameProduct={onRenameProduct}
               onDeleteProduct={onDeleteProduct}
+              onRenameCategory={onRenameCategory}
+              onDeleteCategory={onDeleteCategory}
               onAddProduct={onAddProduct}
             />
           ))}
@@ -323,6 +329,8 @@ function CategoryBlock({
   onProductCostAction,
   onRenameProduct,
   onDeleteProduct,
+  onRenameCategory,
+  onDeleteCategory,
   onAddProduct,
 }: {
   group: SummaryGroup;
@@ -340,6 +348,8 @@ function CategoryBlock({
   ) => string | null;
   onRenameProduct: (productId: string, name: string) => string | null;
   onDeleteProduct: (productId: string, name: string) => void;
+  onRenameCategory: (categoryId: string, name: string) => string | null;
+  onDeleteCategory: (categoryId: string, name: string) => void;
   onAddProduct: (categoryId: string) => void;
 }) {
   const header = 'bg-paper';
@@ -368,23 +378,51 @@ function CategoryBlock({
             >
               {open ? <IconChevronDown /> : <IconChevronRight />}
             </button>
-            <span className="flex h-8 min-w-max flex-1 items-center text-sm font-semibold leading-none text-ink">
-              {group.name} ({productCount})
-            </span>
-            {vatEditable ? (
-              <button
-                type="button"
-                aria-label={`Добавить товар в ${group.name}`}
-                title="Добавить товар"
-                onClick={() => {
-                  setOpen(true);
-                  onAddProduct(group.categoryId);
-                }}
-                className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-              >
-                <IconPlus />
-              </button>
-            ) : null}
+            {group.deleted ? (
+              <span className="flex h-8 min-w-max flex-1 items-center text-sm font-semibold leading-none text-ink">
+                {group.name} ({productCount})
+              </span>
+            ) : (
+              <>
+                <GridText
+                  label={`Категория, ${group.name}`}
+                  value={group.name}
+                  disabled={!vatEditable}
+                  invalidMessage={FIELD_ERROR.empty}
+                  onCommit={(next) => onRenameCategory(group.categoryId, next)}
+                />
+                <span className="text-sm text-muted">({productCount})</span>
+              </>
+            )}
+            {group.deleted ? (
+              <span className="text-sm text-muted">удалена</span>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={!vatEditable}
+                  aria-label={`Добавить товар в ${group.name}`}
+                  title="Добавить товар"
+                  onClick={() => {
+                    setOpen(true);
+                    onAddProduct(group.categoryId);
+                  }}
+                  className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
+                >
+                  <IconPlus />
+                </button>
+                <button
+                  type="button"
+                  disabled={!vatEditable}
+                  aria-label={`Удалить категорию ${group.name}`}
+                  title="Удалить категорию"
+                  onClick={() => onDeleteCategory(group.categoryId, group.name)}
+                  className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
+                >
+                  <IconTrash />
+                </button>
+              </>
+            )}
           </div>
         </th>
         {SIDE_COLUMNS.map((column) => (
@@ -1067,11 +1105,13 @@ function GridNumber({
 function GridText({
   label,
   value,
+  disabled = false,
   invalidMessage,
   onCommit,
 }: {
   label: string;
   value: string;
+  disabled?: boolean;
   invalidMessage: string;
   onCommit: (value: string) => string | null;
 }) {
@@ -1115,6 +1155,7 @@ function GridText({
           id={inputId}
           value={shown}
           autoComplete="off"
+          disabled={disabled}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? errorId : undefined}
           onFocus={() => {

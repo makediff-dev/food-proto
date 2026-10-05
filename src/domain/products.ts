@@ -90,7 +90,9 @@ export function productCategoryRejection(
   document: PrototypeDocument,
   categoryId: string,
 ): FieldRejection | null {
-  const category = document.categories.find((item) => item.id === categoryId);
+  const category = document.categories.find(
+    (item) => item.id === categoryId && item.deletedAt === null,
+  );
   return category ? null : 'category';
 }
 
@@ -152,7 +154,7 @@ export function addProduct(
   const vatPercent = product.vatPercent ?? 20;
   const unitCostWithVat = product.unitCostWithVat ?? 0;
   const category = document.categories.find(
-    (item) => item.id === product.categoryId,
+    (item) => item.id === product.categoryId && item.deletedAt === null,
   );
   if (!category || !isVat(vatPercent) || !isUnitCost(unitCostWithVat)) {
     return document;

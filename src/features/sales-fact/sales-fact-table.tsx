@@ -370,6 +370,9 @@ function CategoryBlock({
             <span className="flex h-8 min-w-max flex-1 items-center text-sm font-semibold leading-none text-ink">
               {group.name} ({productCount})
             </span>
+            {group.deleted ? (
+              <span className="text-sm font-normal text-muted">удалена</span>
+            ) : null}
           </div>
         </th>
         {COLUMNS.map((column) => (

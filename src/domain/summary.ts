@@ -1,3 +1,4 @@
+import { visibleCategories } from '@/domain/categories';
 import { type UnitCost, unitCost } from '@/domain/cost';
 import {
   isMonthKey,
@@ -76,10 +77,11 @@ export interface SummaryRow {
   variance: SummaryVariance;
 }
 
-/** Строка группы `Svod`. Пустая категория тоже входит. */
+/** Строка группы `Svod`. Пустая рабочая категория тоже входит. */
 export interface SummaryGroup {
   categoryId: string;
   name: string;
+  deleted: boolean;
   rows: SummaryRow[];
   plan: SummarySide | null;
   fact: SummarySide;
@@ -199,8 +201,11 @@ export function summaryGridProducts(
   return [...fromFact, ...extra];
 }
 
-function summaryCategories(document: PrototypeDocument): ProductCategory[] {
-  return document.categories;
+function summaryCategories(
+  document: PrototypeDocument,
+  products: readonly Product[],
+): ProductCategory[] {
+  return visibleCategories(document, products);
 }
 
 function planSide(
@@ -640,26 +645,29 @@ export function monthSummary(
     });
   }
 
-  const groups: SummaryGroup[] = summaryCategories(document).map((category) => {
-    const rows = products
-      .filter((item) => item.categoryId === category.id)
-      .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
-      .flatMap((item) => {
-        const row = rowByProduct.get(item.id);
-        return row ? [row] : [];
-      });
-    const factSide = factTotalsFromRows(rows, days);
-    const planMetrics = planTotalsFromRows(rows, days);
+  const groups: SummaryGroup[] = summaryCategories(document, products).map(
+    (category) => {
+      const rows = products
+        .filter((item) => item.categoryId === category.id)
+        .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+        .flatMap((item) => {
+          const row = rowByProduct.get(item.id);
+          return row ? [row] : [];
+        });
+      const factSide = factTotalsFromRows(rows, days);
+      const planMetrics = planTotalsFromRows(rows, days);
 
-    return {
-      categoryId: category.id,
-      name: category.name,
-      rows,
-      plan: planMetrics,
-      fact: factSide,
-      variance: varianceOf(factSide, planMetrics),
-    };
-  });
+      return {
+        categoryId: category.id,
+        name: category.name,
+        deleted: category.deletedAt !== null,
+        rows,
+        plan: planMetrics,
+        fact: factSide,
+        variance: varianceOf(factSide, planMetrics),
+      };
+    },
+  );
   const rows = groups.flatMap((group) => group.rows);
 
   const planTotals = plan ? salesPlanTotals(document, plan) : null;

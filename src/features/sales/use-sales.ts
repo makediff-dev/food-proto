@@ -1,6 +1,14 @@
 'use client';
 
 import { useDocumentStore } from '@/data/document-store';
+import {
+  addCategory,
+  type CategoryRejection,
+  categoryNameRejection,
+  deleteCategory,
+  renameCategory,
+  restoreCategory,
+} from '@/domain/categories';
 import type { PrototypeDocument } from '@/domain/document';
 import {
   addProduct,
@@ -122,6 +130,42 @@ export function useSales() {
           );
         },
       );
+    },
+    addCategory(name: string): CategoryRejection | null {
+      const id = `category:${crypto.randomUUID()}`;
+      const rejection = categoryNameRejection(document, name);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) =>
+        addCategory(current, { id, name, deletedAt: null }),
+      );
+      return null;
+    },
+    renameCategory(id: string, name: string): CategoryRejection | null {
+      const rejection = categoryNameRejection(document, name, id);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => renameCategory(current, id, name));
+      return null;
+    },
+    deleteCategory(id: string) {
+      updateDocument((current) =>
+        deleteCategory(current, id, new Date().toISOString()),
+      );
+    },
+    restoreCategory(id: string): CategoryRejection | null {
+      const current = document.categories.find((item) => item.id === id);
+      if (!current || current.deletedAt === null) {
+        return 'missing';
+      }
+      const rejection = categoryNameRejection(document, current.name, id);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((next) => restoreCategory(next, id));
+      return null;
     },
     addProduct(name: string, categoryId: string): FieldRejection | null {
       const id = `product:${crypto.randomUUID()}`;

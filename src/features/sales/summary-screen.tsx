@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useMemo, useState } from 'react';
-import { activeCategories } from '@/domain/categories';
+import { activeCategories, deletedCategories } from '@/domain/categories';
 import { normalizeName } from '@/domain/directory';
 import { MAX_LABEL_LENGTH } from '@/domain/document';
 import { activeProducts, deletedProducts } from '@/domain/products';
@@ -72,6 +72,7 @@ function Workspace({
   const monthFieldId = useId();
   const [fullscreen, setFullscreen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [addCategoryOpen, setAddCategoryOpen] = useState(false);
   const [addCategoryId, setAddCategoryId] = useState<string | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
@@ -84,7 +85,8 @@ function Workspace({
   const products = activeProducts(sales.document);
   const categories = activeCategories(sales.document);
   const removedProducts = deletedProducts(sales.document);
-  const removedCount = removedProducts.length;
+  const removedCategories = deletedCategories(sales.document);
+  const removedCount = removedProducts.length + removedCategories.length;
   const phase = planPhase(month, today);
   const editable = sales.hydrated && phase !== 'past' && products.length > 0;
   const vatEditable = sales.hydrated;
@@ -203,10 +205,27 @@ function Workspace({
                 setAddCategoryId(null);
                 setAddOpen(true);
               }}
-              className={primaryButtonClassName}
+              className={
+                categories.length === 0
+                  ? 'inline-flex h-11 items-center justify-center gap-2 border border-line bg-sheet px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
+                  : primaryButtonClassName
+              }
             >
               <IconPlus />
               Добавить товар
+            </button>
+            <button
+              type="button"
+              disabled={!sales.hydrated}
+              onClick={() => setAddCategoryOpen(true)}
+              className={
+                categories.length === 0
+                  ? primaryButtonClassName
+                  : 'inline-flex h-11 items-center justify-center gap-2 border border-line bg-sheet px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60'
+              }
+            >
+              <IconPlus />
+              Добавить категорию
             </button>
             <button
               type="button"
@@ -242,9 +261,14 @@ function Workspace({
 
           {showDeleted ? (
             <DeletedRecords
+              categories={removedCategories}
               products={removedProducts}
               error={restoreError}
               hydrated={sales.hydrated}
+              onRestoreCategory={(id) => {
+                const rejection = sales.restoreCategory(id);
+                setRestoreError(rejection ? FIELD_ERROR[rejection] : null);
+              }}
               onRestoreProduct={(id) => {
                 const rejection = sales.restoreProduct(id);
                 setRestoreError(rejection ? FIELD_ERROR[rejection] : null);
@@ -295,6 +319,18 @@ function Workspace({
                   const rejection = sales.renameProduct(productId, name);
                   return rejection ? FIELD_ERROR[rejection] : null;
                 }}
+                onRenameCategory={(categoryId, name) => {
+                  const rejection = sales.renameCategory(categoryId, name);
+                  return rejection ? FIELD_ERROR[rejection] : null;
+                }}
+                onDeleteCategory={(categoryId, name) => {
+                  const confirmed = window.confirm(
+                    `Удалить категорию «${name}»? Она пропадёт из рабочего списка. Товары останутся в этой категории. Вернуть можно среди удалённых.`,
+                  );
+                  if (confirmed) {
+                    sales.deleteCategory(categoryId);
+                  }
+                }}
                 onDeleteProduct={(productId, name) => {
                   const confirmed = window.confirm(
                     `Удалить товар «${name}»? Он пропадёт из рабочего списка. Вернуть можно среди удалённых.`,
@@ -311,8 +347,9 @@ function Workspace({
             </section>
           ) : (
             <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-              Добавьте товар на этой сводке. Категории заданы заранее. План и
-              факт строятся по товарам.
+              {categories.length === 0
+                ? 'Добавьте категорию, затем товар. План и факт строятся по товарам.'
+                : 'Добавьте товар в категорию. План и факт строятся по товарам.'}
             </p>
           )}
         </div>
@@ -329,6 +366,20 @@ function Workspace({
               return FIELD_ERROR[rejection];
             }
             setAddOpen(false);
+            return null;
+          }}
+        />
+      ) : null}
+
+      {addCategoryOpen ? (
+        <AddCategoryDialog
+          onClose={() => setAddCategoryOpen(false)}
+          onSubmit={(name) => {
+            const rejection = sales.addCategory(name);
+            if (rejection) {
+              return FIELD_ERROR[rejection];
+            }
+            setAddCategoryOpen(false);
             return null;
           }}
         />
@@ -456,49 +507,149 @@ function AddProductDialog({
   );
 }
 
+function AddCategoryDialog({
+  onClose,
+  onSubmit,
+}: {
+  onClose: () => void;
+  onSubmit: (name: string) => string | null;
+}) {
+  const nameId = useId();
+  const errorId = useId();
+  const [name, setName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  function submit() {
+    if (normalizeName(name).length === 0) {
+      setError(FIELD_ERROR.empty);
+      return;
+    }
+    if (normalizeName(name).length > MAX_LABEL_LENGTH) {
+      setError(FIELD_ERROR['too-long']);
+      return;
+    }
+
+    const rejection = onSubmit(name);
+    if (rejection) {
+      setError(rejection);
+    }
+  }
+
+  return (
+    <Dialog title="Новая категория" onClose={onClose}>
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        <div>
+          <label htmlFor={nameId} className="text-sm text-muted">
+            Название
+          </label>
+          <input
+            id={nameId}
+            value={name}
+            autoComplete="off"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? errorId : undefined}
+            onChange={(event) => {
+              setName(event.target.value);
+              setError(null);
+            }}
+            className={`mt-2 ${fieldClassName}`}
+          />
+          {error ? (
+            <p id={errorId} className="mt-2 text-sm text-ink">
+              {error}
+            </p>
+          ) : null}
+        </div>
+        <button type="submit" className={primaryButtonClassName}>
+          <IconPlus />
+          Добавить категорию
+        </button>
+      </form>
+    </Dialog>
+  );
+}
+
 function DeletedRecords({
+  categories,
   products,
   error,
   hydrated,
+  onRestoreCategory,
   onRestoreProduct,
 }: {
+  categories: { id: string; name: string }[];
   products: { id: string; name: string }[];
   error: string | null;
   hydrated: boolean;
+  onRestoreCategory: (id: string) => void;
   onRestoreProduct: (id: string) => void;
 }) {
+  const empty = categories.length === 0 && products.length === 0;
+
   return (
     <div className="border border-line bg-sheet p-4">
       <h2 className="text-sm font-semibold text-ink">Удалённые</h2>
       {error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
-      {products.length === 0 ? (
+      {empty ? (
         <p className="mt-2 text-sm leading-6 text-muted">
-          Удалённых товаров нет.
+          Удалённых категорий и товаров нет.
         </p>
       ) : (
         <div className="mt-3 flex flex-col gap-4">
-          <div>
-            <h3 className="text-sm text-muted">Товары</h3>
-            <ul className="mt-2 flex flex-col gap-2">
-              {products.map((item) => (
-                <li
-                  key={item.id}
-                  className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <p className="text-sm text-ink">{item.name}</p>
-                  <button
-                    type="button"
-                    disabled={!hydrated}
-                    onClick={() => onRestoreProduct(item.id)}
-                    className="inline-flex h-11 items-center justify-center gap-2 border border-line bg-paper px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
+          {categories.length > 0 ? (
+            <div>
+              <h3 className="text-sm text-muted">Категории</h3>
+              <ul className="mt-2 flex flex-col gap-2">
+                {categories.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <IconUndo />
-                    Вернуть
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+                    <p className="text-sm text-ink">{item.name}</p>
+                    <button
+                      type="button"
+                      disabled={!hydrated}
+                      onClick={() => onRestoreCategory(item.id)}
+                      className="inline-flex h-11 items-center justify-center gap-2 border border-line bg-paper px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
+                    >
+                      <IconUndo />
+                      Вернуть
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {products.length > 0 ? (
+            <div>
+              <h3 className="text-sm text-muted">Товары</h3>
+              <ul className="mt-2 flex flex-col gap-2">
+                {products.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <p className="text-sm text-ink">{item.name}</p>
+                    <button
+                      type="button"
+                      disabled={!hydrated}
+                      onClick={() => onRestoreProduct(item.id)}
+                      className="inline-flex h-11 items-center justify-center gap-2 border border-line bg-paper px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
+                    >
+                      <IconUndo />
+                      Вернуть
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
       )}
     </div>
