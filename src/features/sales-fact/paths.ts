@@ -1,6 +1,6 @@
-export const SALES_FACT_SECTION_TITLE = "Факт. продажи и производство";
+export const SALES_FACT_SECTION_TITLE = 'Факт. продажи и производство';
 
-export type SalesFactView = "day" | "all";
+export type SalesFactView = 'day' | 'all';
 
 export function parseSalesFactQuery(params: {
   month?: string;
@@ -16,11 +16,11 @@ export function parseSalesFactQuery(params: {
   factId: string;
 } {
   return {
-    month: params.month ?? "",
-    day: params.day ?? "",
-    view: params.view === "day" ? "day" : "all",
-    showDeleted: params.deleted === "1",
-    factId: params.fact ?? "",
+    month: params.month ?? '',
+    day: params.day ?? '',
+    view: params.view === 'day' ? 'day' : 'all',
+    showDeleted: params.deleted === '1',
+    factId: params.fact ?? '',
   };
 }
 
@@ -34,24 +34,24 @@ export function salesFactHref(options: {
   factId?: string;
 }): string {
   if (options.showDeleted && !options.factId) {
-    return "/sales-fact?deleted=1";
+    return '/sales-fact?deleted=1';
   }
 
   const params = new URLSearchParams();
   if (options.showDeleted && options.factId) {
-    params.set("deleted", "1");
-    params.set("fact", options.factId);
+    params.set('deleted', '1');
+    params.set('fact', options.factId);
   }
   if (options.month && options.month !== options.currentMonth) {
-    params.set("month", options.month);
+    params.set('month', options.month);
   }
   if (options.day && options.day !== options.defaultDay) {
-    params.set("day", options.day);
+    params.set('day', options.day);
   }
-  if (options.view === "day") {
-    params.set("view", "day");
+  if (options.view === 'day') {
+    params.set('view', 'day');
   }
 
   const query = params.toString();
-  return query ? `/sales-fact?${query}` : "/sales-fact";
+  return query ? `/sales-fact?${query}` : '/sales-fact';
 }

@@ -1,30 +1,24 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { type ReactNode, useEffect, useState } from 'react';
 
-import { useDocumentStore } from "@/data/document-store";
-import { MATERIALS_SECTION_TITLE } from "@/features/materials/paths";
-import { SALES_FACT_SECTION_TITLE } from "@/features/sales-fact/paths";
-import { IconMenu, IconUndo } from "@/features/shell/icons";
+import { useDocumentStore } from '@/data/document-store';
+import { SALES_FACT_SECTION_TITLE } from '@/features/sales-fact/paths';
+import { IconMenu, IconUndo } from '@/features/shell/icons';
 
 const SECTIONS = [
-  { href: "/", label: "Сводка" },
-  { href: "/sales-fact", label: SALES_FACT_SECTION_TITLE },
-  { href: "/production", label: "Производство" },
-  { href: "/materials", label: MATERIALS_SECTION_TITLE },
-  { href: "/places", label: "Цеха и склады" },
-  { href: "/stock", label: "Складской учет" },
-  { href: "/expenses", label: "Операционные расходы" },
+  { href: '/', label: 'Сводка' },
+  { href: '/sales-fact', label: SALES_FACT_SECTION_TITLE },
 ] as const;
 
-const QUESTIONS_HREF = "/questions";
-const QUESTIONS_LABEL = "Вопросы";
+const QUESTIONS_HREF = '/questions';
+const QUESTIONS_LABEL = 'Вопросы';
 
 function sectionIsCurrent(pathname: string, href: string): boolean {
-  if (href === "/") {
-    return pathname === "/";
+  if (href === '/') {
+    return pathname === '/';
   }
 
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -44,17 +38,17 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         setMenuOpen(false);
       }
     }
 
     const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener('keydown', onKeyDown);
     };
   }, [menuOpen]);
 
@@ -72,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <aside
         id="app-menu"
         className={`fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-sidebar text-white motion-safe:transition-transform ${
-          menuOpen ? "translate-x-0" : "-translate-x-full"
+          menuOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0`}
       >
         <div className="px-4 pt-5 pb-4">
@@ -97,12 +91,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={section.href}
                 href={section.href}
-                aria-current={currentSection ? "page" : undefined}
+                aria-current={currentSection ? 'page' : undefined}
                 onClick={() => setMenuOpen(false)}
                 className={`relative px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
                   currentSection
-                    ? "bg-sidebar-active text-white"
-                    : "text-sidebar-muted hover:bg-white/5 hover:text-white"
+                    ? 'bg-sidebar-active text-white'
+                    : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
                 }`}
               >
                 {currentSection ? (
@@ -121,12 +115,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           <MockReset />
           <Link
             href={QUESTIONS_HREF}
-            aria-current={questionsCurrent ? "page" : undefined}
+            aria-current={questionsCurrent ? 'page' : undefined}
             onClick={() => setMenuOpen(false)}
             className={`relative mx-2 mb-3 block px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
               questionsCurrent
-                ? "bg-sidebar-active text-white"
-                : "text-sidebar-muted hover:bg-white/5 hover:text-white"
+                ? 'bg-sidebar-active text-white'
+                : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
             }`}
           >
             {questionsCurrent ? (
@@ -162,11 +156,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 function MockReset() {
   const { source, hydrated, storageError, resetToMock } = useDocumentStore();
-  const usingLocalData = source === "local";
+  const usingLocalData = source === 'local';
 
   function handleReset() {
     const confirmed = window.confirm(
-      "Вернуть мок-данные? Все цеха, склады и остальные записи, сохранённые в этом браузере, будут стёрты.",
+      'Вернуть мок-данные? Все записи в этом браузере будут стёрты. Останется гамбургер и план сентября.',
     );
     if (!confirmed) {
       return;
@@ -179,10 +173,12 @@ function MockReset() {
     <div className="px-4 py-3">
       <p
         className="text-xs leading-5 text-sidebar-muted"
-        role={storageError ? "alert" : undefined}
+        role={storageError ? 'alert' : undefined}
       >
         {storageError ??
-          (usingLocalData ? "Сохранено в этом браузере." : "Показаны мок-данные.")}
+          (usingLocalData
+            ? 'Сохранено в этом браузере.'
+            : 'Показаны мок-данные.')}
       </p>
       <button
         type="button"

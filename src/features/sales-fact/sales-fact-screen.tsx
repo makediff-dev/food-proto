@@ -1,37 +1,37 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
-import { isOccurredOn } from "@/domain/document";
+import { isOccurredOn } from '@/domain/document';
 import {
   defaultSalesFactDay,
   monthDates,
   openingOf,
+  type SalesFactRejection,
   salesFactById,
   salesFactGridProducts,
   salesFactMonth,
   salesFactMonthOpen,
   workingSalesFact,
-  type SalesFactRejection,
-} from "@/domain/sales-fact";
-import { monthKeyFromDate, shiftMonth } from "@/domain/sales-plan";
-import { fieldClassName } from "@/features/materials/fields";
+} from '@/domain/sales-fact';
+import { monthKeyFromDate, shiftMonth } from '@/domain/sales-plan';
+import { fieldClassName } from '@/features/sales/fields';
+import { formatMonth } from '@/features/sales/text';
 import {
   SALES_FACT_SECTION_TITLE,
-  salesFactHref,
   type SalesFactView,
-} from "@/features/sales-fact/paths";
-import { SalesFactTable } from "@/features/sales-fact/sales-fact-table";
+  salesFactHref,
+} from '@/features/sales-fact/paths';
+import { SalesFactTable } from '@/features/sales-fact/sales-fact-table';
 import {
   factPiecesDraft,
   formatSalesFactDay,
   parseSignedPieces,
   SALES_FACT_ERROR,
-} from "@/features/sales-fact/text";
-import { useSalesFact } from "@/features/sales-fact/use-sales-fact";
-import { formatMonth } from "@/features/sales/text";
+} from '@/features/sales-fact/text';
+import { useSalesFact } from '@/features/sales-fact/use-sales-fact';
 import {
   IconChevronLeft,
   IconChevronRight,
@@ -41,10 +41,10 @@ import {
   IconPlan,
   IconTrash,
   IconUndo,
-} from "@/features/shell/icons";
-import { PageFrame } from "@/features/shell/page-frame";
+} from '@/features/shell/icons';
+import { PageFrame } from '@/features/shell/page-frame';
 
-const WEEKDAY_LABELS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"] as const;
+const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as const;
 
 export function SalesFactScreen({
   month,
@@ -89,7 +89,11 @@ export function SalesFactScreen({
           Запись не найдена.
         </p>
         <Link
-          href={salesFactHref({ month: currentMonth, currentMonth, showDeleted: true })}
+          href={salesFactHref({
+            month: currentMonth,
+            currentMonth,
+            showDeleted: true,
+          })}
           className={quietLinkClassName}
         >
           <IconUndo />К удалённым
@@ -106,7 +110,7 @@ export function SalesFactScreen({
       currentMonth={currentMonth}
       today={today}
       readOnly={readOnly}
-      factId={fact?.id ?? ""}
+      factId={fact?.id ?? ''}
     />
   );
 }
@@ -150,8 +154,11 @@ function Workspace({
   const fallbackDay = defaultSalesFactDay(month);
   const selectedDay = resolveDay(month, dayQuery, fallbackDay);
   const visible =
-    view === "all" ? days : days.filter((item) => item.occurredOn === selectedDay);
-  const editable = sales.hydrated && !readOnly && salesFactMonthOpen(month, today);
+    view === 'all'
+      ? days
+      : days.filter((item) => item.occurredOn === selectedDay);
+  const editable =
+    sales.hydrated && !readOnly && salesFactMonthOpen(month, today);
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
   const nextDisabled = nextMonth > currentMonth;
@@ -164,17 +171,17 @@ function Workspace({
     }
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         setFullscreen(false);
       }
     }
 
     const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener('keydown', onKeyDown);
     };
   }, [tableExpanded]);
 
@@ -252,10 +259,13 @@ function Workspace({
                   </div>
                 </div>
                 {readOnly ? (
-                  <RestoreButton factId={factId} monthLabel={formatMonth(month)} />
+                  <RestoreButton
+                    factId={factId}
+                    monthLabel={formatMonth(month)}
+                  />
                 ) : (
                   <DeleteMonthButton
-                    factId={fact?.id ?? ""}
+                    factId={fact?.id ?? ''}
                     monthLabel={formatMonth(month)}
                     disabled={!sales.hydrated || !fact}
                   />
@@ -270,7 +280,11 @@ function Workspace({
                     ...openingOf(fact, product.id),
                   }))}
                   editable={editable}
-                  onOpening={(productId, productionPieces, distributionPieces) =>
+                  onOpening={(
+                    productId,
+                    productionPieces,
+                    distributionPieces,
+                  ) =>
                     sales.setOpening(
                       month,
                       productId,
@@ -285,8 +299,8 @@ function Workspace({
                   key={month}
                   month={month}
                   selectedDay={selectedDay}
-                  active={view === "day"}
-                  onPick={(next) => open({ day: next, view: "day" })}
+                  active={view === 'day'}
+                  onPick={(next) => open({ day: next, view: 'day' })}
                 />
                 <Link
                   href={salesFactHref({
@@ -294,12 +308,12 @@ function Workspace({
                     currentMonth,
                     day: selectedDay,
                     defaultDay: fallbackDay,
-                    view: "all",
+                    view: 'all',
                     showDeleted: readOnly,
                     factId: readOnly ? factId : undefined,
                   })}
-                  aria-current={view === "all" ? "page" : undefined}
-                  className={viewLinkClass(view === "all")}
+                  aria-current={view === 'all' ? 'page' : undefined}
+                  className={viewLinkClass(view === 'all')}
                 >
                   <IconEye />
                   Все даты
@@ -313,9 +327,9 @@ function Workspace({
                   className={quietLinkClassName}
                 >
                   <IconUndo />
-                  {readOnly ? "К удалённым" : "Удалённые"}
+                  {readOnly ? 'К удалённым' : 'Удалённые'}
                   {readOnly || sales.deleted.length === 0
-                    ? ""
+                    ? ''
                     : ` ${sales.deleted.length}`}
                 </Link>
               </div>
@@ -323,31 +337,40 @@ function Workspace({
           </div>
 
           <p className="text-sm leading-6 text-muted">
-            Себестоимость штуки пока из плановой калькуляции рецепта. Фактической
-            себестоимости ещё нет.
+            Себестоимость штуки — та же, что на «Сводке»: ввод с НДС у товара,
+            без НДС считается. Отдельной фактической себестоимости нет.
           </p>
 
           {hasTable ? (
-            <div
-              className={tableExpanded ? "fixed inset-0 z-50 bg-paper" : undefined}
-              role={tableExpanded ? "dialog" : undefined}
-              aria-label={tableExpanded ? "Таблица на весь экран" : undefined}
-              aria-modal={tableExpanded ? true : undefined}
+            <section
+              className={
+                tableExpanded ? 'fixed inset-0 z-50 bg-paper' : undefined
+              }
+              aria-label={
+                tableExpanded ? 'Таблица на весь экран' : 'Таблица факта'
+              }
             >
               <SalesFactTable
                 days={visible}
                 editable={editable}
-                showDayArrows={view === "day"}
+                showDayArrows={view === 'day'}
                 expanded={tableExpanded}
                 onDay={(next) => open({ day: next })}
                 onCell={(occurredOn, productId, inputs) =>
                   sales.setCell(month, occurredOn, productId, inputs)
                 }
               />
-            </div>
+            </section>
           ) : (
             <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-              Сначала добавьте конечный товар. Факт продаж строится по товарам.
+              Сначала добавьте товар на{' '}
+              <Link
+                href="/"
+                className="text-ink underline outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              >
+                Сводке
+              </Link>
+              . Факт продаж строится по товарам.
             </p>
           )}
         </div>
@@ -373,9 +396,9 @@ function FullscreenToggle({
   return (
     <button
       type="button"
-      aria-label={active ? "Обычный режим" : "На весь экран"}
+      aria-label={active ? 'Обычный режим' : 'На весь экран'}
       aria-pressed={active}
-      title={active ? "Обычный режим" : "На весь экран"}
+      title={active ? 'Обычный режим' : 'На весь экран'}
       onClick={onToggle}
       className="fixed right-5 bottom-5 z-[60] inline-flex size-12 items-center justify-center rounded-full border border-line bg-sheet text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
@@ -405,7 +428,7 @@ function resolveDay(month: string, day: string, fallback: string): string {
   if (Number.isInteger(dom) && dom > 0) {
     const last = monthDates(month).length;
     const clamped = Math.min(dom, last);
-    const candidate = `${month}-${String(clamped).padStart(2, "0")}`;
+    const candidate = `${month}-${String(clamped).padStart(2, '0')}`;
     if (monthDates(month).includes(candidate)) {
       return candidate;
     }
@@ -421,7 +444,7 @@ function MonthStep({
   onClick,
 }: {
   label: string;
-  direction: "previous" | "next";
+  direction: 'previous' | 'next';
   disabled: boolean;
   onClick: () => void;
 }) {
@@ -433,7 +456,7 @@ function MonthStep({
       onClick={onClick}
       className="inline-flex size-11 items-center justify-center border border-line bg-sheet text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-40"
     >
-      {direction === "previous" ? <IconChevronLeft /> : <IconChevronRight />}
+      {direction === 'previous' ? <IconChevronLeft /> : <IconChevronRight />}
     </button>
   );
 }
@@ -462,10 +485,15 @@ function Openings({
       <h2 className="text-xs text-muted">Остатки на 1-е число</h2>
       <ul className="mt-1.5 flex flex-col gap-1.5">
         {products.map((product) => (
-          <li key={product.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <li
+            key={product.id}
+            className="flex flex-wrap items-center gap-x-2 gap-y-1"
+          >
             <p className="text-sm text-ink">
               {product.name}
-              {product.deleted ? <span className="text-muted"> · удалён</span> : null}
+              {product.deleted ? (
+                <span className="text-muted"> · удалён</span>
+              ) : null}
             </p>
             <OpeningField
               label={`Остаток на начало на производстве, ${product.name}`}
@@ -473,7 +501,11 @@ function Openings({
               value={product.productionPieces}
               disabled={!editable || product.deleted}
               onCommit={(productionPieces) =>
-                onOpening(product.id, productionPieces, product.distributionPieces)
+                onOpening(
+                  product.id,
+                  productionPieces,
+                  product.distributionPieces,
+                )
               }
             />
             <OpeningField
@@ -482,7 +514,11 @@ function Openings({
               value={product.distributionPieces}
               disabled={!editable || product.deleted}
               onCommit={(distributionPieces) =>
-                onOpening(product.id, product.productionPieces, distributionPieces)
+                onOpening(
+                  product.id,
+                  product.productionPieces,
+                  distributionPieces,
+                )
               }
             />
           </li>
@@ -535,7 +571,7 @@ function OpeningField({
       <label
         htmlFor={inputId}
         className={`flex w-max flex-col gap-0.5 border border-line bg-paper px-1.5 py-1 outline-none focus-within:border-ink focus-within:bg-sheet focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ink ${
-          disabled ? "opacity-60" : ""
+          disabled ? 'opacity-60' : ''
         }`}
       >
         <span className="text-xs leading-none whitespace-nowrap text-muted">
@@ -557,7 +593,7 @@ function OpeningField({
           onChange={(event) => setDraft(event.target.value)}
           onBlur={(event) => commit(event.currentTarget.value)}
           onKeyDown={(event) => {
-            if (event.key === "Enter") {
+            if (event.key === 'Enter') {
               event.currentTarget.blur();
             }
           }}
@@ -606,7 +642,13 @@ function DeleteMonthButton({
   );
 }
 
-function RestoreButton({ factId, monthLabel }: { factId: string; monthLabel: string }) {
+function RestoreButton({
+  factId,
+  monthLabel,
+}: {
+  factId: string;
+  monthLabel: string;
+}) {
   const sales = useSalesFact();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -740,16 +782,16 @@ function DayDateControl({
     }
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         setOpen(false);
       }
     }
 
-    document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
     return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
     };
   }, [open]);
 
@@ -759,7 +801,7 @@ function DayDateControl({
         type="button"
         aria-expanded={open}
         aria-haspopup="dialog"
-        aria-current={active ? "page" : undefined}
+        aria-current={active ? 'page' : undefined}
         className={viewLinkClass(active)}
         onClick={() => setOpen((current) => !current)}
       >
@@ -782,7 +824,12 @@ function DayDateControl({
               </span>
             ))}
             {Array.from({ length: lead }, (_, index) => (
-              <span key={`pad-${index}`} className="size-8" aria-hidden="true" />
+              <span
+                // biome-ignore lint/suspicious/noArrayIndexKey: пустые клетки календаря позиционные
+                key={`pad-${index}`}
+                className="size-8"
+                aria-hidden="true"
+              />
             ))}
             {dates.map((occurredOn) => {
               const selected = active && occurredOn === selectedDay;
@@ -799,8 +846,8 @@ function DayDateControl({
                   }}
                   className={`flex size-8 items-center justify-center text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
                     selected
-                      ? "bg-ink text-white"
-                      : "text-ink hover:border hover:border-ink"
+                      ? 'bg-ink text-white'
+                      : 'text-ink hover:border hover:border-ink'
                   }`}
                 >
                   {dayNumber}
@@ -829,10 +876,10 @@ function mondayLeadForMonth(month: string): number {
 function viewLinkClass(selected: boolean): string {
   return `inline-flex h-11 items-center justify-center gap-2 border px-3 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
     selected
-      ? "border-ink bg-ink text-white"
-      : "border-line bg-sheet text-ink hover:border-ink"
+      ? 'border-ink bg-ink text-white'
+      : 'border-line bg-sheet text-ink hover:border-ink'
   }`;
 }
 
 const quietLinkClassName =
-  "inline-flex h-11 items-center justify-center gap-2 border border-line bg-sheet px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
+  'inline-flex h-11 items-center justify-center gap-2 border border-line bg-sheet px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink';

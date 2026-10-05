@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useId, useState, type ReactNode } from "react";
+import { type ReactNode, useId, useState } from 'react';
 
 import {
   adjacentDay,
@@ -9,8 +9,12 @@ import {
   type SalesFactRejection,
   type SalesFactRow,
   type SalesFactTotals,
-} from "@/domain/sales-fact";
-import { formatMoney } from "@/features/materials/money";
+} from '@/domain/sales-fact';
+import { formatMoney } from '@/features/sales/money';
+import {
+  formatPercentHundredths,
+  formatPriceExVat,
+} from '@/features/sales/text';
 import {
   factPiecesDraft,
   factPriceDraft,
@@ -18,68 +22,67 @@ import {
   parseFactPieces,
   parseFactPrice,
   SALES_FACT_ERROR,
-} from "@/features/sales-fact/text";
-import { formatPercentHundredths, formatPriceExVat } from "@/features/sales/text";
-import { IconChevronDown, IconChevronUp } from "@/features/shell/icons";
+} from '@/features/sales-fact/text';
+import { IconChevronDown, IconChevronUp } from '@/features/shell/icons';
 
 const gridFieldClassName =
-  "w-full min-w-0 cursor-text appearance-none border-0 bg-transparent p-0 text-right text-sm text-ink shadow-none outline-none";
+  'w-full min-w-0 cursor-text appearance-none border-0 bg-transparent p-0 text-right text-sm text-ink shadow-none outline-none';
 
-const editableCellClassName = "bg-[#e4e4e0]";
+const editableCellClassName = 'bg-[#e4e4e0]';
 
 /** Предлоги, союзы и частицы, которые не оставляют в конце строки. */
 const HANGING_WORDS = new Set([
-  "а",
-  "без",
-  "бы",
-  "в",
-  "во",
-  "для",
-  "до",
-  "же",
-  "за",
-  "и",
-  "из",
-  "к",
-  "ко",
-  "ли",
-  "на",
-  "не",
-  "ни",
-  "но",
-  "о",
-  "об",
-  "от",
-  "по",
-  "под",
-  "при",
-  "с",
-  "со",
-  "у",
+  'а',
+  'без',
+  'бы',
+  'в',
+  'во',
+  'для',
+  'до',
+  'же',
+  'за',
+  'и',
+  'из',
+  'к',
+  'ко',
+  'ли',
+  'на',
+  'не',
+  'ни',
+  'но',
+  'о',
+  'об',
+  'от',
+  'по',
+  'под',
+  'при',
+  'с',
+  'со',
+  'у',
 ]);
 
 function keepWithNext(text: string): string {
-  const parts = text.split(" ");
-  let line = "";
+  const parts = text.split(' ');
+  let line = '';
   for (let index = 0; index < parts.length; index += 1) {
-    line += parts[index] ?? "";
+    line += parts[index] ?? '';
     if (index === parts.length - 1) {
       break;
     }
-    const bare = (parts[index] ?? "")
+    const bare = (parts[index] ?? '')
       .toLowerCase()
-      .replace(/^[^a-zа-яё]+|[^a-zа-яё]+$/gi, "");
-    line += HANGING_WORDS.has(bare) ? "\u00A0" : " ";
+      .replace(/^[^a-zа-яё]+|[^a-zа-яё]+$/gi, '');
+    line += HANGING_WORDS.has(bare) ? '\u00A0' : ' ';
   }
   return line;
 }
 
 function ColumnLabel({ label }: { label: string }) {
-  const chunks = keepWithNext(label).split(" ");
+  const chunks = keepWithNext(label).split(' ');
   return (
     <span className="mx-auto block w-min text-center">
-      {chunks.map((chunk, index) => (
-        <span key={`${index}:${chunk}`} className="block whitespace-nowrap">
+      {chunks.map((chunk) => (
+        <span key={chunk} className="block whitespace-nowrap">
           {chunk}
         </span>
       ))}
@@ -88,67 +91,70 @@ function ColumnLabel({ label }: { label: string }) {
 }
 
 type ColumnKey =
-  | "opening"
-  | "salesUnitCost"
-  | "profitability"
-  | "price"
-  | "salesPieces"
-  | "revenue"
-  | "contribution"
-  | "salesVolumeCost"
-  | "vat"
-  | "outputUnitCost"
-  | "outputPieces"
-  | "outputVolumeCost"
-  | "transfer"
-  | "staffMeals"
-  | "samples"
-  | "returns"
-  | "writeOff"
-  | "closing";
+  | 'opening'
+  | 'salesUnitCost'
+  | 'profitability'
+  | 'price'
+  | 'salesPieces'
+  | 'revenue'
+  | 'contribution'
+  | 'salesVolumeCost'
+  | 'vat'
+  | 'outputUnitCost'
+  | 'outputPieces'
+  | 'outputVolumeCost'
+  | 'transfer'
+  | 'staffMeals'
+  | 'samples'
+  | 'returns'
+  | 'writeOff'
+  | 'closing';
 
-const COLUMNS: { key: ColumnKey; label: string; group: "sales" | "output" }[] = [
-  { key: "opening", label: "Остаток на начало", group: "sales" },
-  { key: "salesUnitCost", label: "Себест продажи", group: "sales" },
-  { key: "profitability", label: "Рентаб", group: "sales" },
-  { key: "price", label: "Цена", group: "sales" },
-  { key: "salesPieces", label: "Объём продаж", group: "sales" },
-  { key: "revenue", label: "Выручка", group: "sales" },
-  { key: "contribution", label: "Т-проток", group: "sales" },
-  { key: "salesVolumeCost", label: "Себест объёма", group: "sales" },
-  { key: "vat", label: "НДС", group: "sales" },
-  { key: "outputUnitCost", label: "Себест произв", group: "output" },
-  { key: "outputPieces", label: "Объём произв", group: "output" },
-  { key: "outputVolumeCost", label: "Себест объёма произв", group: "output" },
-  { key: "transfer", label: "Перемещение на РЦ", group: "output" },
-  { key: "staffMeals", label: "Питание сотрудников", group: "output" },
-  { key: "samples", label: "Образцы для клиентов", group: "output" },
-  { key: "returns", label: "Возвраты клиентов", group: "output" },
-  { key: "writeOff", label: "Списание", group: "output" },
-  { key: "closing", label: "Остаток на конец", group: "output" },
-];
+const COLUMNS: { key: ColumnKey; label: string; group: 'sales' | 'output' }[] =
+  [
+    { key: 'opening', label: 'Остаток на начало', group: 'sales' },
+    { key: 'salesUnitCost', label: 'Себест продажи', group: 'sales' },
+    { key: 'profitability', label: 'Рентаб', group: 'sales' },
+    { key: 'price', label: 'Цена', group: 'sales' },
+    { key: 'salesPieces', label: 'Объём продаж', group: 'sales' },
+    { key: 'revenue', label: 'Выручка', group: 'sales' },
+    { key: 'contribution', label: 'Т-проток', group: 'sales' },
+    { key: 'salesVolumeCost', label: 'Себест объёма', group: 'sales' },
+    { key: 'vat', label: 'НДС', group: 'sales' },
+    { key: 'outputUnitCost', label: 'Себест произв', group: 'output' },
+    { key: 'outputPieces', label: 'Объём произв', group: 'output' },
+    { key: 'outputVolumeCost', label: 'Себест объёма произв', group: 'output' },
+    { key: 'transfer', label: 'Перемещение на РЦ', group: 'output' },
+    { key: 'staffMeals', label: 'Питание сотрудников', group: 'output' },
+    { key: 'samples', label: 'Образцы для клиентов', group: 'output' },
+    { key: 'returns', label: 'Возвраты клиентов', group: 'output' },
+    { key: 'writeOff', label: 'Списание', group: 'output' },
+    { key: 'closing', label: 'Остаток на конец', group: 'output' },
+  ];
 
-const SALES_SPAN = COLUMNS.filter((column) => column.group === "sales").length;
+const SALES_SPAN = COLUMNS.filter((column) => column.group === 'sales').length;
 const OUTPUT_SPAN = COLUMNS.length - SALES_SPAN;
-const LAST_SALES_KEY = COLUMNS.filter((column) => column.group === "sales").at(-1)?.key;
+const LAST_SALES_KEY = COLUMNS.filter((column) => column.group === 'sales').at(
+  -1,
+)?.key;
 
 const INPUTS: Partial<
-  Record<ColumnKey, { field: keyof SalesFactInputs; kind: "price" | "pieces" }>
+  Record<ColumnKey, { field: keyof SalesFactInputs; kind: 'price' | 'pieces' }>
 > = {
-  price: { field: "priceWithVatKopecks", kind: "price" },
-  salesPieces: { field: "salesPieces", kind: "pieces" },
-  outputPieces: { field: "outputPieces", kind: "pieces" },
-  transfer: { field: "transferPieces", kind: "pieces" },
-  staffMeals: { field: "staffMealsPieces", kind: "pieces" },
-  samples: { field: "samplesPieces", kind: "pieces" },
-  returns: { field: "returnsPieces", kind: "pieces" },
-  writeOff: { field: "writeOffPieces", kind: "pieces" },
+  price: { field: 'priceWithVatKopecks', kind: 'price' },
+  salesPieces: { field: 'salesPieces', kind: 'pieces' },
+  outputPieces: { field: 'outputPieces', kind: 'pieces' },
+  transfer: { field: 'transferPieces', kind: 'pieces' },
+  staffMeals: { field: 'staffMealsPieces', kind: 'pieces' },
+  samples: { field: 'samplesPieces', kind: 'pieces' },
+  returns: { field: 'returnsPieces', kind: 'pieces' },
+  writeOff: { field: 'writeOffPieces', kind: 'pieces' },
 };
 
 function sectionRightClass(column: ColumnKey): string {
   return column === LAST_SALES_KEY
-    ? "border-r-[1.5px] border-r-muted"
-    : "border-r border-r-line";
+    ? 'border-r-[1.5px] border-r-muted'
+    : 'border-r border-r-line';
 }
 
 export function SalesFactTable({
@@ -174,8 +180,8 @@ export function SalesFactTable({
     <div
       className={
         expanded
-          ? "h-dvh contain-paint overflow-auto bg-sheet"
-          : "max-h-[calc(100dvh-14rem)] contain-paint overflow-auto border border-line bg-sheet"
+          ? 'h-dvh contain-paint overflow-auto bg-sheet'
+          : 'max-h-[calc(100dvh-14rem)] contain-paint overflow-auto border border-line bg-sheet'
       }
     >
       {/* contain-paint не даёт широкой таблице растянуть прокрутку страницы */}
@@ -192,14 +198,14 @@ export function SalesFactTable({
               scope="colgroup"
               className="border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
             >
-              {keepWithNext("Фактические показатели продаж за дату")}
+              {keepWithNext('Фактические показатели продаж за дату')}
             </th>
             <th
               colSpan={OUTPUT_SPAN}
               scope="colgroup"
               className="border-b border-b-line bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
             >
-              {keepWithNext("Фактические показатели производства за дату")}
+              {keepWithNext('Фактические показатели производства за дату')}
             </th>
           </tr>
           <tr>
@@ -238,8 +244,8 @@ export function SalesFactTable({
                       rowSpan={day.rows.length + 1}
                       className={`sticky left-0 z-10 h-px w-10 max-w-10 border-r border-r-line bg-sheet p-0 align-middle font-normal ${
                         dayBreak
-                          ? "border-b-[3px] border-b-muted"
-                          : "border-b border-b-line"
+                          ? 'border-b-[3px] border-b-muted'
+                          : 'border-b border-b-line'
                       }`}
                     >
                       <DayLabel
@@ -258,22 +264,36 @@ export function SalesFactTable({
                   {COLUMNS.map((column) => {
                     const canEdit =
                       Boolean(INPUTS[column.key]) && editable && !row.deleted;
-                    const highlightCell = canEdit && column.key !== "price";
+                    const highlightCell = canEdit && column.key !== 'price';
                     return (
                       <td
                         key={column.key}
                         className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass(column.key)} ${
-                          highlightCell ? editableCellClassName : ""
+                          highlightCell ? editableCellClassName : ''
                         }`}
                         onClick={(event) => {
                           if (!canEdit) {
                             return;
                           }
-                          const field = event.currentTarget.querySelector("input");
+                          const field =
+                            event.currentTarget.querySelector('input');
                           if (
                             field instanceof HTMLInputElement &&
                             document.activeElement !== field
                           ) {
+                            field.focus();
+                          }
+                        }}
+                        onKeyDown={(event) => {
+                          if (!canEdit) {
+                            return;
+                          }
+                          if (event.key !== 'Enter' && event.key !== ' ') {
+                            return;
+                          }
+                          const field =
+                            event.currentTarget.querySelector('input');
+                          if (field instanceof HTMLInputElement) {
                             field.focus();
                           }
                         }}
@@ -295,7 +315,9 @@ export function SalesFactTable({
                 <th
                   scope="row"
                   className={`sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-t-[1.5px] border-t-muted border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink ${
-                    dayBreak ? "border-b-[3px] border-b-muted" : "border-b border-b-line"
+                    dayBreak
+                      ? 'border-b-[3px] border-b-muted'
+                      : 'border-b border-b-line'
                   }`}
                 >
                   Всего
@@ -305,8 +327,8 @@ export function SalesFactTable({
                     key={column.key}
                     className={`w-px border-t-[1.5px] border-t-muted bg-paper px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass(column.key)} ${
                       dayBreak
-                        ? "border-b-[3px] border-b-muted"
-                        : "border-b border-b-line"
+                        ? 'border-b-[3px] border-b-muted'
+                        : 'border-b border-b-line'
                     }`}
                   >
                     <TotalCell column={column.key} totals={day.totals} />
@@ -371,7 +393,7 @@ function ArrowButton({
   onClick,
 }: {
   label: string;
-  direction: "up" | "down";
+  direction: 'up' | 'down';
   disabled: boolean;
   onClick: () => void;
 }) {
@@ -383,7 +405,7 @@ function ArrowButton({
       onClick={onClick}
       className="inline-flex size-5 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-40"
     >
-      {direction === "up" ? <IconChevronUp /> : <IconChevronDown />}
+      {direction === 'up' ? <IconChevronUp /> : <IconChevronDown />}
     </button>
   );
 }
@@ -408,7 +430,7 @@ function RowCell({
   editable: boolean;
   onCommit: (inputs: SalesFactInputs) => SalesFactRejection | null;
 }) {
-  if (column === "price") {
+  if (column === 'price') {
     return (
       <StackedPair
         topHighlighted={editable}
@@ -423,7 +445,9 @@ function RowCell({
             unit="₽"
             invalidMessage={SALES_FACT_ERROR.price}
             parse={parseFactPrice}
-            onCommit={(next) => onCommit({ ...row.inputs, priceWithVatKopecks: next })}
+            onCommit={(next) =>
+              onCommit({ ...row.inputs, priceWithVatKopecks: next })
+            }
           />
         }
         bottom={
@@ -444,70 +468,79 @@ function RowCell({
     const value = row.inputs[input.field];
     return (
       <GridNumber
-        label={`${COLUMNS.find((item) => item.key === column)?.label ?? ""}, ${row.name}`}
-        value={input.kind === "price" ? factPriceDraft(value) : factPiecesDraft(value)}
-        disabled={!editable}
-        inputMode={input.kind === "price" ? "decimal" : "numeric"}
-        unit={input.kind === "pieces" ? "шт" : undefined}
-        invalidMessage={
-          input.kind === "price" ? SALES_FACT_ERROR.price : SALES_FACT_ERROR.pieces
+        label={`${COLUMNS.find((item) => item.key === column)?.label ?? ''}, ${row.name}`}
+        value={
+          input.kind === 'price'
+            ? factPriceDraft(value)
+            : factPiecesDraft(value)
         }
-        parse={input.kind === "price" ? parseFactPrice : parseFactPieces}
+        disabled={!editable}
+        inputMode={input.kind === 'price' ? 'decimal' : 'numeric'}
+        unit={input.kind === 'pieces' ? 'шт' : undefined}
+        invalidMessage={
+          input.kind === 'price'
+            ? SALES_FACT_ERROR.price
+            : SALES_FACT_ERROR.pieces
+        }
+        parse={input.kind === 'price' ? parseFactPrice : parseFactPieces}
         onCommit={(next) => onCommit({ ...row.inputs, [input.field]: next })}
       />
     );
   }
 
   switch (column) {
-    case "opening":
+    case 'opening':
       return (
         <PlacePair
           production={row.productionStart}
           distribution={row.distributionStart}
         />
       );
-    case "closing":
+    case 'closing':
       return (
-        <PlacePair production={row.productionEnd} distribution={row.distributionEnd} />
+        <PlacePair
+          production={row.productionEnd}
+          distribution={row.distributionEnd}
+        />
       );
-    case "salesUnitCost":
-    case "outputUnitCost":
+    case 'salesUnitCost':
+    case 'outputUnitCost':
       return row.unitCost ? (
         <VatPair
           withVat={<MoneyAmount kopecks={row.unitCost.withVatKopecks} />}
           exVat={<MoneyAmount kopecks={row.unitCost.exVatKopecks} />}
         />
       ) : (
-        <Muted>{keepWithNext("Себестоимость не считается")}</Muted>
+        <Muted>{keepWithNext('Себестоимость не считается')}</Muted>
       );
-    case "salesVolumeCost":
+    case 'salesVolumeCost':
       return (
         <VatMoneyOrEmpty
           withVat={row.salesVolumeCostWithVatKopecks}
           exVat={row.salesVolumeCostExVatKopecks}
         />
       );
-    case "outputVolumeCost":
+    case 'outputVolumeCost':
       return (
         <VatMoneyOrEmpty
           withVat={row.outputVolumeCostWithVatKopecks}
           exVat={row.outputVolumeCostExVatKopecks}
         />
       );
-    case "revenue":
+    case 'revenue':
       return (
         <VatMoneyOrEmpty
           withVat={row.revenueWithVatKopecks}
           exVat={row.revenueExVatKopecks}
         />
       );
-    case "contribution":
+    case 'contribution':
       return row.contributionKopecks === null ? (
         <Empty />
       ) : (
         <MoneyAmount kopecks={row.contributionKopecks} />
       );
-    case "profitability":
+    case 'profitability':
       return row.profitabilityHundredths === null ? (
         <Empty />
       ) : (
@@ -515,7 +548,7 @@ function RowCell({
           {formatPercentHundredths(row.profitabilityHundredths)}
         </span>
       );
-    case "vat":
+    case 'vat':
       return row.vatPercent === null ? (
         <Empty />
       ) : (
@@ -526,59 +559,65 @@ function RowCell({
   }
 }
 
-function TotalCell({ column, totals }: { column: ColumnKey; totals: SalesFactTotals }) {
+function TotalCell({
+  column,
+  totals,
+}: {
+  column: ColumnKey;
+  totals: SalesFactTotals;
+}) {
   switch (column) {
-    case "opening":
+    case 'opening':
       return (
         <PlacePair
           production={totals.productionStart}
           distribution={totals.distributionStart}
         />
       );
-    case "closing":
+    case 'closing':
       return (
         <PlacePair
           production={totals.productionEnd}
           distribution={totals.distributionEnd}
         />
       );
-    case "salesPieces":
+    case 'salesPieces':
       return <Pieces value={totals.salesPieces} />;
-    case "outputPieces":
+    case 'outputPieces':
       return <Pieces value={totals.outputPieces} />;
-    case "transfer":
+    case 'transfer':
       return <Pieces value={totals.transferPieces} />;
-    case "staffMeals":
+    case 'staffMeals':
       return <Pieces value={totals.staffMealsPieces} />;
-    case "samples":
+    case 'samples':
       return <Pieces value={totals.samplesPieces} />;
-    case "returns":
+    case 'returns':
       return <Pieces value={totals.returnsPieces} />;
-    case "writeOff":
+    case 'writeOff':
       return <Pieces value={totals.writeOffPieces} />;
-    case "price":
+    case 'price':
       return (
         <VatMoneyOrEmpty
           withVat={totals.priceWithVatKopecks}
           exVat={totals.priceExVatKopecks}
         />
       );
-    case "revenue":
+    case 'revenue':
       return (
         <VatMoneyOrEmpty
           withVat={totals.revenueWithVatKopecks}
           exVat={totals.revenueExVatKopecks}
         />
       );
-    case "contribution":
+    case 'contribution':
       return !totals.salesCostComplete || !totals.revenueComplete ? (
-        <Muted>{keepWithNext("не по всем товарам")}</Muted>
+        <Muted>{keepWithNext('не по всем товарам')}</Muted>
       ) : totals.contributionKopecks === null ? (
         <Empty />
       ) : (
         <MoneyAmount kopecks={totals.contributionKopecks} />
       );
-    case "salesUnitCost":
+    case 'salesUnitCost':
       return (
         <AverageCost
           complete={totals.salesCostComplete}
@@ -586,7 +625,7 @@ function TotalCell({ column, totals }: { column: ColumnKey; totals: SalesFactTot
           exVat={totals.salesUnitCostExVatKopecks}
         />
       );
-    case "outputUnitCost":
+    case 'outputUnitCost':
       return (
         <AverageCost
           complete={totals.outputCostComplete}
@@ -594,7 +633,7 @@ function TotalCell({ column, totals }: { column: ColumnKey; totals: SalesFactTot
           exVat={totals.outputUnitCostExVatKopecks}
         />
       );
-    case "salesVolumeCost":
+    case 'salesVolumeCost':
       return (
         <VolumeTotal
           complete={totals.salesCostComplete}
@@ -602,7 +641,7 @@ function TotalCell({ column, totals }: { column: ColumnKey; totals: SalesFactTot
           exVat={totals.salesVolumeCostExVatKopecks}
         />
       );
-    case "outputVolumeCost":
+    case 'outputVolumeCost':
       return (
         <VolumeTotal
           complete={totals.outputCostComplete}
@@ -610,15 +649,16 @@ function TotalCell({ column, totals }: { column: ColumnKey; totals: SalesFactTot
           exVat={totals.outputVolumeCostExVatKopecks}
         />
       );
-    case "profitability":
-      return !totals.salesCostComplete || totals.profitabilityHundredths === null ? (
+    case 'profitability':
+      return !totals.salesCostComplete ||
+        totals.profitabilityHundredths === null ? (
         <Empty />
       ) : (
         <span className="whitespace-nowrap">
           {formatPercentHundredths(totals.profitabilityHundredths)}
         </span>
       );
-    case "vat":
+    case 'vat':
       return totals.vatPercentHundredths === null ? (
         <Empty />
       ) : (
@@ -641,7 +681,7 @@ function AverageCost({
   exVat: number | null;
 }) {
   if (!complete) {
-    return <Muted>{keepWithNext("не по всем товарам")}</Muted>;
+    return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
   }
 
   return <VatMoneyOrEmpty withVat={withVat} exVat={exVat} />;
@@ -657,7 +697,7 @@ function VolumeTotal({
   exVat: number | null;
 }) {
   if (!complete) {
-    return <Muted>{keepWithNext("не по всем товарам")}</Muted>;
+    return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
   }
 
   return <VatMoneyOrEmpty withVat={withVat} exVat={exVat} />;
@@ -668,7 +708,9 @@ function Pieces({ value }: { value: number | null }) {
     return <Empty />;
   }
 
-  return <span className="whitespace-nowrap">{formatSignedPieces(value)} шт</span>;
+  return (
+    <span className="whitespace-nowrap">{formatSignedPieces(value)} шт</span>
+  );
 }
 
 function PlacePair({
@@ -748,14 +790,18 @@ function StackedPair({
     <div className="-mx-1.5 -my-2 flex min-w-[4.5rem] flex-col">
       <div
         className={`flex flex-col items-end border-b border-line px-1.5 py-1 ${
-          topHighlighted ? editableCellClassName : ""
+          topHighlighted ? editableCellClassName : ''
         }`}
       >
-        <span className="text-[0.5rem] leading-none text-muted">{topLabel}</span>
+        <span className="text-[0.5rem] leading-none text-muted">
+          {topLabel}
+        </span>
         {top}
       </div>
       <div className="flex flex-col items-end px-1.5 py-1">
-        <span className="text-[0.5rem] leading-none text-muted">{bottomLabel}</span>
+        <span className="text-[0.5rem] leading-none text-muted">
+          {bottomLabel}
+        </span>
         {bottom}
       </div>
     </div>
@@ -771,18 +817,18 @@ function Muted({ children }: { children: string }) {
 }
 
 /** Оставляет цифры; для цены — ещё одну дробную запятую. Точку приводит к запятой. */
-function sanitizeFactDraft(raw: string, mode: "decimal" | "numeric"): string {
-  let result = "";
+function sanitizeFactDraft(raw: string, mode: 'decimal' | 'numeric'): string {
+  let result = '';
   let hasComma = false;
 
   for (const char of raw) {
-    if (char >= "0" && char <= "9") {
+    if (char >= '0' && char <= '9') {
       result += char;
       continue;
     }
 
-    if (mode === "decimal" && (char === "," || char === ".") && !hasComma) {
-      result += ",";
+    if (mode === 'decimal' && (char === ',' || char === '.') && !hasComma) {
+      result += ',';
       hasComma = true;
     }
   }
@@ -803,7 +849,7 @@ function GridNumber({
   label: string;
   value: string;
   disabled: boolean;
-  inputMode: "decimal" | "numeric";
+  inputMode: 'decimal' | 'numeric';
   unit?: string;
   invalidMessage: string;
   parse: (raw: string) => number | null;
@@ -840,7 +886,7 @@ function GridNumber({
         <span className="sr-only">{label}</span>
         <span className="whitespace-nowrap">
           {shown}
-          {unit ? ` ${unit}` : ""}
+          {unit ? ` ${unit}` : ''}
         </span>
       </>
     );
@@ -863,16 +909,20 @@ function GridNumber({
             setDraft(sanitizeFactDraft(value, inputMode));
             setError(null);
           }}
-          onChange={(event) => setDraft(sanitizeFactDraft(event.target.value, inputMode))}
+          onChange={(event) =>
+            setDraft(sanitizeFactDraft(event.target.value, inputMode))
+          }
           onBlur={(event) => commit(event.currentTarget.value)}
           onKeyDown={(event) => {
-            if (event.key === "Enter") {
+            if (event.key === 'Enter') {
               event.currentTarget.blur();
             }
           }}
           className={gridFieldClassName}
         />
-        {unit ? <span className="shrink-0 text-sm text-ink">{unit}</span> : null}
+        {unit ? (
+          <span className="shrink-0 text-sm text-ink">{unit}</span>
+        ) : null}
       </div>
       {error ? (
         <p id={errorId} className="mt-1 text-sm text-ink">

@@ -1,30 +1,39 @@
-"use client";
+'use client';
 
-import { useDocumentStore } from "@/data/document-store";
-import type { PrototypeDocument } from "@/domain/document";
+import { useDocumentStore } from '@/data/document-store';
+import type { PrototypeDocument } from '@/domain/document';
 import {
-  finalProductVatRejection,
-  setFinalProductVat,
+  addProduct,
+  deleteProduct,
   type FieldRejection,
-} from "@/domain/materials";
+  productNameRejection,
+  productUnitCostRejection,
+  productVatRejection,
+  renameProduct,
+  restoreProduct,
+  setProductUnitCost,
+  setProductVat,
+} from '@/domain/products';
 import {
   addMissingPlanLines,
   addMissingPlanLinesRejection,
   ensureSalesPlan,
+  type SalesPlanRejection,
   updateSalesPlanLine,
   updateSalesPlanLineRejection,
   workingSalesPlan,
-  type SalesPlanRejection,
-} from "@/domain/sales-plan";
+} from '@/domain/sales-plan';
 import {
-  setOperatingExpense,
-  setOperatingExpenseRejection,
   type OperatingExpenseRejection,
   type OperatingExpenseSide,
-} from "@/domain/summary";
+  setOperatingExpense,
+  setOperatingExpenseRejection,
+} from '@/domain/summary';
 
 function commit(
-  updateDocument: (recipe: (current: PrototypeDocument) => PrototypeDocument) => void,
+  updateDocument: (
+    recipe: (current: PrototypeDocument) => PrototypeDocument,
+  ) => void,
   recipe: (current: PrototypeDocument) => PrototypeDocument,
   explain: (current: PrototypeDocument) => SalesPlanRejection | null,
 ): SalesPlanRejection | null {
@@ -87,11 +96,11 @@ export function useSales() {
               today,
             );
             if (ensured === current) {
-              return "month";
+              return 'month';
             }
             const created = workingSalesPlan(ensured, month);
             if (!created) {
-              return "missing";
+              return 'missing';
             }
             return updateSalesPlanLineRejection(
               ensured,
@@ -113,12 +122,71 @@ export function useSales() {
         },
       );
     },
-    updateProductVat(id: string, vatPercent: number): FieldRejection | null {
-      const rejection = finalProductVatRejection(document, id, vatPercent);
+    addProduct(name: string): FieldRejection | null {
+      const id = `product:${crypto.randomUUID()}`;
+      const rejection = productNameRejection(document, name);
       if (rejection) {
         return rejection;
       }
-      updateDocument((current) => setFinalProductVat(current, id, vatPercent));
+      updateDocument((current) =>
+        addProduct(current, {
+          id,
+          name,
+          vatPercent: 20,
+          unitCostWithVatKopecks: 0,
+          deletedAt: null,
+        }),
+      );
+      return null;
+    },
+    renameProduct(id: string, name: string): FieldRejection | null {
+      const rejection = productNameRejection(document, name, id);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => renameProduct(current, id, name));
+      return null;
+    },
+    updateProductVat(id: string, vatPercent: number): FieldRejection | null {
+      const rejection = productVatRejection(document, id, vatPercent);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => setProductVat(current, id, vatPercent));
+      return null;
+    },
+    updateProductCost(
+      id: string,
+      unitCostWithVatKopecks: number,
+    ): FieldRejection | null {
+      const rejection = productUnitCostRejection(
+        document,
+        id,
+        unitCostWithVatKopecks,
+      );
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) =>
+        setProductUnitCost(current, id, unitCostWithVatKopecks),
+      );
+      return null;
+    },
+    deleteProduct(id: string) {
+      updateDocument((current) =>
+        deleteProduct(current, id, new Date().toISOString()),
+      );
+    },
+    restoreProduct(id: string): FieldRejection | null {
+      const current = document.products.find((item) => item.id === id);
+      if (!current || current.deletedAt === null) {
+        return 'missing';
+      }
+      const rejection = productNameRejection(document, current.name, id);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((next) => restoreProduct(next, id));
       return null;
     },
     updateOperatingExpense(
@@ -140,12 +208,16 @@ export function useSales() {
       );
       return null;
     },
-    addMissing(planId: string, lines: readonly { id: string; productId: string }[]) {
+    addMissing(
+      planId: string,
+      lines: readonly { id: string; productId: string }[],
+    ) {
       const today = new Date();
       return commit(
         updateDocument,
         (current) => addMissingPlanLines(current, planId, lines, today),
-        (current) => addMissingPlanLinesRejection(current, planId, lines, today),
+        (current) =>
+          addMissingPlanLinesRejection(current, planId, lines, today),
       );
     },
   };

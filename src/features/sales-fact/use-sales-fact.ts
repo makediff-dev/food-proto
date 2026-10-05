@@ -1,23 +1,25 @@
-"use client";
+'use client';
 
-import { useDocumentStore } from "@/data/document-store";
-import type { PrototypeDocument } from "@/domain/document";
+import { useDocumentStore } from '@/data/document-store';
+import type { PrototypeDocument } from '@/domain/document';
 import {
   deletedSalesFacts,
   deleteSalesFact,
   restoreSalesFact,
   restoreSalesFactRejection,
+  type SalesFactIds,
+  type SalesFactInputs,
+  type SalesFactRejection,
   setSalesFactCell,
   setSalesFactCellRejection,
   setSalesFactOpening,
   setSalesFactOpeningRejection,
-  type SalesFactIds,
-  type SalesFactInputs,
-  type SalesFactRejection,
-} from "@/domain/sales-fact";
+} from '@/domain/sales-fact';
 
 function commit(
-  updateDocument: (recipe: (current: PrototypeDocument) => PrototypeDocument) => void,
+  updateDocument: (
+    recipe: (current: PrototypeDocument) => PrototypeDocument,
+  ) => void,
   recipe: (current: PrototypeDocument) => PrototypeDocument,
   explain: (current: PrototypeDocument) => SalesFactRejection | null,
 ): SalesFactRejection | null {
@@ -57,7 +59,15 @@ export function useSalesFact() {
       return commit(
         updateDocument,
         (current) =>
-          setSalesFactCell(current, month, occurredOn, productId, inputs, ids, today),
+          setSalesFactCell(
+            current,
+            month,
+            occurredOn,
+            productId,
+            inputs,
+            ids,
+            today,
+          ),
         (current) =>
           setSalesFactCellRejection(
             current,
@@ -103,7 +113,9 @@ export function useSalesFact() {
       );
     },
     remove(id: string) {
-      updateDocument((current) => deleteSalesFact(current, id, new Date().toISOString()));
+      updateDocument((current) =>
+        deleteSalesFact(current, id, new Date().toISOString()),
+      );
     },
     restore(id: string) {
       return commit(

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { type ReactNode, useEffect, useId, useRef } from 'react';
 
-import { IconClose } from "@/features/shell/icons";
+import { IconClose } from '@/features/shell/icons';
 
 export function Dialog({
   title,
@@ -21,8 +21,10 @@ export function Dialog({
   useEffect(() => {
     const previousFocus = document.activeElement;
     const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    panelRef.current?.querySelector<HTMLElement>("input, select, textarea")?.focus();
+    document.body.style.overflow = 'hidden';
+    panelRef.current
+      ?.querySelector<HTMLElement>('input, select, textarea')
+      ?.focus();
 
     return () => {
       document.body.style.overflow = previousOverflow;
@@ -34,13 +36,13 @@ export function Dialog({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         onClose();
       }
     };
 
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
   return (
@@ -57,7 +59,7 @@ export function Dialog({
         aria-modal="true"
         aria-labelledby={titleId}
         className={`relative flex max-h-[100dvh] w-full flex-col bg-sheet sm:max-h-[min(42rem,calc(100dvh-3rem))] sm:border sm:border-line ${
-          wide ? "sm:max-w-4xl" : "sm:max-w-xl"
+          wide ? 'sm:max-w-4xl' : 'sm:max-w-xl'
         }`}
       >
         <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2">

@@ -1,31 +1,31 @@
-import type { Metadata } from "next";
-import { Onest, Unbounded } from "next/font/google";
+import type { Metadata } from 'next';
+import { Onest, Unbounded } from 'next/font/google';
 
-import { DocumentProvider } from "@/data/document-store";
-import { AppShell } from "@/features/shell/app-shell";
+import { DocumentProvider } from '@/data/document-store';
+import { AppShell } from '@/features/shell/app-shell';
 
-import "./globals.css";
+import './globals.css';
 
 const onest = Onest({
-  subsets: ["cyrillic", "latin"],
-  variable: "--font-onest",
+  subsets: ['cyrillic', 'latin'],
+  variable: '--font-onest',
 });
 
 const unbounded = Unbounded({
-  subsets: ["cyrillic", "latin"],
-  variable: "--font-unbounded",
-  weight: "500",
+  subsets: ['cyrillic', 'latin'],
+  variable: '--font-unbounded',
+  weight: '500',
 });
 
 export const metadata: Metadata = {
   title: {
-    default: "Учёт — прототип",
-    template: "%s — учёт",
+    default: 'Учёт — прототип',
+    template: '%s — учёт',
   },
-  description: "Прототип финансового и товарного учёта мясного производства",
+  description: 'Прототип финансового и товарного учёта мясного производства',
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html
       lang="ru"

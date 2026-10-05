@@ -17,4 +17,4 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Тестовый экран «Учёт» и поле `probe` удалены. Не возвращать.
 - Учётные сущности не стирать из документа. Удаление мягкое: поле `deletedAt`. Правило — `.cursor/rules/soft-delete.mdc`.
 - Интерфейс русский, в основном чёрно-белый, с боковым меню. Плотность и меню — в правиле интерфейса.
-- После крупных правок запусти `npm run lint` и `npm run format`.
+- После крупных правок запусти `npm run lint` и `npm run format` (Biome).

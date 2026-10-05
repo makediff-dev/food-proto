@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
 function Glyph({ children }: { children: ReactNode }) {
   return (
@@ -50,13 +50,14 @@ export function IconUndo() {
   );
 }
 
-export function IconArrowLeft() {
-  return (
-    <Glyph>
-      <path d="M12 4 6 10l6 6M6 10h10" />
-    </Glyph>
-  );
-}
+// Не вызывается: каталог сырья, производных и отдельных экранов плана/факта убран.
+// export function IconArrowLeft() {
+//   return (
+//     <Glyph>
+//       <path d="M12 4 6 10l6 6M6 10h10" />
+//     </Glyph>
+//   );
+// }
 
 export function IconChevronLeft() {
   return (
@@ -98,85 +99,38 @@ export function IconMenu() {
   );
 }
 
-export function IconWorkshop() {
-  return (
-    <Glyph>
-      <path d="M3 9 10 4l7 5v7H3V9zM8 16v-4h4v4" />
-    </Glyph>
-  );
-}
-
-export function IconWarehouse() {
-  return (
-    <Glyph>
-      <path d="M3 8h14v8H3V8zM3 8l2.5-4h9L17 8M8 16v-4h4v4" />
-    </Glyph>
-  );
-}
-
-export function IconMaterial() {
-  return (
-    <Glyph>
-      <path d="M4 8h12v8H4V8zM4 8l6-4 6 4" />
-    </Glyph>
-  );
-}
-
-export function IconDerivative() {
-  return (
-    <Glyph>
-      <path d="M3 8h9v9H3V8zM8 4h9v9" />
-    </Glyph>
-  );
-}
-
-export function IconProduct() {
-  return (
-    <Glyph>
-      <path d="M4 7h12v9H4V7zM7 7V4h6v3" />
-    </Glyph>
-  );
-}
-
-export function IconDelivery() {
-  return (
-    <Glyph>
-      <path d="M4 9h12v7H4V9zM10 3v5M8 6l2 2 2-2" />
-    </Glyph>
-  );
-}
-
-export function IconWriteOff() {
-  return (
-    <Glyph>
-      <path d="M4 4h12v7H4V4zM10 12v5M8 15l2 2 2-2" />
-    </Glyph>
-  );
-}
-
-export function IconFlow() {
-  return (
-    <Glyph>
-      <path d="M4 6h8M10 4l2 2-2 2M16 14H8M10 12l-2 2 2 2" />
-    </Glyph>
-  );
-}
-
-export function IconBalances() {
-  return (
-    <Glyph>
-      <path d="M4 5h12M4 10h12M4 15h12" />
-    </Glyph>
-  );
-}
-
-export function IconCheck() {
-  return (
-    <Glyph>
-      <path d="M4 10l4 4 8-8" />
-    </Glyph>
-  );
-}
+// Не вызывается: каталог сырья, производных и отдельных экранов плана/факта убран.
+// export function IconMaterial() {
+//   return (
+//     <Glyph>
+//       <path d="M4 8h12v8H4V8zM4 8l6-4 6 4" />
+//     </Glyph>
+//   );
+// }
+//
+// export function IconDerivative() {
+//   return (
+//     <Glyph>
+//       <path d="M3 8h9v9H3V8zM8 4h9v9" />
+//     </Glyph>
+//   );
+// }
+//
+// export function IconProduct() {
+//   return (
+//     <Glyph>
+//       <path d="M4 7h12v9H4V7zM7 7V4h6v3" />
+//     </Glyph>
+//   );
+// }
+//
+// export function IconCheck() {
+//   return (
+//     <Glyph>
+//       <path d="M4 10l4 4 8-8" />
+//     </Glyph>
+//   );
+// }
 
 export function IconPlan() {
   return (
@@ -195,38 +149,39 @@ export function IconEye() {
   );
 }
 
-export function IconEyeOff() {
-  return (
-    <Glyph>
-      <path d="M2 10c2.4-3.4 4.8-4.6 8-4.6s5.6 1.2 8 4.6c-2.4 3.4-4.8 4.6-8 4.6s-5.6-1.2-8-4.6z" />
-      <path d="M4 16 16 4" />
-    </Glyph>
-  );
-}
-
-export function IconOrder() {
-  return (
-    <Glyph>
-      <path d="M5 3h8l3 3v11H5V3zM13 3v3h3M7 10h6M7 13h4" />
-    </Glyph>
-  );
-}
-
-export function IconFact() {
-  return (
-    <Glyph>
-      <path d="M6 3h8v14H6V3zM8 7h4M8 10h4M8 13h3" />
-    </Glyph>
-  );
-}
-
-export function IconLamp() {
-  return (
-    <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4 shrink-0">
-      <circle cx="10" cy="10" r="4" fill="currentColor" />
-    </svg>
-  );
-}
+// Не вызывается: каталог сырья, производных и отдельных экранов плана/факта убран.
+// export function IconEyeOff() {
+//   return (
+//     <Glyph>
+//       <path d="M2 10c2.4-3.4 4.8-4.6 8-4.6s5.6 1.2 8 4.6c-2.4 3.4-4.8 4.6-8 4.6s-5.6-1.2-8-4.6z" />
+//       <path d="M4 16 16 4" />
+//     </Glyph>
+//   );
+// }
+//
+// export function IconOrder() {
+//   return (
+//     <Glyph>
+//       <path d="M5 3h8l3 3v11H5V3zM13 3v3h3M7 10h6M7 13h4" />
+//     </Glyph>
+//   );
+// }
+//
+// export function IconFact() {
+//   return (
+//     <Glyph>
+//       <path d="M6 3h8v14H6V3zM8 7h4M8 10h4M8 13h3" />
+//     </Glyph>
+//   );
+// }
+//
+// export function IconLamp() {
+//   return (
+//     <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4 shrink-0">
+//       <circle cx="10" cy="10" r="4" fill="currentColor" />
+//     </svg>
+//   );
+// }
 
 export function IconFullscreen() {
   return (
@@ -249,7 +204,7 @@ export function IconRuble({ className }: { className?: string }) {
     <svg
       viewBox="0 0 20 20"
       aria-hidden="true"
-      className={className ?? "size-4 shrink-0"}
+      className={className ?? 'size-4 shrink-0'}
       fill="none"
       stroke="currentColor"
       strokeWidth="1.5"

@@ -1,9 +1,10 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useState } from "react";
-
+import { useRouter } from 'next/navigation';
+import { useEffect, useId, useMemo, useState } from 'react';
+import { normalizeName } from '@/domain/directory';
+import { MAX_LABEL_LENGTH } from '@/domain/document';
+import { deletedProducts } from '@/domain/products';
 import {
   activeFinalProducts,
   daysInMonth,
@@ -12,38 +13,49 @@ import {
   planPhase,
   shiftMonth,
   workingSalesPlan,
-} from "@/domain/sales-plan";
-import { lastHorizonMonth, monthSummary, summaryMonthOpen } from "@/domain/summary";
+} from '@/domain/sales-plan';
+import {
+  lastHorizonMonth,
+  monthSummary,
+  summaryMonthOpen,
+} from '@/domain/summary';
 import {
   FIELD_ERROR,
   fieldClassName,
   primaryButtonClassName,
-} from "@/features/materials/fields";
-import { materialListHref } from "@/features/materials/paths";
-import { SummaryHeadlineTable } from "@/features/sales/summary-headline";
-import { summaryHref } from "@/features/sales/paths";
-import { SummaryTable } from "@/features/sales/summary-table";
+} from '@/features/sales/fields';
+import { summaryHref } from '@/features/sales/paths';
+import { SummaryHeadlineTable } from '@/features/sales/summary-headline';
+import { SummaryTable } from '@/features/sales/summary-table';
 import {
   daysPhrase,
   OPERATING_EXPENSE_ERROR,
   SALES_PLAN_ERROR,
-} from "@/features/sales/text";
-import { useSales } from "@/features/sales/use-sales";
+} from '@/features/sales/text';
+import { useSales } from '@/features/sales/use-sales';
+import { Dialog } from '@/features/shell/dialog';
 import {
   IconChevronLeft,
   IconChevronRight,
   IconFullscreen,
   IconFullscreenExit,
   IconPlus,
-} from "@/features/shell/icons";
-import { PageFrame } from "@/features/shell/page-frame";
+  IconUndo,
+} from '@/features/shell/icons';
+import { PageFrame } from '@/features/shell/page-frame';
 
 export function SummaryScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = resolveMonth(month, today);
 
-  return <Workspace month={selectedMonth} currentMonth={currentMonth} today={today} />;
+  return (
+    <Workspace
+      month={selectedMonth}
+      currentMonth={currentMonth}
+      today={today}
+    />
+  );
 }
 
 function Workspace({
@@ -59,18 +71,24 @@ function Workspace({
   const router = useRouter();
   const monthFieldId = useId();
   const [fullscreen, setFullscreen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
   const storedPlan = workingSalesPlan(sales.document, month);
   const summary = useMemo(
     () => monthSummary(sales.document, month),
     [sales.document, month],
   );
   const products = activeFinalProducts(sales.document);
+  const removed = deletedProducts(sales.document);
   const phase = planPhase(month, today);
-  const editable = sales.hydrated && phase !== "past" && products.length > 0;
+  const editable = sales.hydrated && phase !== 'past' && products.length > 0;
   const vatEditable = sales.hydrated;
   const missing =
-    editable && storedPlan ? missingPlanProducts(sales.document, storedPlan) : [];
+    editable && storedPlan
+      ? missingPlanProducts(sales.document, storedPlan)
+      : [];
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
   const horizonEnd = lastHorizonMonth(today);
@@ -83,22 +101,24 @@ function Workspace({
     }
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         setFullscreen(false);
       }
     }
 
     const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKeyDown);
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener('keydown', onKeyDown);
     };
   }, [tableExpanded]);
 
   function open(nextMonthKey: string) {
-    router.push(summaryHref({ month: nextMonthKey, currentMonth }), { scroll: false });
+    router.push(summaryHref({ month: nextMonthKey, currentMonth }), {
+      scroll: false,
+    });
   }
 
   function addMissing() {
@@ -172,6 +192,27 @@ function Workspace({
         }
       >
         <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={!sales.hydrated}
+              onClick={() => setAddOpen(true)}
+              className={primaryButtonClassName}
+            >
+              <IconPlus />
+              Добавить товар
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowDeleted((current) => !current)}
+              className="inline-flex h-11 items-center justify-center gap-2 border border-line bg-sheet px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              <IconUndo />
+              {showDeleted ? 'Скрыть удалённые' : 'Удалённые'}
+              {removed.length === 0 ? '' : ` ${removed.length}`}
+            </button>
+          </div>
+
           {missing.length > 0 ? (
             <div className="flex flex-col gap-3 border border-line bg-sheet p-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm leading-6 text-ink">
@@ -186,27 +227,37 @@ function Workspace({
                   <IconPlus />
                   Добавить новые товары
                 </button>
-                {addError ? <p className="text-sm text-ink">{addError}</p> : null}
+                {addError ? (
+                  <p className="text-sm text-ink">{addError}</p>
+                ) : null}
               </div>
             </div>
           ) : null}
 
+          {showDeleted ? (
+            <DeletedProducts
+              items={removed}
+              error={restoreError}
+              hydrated={sales.hydrated}
+              onRestore={(id) => {
+                const rejection = sales.restoreProduct(id);
+                setRestoreError(rejection ? FIELD_ERROR[rejection] : null);
+              }}
+            />
+          ) : null}
+
           {products.length === 0 && summary.rows.length === 0 ? (
             <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-              Сначала добавьте конечный товар.{" "}
-              <Link
-                href={materialListHref("products", false)}
-                className="text-ink underline outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-              >
-                К товарам
-              </Link>
+              Добавьте товар на этой сводке. План и факт строятся по товарам.
             </p>
           ) : hasTable ? (
-            <div
-              className={tableExpanded ? "fixed inset-0 z-50 bg-paper" : undefined}
-              role={tableExpanded ? "dialog" : undefined}
-              aria-label={tableExpanded ? "Таблица на весь экран" : undefined}
-              aria-modal={tableExpanded ? true : undefined}
+            <section
+              className={
+                tableExpanded ? 'fixed inset-0 z-50 bg-paper' : undefined
+              }
+              aria-label={
+                tableExpanded ? 'Таблица на весь экран' : 'Таблица сводки'
+              }
             >
               <SummaryTable
                 rows={summary.rows}
@@ -216,7 +267,11 @@ function Workspace({
                 editable={editable}
                 vatEditable={vatEditable}
                 expanded={tableExpanded}
-                onPlanLineAction={(lineId, priceWithVatKopecks, volumePieces) => {
+                onPlanLineAction={(
+                  lineId,
+                  priceWithVatKopecks,
+                  volumePieces,
+                ) => {
                   return sales.updateMonthLine(
                     month,
                     lineId,
@@ -225,18 +280,54 @@ function Workspace({
                   );
                 }}
                 onProductVatAction={(productId, vatPercent) => {
-                  const rejection = sales.updateProductVat(productId, vatPercent);
+                  const rejection = sales.updateProductVat(
+                    productId,
+                    vatPercent,
+                  );
                   return rejection ? FIELD_ERROR[rejection] : null;
                 }}
+                onProductCostAction={(productId, unitCostWithVatKopecks) => {
+                  const rejection = sales.updateProductCost(
+                    productId,
+                    unitCostWithVatKopecks,
+                  );
+                  return rejection ? FIELD_ERROR[rejection] : null;
+                }}
+                onRenameProduct={(productId, name) => {
+                  const rejection = sales.renameProduct(productId, name);
+                  return rejection ? FIELD_ERROR[rejection] : null;
+                }}
+                onDeleteProduct={(productId, name) => {
+                  const confirmed = window.confirm(
+                    `Удалить товар «${name}»? Он пропадёт из рабочего списка. Вернуть можно среди удалённых.`,
+                  );
+                  if (confirmed) {
+                    sales.deleteProduct(productId);
+                  }
+                }}
               />
-            </div>
+            </section>
           ) : (
             <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-              Сначала добавьте конечный товар. Сводка строится по товарам.
+              Добавьте товар на этой сводке. Сводка строится по товарам.
             </p>
           )}
         </div>
       </PageFrame>
+
+      {addOpen ? (
+        <AddProductDialog
+          onClose={() => setAddOpen(false)}
+          onSubmit={(name) => {
+            const rejection = sales.addProduct(name);
+            if (rejection) {
+              return FIELD_ERROR[rejection];
+            }
+            setAddOpen(false);
+            return null;
+          }}
+        />
+      ) : null}
 
       {hasTable ? (
         <FullscreenToggle
@@ -248,13 +339,129 @@ function Workspace({
   );
 }
 
+function AddProductDialog({
+  onClose,
+  onSubmit,
+}: {
+  onClose: () => void;
+  onSubmit: (name: string) => string | null;
+}) {
+  const nameId = useId();
+  const errorId = useId();
+  const [name, setName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  function submit() {
+    if (normalizeName(name).length === 0) {
+      setError(FIELD_ERROR.empty);
+      return;
+    }
+    if (normalizeName(name).length > MAX_LABEL_LENGTH) {
+      setError(FIELD_ERROR['too-long']);
+      return;
+    }
+
+    const rejection = onSubmit(name);
+    if (rejection) {
+      setError(rejection);
+    }
+  }
+
+  return (
+    <Dialog title="Новый товар" onClose={onClose}>
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+      >
+        <div>
+          <label htmlFor={nameId} className="text-sm text-muted">
+            Название
+          </label>
+          <input
+            id={nameId}
+            value={name}
+            autoComplete="off"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? errorId : undefined}
+            onChange={(event) => {
+              setName(event.target.value);
+              setError(null);
+            }}
+            className={`mt-2 ${fieldClassName}`}
+          />
+          {error ? (
+            <p id={errorId} className="mt-2 text-sm text-ink">
+              {error}
+            </p>
+          ) : (
+            <p className="mt-2 text-sm text-muted">
+              НДС 20 % и себестоимость 0 ₽. Их правят в строке сводки.
+            </p>
+          )}
+        </div>
+        <button type="submit" className={primaryButtonClassName}>
+          <IconPlus />
+          Добавить товар
+        </button>
+      </form>
+    </Dialog>
+  );
+}
+
+function DeletedProducts({
+  items,
+  error,
+  hydrated,
+  onRestore,
+}: {
+  items: { id: string; name: string }[];
+  error: string | null;
+  hydrated: boolean;
+  onRestore: (id: string) => void;
+}) {
+  return (
+    <div className="border border-line bg-sheet p-4">
+      <h2 className="text-sm font-semibold text-ink">Удалённые товары</h2>
+      {error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
+      {items.length === 0 ? (
+        <p className="mt-2 text-sm leading-6 text-muted">
+          Удалённых товаров нет.
+        </p>
+      ) : (
+        <ul className="mt-3 flex flex-col gap-2">
+          {items.map((item) => (
+            <li
+              key={item.id}
+              className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <p className="text-sm text-ink">{item.name}</p>
+              <button
+                type="button"
+                disabled={!hydrated}
+                onClick={() => onRestore(item.id)}
+                className="inline-flex h-11 items-center justify-center gap-2 border border-line bg-paper px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
+              >
+                <IconUndo />
+                Вернуть
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function lede(phase: ReturnType<typeof planPhase>, days: number): string {
   const length = `В месяце ${daysPhrase(days)}.`;
-  if (phase === "past") {
+  if (phase === 'past') {
     return `Месяц прошёл, план только для просмотра. Факт считается из дней раздела «Факт. продажи и производство». ${length}`;
   }
 
-  return `План, факт и отклонение выбранного месяца. Факт считается из дней раздела «Факт. продажи и производство». ${length}`;
+  return `План, факт и отклонение выбранного месяца. Товары, НДС и себестоимость правят здесь. Факт считается из дней раздела «Факт. продажи и производство». ${length}`;
 }
 
 function resolveMonth(month: string, today: Date): string {
@@ -272,7 +479,7 @@ function MonthStep({
   onClick,
 }: {
   label: string;
-  direction: "previous" | "next";
+  direction: 'previous' | 'next';
   disabled: boolean;
   onClick: () => void;
 }) {
@@ -284,7 +491,7 @@ function MonthStep({
       onClick={onClick}
       className="inline-flex size-11 items-center justify-center border border-line bg-sheet text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-40"
     >
-      {direction === "previous" ? <IconChevronLeft /> : <IconChevronRight />}
+      {direction === 'previous' ? <IconChevronLeft /> : <IconChevronRight />}
     </button>
   );
 }
@@ -299,9 +506,9 @@ function FullscreenToggle({
   return (
     <button
       type="button"
-      aria-label={active ? "Обычный режим" : "На весь экран"}
+      aria-label={active ? 'Обычный режим' : 'На весь экран'}
       aria-pressed={active}
-      title={active ? "Обычный режим" : "На весь экран"}
+      title={active ? 'Обычный режим' : 'На весь экран'}
       onClick={onToggle}
       className="fixed right-5 bottom-5 z-60 inline-flex size-12 items-center justify-center rounded-full border border-line bg-sheet text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >

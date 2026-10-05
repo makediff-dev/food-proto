@@ -1,6 +1,6 @@
-import { MAX_PRICE_PER_KILOGRAM_KOPECKS, MAX_WEIGHT_GRAMS } from "@/domain/units";
+import { MAX_PRICE_PER_KILOGRAM_KOPECKS } from '@/domain/units';
 
-export const SCHEMA_VERSION = 20 as const;
+export const SCHEMA_VERSION = 24 as const;
 
 export const MAX_LABEL_LENGTH = 200;
 
@@ -22,10 +22,6 @@ export const MIN_VAT_PERCENT = 0;
 
 export const MAX_VAT_PERCENT = 100;
 
-export const MIN_YIELD_PERCENT = 1;
-
-export const MAX_YIELD_PERCENT = 100;
-
 const DELETION_MARK = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 /**
@@ -38,129 +34,12 @@ export interface DeletableRecord {
   deletedAt: string | null;
 }
 
-/** Цех производит производные и товары. У товара и у производной один цех. */
-export type Workshop = DeletableRecord;
-
-/** Склад хранит сырьё, производные и товары. У каждой такой позиции один склад. */
-export type Warehouse = DeletableRecord;
-
-/** Килограммы или штуки. Штуки в граммы не переводятся. */
-export type MaterialUnit = "kg" | "piece";
-
-/** Сырьё. Цена без НДС в документ не пишется: `DSM Meat!J8`. */
-export interface RawMaterial extends DeletableRecord {
-  /** Бренд, производитель. Справочно, на себестоимость не влияет. `DSM Meat!D`. */
-  brand: string;
-  warehouseId: string;
-  unit: MaterialUnit;
-  /** Плановая цена закупки с НДС, копейки за 1 кг или за 1 шт. `DSM Meat!H`. */
-  priceWithVatKopecks: number;
-  /** НДС, целые проценты. `DSM Meat!F`. */
+/** Конечный товар. Себестоимость единицы с НДС вводится на сводке. */
+export interface Product extends DeletableRecord {
+  /** НДС продажи, целые проценты. `Svod!N`. */
   vatPercent: number;
-  /**
-   * Минимальный нормативный остаток.
-   * Килограммы — целые граммы, штуки — целые штуки. Штуки в граммы не переводить.
-   * `DSM Meat!DU`, `DSM Bakery!DU`, `DSM Vegetables!DU`, у упаковки `DSM Packaging!DL`.
-   */
-  minNormStock: number;
-  /** Максимальный нормативный остаток. `DV` на тех же листах, у упаковки `DM`. */
-  maxNormStock: number;
-}
-
-/**
- * Производная или конечный товар.
- * Конечный товар в состав других рецептурных карт не входит.
- */
-export interface Derivative extends DeletableRecord {
-  isFinalProduct: boolean;
-  warehouseId: string;
-  workshopId: string;
-  /**
-   * НДС продажи, целые проценты. Только у конечного товара: `Svod!N`.
-   * У производной `null`: выручку планируют по товару.
-   */
-  vatPercent: number | null;
-  /**
-   * Вес одной штуки, целые граммы. Только у производной.
-   * У конечного товара `null`: штуки товара — база закладки карты, не граммы.
-   */
-  pieceWeightGrams: number | null;
-}
-
-export type RecipeComponentKind = "material" | "derivative";
-
-/** Строка состава. Это часть карты, отдельной учётной сущностью не считается. */
-export interface RecipeLine {
-  id: string;
-  kind: RecipeComponentKind;
-  refId: string;
-  /**
-   * Количество на партию карты (`batchSize`).
-   * Килограммы хранятся граммами. Штучное сырьё у товара — целыми штуками.
-   */
-  quantityGrams: number;
-}
-
-/**
- * Рецептурная карта производной или конечного товара.
- * Выход есть только у производной: `Rec&Calc Meat!D`. У конечного товара `null`.
- */
-export interface RecipeCard {
-  id: string;
-  derivativeId: string;
-  /**
-   * База закладки: у производной — граммы готового выхода, у товара — штуки.
-   * По умолчанию 100 кг или 1000 шт.
-   */
-  batchSize: number;
-  yieldPercent: number | null;
-  lines: RecipeLine[];
-  deletedAt: string | null;
-}
-
-/**
- * Строка поставки. Часть документа, не отдельная учётная сущность.
- * Ставка НДС копируется с сырья в момент записи и дальше не едет за справочником.
- */
-export interface DeliveryLine {
-  id: string;
-  materialId: string;
-  /** Килограммы — целые граммы, штуки — целые штуки. */
-  quantity: number;
-  /** Реальная себестоимость с НДС, копейки за 1 кг или за 1 шт. */
-  priceWithVatKopecks: number;
-  /** НДС этой поставки, целые проценты. */
-  vatPercent: number;
-}
-
-/** Поставка сырья на один склад. Итог в документ не пишется. */
-export interface Delivery {
-  id: string;
-  warehouseId: string;
-  /** Календарный день, `ГГГГ-ММ-ДД`. */
-  occurredOn: string;
-  note: string;
-  lines: DeliveryLine[];
-  deletedAt: string | null;
-}
-
-/** Строка списания. Вид `derivative` покрывает и производную, и конечный товар. */
-export interface WriteOffLine {
-  id: string;
-  kind: RecipeComponentKind;
-  refId: string;
-  /** Килограммы — целые граммы, штуки — целые штуки. */
-  quantity: number;
-}
-
-/** Списание с одного склада. Потенциальный убыток в документ не пишется. */
-export interface WriteOff {
-  id: string;
-  warehouseId: string;
-  occurredOn: string;
-  note: string;
-  lines: WriteOffLine[];
-  deletedAt: string | null;
+  /** Ручная себестоимость 1 шт с НДС, копейки. */
+  unitCostWithVatKopecks: number;
 }
 
 /** Строка плана продаж. Цена без НДС, выручка и Т-проток в документ не пишутся. */
@@ -180,38 +59,6 @@ export interface SalesPlan {
   /** `ГГГГ-ММ`. */
   month: string;
   lines: SalesPlanLine[];
-  deletedAt: string | null;
-}
-
-/**
- * Фактический расход ингредиента. Часть выпуска, не отдельная учётная сущность.
- * Количество вводится вручную и не следует за нормой рецепта.
- */
-export interface ProductionFactUse {
-  id: string;
-  kind: RecipeComponentKind;
-  refId: string;
-  /** Килограммы — целые граммы, штуки — целые штуки. Ноль допустим. */
-  quantity: number;
-}
-
-/** Фактический выпуск одной позиции за день. Часть записи дня. */
-export interface ProductionFactOutput {
-  id: string;
-  /** Конечный товар или производная. Одна позиция в дне один раз. */
-  refId: string;
-  /** Товар — штуки, производная — граммы. Больше нуля. */
-  quantity: number;
-  uses: ProductionFactUse[];
-}
-
-/** Факт производства за календарный день. На одну дату — одна рабочая запись. */
-export interface ProductionFact {
-  id: string;
-  /** Календарный день, `ГГГГ-ММ-ДД`. */
-  occurredOn: string;
-  note: string;
-  outputs: ProductionFactOutput[];
   deletedAt: string | null;
 }
 
@@ -239,7 +86,7 @@ export interface SalesFactCell {
   priceWithVatKopecks: number;
   /** Объём продаж, шт. */
   salesPieces: number;
-  /** Объём производства, шт. Не читает факт производства. */
+  /** Объём производства, шт. Ввод сетки факта продаж. */
   outputPieces: number;
   /** Перемещение на РЦ, шт. */
   transferPieces: number;
@@ -293,15 +140,8 @@ export interface MonthOperatingExpense {
  */
 export interface PrototypeDocument {
   schemaVersion: typeof SCHEMA_VERSION;
-  workshops: Workshop[];
-  warehouses: Warehouse[];
-  materials: RawMaterial[];
-  derivatives: Derivative[];
-  recipes: RecipeCard[];
-  deliveries: Delivery[];
-  writeOffs: WriteOff[];
+  products: Product[];
   salesPlans: SalesPlan[];
-  productionFacts: ProductionFact[];
   salesFacts: SalesFact[];
   operatingExpenses: MonthOperatingExpense[];
 }
@@ -314,7 +154,7 @@ export function isDeletionMark(value: string): boolean {
 const OCCURRED_ON = /^(\d{4})-(\d{2})-(\d{2})$/;
 const MONTH_KEY = /^(\d{4})-(\d{2})$/;
 
-/** Календарный день поставки или списания. Время суток не хранится. */
+/** Календарный день, `ГГГГ-ММ-ДД`. Время суток не хранится. */
 export function isOccurredOn(value: string): boolean {
   const match = OCCURRED_ON.exec(value);
   if (!match) {
@@ -345,67 +185,12 @@ export function isMonthKey(value: string): boolean {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function parsePlace(value: unknown): DeletableRecord | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const { id, name, deletedAt } = value;
-
-  if (
-    typeof id !== "string" ||
-    id.length === 0 ||
-    id.length > MAX_ID_LENGTH ||
-    id !== id.trim()
-  ) {
-    return null;
-  }
-
-  if (
-    typeof name !== "string" ||
-    name.length > MAX_LABEL_LENGTH ||
-    name.trim().length === 0
-  ) {
-    return null;
-  }
-
-  if (
-    deletedAt !== null &&
-    (typeof deletedAt !== "string" || !isDeletionMark(deletedAt))
-  ) {
-    return null;
-  }
-
-  return { id, name, deletedAt };
-}
-
-function parsePlaceList(value: unknown): DeletableRecord[] | null {
-  if (!Array.isArray(value)) {
-    return null;
-  }
-
-  const seen = new Set<string>();
-  const items: DeletableRecord[] = [];
-
-  for (const entry of value) {
-    const place = parsePlace(entry);
-    if (!place || seen.has(place.id)) {
-      return null;
-    }
-
-    seen.add(place.id);
-    items.push(place);
-  }
-
-  return items;
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function parseId(value: unknown): string | null {
   if (
-    typeof value !== "string" ||
+    typeof value !== 'string' ||
     value.length === 0 ||
     value.length > MAX_ID_LENGTH ||
     value !== value.trim()
@@ -421,7 +206,7 @@ function parseDeletedAt(value: unknown): string | null | undefined {
     return null;
   }
 
-  if (typeof value === "string" && isDeletionMark(value)) {
+  if (typeof value === 'string' && isDeletionMark(value)) {
     return value;
   }
 
@@ -430,7 +215,7 @@ function parseDeletedAt(value: unknown): string | null | undefined {
 
 function parseInteger(value: unknown, min: number, max: number): number | null {
   if (
-    typeof value !== "number" ||
+    typeof value !== 'number' ||
     !Number.isInteger(value) ||
     value < min ||
     value > max
@@ -449,7 +234,7 @@ function uniqueActiveNames(items: readonly DeletableRecord[]): boolean {
       continue;
     }
 
-    const key = item.name.trim().toLocaleLowerCase("ru-RU");
+    const key = item.name.trim().toLocaleLowerCase('ru-RU');
     if (seen.has(key)) {
       return false;
     }
@@ -460,107 +245,35 @@ function uniqueActiveNames(items: readonly DeletableRecord[]): boolean {
   return true;
 }
 
-function parseMaterial(
-  value: unknown,
-  warehouseIds: ReadonlySet<string>,
-): RawMaterial | null {
+function parseProduct(value: unknown): Product | null {
   if (!isRecord(value)) {
     return null;
   }
 
   const id = parseId(value.id);
   const deletedAt = parseDeletedAt(value.deletedAt);
-  const warehouseId = parseId(value.warehouseId);
-  const priceWithVatKopecks = parseInteger(
-    value.priceWithVatKopecks,
+  const vatPercent = parseInteger(
+    value.vatPercent,
+    MIN_VAT_PERCENT,
+    MAX_VAT_PERCENT,
+  );
+  const unitCostWithVatKopecks = parseInteger(
+    value.unitCostWithVatKopecks,
     0,
     MAX_PRICE_PER_KILOGRAM_KOPECKS,
   );
-  const vatPercent = parseInteger(value.vatPercent, MIN_VAT_PERCENT, MAX_VAT_PERCENT);
 
   if (
     !id ||
     deletedAt === undefined ||
-    typeof value.name !== "string" ||
+    typeof value.name !== 'string' ||
     value.name.length > MAX_LABEL_LENGTH ||
     value.name.trim().length === 0 ||
-    typeof value.brand !== "string" ||
-    value.brand.length > MAX_LABEL_LENGTH ||
-    !warehouseId ||
-    !warehouseIds.has(warehouseId) ||
-    (value.unit !== "kg" && value.unit !== "piece") ||
-    priceWithVatKopecks === null ||
-    vatPercent === null
-  ) {
-    return null;
-  }
-
-  const minNormStock = parseInteger(value.minNormStock, 0, MAX_WEIGHT_GRAMS);
-  const maxNormStock = parseInteger(value.maxNormStock, 0, MAX_WEIGHT_GRAMS);
-  if (minNormStock === null || maxNormStock === null || minNormStock > maxNormStock) {
-    return null;
-  }
-
-  return {
-    id,
-    name: value.name,
-    brand: value.brand,
-    warehouseId,
-    unit: value.unit,
-    priceWithVatKopecks,
-    vatPercent,
-    minNormStock,
-    maxNormStock,
-    deletedAt,
-  };
-}
-
-function parseDerivative(
-  value: unknown,
-  warehouseIds: ReadonlySet<string>,
-  workshopIds: ReadonlySet<string>,
-): Derivative | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const id = parseId(value.id);
-  const deletedAt = parseDeletedAt(value.deletedAt);
-  const warehouseId = parseId(value.warehouseId);
-  const workshopId = parseId(value.workshopId);
-
-  if (
-    !id ||
-    deletedAt === undefined ||
-    typeof value.name !== "string" ||
-    value.name.length > MAX_LABEL_LENGTH ||
-    value.name.trim().length === 0 ||
-    typeof value.isFinalProduct !== "boolean" ||
-    !warehouseId ||
-    !warehouseIds.has(warehouseId) ||
-    !workshopId ||
-    !workshopIds.has(workshopId)
-  ) {
-    return null;
-  }
-
-  const vatPercent = value.isFinalProduct
-    ? parseInteger(value.vatPercent, MIN_VAT_PERCENT, MAX_VAT_PERCENT)
-    : value.vatPercent === null
-      ? null
-      : undefined;
-  if (vatPercent === undefined || (value.isFinalProduct && vatPercent === null)) {
-    return null;
-  }
-
-  const pieceWeightGrams = value.isFinalProduct
-    ? value.pieceWeightGrams === null
-      ? null
-      : undefined
-    : parseInteger(value.pieceWeightGrams, 1, MAX_WEIGHT_GRAMS);
-  if (
-    pieceWeightGrams === undefined ||
-    (!value.isFinalProduct && pieceWeightGrams === null)
+    vatPercent === null ||
+    unitCostWithVatKopecks === null ||
+    'isFinalProduct' in value ||
+    'pieceWeightGrams' in value ||
+    'workshopId' in value
   ) {
     return null;
   }
@@ -568,180 +281,10 @@ function parseDerivative(
   return {
     id,
     name: value.name,
-    isFinalProduct: value.isFinalProduct,
-    warehouseId,
-    workshopId,
     vatPercent,
-    pieceWeightGrams,
+    unitCostWithVatKopecks,
     deletedAt,
   };
-}
-
-function parseRecipeLine(value: unknown): RecipeLine | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const id = parseId(value.id);
-  const refId = parseId(value.refId);
-  const quantityGrams = parseInteger(value.quantityGrams, 1, MAX_WEIGHT_GRAMS);
-
-  if (
-    !id ||
-    !refId ||
-    quantityGrams === null ||
-    (value.kind !== "material" && value.kind !== "derivative")
-  ) {
-    return null;
-  }
-
-  return {
-    id,
-    kind: value.kind,
-    refId,
-    quantityGrams,
-  };
-}
-
-function parseRecipe(
-  value: unknown,
-  derivativeIds: ReadonlySet<string>,
-): RecipeCard | null {
-  if (!isRecord(value) || !Array.isArray(value.lines)) {
-    return null;
-  }
-
-  const id = parseId(value.id);
-  const derivativeId = parseId(value.derivativeId);
-  const deletedAt = parseDeletedAt(value.deletedAt);
-
-  if (
-    !id ||
-    !derivativeId ||
-    !derivativeIds.has(derivativeId) ||
-    deletedAt === undefined
-  ) {
-    return null;
-  }
-
-  let yieldPercent: number | null;
-  if (value.yieldPercent === null) {
-    yieldPercent = null;
-  } else {
-    const parsed = parseInteger(value.yieldPercent, MIN_YIELD_PERCENT, MAX_YIELD_PERCENT);
-    if (parsed === null) {
-      return null;
-    }
-    yieldPercent = parsed;
-  }
-
-  // У производной — граммы, у товара — штуки; потолок один.
-  const batchSize = parseInteger(value.batchSize, 1, MAX_WEIGHT_GRAMS);
-  if (batchSize === null) {
-    return null;
-  }
-
-  const seenLines = new Set<string>();
-  const seenRefs = new Set<string>();
-  const lines: RecipeLine[] = [];
-
-  for (const entry of value.lines) {
-    const line = parseRecipeLine(entry);
-    if (!line || seenLines.has(line.id) || seenRefs.has(`${line.kind}:${line.refId}`)) {
-      return null;
-    }
-
-    seenLines.add(line.id);
-    seenRefs.add(`${line.kind}:${line.refId}`);
-    lines.push(line);
-  }
-
-  return { id, derivativeId, batchSize, yieldPercent, lines, deletedAt };
-}
-
-function recipesMatchDerivatives(
-  recipes: readonly RecipeCard[],
-  derivatives: readonly Derivative[],
-  materialIds: ReadonlySet<string>,
-): boolean {
-  const derivativeById = new Map(derivatives.map((item) => [item.id, item]));
-  const activeByDerivative = new Set<string>();
-
-  for (const recipe of recipes) {
-    const derivative = derivativeById.get(recipe.derivativeId);
-    if (!derivative) {
-      return false;
-    }
-
-    if (derivative.isFinalProduct !== (recipe.yieldPercent === null)) {
-      return false;
-    }
-
-    if (recipe.deletedAt === null) {
-      if (activeByDerivative.has(recipe.derivativeId)) {
-        return false;
-      }
-      activeByDerivative.add(recipe.derivativeId);
-    }
-
-    for (const line of recipe.lines) {
-      if (line.kind === "material") {
-        if (!materialIds.has(line.refId)) {
-          return false;
-        }
-        continue;
-      }
-
-      const component = derivativeById.get(line.refId);
-      if (!component || component.isFinalProduct) {
-        return false;
-      }
-    }
-  }
-
-  return !recipeGraphHasCycle(recipes);
-}
-
-function recipeGraphHasCycle(recipes: readonly RecipeCard[]): boolean {
-  const active = new Map<string, RecipeCard>();
-  for (const recipe of recipes) {
-    if (recipe.deletedAt === null) {
-      active.set(recipe.derivativeId, recipe);
-    }
-  }
-
-  const visiting = new Set<string>();
-  const visited = new Set<string>();
-
-  function walk(derivativeId: string): boolean {
-    if (visited.has(derivativeId)) {
-      return false;
-    }
-    if (visiting.has(derivativeId)) {
-      return true;
-    }
-
-    visiting.add(derivativeId);
-    const recipe = active.get(derivativeId);
-    if (recipe) {
-      for (const line of recipe.lines) {
-        if (line.kind === "derivative" && walk(line.refId)) {
-          return true;
-        }
-      }
-    }
-    visiting.delete(derivativeId);
-    visited.add(derivativeId);
-    return false;
-  }
-
-  for (const derivativeId of active.keys()) {
-    if (walk(derivativeId)) {
-      return true;
-    }
-  }
-
-  return false;
 }
 
 function parseNamedList<T extends DeletableRecord>(
@@ -772,174 +315,6 @@ function parseNamedList<T extends DeletableRecord>(
   return items;
 }
 
-function parseDeliveryLine(
-  value: unknown,
-  materialIds: ReadonlySet<string>,
-): DeliveryLine | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const id = parseId(value.id);
-  const materialId = parseId(value.materialId);
-  const quantity = parseInteger(value.quantity, 1, MAX_WEIGHT_GRAMS);
-  const priceWithVatKopecks = parseInteger(
-    value.priceWithVatKopecks,
-    0,
-    MAX_PRICE_PER_KILOGRAM_KOPECKS,
-  );
-  const vatPercent = parseInteger(value.vatPercent, MIN_VAT_PERCENT, MAX_VAT_PERCENT);
-
-  if (
-    !id ||
-    !materialId ||
-    !materialIds.has(materialId) ||
-    quantity === null ||
-    priceWithVatKopecks === null ||
-    vatPercent === null
-  ) {
-    return null;
-  }
-
-  return { id, materialId, quantity, priceWithVatKopecks, vatPercent };
-}
-
-function parseDelivery(
-  value: unknown,
-  warehouseIds: ReadonlySet<string>,
-  materialIds: ReadonlySet<string>,
-): Delivery | null {
-  if (!isRecord(value) || !Array.isArray(value.lines)) {
-    return null;
-  }
-
-  const id = parseId(value.id);
-  const warehouseId = parseId(value.warehouseId);
-  const deletedAt = parseDeletedAt(value.deletedAt);
-
-  if (
-    !id ||
-    !warehouseId ||
-    !warehouseIds.has(warehouseId) ||
-    deletedAt === undefined ||
-    typeof value.occurredOn !== "string" ||
-    !isOccurredOn(value.occurredOn) ||
-    typeof value.note !== "string" ||
-    value.note.length > MAX_LABEL_LENGTH
-  ) {
-    return null;
-  }
-
-  const seenLines = new Set<string>();
-  const seenMaterials = new Set<string>();
-  const lines: DeliveryLine[] = [];
-
-  for (const entry of value.lines) {
-    const line = parseDeliveryLine(entry, materialIds);
-    if (!line || seenLines.has(line.id) || seenMaterials.has(line.materialId)) {
-      return null;
-    }
-
-    seenLines.add(line.id);
-    seenMaterials.add(line.materialId);
-    lines.push(line);
-  }
-
-  return {
-    id,
-    warehouseId,
-    occurredOn: value.occurredOn,
-    note: value.note,
-    lines,
-    deletedAt,
-  };
-}
-
-function parseWriteOffLine(
-  value: unknown,
-  materialIds: ReadonlySet<string>,
-  derivativeIds: ReadonlySet<string>,
-): WriteOffLine | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const id = parseId(value.id);
-  const refId = parseId(value.refId);
-  const quantity = parseInteger(value.quantity, 1, MAX_WEIGHT_GRAMS);
-
-  if (
-    !id ||
-    !refId ||
-    quantity === null ||
-    (value.kind !== "material" && value.kind !== "derivative")
-  ) {
-    return null;
-  }
-
-  if (value.kind === "material" && !materialIds.has(refId)) {
-    return null;
-  }
-
-  if (value.kind === "derivative" && !derivativeIds.has(refId)) {
-    return null;
-  }
-
-  return { id, kind: value.kind, refId, quantity };
-}
-
-function parseWriteOff(
-  value: unknown,
-  warehouseIds: ReadonlySet<string>,
-  materialIds: ReadonlySet<string>,
-  derivativeIds: ReadonlySet<string>,
-): WriteOff | null {
-  if (!isRecord(value) || !Array.isArray(value.lines)) {
-    return null;
-  }
-
-  const id = parseId(value.id);
-  const warehouseId = parseId(value.warehouseId);
-  const deletedAt = parseDeletedAt(value.deletedAt);
-
-  if (
-    !id ||
-    !warehouseId ||
-    !warehouseIds.has(warehouseId) ||
-    deletedAt === undefined ||
-    typeof value.occurredOn !== "string" ||
-    !isOccurredOn(value.occurredOn) ||
-    typeof value.note !== "string" ||
-    value.note.length > MAX_LABEL_LENGTH
-  ) {
-    return null;
-  }
-
-  const seenLines = new Set<string>();
-  const seenRefs = new Set<string>();
-  const lines: WriteOffLine[] = [];
-
-  for (const entry of value.lines) {
-    const line = parseWriteOffLine(entry, materialIds, derivativeIds);
-    if (!line || seenLines.has(line.id) || seenRefs.has(`${line.kind}:${line.refId}`)) {
-      return null;
-    }
-
-    seenLines.add(line.id);
-    seenRefs.add(`${line.kind}:${line.refId}`);
-    lines.push(line);
-  }
-
-  return {
-    id,
-    warehouseId,
-    occurredOn: value.occurredOn,
-    note: value.note,
-    lines,
-    deletedAt,
-  };
-}
-
 function parseMovementList<T extends { id: string }>(
   value: unknown,
   parseItem: (entry: unknown) => T | null,
@@ -965,12 +340,14 @@ function parseMovementList<T extends { id: string }>(
 }
 
 function fitsSafeKopeckProduct(priceKopecks: number, volume: number): boolean {
-  return BigInt(priceKopecks) * BigInt(volume) <= BigInt(Number.MAX_SAFE_INTEGER);
+  return (
+    BigInt(priceKopecks) * BigInt(volume) <= BigInt(Number.MAX_SAFE_INTEGER)
+  );
 }
 
 function parseSalesPlanLine(
   value: unknown,
-  derivativeIds: ReadonlySet<string>,
+  productIds: ReadonlySet<string>,
 ): SalesPlanLine | null {
   if (!isRecord(value)) {
     return null;
@@ -988,7 +365,7 @@ function parseSalesPlanLine(
   if (
     !id ||
     !productId ||
-    !derivativeIds.has(productId) ||
+    !productIds.has(productId) ||
     priceWithVatKopecks === null ||
     volumePieces === null ||
     !fitsSafeKopeckProduct(priceWithVatKopecks, volumePieces)
@@ -1001,7 +378,7 @@ function parseSalesPlanLine(
 
 function parseSalesPlan(
   value: unknown,
-  derivativeIds: ReadonlySet<string>,
+  productIds: ReadonlySet<string>,
 ): SalesPlan | null {
   if (!isRecord(value) || !Array.isArray(value.lines)) {
     return null;
@@ -1013,7 +390,7 @@ function parseSalesPlan(
   if (
     !id ||
     deletedAt === undefined ||
-    typeof value.month !== "string" ||
+    typeof value.month !== 'string' ||
     !isMonthKey(value.month)
   ) {
     return null;
@@ -1024,7 +401,7 @@ function parseSalesPlan(
   const lines: SalesPlanLine[] = [];
 
   for (const entry of value.lines) {
-    const line = parseSalesPlanLine(entry, derivativeIds);
+    const line = parseSalesPlanLine(entry, productIds);
     if (!line || seenLines.has(line.id) || seenProducts.has(line.productId)) {
       return null;
     }
@@ -1039,9 +416,11 @@ function parseSalesPlan(
 
 function parseSalesPlans(
   value: unknown,
-  derivativeIds: ReadonlySet<string>,
+  productIds: ReadonlySet<string>,
 ): SalesPlan[] | null {
-  const plans = parseMovementList(value, (entry) => parseSalesPlan(entry, derivativeIds));
+  const plans = parseMovementList(value, (entry) =>
+    parseSalesPlan(entry, productIds),
+  );
   if (!plans) {
     return null;
   }
@@ -1065,7 +444,7 @@ function parseOperatingExpense(value: unknown): MonthOperatingExpense | null {
     return null;
   }
 
-  if (typeof value.month !== "string" || !isMonthKey(value.month)) {
+  if (typeof value.month !== 'string' || !isMonthKey(value.month)) {
     return null;
   }
 
@@ -1091,7 +470,9 @@ function parseOperatingExpense(value: unknown): MonthOperatingExpense | null {
   };
 }
 
-function parseOperatingExpenses(value: unknown): MonthOperatingExpense[] | null {
+function parseOperatingExpenses(
+  value: unknown,
+): MonthOperatingExpense[] | null {
   if (!Array.isArray(value)) {
     return null;
   }
@@ -1112,159 +493,13 @@ function parseOperatingExpenses(value: unknown): MonthOperatingExpense[] | null 
   return items;
 }
 
-function parseProductionFactUse(
-  value: unknown,
-  materialIds: ReadonlySet<string>,
-  derivatives: readonly Derivative[],
-): ProductionFactUse | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const id = parseId(value.id);
-  const refId = parseId(value.refId);
-  const quantity = parseInteger(value.quantity, 0, MAX_WEIGHT_GRAMS);
-
-  if (
-    !id ||
-    !refId ||
-    quantity === null ||
-    (value.kind !== "material" && value.kind !== "derivative")
-  ) {
-    return null;
-  }
-
-  if (value.kind === "material") {
-    if (!materialIds.has(refId)) {
-      return null;
-    }
-  } else {
-    const component = derivatives.find((item) => item.id === refId);
-    if (!component || component.isFinalProduct) {
-      return null;
-    }
-  }
-
-  return { id, kind: value.kind, refId, quantity };
-}
-
-function parseProductionFactOutput(
-  value: unknown,
-  materialIds: ReadonlySet<string>,
-  derivatives: readonly Derivative[],
-): ProductionFactOutput | null {
-  if (!isRecord(value) || !Array.isArray(value.uses)) {
-    return null;
-  }
-
-  const id = parseId(value.id);
-  const refId = parseId(value.refId);
-  const owner = derivatives.find((item) => item.id === refId);
-  const quantityMax = owner?.isFinalProduct ? MAX_VOLUME_PIECES : MAX_WEIGHT_GRAMS;
-  const quantity = parseInteger(value.quantity, 1, quantityMax);
-
-  if (!id || !refId || !owner || quantity === null) {
-    return null;
-  }
-
-  const seenUses = new Set<string>();
-  const seenRefs = new Set<string>();
-  const uses: ProductionFactUse[] = [];
-
-  for (const entry of value.uses) {
-    const use = parseProductionFactUse(entry, materialIds, derivatives);
-    if (!use || seenUses.has(use.id) || seenRefs.has(`${use.kind}:${use.refId}`)) {
-      return null;
-    }
-
-    seenUses.add(use.id);
-    seenRefs.add(`${use.kind}:${use.refId}`);
-    uses.push(use);
-  }
-
-  return { id, refId, quantity, uses };
-}
-
-function parseProductionFact(
-  value: unknown,
-  materialIds: ReadonlySet<string>,
-  derivatives: readonly Derivative[],
-): ProductionFact | null {
-  if (!isRecord(value) || !Array.isArray(value.outputs)) {
-    return null;
-  }
-
-  const id = parseId(value.id);
-  const deletedAt = parseDeletedAt(value.deletedAt);
-
-  if (
-    !id ||
-    deletedAt === undefined ||
-    typeof value.occurredOn !== "string" ||
-    !isOccurredOn(value.occurredOn) ||
-    typeof value.note !== "string" ||
-    value.note.length > MAX_LABEL_LENGTH
-  ) {
-    return null;
-  }
-
-  const seenOutputs = new Set<string>();
-  const seenRefs = new Set<string>();
-  const outputs: ProductionFactOutput[] = [];
-
-  for (const entry of value.outputs) {
-    const output = parseProductionFactOutput(entry, materialIds, derivatives);
-    if (!output || seenOutputs.has(output.id) || seenRefs.has(output.refId)) {
-      return null;
-    }
-
-    seenOutputs.add(output.id);
-    seenRefs.add(output.refId);
-    outputs.push(output);
-  }
-
-  return {
-    id,
-    occurredOn: value.occurredOn,
-    note: value.note,
-    outputs,
-    deletedAt,
-  };
-}
-
-function parseProductionFacts(
-  value: unknown,
-  materialIds: ReadonlySet<string>,
-  derivatives: readonly Derivative[],
-): ProductionFact[] | null {
-  const facts = parseMovementList(value, (entry) =>
-    parseProductionFact(entry, materialIds, derivatives),
-  );
-  if (!facts) {
-    return null;
-  }
-
-  const activeDates = new Set<string>();
-  for (const fact of facts) {
-    if (fact.deletedAt !== null) {
-      continue;
-    }
-    if (activeDates.has(fact.occurredOn)) {
-      return null;
-    }
-    activeDates.add(fact.occurredOn);
-  }
-
-  return facts;
-}
-
 function dateInMonth(date: string, month: string): boolean {
   return date.startsWith(`${month}-`) && isOccurredOn(date);
 }
 
 function parseSalesFactOpening(
   value: unknown,
-  derivatives: readonly Derivative[],
+  products: readonly Product[],
 ): SalesFactOpening | null {
   if (!isRecord(value)) {
     return null;
@@ -1272,7 +507,7 @@ function parseSalesFactOpening(
 
   const id = parseId(value.id);
   const productId = parseId(value.productId);
-  const product = derivatives.find((item) => item.id === productId);
+  const product = products.find((item) => item.id === productId);
   const productionPieces = parseInteger(
     value.productionPieces,
     -MAX_VOLUME_PIECES,
@@ -1287,7 +522,7 @@ function parseSalesFactOpening(
   if (
     !id ||
     !productId ||
-    !product?.isFinalProduct ||
+    !product ||
     productionPieces === null ||
     distributionPieces === null ||
     (productionPieces === 0 && distributionPieces === 0)
@@ -1300,7 +535,7 @@ function parseSalesFactOpening(
 
 function parseSalesFactCell(
   value: unknown,
-  derivatives: readonly Derivative[],
+  products: readonly Product[],
 ): SalesFactCell | null {
   if (!isRecord(value)) {
     return null;
@@ -1308,7 +543,7 @@ function parseSalesFactCell(
 
   const id = parseId(value.id);
   const productId = parseId(value.productId);
-  const product = derivatives.find((item) => item.id === productId);
+  const product = products.find((item) => item.id === productId);
   const priceWithVatKopecks = parseInteger(
     value.priceWithVatKopecks,
     0,
@@ -1316,16 +551,28 @@ function parseSalesFactCell(
   );
   const salesPieces = parseInteger(value.salesPieces, 0, MAX_VOLUME_PIECES);
   const outputPieces = parseInteger(value.outputPieces, 0, MAX_VOLUME_PIECES);
-  const transferPieces = parseInteger(value.transferPieces, 0, MAX_VOLUME_PIECES);
-  const staffMealsPieces = parseInteger(value.staffMealsPieces, 0, MAX_VOLUME_PIECES);
+  const transferPieces = parseInteger(
+    value.transferPieces,
+    0,
+    MAX_VOLUME_PIECES,
+  );
+  const staffMealsPieces = parseInteger(
+    value.staffMealsPieces,
+    0,
+    MAX_VOLUME_PIECES,
+  );
   const samplesPieces = parseInteger(value.samplesPieces, 0, MAX_VOLUME_PIECES);
   const returnsPieces = parseInteger(value.returnsPieces, 0, MAX_VOLUME_PIECES);
-  const writeOffPieces = parseInteger(value.writeOffPieces, 0, MAX_VOLUME_PIECES);
+  const writeOffPieces = parseInteger(
+    value.writeOffPieces,
+    0,
+    MAX_VOLUME_PIECES,
+  );
 
   if (
     !id ||
     !productId ||
-    !product?.isFinalProduct ||
+    !product ||
     priceWithVatKopecks === null ||
     salesPieces === null ||
     outputPieces === null ||
@@ -1369,13 +616,16 @@ function parseSalesFactCell(
 function parseSalesFactDay(
   value: unknown,
   month: string,
-  derivatives: readonly Derivative[],
+  products: readonly Product[],
 ): SalesFactDay | null {
   if (!isRecord(value) || !Array.isArray(value.cells)) {
     return null;
   }
 
-  if (typeof value.occurredOn !== "string" || !dateInMonth(value.occurredOn, month)) {
+  if (
+    typeof value.occurredOn !== 'string' ||
+    !dateInMonth(value.occurredOn, month)
+  ) {
     return null;
   }
 
@@ -1384,7 +634,7 @@ function parseSalesFactDay(
   const cells: SalesFactCell[] = [];
 
   for (const entry of value.cells) {
-    const cell = parseSalesFactCell(entry, derivatives);
+    const cell = parseSalesFactCell(entry, products);
     if (!cell || seenCells.has(cell.id) || seenProducts.has(cell.productId)) {
       return null;
     }
@@ -1403,9 +653,13 @@ function parseSalesFactDay(
 
 function parseSalesFact(
   value: unknown,
-  derivatives: readonly Derivative[],
+  products: readonly Product[],
 ): SalesFact | null {
-  if (!isRecord(value) || !Array.isArray(value.openings) || !Array.isArray(value.days)) {
+  if (
+    !isRecord(value) ||
+    !Array.isArray(value.openings) ||
+    !Array.isArray(value.days)
+  ) {
     return null;
   }
 
@@ -1415,7 +669,7 @@ function parseSalesFact(
   if (
     !id ||
     deletedAt === undefined ||
-    typeof value.month !== "string" ||
+    typeof value.month !== 'string' ||
     !isMonthKey(value.month)
   ) {
     return null;
@@ -1426,7 +680,7 @@ function parseSalesFact(
   const openings: SalesFactOpening[] = [];
 
   for (const entry of value.openings) {
-    const opening = parseSalesFactOpening(entry, derivatives);
+    const opening = parseSalesFactOpening(entry, products);
     if (
       !opening ||
       seenOpenings.has(opening.id) ||
@@ -1445,7 +699,7 @@ function parseSalesFact(
   const days: SalesFactDay[] = [];
 
   for (const entry of value.days) {
-    const day = parseSalesFactDay(entry, value.month, derivatives);
+    const day = parseSalesFactDay(entry, value.month, products);
     if (!day || seenDays.has(day.occurredOn)) {
       return null;
     }
@@ -1470,9 +724,11 @@ function parseSalesFact(
 
 function parseSalesFacts(
   value: unknown,
-  derivatives: readonly Derivative[],
+  products: readonly Product[],
 ): SalesFact[] | null {
-  const facts = parseMovementList(value, (entry) => parseSalesFact(entry, derivatives));
+  const facts = parseMovementList(value, (entry) =>
+    parseSalesFact(entry, products),
+  );
   if (!facts) {
     return null;
   }
@@ -1492,91 +748,43 @@ function parseSalesFacts(
 }
 
 /** Собирает документ только из известных полей. Чужие ключи отбрасываются. */
-export function parsePrototypeDocument(value: unknown): PrototypeDocument | null {
+export function parsePrototypeDocument(
+  value: unknown,
+): PrototypeDocument | null {
   if (!isRecord(value) || value.schemaVersion !== SCHEMA_VERSION) {
     return null;
   }
 
-  const workshops = parsePlaceList(value.workshops);
-  const warehouses = parsePlaceList(value.warehouses);
-  if (!workshops || !warehouses) {
+  if (
+    'workshops' in value ||
+    'workshopId' in value ||
+    'materials' in value ||
+    'derivatives' in value ||
+    'recipes' in value
+  ) {
     return null;
   }
 
-  const warehouseIds = new Set(warehouses.map((item) => item.id));
-  const workshopIds = new Set(workshops.map((item) => item.id));
-  const materials = parseNamedList(value.materials, (entry) =>
-    parseMaterial(entry, warehouseIds),
+  const products = parseNamedList(value.products, (entry) =>
+    parseProduct(entry),
   );
-  const derivatives = parseNamedList(value.derivatives, (entry) =>
-    parseDerivative(entry, warehouseIds, workshopIds),
-  );
-
-  if (!materials || !derivatives) {
+  if (!products) {
     return null;
   }
 
-  if (!Array.isArray(value.recipes)) {
-    return null;
-  }
-
-  const derivativeIds = new Set(derivatives.map((item) => item.id));
-  const materialIds = new Set(materials.map((item) => item.id));
-  const seenRecipes = new Set<string>();
-  const recipes: RecipeCard[] = [];
-
-  for (const entry of value.recipes) {
-    const recipe = parseRecipe(entry, derivativeIds);
-    if (!recipe || seenRecipes.has(recipe.id)) {
-      return null;
-    }
-
-    seenRecipes.add(recipe.id);
-    recipes.push(recipe);
-  }
-
-  if (!recipesMatchDerivatives(recipes, derivatives, materialIds)) {
-    return null;
-  }
-
-  const deliveries = parseMovementList(value.deliveries, (entry) =>
-    parseDelivery(entry, warehouseIds, materialIds),
-  );
-  const writeOffs = parseMovementList(value.writeOffs, (entry) =>
-    parseWriteOff(entry, warehouseIds, materialIds, derivativeIds),
-  );
-
-  const salesPlans = parseSalesPlans(value.salesPlans, derivativeIds);
-  const productionFacts = parseProductionFacts(
-    value.productionFacts,
-    materialIds,
-    derivatives,
-  );
-  const salesFacts = parseSalesFacts(value.salesFacts, derivatives);
+  const productIds = new Set(products.map((item) => item.id));
+  const salesPlans = parseSalesPlans(value.salesPlans, productIds);
+  const salesFacts = parseSalesFacts(value.salesFacts, products);
   const operatingExpenses = parseOperatingExpenses(value.operatingExpenses);
 
-  if (
-    !deliveries ||
-    !writeOffs ||
-    !salesPlans ||
-    !productionFacts ||
-    !salesFacts ||
-    !operatingExpenses
-  ) {
+  if (!salesPlans || !salesFacts || !operatingExpenses) {
     return null;
   }
 
   return {
     schemaVersion: SCHEMA_VERSION,
-    workshops,
-    warehouses,
-    materials,
-    derivatives,
-    recipes,
-    deliveries,
-    writeOffs,
+    products,
     salesPlans,
-    productionFacts,
     salesFacts,
     operatingExpenses,
   };

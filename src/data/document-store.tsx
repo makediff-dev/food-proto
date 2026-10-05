@@ -1,21 +1,25 @@
-"use client";
+'use client';
 
 import {
   createContext,
+  type ReactNode,
   useCallback,
   useContext,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
-  type ReactNode,
-} from "react";
+} from 'react';
 
-import { clearDocument, readDocument, writeDocument } from "@/data/document-storage";
-import { createMockDocument } from "@/data/mock-document";
-import type { PrototypeDocument } from "@/domain/document";
+import {
+  clearDocument,
+  readDocument,
+  writeDocument,
+} from '@/data/document-storage';
+import { createMockDocument } from '@/data/mock-document';
+import type { PrototypeDocument } from '@/domain/document';
 
-export type DocumentSource = "mock" | "local";
+export type DocumentSource = 'mock' | 'local';
 
 interface DocumentState {
   document: PrototypeDocument;
@@ -25,19 +29,21 @@ interface DocumentState {
 }
 
 interface DocumentStoreValue extends DocumentState {
-  updateDocument: (recipe: (current: PrototypeDocument) => PrototypeDocument) => void;
+  updateDocument: (
+    recipe: (current: PrototypeDocument) => PrototypeDocument,
+  ) => void;
   resetToMock: () => void;
 }
 
 const DocumentStoreContext = createContext<DocumentStoreValue | null>(null);
 
 const STORAGE_ERROR_MESSAGE =
-  "Браузер не сохранил числа. Они пропадут после обновления страницы.";
+  'Браузер не сохранил числа. Они пропадут после обновления страницы.';
 
 function createInitialState(): DocumentState {
   return {
     document: createMockDocument(),
-    source: "mock",
+    source: 'mock',
     hydrated: false,
     storageError: null,
   };
@@ -54,11 +60,11 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
     }
 
     // localStorage нельзя читать на сервере. Подмена до paint, иначе мок вспыхивает поверх сохранённых чисел.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- гидрация внешнего хранилища до первой отрисовки
+    // Подмена до paint: иначе мок вспыхивает поверх сохранённых чисел.
     setState((current) => ({
       ...current,
       document: stored ?? current.document,
-      source: stored ? "local" : "mock",
+      source: stored ? 'local' : 'mock',
       hydrated: true,
     }));
   }, []);
@@ -83,7 +89,7 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
       setState((current) => ({
         ...current,
         document: next,
-        source: "local",
+        source: 'local',
         storageError,
       }));
     },
@@ -94,7 +100,10 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
     try {
       clearDocument();
     } catch {
-      setState((current) => ({ ...current, storageError: STORAGE_ERROR_MESSAGE }));
+      setState((current) => ({
+        ...current,
+        storageError: STORAGE_ERROR_MESSAGE,
+      }));
       return;
     }
 
@@ -103,7 +112,7 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
     setState((current) => ({
       ...current,
       document: next,
-      source: "mock",
+      source: 'mock',
       storageError: null,
     }));
   }, []);
@@ -127,7 +136,7 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
 export function useDocumentStore(): DocumentStoreValue {
   const store = useContext(DocumentStoreContext);
   if (!store) {
-    throw new Error("useDocumentStore вызывается внутри DocumentProvider");
+    throw new Error('useDocumentStore вызывается внутри DocumentProvider');
   }
 
   return store;

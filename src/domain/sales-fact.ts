@@ -1,15 +1,15 @@
-import { ratioKopecks, unitCost, type UnitCost } from "@/domain/cost";
+import { ratioKopecks, type UnitCost, unitCost } from '@/domain/cost';
 import {
   isDeletionMark,
   isMonthKey,
   isOccurredOn,
   MAX_ID_LENGTH,
   MAX_VOLUME_PIECES,
-  type Derivative,
+  type Product,
   type PrototypeDocument,
   type SalesFact,
   type SalesFactCell,
-} from "@/domain/document";
+} from '@/domain/document';
 import {
   daysInMonth,
   monthKeyFromDate,
@@ -17,24 +17,24 @@ import {
   profitabilityHundredths,
   revenueExVatKopecks,
   revenueWithVatKopecks,
-} from "@/domain/sales-plan";
-import { MAX_PRICE_PER_KILOGRAM_KOPECKS } from "@/domain/units";
+} from '@/domain/sales-plan';
+import { MAX_PRICE_PER_KILOGRAM_KOPECKS } from '@/domain/units';
 
 const TEN_THOUSAND = BigInt(10_000);
 const TWO = BigInt(2);
 const ZERO = BigInt(0);
 
 export type SalesFactRejection =
-  | "missing"
-  | "month"
-  | "date"
-  | "product"
-  | "locked"
-  | "price"
-  | "pieces"
-  | "opening"
-  | "overflow"
-  | "taken";
+  | 'missing'
+  | 'month'
+  | 'date'
+  | 'product'
+  | 'locked'
+  | 'price'
+  | 'pieces'
+  | 'opening'
+  | 'overflow'
+  | 'taken';
 
 /** Серые вводы дня. На экране пустой день — нули, в документ он не пишется. */
 export interface SalesFactInputs {
@@ -62,10 +62,7 @@ export interface SalesFactRow {
   priceExVatTenThousandths: number | null;
   revenueWithVatKopecks: number | null;
   revenueExVatKopecks: number | null;
-  /**
-   * Плановая себестоимость рецепта. Обе колонки «Себест, р/ед» на строке товара совпадают,
-   * пока нет блока фактической себестоимости.
-   */
+  /** Себестоимость 1 шт с товара. Обе колонки «Себест, р/ед» совпадают. */
   unitCost: UnitCost | null;
   salesVolumeCostWithVatKopecks: number | null;
   salesVolumeCostExVatKopecks: number | null;
@@ -128,11 +125,17 @@ export interface SalesFactIds {
 }
 
 function isEntityId(value: string): boolean {
-  return value.length > 0 && value.length <= MAX_ID_LENGTH && value === value.trim();
+  return (
+    value.length > 0 && value.length <= MAX_ID_LENGTH && value === value.trim()
+  );
 }
 
 function isPrice(value: number): boolean {
-  return Number.isInteger(value) && value >= 0 && value <= MAX_PRICE_PER_KILOGRAM_KOPECKS;
+  return (
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value <= MAX_PRICE_PER_KILOGRAM_KOPECKS
+  );
 }
 
 function isPieces(value: number): boolean {
@@ -141,12 +144,16 @@ function isPieces(value: number): boolean {
 
 function isOpening(value: number): boolean {
   return (
-    Number.isInteger(value) && value >= -MAX_VOLUME_PIECES && value <= MAX_VOLUME_PIECES
+    Number.isInteger(value) &&
+    value >= -MAX_VOLUME_PIECES &&
+    value <= MAX_VOLUME_PIECES
   );
 }
 
 function fitsSafeKopeckProduct(priceKopecks: number, volume: number): boolean {
-  return BigInt(priceKopecks) * BigInt(volume) <= BigInt(Number.MAX_SAFE_INTEGER);
+  return (
+    BigInt(priceKopecks) * BigInt(volume) <= BigInt(Number.MAX_SAFE_INTEGER)
+  );
 }
 
 function toSafeNumber(value: bigint): number | null {
@@ -160,7 +167,10 @@ function toSafeNumber(value: bigint): number | null {
   return Number(value);
 }
 
-function roundHalfAwayFromZero(numerator: bigint, denominator: bigint): number | null {
+function roundHalfAwayFromZero(
+  numerator: bigint,
+  denominator: bigint,
+): number | null {
   if (denominator < ZERO) {
     return roundHalfAwayFromZero(-numerator, -denominator);
   }
@@ -240,8 +250,9 @@ export function workingSalesFact(
   month: string,
 ): SalesFact | null {
   return (
-    document.salesFacts.find((item) => item.deletedAt === null && item.month === month) ??
-    null
+    document.salesFacts.find(
+      (item) => item.deletedAt === null && item.month === month,
+    ) ?? null
   );
 }
 
@@ -251,18 +262,23 @@ export function deletedSalesFacts(document: PrototypeDocument): SalesFact[] {
     .sort((left, right) => right.month.localeCompare(left.month));
 }
 
-export function salesFactById(document: PrototypeDocument, id: string): SalesFact | null {
+export function salesFactById(
+  document: PrototypeDocument,
+  id: string,
+): SalesFact | null {
   return document.salesFacts.find((item) => item.id === id) ?? null;
 }
 
 /** Текущий и прошлые месяцы. Будущий не создаётся. */
 export function salesFactMonthOpen(month: string, today: Date): boolean {
-  return isMonthKey(month) && month <= monthKeyFromDate(today) && month >= "2000-01";
+  return (
+    isMonthKey(month) && month <= monthKeyFromDate(today) && month >= '2000-01'
+  );
 }
 
 export function monthDates(month: string): string[] {
   return Array.from({ length: daysInMonth(month) }, (_, index) => {
-    const day = String(index + 1).padStart(2, "0");
+    const day = String(index + 1).padStart(2, '0');
     return `${month}-${day}`;
   });
 }
@@ -282,7 +298,7 @@ export function adjacentDay(date: string, offset: -1 | 1): string | null {
   const month = Number(date.slice(5, 7));
   const day = Number(date.slice(8, 10));
   const next = new Date(year, month - 1, day + offset);
-  const iso = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`;
+  const iso = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
   if (iso.slice(0, 7) !== date.slice(0, 7)) {
     return null;
   }
@@ -301,20 +317,18 @@ export function openingOf(
   };
 }
 
-function finalProduct(document: PrototypeDocument, productId: string): Derivative | null {
-  const product = document.derivatives.find((item) => item.id === productId);
-  if (!product?.isFinalProduct) {
-    return null;
-  }
-
-  return product;
+function finalProduct(
+  document: PrototypeDocument,
+  productId: string,
+): Product | null {
+  return document.products.find((item) => item.id === productId) ?? null;
 }
 
-/** Рабочие конечные товары и те, на которые в этом месяце уже есть шапка или серый ввод. */
+/** Рабочие товары и те, на которые в этом месяце уже есть шапка или серый ввод. */
 export function salesFactGridProducts(
   document: PrototypeDocument,
   fact: SalesFact | null,
-): Derivative[] {
+): Product[] {
   const referenced = new Set<string>();
   if (fact) {
     for (const opening of fact.openings) {
@@ -327,8 +341,8 @@ export function salesFactGridProducts(
     }
   }
 
-  return document.derivatives.filter(
-    (item) => item.isFinalProduct && (item.deletedAt === null || referenced.has(item.id)),
+  return document.products.filter(
+    (item) => item.deletedAt === null || referenced.has(item.id),
   );
 }
 
@@ -372,7 +386,8 @@ function stockChain(
     const inputs = inputsOn(fact, occurredOn, productId);
     const productionStart = production;
     const distributionStart = distribution;
-    const productionEnd = productionStart + inputs.outputPieces - inputs.transferPieces;
+    const productionEnd =
+      productionStart + inputs.outputPieces - inputs.transferPieces;
     const distributionEnd =
       distributionStart -
       inputs.salesPieces +
@@ -398,7 +413,7 @@ function stockChain(
 
 function rowMetrics(
   document: PrototypeDocument,
-  product: Derivative,
+  product: Product,
   stock: DayStock,
 ): SalesFactRow {
   const inputs = stock.inputs;
@@ -413,17 +428,31 @@ function rowMetrics(
       ? inputs.salesPieces === 0
         ? 0
         : null
-      : revenueExVatKopecks(inputs.priceWithVatKopecks, vat, inputs.salesPieces);
+      : revenueExVatKopecks(
+          inputs.priceWithVatKopecks,
+          vat,
+          inputs.salesPieces,
+        );
   const salesVolumeWith =
-    cost === null ? null : multiplyKopecks(cost.withVatKopecks, inputs.salesPieces);
+    cost === null
+      ? null
+      : multiplyKopecks(cost.withVatKopecks, inputs.salesPieces);
   const salesVolumeEx =
-    cost === null ? null : multiplyKopecks(cost.exVatKopecks, inputs.salesPieces);
+    cost === null
+      ? null
+      : multiplyKopecks(cost.exVatKopecks, inputs.salesPieces);
   const outputVolumeWith =
-    cost === null ? null : multiplyKopecks(cost.withVatKopecks, inputs.outputPieces);
+    cost === null
+      ? null
+      : multiplyKopecks(cost.withVatKopecks, inputs.outputPieces);
   const outputVolumeEx =
-    cost === null ? null : multiplyKopecks(cost.exVatKopecks, inputs.outputPieces);
+    cost === null
+      ? null
+      : multiplyKopecks(cost.exVatKopecks, inputs.outputPieces);
   const contribution =
-    revenueEx === null || salesVolumeEx === null ? null : revenueEx - salesVolumeEx;
+    revenueEx === null || salesVolumeEx === null
+      ? null
+      : revenueEx - salesVolumeEx;
 
   return {
     productId: product.id,
@@ -436,7 +465,9 @@ function rowMetrics(
     productionEnd: stock.productionEnd,
     distributionEnd: stock.distributionEnd,
     priceExVatTenThousandths:
-      vat === null ? null : priceExVatTenThousandths(inputs.priceWithVatKopecks, vat),
+      vat === null
+        ? null
+        : priceExVatTenThousandths(inputs.priceWithVatKopecks, vat),
     revenueWithVatKopecks: revenueWith,
     revenueExVatKopecks: revenueEx,
     unitCost: cost,
@@ -448,11 +479,18 @@ function rowMetrics(
     profitabilityHundredths:
       cost === null || vat === null
         ? null
-        : profitabilityHundredths(inputs.priceWithVatKopecks, vat, cost.exVatKopecks),
+        : profitabilityHundredths(
+            inputs.priceWithVatKopecks,
+            vat,
+            cost.exVatKopecks,
+          ),
   };
 }
 
-function averageKopecks(amount: number | null, volume: number | null): number | null {
+function averageKopecks(
+  amount: number | null,
+  volume: number | null,
+): number | null {
   if (amount === null || volume === null || volume <= 0) {
     return null;
   }
@@ -477,7 +515,8 @@ function totalVatHundredths(
   }
 
   return roundHalfAwayFromZero(
-    (BigInt(revenueWithVatKopecks) - BigInt(revenueExVatKopecks)) * TEN_THOUSAND,
+    (BigInt(revenueWithVatKopecks) - BigInt(revenueExVatKopecks)) *
+      TEN_THOUSAND,
     BigInt(revenueExVatKopecks),
   );
 }
@@ -539,7 +578,10 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
     productionEnd += BigInt(row.productionEnd);
     distributionEnd += BigInt(row.distributionEnd);
 
-    if (row.revenueWithVatKopecks === null || row.revenueExVatKopecks === null) {
+    if (
+      row.revenueWithVatKopecks === null ||
+      row.revenueExVatKopecks === null
+    ) {
       if (row.inputs.salesPieces > 0) {
         revenueComplete = false;
       }
@@ -582,7 +624,9 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
 
   const salesVolume = toSafeNumber(salesPieces);
   const outputVolume = toSafeNumber(outputPieces);
-  const revenueWithVatKopecks = revenueComplete ? toSafeNumber(revenueWith) : null;
+  const revenueWithVatKopecks = revenueComplete
+    ? toSafeNumber(revenueWith)
+    : null;
   const revenueExVatKopecks = revenueComplete ? toSafeNumber(revenueEx) : null;
   const salesVolumeCostWithVatKopecks = salesCostComplete
     ? toSafeNumber(salesCostWith)
@@ -596,7 +640,10 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
   const outputVolumeCostExVatKopecks = outputCostComplete
     ? toSafeNumber(outputCostEx)
     : null;
-  const priceWithVatKopecks = averageKopecks(revenueWithVatKopecks, salesVolume);
+  const priceWithVatKopecks = averageKopecks(
+    revenueWithVatKopecks,
+    salesVolume,
+  );
   const priceExVatKopecks = averageKopecks(revenueExVatKopecks, salesVolume);
   const salesUnitCostWithVatKopecks = averageKopecks(
     salesVolumeCostWithVatKopecks,
@@ -633,7 +680,10 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
     contributionKopecks,
     priceWithVatKopecks,
     priceExVatKopecks,
-    vatPercentHundredths: totalVatHundredths(revenueWithVatKopecks, revenueExVatKopecks),
+    vatPercentHundredths: totalVatHundredths(
+      revenueWithVatKopecks,
+      revenueExVatKopecks,
+    ),
     salesUnitCostWithVatKopecks,
     salesUnitCostExVatKopecks,
     outputUnitCostWithVatKopecks: averageKopecks(
@@ -646,7 +696,10 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
     ),
     profitabilityHundredths:
       salesCostComplete && revenueComplete
-        ? totalProfitabilityHundredths(contributionKopecks, salesVolumeCostExVatKopecks)
+        ? totalProfitabilityHundredths(
+            contributionKopecks,
+            salesVolumeCostExVatKopecks,
+          )
         : null,
   };
 }
@@ -659,7 +712,10 @@ export function salesFactMonth(
 ): SalesFactDayView[] {
   const products = salesFactGridProducts(document, fact);
   const chains = new Map(
-    products.map((product) => [product.id, stockChain(fact, month, product.id)]),
+    products.map((product) => [
+      product.id,
+      stockChain(fact, month, product.id),
+    ]),
   );
 
   return monthDates(month).map((occurredOn, index) => {
@@ -681,7 +737,7 @@ export function salesFactMonth(
 
 function inputRejection(inputs: SalesFactInputs): SalesFactRejection | null {
   if (!isPrice(inputs.priceWithVatKopecks)) {
-    return "price";
+    return 'price';
   }
 
   const pieces = [
@@ -694,10 +750,10 @@ function inputRejection(inputs: SalesFactInputs): SalesFactRejection | null {
     inputs.writeOffPieces,
   ];
   if (pieces.some((value) => !isPieces(value))) {
-    return "pieces";
+    return 'pieces';
   }
   if (!fitsSafeKopeckProduct(inputs.priceWithVatKopecks, inputs.salesPieces)) {
-    return "overflow";
+    return 'overflow';
   }
 
   return null;
@@ -710,15 +766,15 @@ function editableProduct(
   today: Date,
 ): SalesFactRejection | null {
   if (!salesFactMonthOpen(month, today)) {
-    return "month";
+    return 'month';
   }
 
   const product = finalProduct(document, productId);
   if (!product) {
-    return "product";
+    return 'product';
   }
   if (product.deletedAt !== null) {
-    return "locked";
+    return 'locked';
   }
 
   return null;
@@ -747,7 +803,10 @@ function upsertFact(
 ): PrototypeDocument | null {
   const current = workingSalesFact(document, month);
   if (!current) {
-    if (!isEntityId(factId) || document.salesFacts.some((item) => item.id === factId)) {
+    if (
+      !isEntityId(factId) ||
+      document.salesFacts.some((item) => item.id === factId)
+    ) {
       return null;
     }
 
@@ -796,7 +855,7 @@ export function setSalesFactCellRejection(
     return locked;
   }
   if (!occurredOn.startsWith(`${month}-`) || !isOccurredOn(occurredOn)) {
-    return "date";
+    return 'date';
   }
 
   const numbers = inputRejection(inputs);
@@ -812,20 +871,20 @@ export function setSalesFactCellRejection(
     return null;
   }
   if (!fact && !isEntityId(ids.factId)) {
-    return "missing";
+    return 'missing';
   }
   if (!cell && !isEntityId(ids.recordId)) {
-    return "missing";
+    return 'missing';
   }
   if (
     fact &&
     !cell &&
     fact.days.some((day) => day.cells.some((item) => item.id === ids.recordId))
   ) {
-    return "missing";
+    return 'missing';
   }
-  if (fact && fact.openings.some((item) => item.id === ids.recordId) && !cell) {
-    return "missing";
+  if (fact?.openings.some((item) => item.id === ids.recordId) && !cell) {
+    return 'missing';
   }
 
   return null;
@@ -841,7 +900,15 @@ export function setSalesFactCell(
   today: Date,
 ): PrototypeDocument {
   if (
-    setSalesFactCellRejection(document, month, occurredOn, productId, inputs, ids, today)
+    setSalesFactCellRejection(
+      document,
+      month,
+      occurredOn,
+      productId,
+      inputs,
+      ids,
+      today,
+    )
   ) {
     return document;
   }
@@ -894,7 +961,7 @@ export function setSalesFactOpeningRejection(
     return locked;
   }
   if (!isOpening(productionPieces) || !isOpening(distributionPieces)) {
-    return "opening";
+    return 'opening';
   }
 
   const fact = workingSalesFact(document, month);
@@ -904,20 +971,24 @@ export function setSalesFactOpeningRejection(
     return null;
   }
   if (!fact && !isEntityId(ids.factId)) {
-    return "missing";
+    return 'missing';
   }
   if (!opening && !isEntityId(ids.recordId)) {
-    return "missing";
+    return 'missing';
   }
-  if (fact && !opening && fact.openings.some((item) => item.id === ids.recordId)) {
-    return "missing";
+  if (
+    fact &&
+    !opening &&
+    fact.openings.some((item) => item.id === ids.recordId)
+  ) {
+    return 'missing';
   }
   if (
     fact &&
     !opening &&
     fact.days.some((day) => day.cells.some((cell) => cell.id === ids.recordId))
   ) {
-    return "missing";
+    return 'missing';
   }
 
   return null;
@@ -960,9 +1031,13 @@ export function setSalesFactOpening(
   }
 
   const next = upsertFact(document, month, ids.factId, (current) => {
-    const openings = current.openings.filter((item) => item.productId !== productId);
+    const openings = current.openings.filter(
+      (item) => item.productId !== productId,
+    );
     if (productionPieces !== 0 || distributionPieces !== 0) {
-      const kept = current.openings.find((item) => item.productId === productId);
+      const kept = current.openings.find(
+        (item) => item.productId === productId,
+      );
       openings.push({
         id: kept?.id ?? ids.recordId,
         productId,
@@ -994,7 +1069,9 @@ export function deleteSalesFact(
 
   return replaceFacts(
     document,
-    document.salesFacts.map((item) => (item.id === id ? { ...item, deletedAt } : item)),
+    document.salesFacts.map((item) =>
+      item.id === id ? { ...item, deletedAt } : item,
+    ),
   );
 }
 
@@ -1006,10 +1083,10 @@ export function restoreSalesFactRejection(
     (item) => item.id === id && item.deletedAt !== null,
   );
   if (!current) {
-    return "missing";
+    return 'missing';
   }
   if (workingSalesFact(document, current.month)) {
-    return "taken";
+    return 'taken';
   }
 
   return null;

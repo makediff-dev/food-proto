@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata } from 'next';
 
 import {
   parseSalesFactQuery,
   SALES_FACT_SECTION_TITLE,
-} from "@/features/sales-fact/paths";
-import { SalesFactScreen } from "@/features/sales-fact/sales-fact-screen";
+} from '@/features/sales-fact/paths';
+import { SalesFactScreen } from '@/features/sales-fact/sales-fact-screen';
 
 export const metadata: Metadata = {
   title: SALES_FACT_SECTION_TITLE,

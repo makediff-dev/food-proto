@@ -1,42 +1,51 @@
-"use client";
+'use client';
 
-import { useId, useState } from "react";
+import { useId, useState } from 'react';
 
-import type { OperatingExpenseSide, SummaryHeadline as Headline } from "@/domain/summary";
-import { formatMoney } from "@/features/materials/money";
+import type {
+  SummaryHeadline as Headline,
+  OperatingExpenseSide,
+} from '@/domain/summary';
+import { formatMoney } from '@/features/sales/money';
 import {
-  OPERATING_EXPENSE_ERROR,
   formatPercentHundredths,
+  OPERATING_EXPENSE_ERROR,
   parseOperatingExpense,
   priceDraft,
-} from "@/features/sales/text";
-import { IconRuble } from "@/features/shell/icons";
+} from '@/features/sales/text';
+import { IconRuble } from '@/features/shell/icons';
 
-const editableCellClassName = "bg-[#e4e4e0]";
+const editableCellClassName = 'bg-[#e4e4e0]';
 
 const labelHeadClassName =
-  "border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-2 py-1.5 text-center align-middle font-normal text-muted";
+  'border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-2 py-1.5 text-center align-middle font-normal text-muted';
 
 const valueHeadClassName =
-  "border-b border-b-line border-r border-r-line bg-paper px-1.5 py-1.5 text-center align-middle font-normal text-muted last:border-r-0";
+  'border-b border-b-line border-r border-r-line bg-paper px-1.5 py-1.5 text-center align-middle font-normal text-muted last:border-r-0';
 
 const labelCellClassName =
-  "border-b border-b-line border-r-[1.5px] border-r-muted px-2 py-1.5 text-left align-middle font-normal";
+  'border-b border-b-line border-r-[1.5px] border-r-muted px-2 py-1.5 text-left align-middle font-normal';
 
 const valueCellClassName =
-  "border-b border-b-line border-r border-r-line px-1.5 py-1.5 text-right align-middle last:border-r-0";
+  'border-b border-b-line border-r border-r-line px-1.5 py-1.5 text-right align-middle last:border-r-0';
 
 type HeadlineRowId =
-  "revenue" | "contribution" | "opex" | "profit" | "tax" | "net" | "rentability";
+  | 'revenue'
+  | 'contribution'
+  | 'opex'
+  | 'profit'
+  | 'tax'
+  | 'net'
+  | 'rentability';
 
 const ROWS: { id: HeadlineRowId; label: string }[] = [
-  { id: "revenue", label: "Выручка с НДС" },
-  { id: "contribution", label: "Т-проток" },
-  { id: "opex", label: "Операционные расходы" },
-  { id: "profit", label: "Прибыль" },
-  { id: "tax", label: "Налог на прибыль" },
-  { id: "net", label: "Чистая прибыль" },
-  { id: "rentability", label: "Рентабельность" },
+  { id: 'revenue', label: 'Выручка с НДС' },
+  { id: 'contribution', label: 'Т-проток' },
+  { id: 'opex', label: 'Операционные расходы' },
+  { id: 'profit', label: 'Прибыль' },
+  { id: 'tax', label: 'Налог на прибыль' },
+  { id: 'net', label: 'Чистая прибыль' },
+  { id: 'rentability', label: 'Рентабельность' },
 ];
 
 export function SummaryHeadlineTable({
@@ -79,7 +88,7 @@ export function SummaryHeadlineTable({
           {ROWS.map((row) => (
             <tr key={row.id}>
               <th scope="row" className={labelCellClassName}>
-                {row.id === "tax" ? (
+                {row.id === 'tax' ? (
                   <span>
                     {row.label}
                     <span className="mt-0.5 block text-[10px] text-muted">
@@ -91,7 +100,7 @@ export function SummaryHeadlineTable({
                 )}
               </th>
               <td
-                className={`${valueCellClassName} ${row.id === "opex" && editable ? editableCellClassName : ""}`}
+                className={`${valueCellClassName} ${row.id === 'opex' && editable ? editableCellClassName : ''}`}
               >
                 <HeadlineValue
                   row={row.id}
@@ -103,7 +112,7 @@ export function SummaryHeadlineTable({
                 />
               </td>
               <td
-                className={`${valueCellClassName} ${row.id === "opex" && editable ? editableCellClassName : ""}`}
+                className={`${valueCellClassName} ${row.id === 'opex' && editable ? editableCellClassName : ''}`}
               >
                 <HeadlineValue
                   row={row.id}
@@ -143,13 +152,13 @@ function HeadlineValue({
     amountExVatKopecks: number,
   ) => string | null;
 }) {
-  const values = side === "plan" ? headline.plan : headline.fact;
+  const values = side === 'plan' ? headline.plan : headline.fact;
 
-  if (row === "opex") {
+  if (row === 'opex') {
     return (
       <ExpenseInput
         label={
-          side === "plan"
+          side === 'plan'
             ? `Операционные расходы, план, ${month}`
             : `Операционные расходы, факт, ${month}`
         }
@@ -160,19 +169,19 @@ function HeadlineValue({
     );
   }
 
-  if (row === "revenue") {
+  if (row === 'revenue') {
     return <MoneyOrEmpty kopecks={values.revenueWithVatKopecks} />;
   }
-  if (row === "contribution") {
+  if (row === 'contribution') {
     return <MoneyOrEmpty kopecks={values.contributionKopecks} />;
   }
-  if (row === "profit") {
+  if (row === 'profit') {
     return <MoneyOrEmpty kopecks={values.profitKopecks} />;
   }
-  if (row === "tax") {
+  if (row === 'tax') {
     return <MoneyOrEmpty kopecks={values.profitTaxKopecks} />;
   }
-  if (row === "net") {
+  if (row === 'net') {
     return <MoneyOrEmpty kopecks={values.netProfitKopecks} />;
   }
 
@@ -185,25 +194,31 @@ function HeadlineValue({
   );
 }
 
-function VarianceValue({ row, headline }: { row: HeadlineRowId; headline: Headline }) {
+function VarianceValue({
+  row,
+  headline,
+}: {
+  row: HeadlineRowId;
+  headline: Headline;
+}) {
   const variance = headline.variance;
 
-  if (row === "opex") {
+  if (row === 'opex') {
     return <MoneyAmount kopecks={variance.operatingExpenseExVatKopecks} />;
   }
-  if (row === "revenue") {
+  if (row === 'revenue') {
     return <MoneyOrEmpty kopecks={variance.revenueWithVatKopecks} />;
   }
-  if (row === "contribution") {
+  if (row === 'contribution') {
     return <MoneyOrEmpty kopecks={variance.contributionKopecks} />;
   }
-  if (row === "profit") {
+  if (row === 'profit') {
     return <MoneyOrEmpty kopecks={variance.profitKopecks} />;
   }
-  if (row === "tax") {
+  if (row === 'tax') {
     return <MoneyOrEmpty kopecks={variance.profitTaxKopecks} />;
   }
-  if (row === "net") {
+  if (row === 'net') {
     return <MoneyOrEmpty kopecks={variance.netProfitKopecks} />;
   }
 
@@ -300,10 +315,10 @@ function ExpenseInput({
           }}
           onBlur={(event) => commit(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === "Enter") {
+            if (event.key === 'Enter') {
               event.currentTarget.blur();
             }
-            if (event.key === "Escape") {
+            if (event.key === 'Escape') {
               setDraft(null);
               setError(null);
               event.currentTarget.blur();
@@ -323,17 +338,17 @@ function ExpenseInput({
 }
 
 function sanitizeDraft(raw: string): string {
-  let result = "";
+  let result = '';
   let hasComma = false;
 
   for (const char of raw) {
-    if (char >= "0" && char <= "9") {
+    if (char >= '0' && char <= '9') {
       result += char;
       continue;
     }
 
-    if ((char === "," || char === ".") && !hasComma) {
-      result += ",";
+    if ((char === ',' || char === '.') && !hasComma) {
+      result += ',';
       hasComma = true;
     }
   }
