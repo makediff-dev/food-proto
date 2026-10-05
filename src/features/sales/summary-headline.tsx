@@ -59,7 +59,7 @@ export function SummaryHeadlineTable({
   editable: boolean;
   onOperatingExpense: (
     side: OperatingExpenseSide,
-    amountExVatKopecks: number,
+    amountExVat: number,
   ) => string | null;
 }) {
   return (
@@ -149,7 +149,7 @@ function HeadlineValue({
   editable: boolean;
   onOperatingExpense: (
     side: OperatingExpenseSide,
-    amountExVatKopecks: number,
+    amountExVat: number,
   ) => string | null;
 }) {
   const values = side === 'plan' ? headline.plan : headline.fact;
@@ -162,7 +162,7 @@ function HeadlineValue({
             ? `Операционные расходы, план, ${month}`
             : `Операционные расходы, факт, ${month}`
         }
-        value={values.operatingExpenseExVatKopecks}
+        value={values.operatingExpenseExVat}
         disabled={!editable}
         onCommit={(next) => onOperatingExpense(side, next)}
       />
@@ -170,19 +170,19 @@ function HeadlineValue({
   }
 
   if (row === 'revenue') {
-    return <MoneyOrEmpty kopecks={values.revenueWithVatKopecks} />;
+    return <MoneyOrEmpty amount={values.revenueWithVat} />;
   }
   if (row === 'contribution') {
-    return <MoneyOrEmpty kopecks={values.contributionKopecks} />;
+    return <MoneyOrEmpty amount={values.contribution} />;
   }
   if (row === 'profit') {
-    return <MoneyOrEmpty kopecks={values.profitKopecks} />;
+    return <MoneyOrEmpty amount={values.profit} />;
   }
   if (row === 'tax') {
-    return <MoneyOrEmpty kopecks={values.profitTaxKopecks} />;
+    return <MoneyOrEmpty amount={values.profitTax} />;
   }
   if (row === 'net') {
-    return <MoneyOrEmpty kopecks={values.netProfitKopecks} />;
+    return <MoneyOrEmpty amount={values.netProfit} />;
   }
 
   return values.netProfitabilityHundredths === null ? (
@@ -204,22 +204,22 @@ function VarianceValue({
   const variance = headline.variance;
 
   if (row === 'opex') {
-    return <MoneyAmount kopecks={variance.operatingExpenseExVatKopecks} />;
+    return <MoneyAmount amount={variance.operatingExpenseExVat} />;
   }
   if (row === 'revenue') {
-    return <MoneyOrEmpty kopecks={variance.revenueWithVatKopecks} />;
+    return <MoneyOrEmpty amount={variance.revenueWithVat} />;
   }
   if (row === 'contribution') {
-    return <MoneyOrEmpty kopecks={variance.contributionKopecks} />;
+    return <MoneyOrEmpty amount={variance.contribution} />;
   }
   if (row === 'profit') {
-    return <MoneyOrEmpty kopecks={variance.profitKopecks} />;
+    return <MoneyOrEmpty amount={variance.profit} />;
   }
   if (row === 'tax') {
-    return <MoneyOrEmpty kopecks={variance.profitTaxKopecks} />;
+    return <MoneyOrEmpty amount={variance.profitTax} />;
   }
   if (row === 'net') {
-    return <MoneyOrEmpty kopecks={variance.netProfitKopecks} />;
+    return <MoneyOrEmpty amount={variance.netProfit} />;
   }
 
   return variance.netProfitabilityHundredths === null ? (
@@ -231,16 +231,16 @@ function VarianceValue({
   );
 }
 
-function MoneyOrEmpty({ kopecks }: { kopecks: number | null }) {
-  if (kopecks === null) {
+function MoneyOrEmpty({ amount }: { amount: number | null }) {
+  if (amount === null) {
     return <Empty />;
   }
 
-  return <MoneyAmount kopecks={kopecks} />;
+  return <MoneyAmount amount={amount} />;
 }
 
-function MoneyAmount({ kopecks }: { kopecks: number }) {
-  return <span className="whitespace-nowrap">{formatMoney(kopecks)}</span>;
+function MoneyAmount({ amount }: { amount: number }) {
+  return <span className="whitespace-nowrap">{formatMoney(amount)}</span>;
 }
 
 function Empty() {
@@ -287,7 +287,7 @@ function ExpenseInput({
     return (
       <>
         <span className="sr-only">{label}</span>
-        <MoneyAmount kopecks={value} />
+        <MoneyAmount amount={value} />
       </>
     );
   }

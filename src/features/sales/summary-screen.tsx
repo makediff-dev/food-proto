@@ -2,11 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useMemo, useState } from 'react';
+import { activeCategories } from '@/domain/categories';
 import { normalizeName } from '@/domain/directory';
 import { MAX_LABEL_LENGTH } from '@/domain/document';
-import { deletedProducts } from '@/domain/products';
+import { activeProducts, deletedProducts } from '@/domain/products';
 import {
-  activeFinalProducts,
   daysInMonth,
   missingPlanProducts,
   monthKeyFromDate,
@@ -72,6 +72,7 @@ function Workspace({
   const monthFieldId = useId();
   const [fullscreen, setFullscreen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [addCategoryId, setAddCategoryId] = useState<string | null>(null);
   const [showDeleted, setShowDeleted] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
@@ -80,8 +81,10 @@ function Workspace({
     () => monthSummary(sales.document, month),
     [sales.document, month],
   );
-  const products = activeFinalProducts(sales.document);
-  const removed = deletedProducts(sales.document);
+  const products = activeProducts(sales.document);
+  const categories = activeCategories(sales.document);
+  const removedProducts = deletedProducts(sales.document);
+  const removedCount = removedProducts.length;
   const phase = planPhase(month, today);
   const editable = sales.hydrated && phase !== 'past' && products.length > 0;
   const vatEditable = sales.hydrated;
@@ -92,7 +95,7 @@ function Workspace({
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
   const horizonEnd = lastHorizonMonth(today);
-  const hasTable = summary.rows.length > 0;
+  const hasTable = summary.groups.length > 0;
   const tableExpanded = fullscreen && hasTable;
 
   useEffect(() => {
@@ -180,11 +183,11 @@ function Workspace({
             headline={summary.headline}
             month={month}
             editable={sales.hydrated}
-            onOperatingExpense={(side, amountExVatKopecks) => {
+            onOperatingExpense={(side, amountExVat) => {
               const rejection = sales.updateOperatingExpense(
                 month,
                 side,
-                amountExVatKopecks,
+                amountExVat,
               );
               return rejection ? OPERATING_EXPENSE_ERROR[rejection] : null;
             }}
@@ -195,8 +198,11 @@ function Workspace({
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              disabled={!sales.hydrated}
-              onClick={() => setAddOpen(true)}
+              disabled={!sales.hydrated || categories.length === 0}
+              onClick={() => {
+                setAddCategoryId(null);
+                setAddOpen(true);
+              }}
               className={primaryButtonClassName}
             >
               <IconPlus />
@@ -209,7 +215,7 @@ function Workspace({
             >
               <IconUndo />
               {showDeleted ? 'Скрыть удалённые' : 'Удалённые'}
-              {removed.length === 0 ? '' : ` ${removed.length}`}
+              {removedCount === 0 ? '' : ` ${removedCount}`}
             </button>
           </div>
 
@@ -235,22 +241,18 @@ function Workspace({
           ) : null}
 
           {showDeleted ? (
-            <DeletedProducts
-              items={removed}
+            <DeletedRecords
+              products={removedProducts}
               error={restoreError}
               hydrated={sales.hydrated}
-              onRestore={(id) => {
+              onRestoreProduct={(id) => {
                 const rejection = sales.restoreProduct(id);
                 setRestoreError(rejection ? FIELD_ERROR[rejection] : null);
               }}
             />
           ) : null}
 
-          {products.length === 0 && summary.rows.length === 0 ? (
-            <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-              Добавьте товар на этой сводке. План и факт строятся по товарам.
-            </p>
-          ) : hasTable ? (
+          {hasTable ? (
             <section
               className={
                 tableExpanded ? 'fixed inset-0 z-50 bg-paper' : undefined
@@ -260,22 +262,18 @@ function Workspace({
               }
             >
               <SummaryTable
-                rows={summary.rows}
+                groups={summary.groups}
                 planTotals={summary.planTotalsSide}
                 factTotals={summary.factTotals}
                 variance={summary.variance}
                 editable={editable}
                 vatEditable={vatEditable}
                 expanded={tableExpanded}
-                onPlanLineAction={(
-                  lineId,
-                  priceWithVatKopecks,
-                  volumePieces,
-                ) => {
+                onPlanLineAction={(lineId, priceWithVat, volumePieces) => {
                   return sales.updateMonthLine(
                     month,
                     lineId,
-                    priceWithVatKopecks,
+                    priceWithVat,
                     volumePieces,
                   );
                 }}
@@ -286,10 +284,10 @@ function Workspace({
                   );
                   return rejection ? FIELD_ERROR[rejection] : null;
                 }}
-                onProductCostAction={(productId, unitCostWithVatKopecks) => {
+                onProductCostAction={(productId, unitCostWithVat) => {
                   const rejection = sales.updateProductCost(
                     productId,
-                    unitCostWithVatKopecks,
+                    unitCostWithVat,
                   );
                   return rejection ? FIELD_ERROR[rejection] : null;
                 }}
@@ -305,11 +303,16 @@ function Workspace({
                     sales.deleteProduct(productId);
                   }
                 }}
+                onAddProduct={(categoryId) => {
+                  setAddCategoryId(categoryId);
+                  setAddOpen(true);
+                }}
               />
             </section>
           ) : (
             <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-              Добавьте товар на этой сводке. Сводка строится по товарам.
+              Добавьте товар на этой сводке. Категории заданы заранее. План и
+              факт строятся по товарам.
             </p>
           )}
         </div>
@@ -317,9 +320,11 @@ function Workspace({
 
       {addOpen ? (
         <AddProductDialog
+          categories={categories}
+          initialCategoryId={addCategoryId}
           onClose={() => setAddOpen(false)}
-          onSubmit={(name) => {
-            const rejection = sales.addProduct(name);
+          onSubmit={(name, categoryId) => {
+            const rejection = sales.addProduct(name, categoryId);
             if (rejection) {
               return FIELD_ERROR[rejection];
             }
@@ -340,15 +345,26 @@ function Workspace({
 }
 
 function AddProductDialog({
+  categories,
+  initialCategoryId,
   onClose,
   onSubmit,
 }: {
+  categories: readonly { id: string; name: string }[];
+  initialCategoryId: string | null;
   onClose: () => void;
-  onSubmit: (name: string) => string | null;
+  onSubmit: (name: string, categoryId: string) => string | null;
 }) {
   const nameId = useId();
+  const categoryFieldId = useId();
   const errorId = useId();
   const [name, setName] = useState('');
+  const lockedCategory = categories.find(
+    (item) => item.id === initialCategoryId,
+  );
+  const [categoryId, setCategoryId] = useState(
+    lockedCategory?.id ?? categories[0]?.id ?? '',
+  );
   const [error, setError] = useState<string | null>(null);
 
   function submit() {
@@ -360,8 +376,12 @@ function AddProductDialog({
       setError(FIELD_ERROR['too-long']);
       return;
     }
+    if (!categoryId) {
+      setError(FIELD_ERROR.category);
+      return;
+    }
 
-    const rejection = onSubmit(name);
+    const rejection = onSubmit(name, categoryId);
     if (rejection) {
       setError(rejection);
     }
@@ -392,15 +412,40 @@ function AddProductDialog({
             }}
             className={`mt-2 ${fieldClassName}`}
           />
+        </div>
+        <div>
+          {lockedCategory ? (
+            <>
+              <p className="text-sm text-muted">Категория</p>
+              <p className="mt-2 text-base text-ink">{lockedCategory.name}</p>
+            </>
+          ) : (
+            <>
+              <label htmlFor={categoryFieldId} className="text-sm text-muted">
+                Категория
+              </label>
+              <select
+                id={categoryFieldId}
+                value={categoryId}
+                onChange={(event) => {
+                  setCategoryId(event.target.value);
+                  setError(null);
+                }}
+                className={`mt-2 ${fieldClassName}`}
+              >
+                {categories.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
           {error ? (
             <p id={errorId} className="mt-2 text-sm text-ink">
               {error}
             </p>
-          ) : (
-            <p className="mt-2 text-sm text-muted">
-              НДС 20 % и себестоимость 0 ₽. Их правят в строке сводки.
-            </p>
-          )}
+          ) : null}
         </div>
         <button type="submit" className={primaryButtonClassName}>
           <IconPlus />
@@ -411,45 +456,50 @@ function AddProductDialog({
   );
 }
 
-function DeletedProducts({
-  items,
+function DeletedRecords({
+  products,
   error,
   hydrated,
-  onRestore,
+  onRestoreProduct,
 }: {
-  items: { id: string; name: string }[];
+  products: { id: string; name: string }[];
   error: string | null;
   hydrated: boolean;
-  onRestore: (id: string) => void;
+  onRestoreProduct: (id: string) => void;
 }) {
   return (
     <div className="border border-line bg-sheet p-4">
-      <h2 className="text-sm font-semibold text-ink">Удалённые товары</h2>
+      <h2 className="text-sm font-semibold text-ink">Удалённые</h2>
       {error ? <p className="mt-2 text-sm text-ink">{error}</p> : null}
-      {items.length === 0 ? (
+      {products.length === 0 ? (
         <p className="mt-2 text-sm leading-6 text-muted">
           Удалённых товаров нет.
         </p>
       ) : (
-        <ul className="mt-3 flex flex-col gap-2">
-          {items.map((item) => (
-            <li
-              key={item.id}
-              className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <p className="text-sm text-ink">{item.name}</p>
-              <button
-                type="button"
-                disabled={!hydrated}
-                onClick={() => onRestore(item.id)}
-                className="inline-flex h-11 items-center justify-center gap-2 border border-line bg-paper px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
-              >
-                <IconUndo />
-                Вернуть
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-3 flex flex-col gap-4">
+          <div>
+            <h3 className="text-sm text-muted">Товары</h3>
+            <ul className="mt-2 flex flex-col gap-2">
+              {products.map((item) => (
+                <li
+                  key={item.id}
+                  className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <p className="text-sm text-ink">{item.name}</p>
+                  <button
+                    type="button"
+                    disabled={!hydrated}
+                    onClick={() => onRestoreProduct(item.id)}
+                    className="inline-flex h-11 items-center justify-center gap-2 border border-line bg-paper px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
+                  >
+                    <IconUndo />
+                    Вернуть
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       )}
     </div>
   );

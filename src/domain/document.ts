@@ -1,6 +1,7 @@
-import { MAX_PRICE_PER_KILOGRAM_KOPECKS } from '@/domain/units';
+import { fitsSafeMoneyProduct } from '@/domain/money';
+import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
-export const SCHEMA_VERSION = 24 as const;
+export const SCHEMA_VERSION = 27 as const;
 
 export const MAX_LABEL_LENGTH = 200;
 
@@ -13,7 +14,7 @@ export const MAX_VOLUME_PIECES = 100_000_000;
  * Потолок суммы операционных расходов, копейки.
  * На своде одна сумма за месяц, без построчного разбиения листа Operation Expense.
  */
-export const MAX_OPERATING_EXPENSE_KOPECKS = 100_000_000_000;
+export const MAX_OPERATING_EXPENSE = 100_000_000_000;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -34,12 +35,34 @@ export interface DeletableRecord {
   deletedAt: string | null;
 }
 
+/** Категория ассортимента. Строка группы на `Svod`. Список только из мока. */
+export interface ProductCategory {
+  id: string;
+  name: string;
+}
+
+/** Шесть категорий ритейла из `docs/domain.md`. Не добавляются и не удаляются. */
+export const PRODUCT_CATEGORIES: ProductCategory[] = [
+  { id: 'category-salads', name: 'Салаты' },
+  { id: 'category-hot', name: 'Горячие блюда' },
+  { id: 'category-rolls', name: 'Роллы и сэндвичи' },
+  { id: 'category-breakfast', name: 'Завтраки' },
+  { id: 'category-desserts', name: 'Десерты и выпечка' },
+  { id: 'category-semifinished', name: 'Полуфабрикаты' },
+];
+
+export function catalogCategories(): ProductCategory[] {
+  return PRODUCT_CATEGORIES.map((item) => ({ ...item }));
+}
+
 /** Конечный товар. Себестоимость единицы с НДС вводится на сводке. */
 export interface Product extends DeletableRecord {
+  /** Категория из справочника мока. */
+  categoryId: string;
   /** НДС продажи, целые проценты. `Svod!N`. */
   vatPercent: number;
   /** Ручная себестоимость 1 шт с НДС, копейки. */
-  unitCostWithVatKopecks: number;
+  unitCostWithVat: number;
 }
 
 /** Строка плана продаж. Цена без НДС, выручка и Т-проток в документ не пишутся. */
@@ -48,7 +71,7 @@ export interface SalesPlanLine {
   /** Конечный товар. Ссылка живёт и после удаления товара. */
   productId: string;
   /** Цена с НДС, копейки за 1 шт. `Svod!F`. */
-  priceWithVatKopecks: number;
+  priceWithVat: number;
   /** Объём продаж, шт. `Svod!H`. */
   volumePieces: number;
 }
@@ -83,7 +106,7 @@ export interface SalesFactCell {
   id: string;
   productId: string;
   /** Цена с НДС, копейки за 1 шт. */
-  priceWithVatKopecks: number;
+  priceWithVat: number;
   /** Объём продаж, шт. */
   salesPieces: number;
   /** Объём производства, шт. Ввод сетки факта продаж. */
@@ -129,9 +152,9 @@ export interface MonthOperatingExpense {
   /** `ГГГГ-ММ`. На один месяц — одна запись. */
   month: string;
   /** Копейки без НДС. План. */
-  planExVatKopecks: number;
+  planExVat: number;
   /** Копейки без НДС. Факт. */
-  factExVatKopecks: number;
+  factExVat: number;
 }
 
 /**
@@ -140,6 +163,7 @@ export interface MonthOperatingExpense {
  */
 export interface PrototypeDocument {
   schemaVersion: typeof SCHEMA_VERSION;
+  categories: ProductCategory[];
   products: Product[];
   salesPlans: SalesPlan[];
   salesFacts: SalesFact[];
@@ -245,32 +269,79 @@ function uniqueActiveNames(items: readonly DeletableRecord[]): boolean {
   return true;
 }
 
-function parseProduct(value: unknown): Product | null {
+function parseCategory(value: unknown): ProductCategory | null {
   if (!isRecord(value)) {
     return null;
   }
 
   const id = parseId(value.id);
+
+  if (
+    !id ||
+    typeof value.name !== 'string' ||
+    value.name.length > MAX_LABEL_LENGTH ||
+    value.name.trim().length === 0
+  ) {
+    return null;
+  }
+
+  return { id, name: value.name };
+}
+
+/** Категории не правятся: в документе должен лежать справочник мока. */
+function parseCatalogCategories(value: unknown): ProductCategory[] | null {
+  if (!Array.isArray(value) || value.length !== PRODUCT_CATEGORIES.length) {
+    return null;
+  }
+
+  for (let index = 0; index < PRODUCT_CATEGORIES.length; index += 1) {
+    const expected = PRODUCT_CATEGORIES[index];
+    const item = parseCategory(value[index]);
+    if (
+      !expected ||
+      !item ||
+      item.id !== expected.id ||
+      item.name !== expected.name
+    ) {
+      return null;
+    }
+  }
+
+  return catalogCategories();
+}
+
+function parseProduct(
+  value: unknown,
+  categoryIds: ReadonlySet<string>,
+): Product | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const id = parseId(value.id);
+  const categoryId = parseId(value.categoryId);
   const deletedAt = parseDeletedAt(value.deletedAt);
   const vatPercent = parseInteger(
     value.vatPercent,
     MIN_VAT_PERCENT,
     MAX_VAT_PERCENT,
   );
-  const unitCostWithVatKopecks = parseInteger(
-    value.unitCostWithVatKopecks,
+  const unitCostWithVat = parseInteger(
+    value.unitCostWithVat,
     0,
-    MAX_PRICE_PER_KILOGRAM_KOPECKS,
+    MAX_PRICE_KOPECKS,
   );
 
   if (
     !id ||
+    !categoryId ||
+    !categoryIds.has(categoryId) ||
     deletedAt === undefined ||
     typeof value.name !== 'string' ||
     value.name.length > MAX_LABEL_LENGTH ||
     value.name.trim().length === 0 ||
     vatPercent === null ||
-    unitCostWithVatKopecks === null ||
+    unitCostWithVat === null ||
     'isFinalProduct' in value ||
     'pieceWeightGrams' in value ||
     'workshopId' in value
@@ -281,8 +352,9 @@ function parseProduct(value: unknown): Product | null {
   return {
     id,
     name: value.name,
+    categoryId,
     vatPercent,
-    unitCostWithVatKopecks,
+    unitCostWithVat,
     deletedAt,
   };
 }
@@ -339,12 +411,6 @@ function parseMovementList<T extends { id: string }>(
   return items;
 }
 
-function fitsSafeKopeckProduct(priceKopecks: number, volume: number): boolean {
-  return (
-    BigInt(priceKopecks) * BigInt(volume) <= BigInt(Number.MAX_SAFE_INTEGER)
-  );
-}
-
 function parseSalesPlanLine(
   value: unknown,
   productIds: ReadonlySet<string>,
@@ -355,25 +421,21 @@ function parseSalesPlanLine(
 
   const id = parseId(value.id);
   const productId = parseId(value.productId);
-  const priceWithVatKopecks = parseInteger(
-    value.priceWithVatKopecks,
-    0,
-    MAX_PRICE_PER_KILOGRAM_KOPECKS,
-  );
+  const priceWithVat = parseInteger(value.priceWithVat, 0, MAX_PRICE_KOPECKS);
   const volumePieces = parseInteger(value.volumePieces, 0, MAX_VOLUME_PIECES);
 
   if (
     !id ||
     !productId ||
     !productIds.has(productId) ||
-    priceWithVatKopecks === null ||
+    priceWithVat === null ||
     volumePieces === null ||
-    !fitsSafeKopeckProduct(priceWithVatKopecks, volumePieces)
+    !fitsSafeMoneyProduct(priceWithVat, volumePieces)
   ) {
     return null;
   }
 
-  return { id, productId, priceWithVatKopecks, volumePieces };
+  return { id, productId, priceWithVat, volumePieces };
 }
 
 function parseSalesPlan(
@@ -448,25 +510,17 @@ function parseOperatingExpense(value: unknown): MonthOperatingExpense | null {
     return null;
   }
 
-  const planExVatKopecks = parseInteger(
-    value.planExVatKopecks,
-    0,
-    MAX_OPERATING_EXPENSE_KOPECKS,
-  );
-  const factExVatKopecks = parseInteger(
-    value.factExVatKopecks,
-    0,
-    MAX_OPERATING_EXPENSE_KOPECKS,
-  );
+  const planExVat = parseInteger(value.planExVat, 0, MAX_OPERATING_EXPENSE);
+  const factExVat = parseInteger(value.factExVat, 0, MAX_OPERATING_EXPENSE);
 
-  if (planExVatKopecks === null || factExVatKopecks === null) {
+  if (planExVat === null || factExVat === null) {
     return null;
   }
 
   return {
     month: value.month,
-    planExVatKopecks,
-    factExVatKopecks,
+    planExVat,
+    factExVat,
   };
 }
 
@@ -544,11 +598,7 @@ function parseSalesFactCell(
   const id = parseId(value.id);
   const productId = parseId(value.productId);
   const product = products.find((item) => item.id === productId);
-  const priceWithVatKopecks = parseInteger(
-    value.priceWithVatKopecks,
-    0,
-    MAX_PRICE_PER_KILOGRAM_KOPECKS,
-  );
+  const priceWithVat = parseInteger(value.priceWithVat, 0, MAX_PRICE_KOPECKS);
   const salesPieces = parseInteger(value.salesPieces, 0, MAX_VOLUME_PIECES);
   const outputPieces = parseInteger(value.outputPieces, 0, MAX_VOLUME_PIECES);
   const transferPieces = parseInteger(
@@ -573,7 +623,7 @@ function parseSalesFactCell(
     !id ||
     !productId ||
     !product ||
-    priceWithVatKopecks === null ||
+    priceWithVat === null ||
     salesPieces === null ||
     outputPieces === null ||
     transferPieces === null ||
@@ -581,13 +631,13 @@ function parseSalesFactCell(
     samplesPieces === null ||
     returnsPieces === null ||
     writeOffPieces === null ||
-    !fitsSafeKopeckProduct(priceWithVatKopecks, salesPieces)
+    !fitsSafeMoneyProduct(priceWithVat, salesPieces)
   ) {
     return null;
   }
 
   const blank =
-    priceWithVatKopecks === 0 &&
+    priceWithVat === 0 &&
     salesPieces === 0 &&
     outputPieces === 0 &&
     transferPieces === 0 &&
@@ -602,7 +652,7 @@ function parseSalesFactCell(
   return {
     id,
     productId,
-    priceWithVatKopecks,
+    priceWithVat,
     salesPieces,
     outputPieces,
     transferPieces,
@@ -765,8 +815,14 @@ export function parsePrototypeDocument(
     return null;
   }
 
+  const categories = parseCatalogCategories(value.categories);
+  if (!categories) {
+    return null;
+  }
+
+  const categoryIds = new Set(categories.map((item) => item.id));
   const products = parseNamedList(value.products, (entry) =>
-    parseProduct(entry),
+    parseProduct(entry, categoryIds),
   );
   if (!products) {
     return null;
@@ -783,6 +839,7 @@ export function parsePrototypeDocument(
 
   return {
     schemaVersion: SCHEMA_VERSION,
+    categories,
     products,
     salesPlans,
     salesFacts,

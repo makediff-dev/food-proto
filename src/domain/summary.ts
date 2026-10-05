@@ -1,13 +1,21 @@
-import { ratioKopecks, type UnitCost, unitCost } from '@/domain/cost';
+import { type UnitCost, unitCost } from '@/domain/cost';
 import {
   isMonthKey,
-  MAX_OPERATING_EXPENSE_KOPECKS,
+  MAX_OPERATING_EXPENSE,
   PROFIT_TAX_PERCENT,
   type Product,
+  type ProductCategory,
   type PrototypeDocument,
   type SalesFact,
   type SalesPlan,
 } from '@/domain/document';
+import {
+  averageAmount,
+  percentHundredths,
+  ratioRound,
+  toSafeNumber,
+  vatPercentHundredths,
+} from '@/domain/money';
 import {
   type SalesFactRow,
   salesFactGridProducts,
@@ -26,26 +34,24 @@ import {
   shiftMonth,
 } from '@/domain/sales-plan';
 
-const TEN_THOUSAND = BigInt(10_000);
 const HUNDRED = BigInt(100);
-const TWO = BigInt(2);
 const ZERO = BigInt(0);
 
 export interface SummarySide {
   volumePieces: number | null;
   perDay: number | null;
-  priceWithVatKopecks: number | null;
+  priceWithVat: number | null;
   /** Десятитысячные доли рубля. Только у строки плана с введённой ценой. */
   priceExVatTenThousandths: number | null;
-  priceExVatKopecks: number | null;
+  priceExVat: number | null;
   unitCost: UnitCost | null;
-  averageCostWithVatKopecks: number | null;
-  averageCostExVatKopecks: number | null;
-  volumeCostWithVatKopecks: number | null;
-  volumeCostExVatKopecks: number | null;
-  revenueWithVatKopecks: number | null;
-  revenueExVatKopecks: number | null;
-  contributionKopecks: number | null;
+  averageCostWithVat: number | null;
+  averageCostExVat: number | null;
+  volumeCostWithVat: number | null;
+  volumeCostExVat: number | null;
+  revenueWithVat: number | null;
+  revenueExVat: number | null;
+  contribution: number | null;
   profitabilityHundredths: number | null;
   vatPercent: number | null;
   vatPercentHundredths: number | null;
@@ -54,9 +60,9 @@ export interface SummarySide {
 }
 
 export interface SummaryVariance {
-  revenueWithVatKopecks: number | null;
-  revenueExVatKopecks: number | null;
-  contributionKopecks: number | null;
+  revenueWithVat: number | null;
+  revenueExVat: number | null;
+  contribution: number | null;
 }
 
 export interface SummaryRow {
@@ -64,8 +70,18 @@ export interface SummaryRow {
   name: string;
   deleted: boolean;
   planLineId: string | null;
-  planPriceWithVatKopecks: number | null;
+  planPriceWithVat: number | null;
   planVolumePieces: number | null;
+  plan: SummarySide | null;
+  fact: SummarySide;
+  variance: SummaryVariance;
+}
+
+/** Строка группы `Svod`. Пустая категория тоже входит. */
+export interface SummaryGroup {
+  categoryId: string;
+  name: string;
+  rows: SummaryRow[];
   plan: SummarySide | null;
   fact: SummarySide;
   variance: SummaryVariance;
@@ -75,6 +91,7 @@ export interface SummaryView {
   month: string;
   days: number;
   plan: SalesPlan | null;
+  groups: SummaryGroup[];
   rows: SummaryRow[];
   planTotals: SalesPlanTotals | null;
   planTotalsSide: SummarySide | null;
@@ -87,17 +104,17 @@ export interface SummaryView {
 /** Одна колонка верхнего блока: план или факт. */
 export interface SummaryHeadlineSide {
   /** `Svod!G2` / `I2` без Factoring: сумма выручки с НДС по товарам. */
-  revenueWithVatKopecks: number | null;
+  revenueWithVat: number | null;
   /** `Svod!G3` / `I3` без Factoring: сумма Т-протока. */
-  contributionKopecks: number | null;
+  contribution: number | null;
   /** `Svod!G4` / `I4`: операционные расходы без НДС. */
-  operatingExpenseExVatKopecks: number;
+  operatingExpenseExVat: number;
   /** `Svod!G5` / `I5` = Т-проток − операционные расходы. */
-  profitKopecks: number | null;
+  profit: number | null;
   /** `Svod!G6` / `I6` = прибыль × `Svod!C6` / 100. */
-  profitTaxKopecks: number | null;
+  profitTax: number | null;
   /** `Svod!G7` / `I7` = прибыль − налог. */
-  netProfitKopecks: number | null;
+  netProfit: number | null;
   /**
    * `Svod!G8` / `I8`: чистая прибыль / выручка без НДС × 100.
    * Хранится в сотых долях процента, как рентабельность строки.
@@ -109,12 +126,12 @@ export interface SummaryHeadline {
   plan: SummaryHeadlineSide;
   fact: SummaryHeadlineSide;
   variance: {
-    revenueWithVatKopecks: number | null;
-    contributionKopecks: number | null;
-    operatingExpenseExVatKopecks: number;
-    profitKopecks: number | null;
-    profitTaxKopecks: number | null;
-    netProfitKopecks: number | null;
+    revenueWithVat: number | null;
+    contribution: number | null;
+    operatingExpenseExVat: number;
+    profit: number | null;
+    profitTax: number | null;
+    netProfit: number | null;
     netProfitabilityHundredths: number | null;
   };
   taxPercent: number;
@@ -123,85 +140,6 @@ export interface SummaryHeadline {
 export type OperatingExpenseSide = 'plan' | 'fact';
 
 export type OperatingExpenseRejection = 'month' | 'amount';
-
-function toSafeNumber(value: bigint): number | null {
-  if (
-    value > BigInt(Number.MAX_SAFE_INTEGER) ||
-    value < BigInt(Number.MIN_SAFE_INTEGER)
-  ) {
-    return null;
-  }
-
-  return Number(value);
-}
-
-function roundHalfAwayFromZero(
-  numerator: bigint,
-  denominator: bigint,
-): number | null {
-  if (denominator < ZERO) {
-    return roundHalfAwayFromZero(-numerator, -denominator);
-  }
-  if (denominator === ZERO) {
-    return null;
-  }
-
-  const negative = numerator < ZERO;
-  const magnitude = negative ? -numerator : numerator;
-  const rounded = (magnitude + denominator / TWO) / denominator;
-  if (rounded > BigInt(Number.MAX_SAFE_INTEGER)) {
-    return null;
-  }
-
-  const value = Number(rounded);
-  return negative ? -value : value;
-}
-
-function averageKopecks(
-  amount: number | null,
-  volume: number | null,
-): number | null {
-  if (amount === null || volume === null || volume <= 0) {
-    return null;
-  }
-
-  return ratioKopecks(BigInt(amount), BigInt(volume));
-}
-
-function totalVatHundredths(
-  revenueWithVatKopecks: number | null,
-  revenueExVatKopecks: number | null,
-): number | null {
-  if (revenueWithVatKopecks === null || revenueExVatKopecks === null) {
-    return null;
-  }
-  if (revenueExVatKopecks === 0) {
-    return 0;
-  }
-
-  return roundHalfAwayFromZero(
-    (BigInt(revenueWithVatKopecks) - BigInt(revenueExVatKopecks)) *
-      TEN_THOUSAND,
-    BigInt(revenueExVatKopecks),
-  );
-}
-
-function totalProfitabilityHundredths(
-  contributionKopecks: number | null,
-  volumeCostExVatKopecks: number | null,
-): number | null {
-  if (contributionKopecks === null || volumeCostExVatKopecks === null) {
-    return null;
-  }
-  if (volumeCostExVatKopecks === 0) {
-    return 0;
-  }
-
-  return roundHalfAwayFromZero(
-    BigInt(contributionKopecks) * TEN_THOUSAND,
-    BigInt(volumeCostExVatKopecks),
-  );
-}
 
 function minus(left: number | null, right: number | null): number | null {
   if (left === null || right === null) {
@@ -212,36 +150,24 @@ function minus(left: number | null, right: number | null): number | null {
 }
 
 function varianceOf(
-  fact: Pick<
-    SummarySide,
-    'revenueWithVatKopecks' | 'revenueExVatKopecks' | 'contributionKopecks'
-  >,
+  fact: Pick<SummarySide, 'revenueWithVat' | 'revenueExVat' | 'contribution'>,
   plan: Pick<
     SummarySide,
-    'revenueWithVatKopecks' | 'revenueExVatKopecks' | 'contributionKopecks'
+    'revenueWithVat' | 'revenueExVat' | 'contribution'
   > | null,
 ): SummaryVariance {
   if (!plan) {
     return {
-      revenueWithVatKopecks: null,
-      revenueExVatKopecks: null,
-      contributionKopecks: null,
+      revenueWithVat: null,
+      revenueExVat: null,
+      contribution: null,
     };
   }
 
   return {
-    revenueWithVatKopecks: minus(
-      fact.revenueWithVatKopecks,
-      plan.revenueWithVatKopecks,
-    ),
-    revenueExVatKopecks: minus(
-      fact.revenueExVatKopecks,
-      plan.revenueExVatKopecks,
-    ),
-    contributionKopecks: minus(
-      fact.contributionKopecks,
-      plan.contributionKopecks,
-    ),
+    revenueWithVat: minus(fact.revenueWithVat, plan.revenueWithVat),
+    revenueExVat: minus(fact.revenueExVat, plan.revenueExVat),
+    contribution: minus(fact.contribution, plan.contribution),
   };
 }
 
@@ -270,9 +196,11 @@ export function summaryGridProducts(
     (item) => referenced.has(item.id) && !seen.has(item.id),
   );
 
-  return [...fromFact, ...extra].sort((left, right) =>
-    left.name.localeCompare(right.name, 'ru'),
-  );
+  return [...fromFact, ...extra];
+}
+
+function summaryCategories(document: PrototypeDocument): ProductCategory[] {
+  return document.categories;
 }
 
 function planSide(
@@ -281,7 +209,7 @@ function planSide(
   product: Product,
 ): {
   lineId: string;
-  priceWithVatKopecks: number;
+  priceWithVat: number;
   volumePieces: number;
   side: SummarySide;
 } | null {
@@ -291,30 +219,28 @@ function planSide(
   }
 
   const metrics = salesPlanLineMetrics(document, plan, line);
-  const costMissing =
-    line.volumePieces > 0 && metrics.volumeCostExVatKopecks === null;
+  const costMissing = line.volumePieces > 0 && metrics.volumeCostExVat === null;
   const revenueMissing =
-    metrics.revenueWithVatKopecks === null ||
-    metrics.revenueExVatKopecks === null;
+    metrics.revenueWithVat === null || metrics.revenueExVat === null;
 
   return {
     lineId: line.id,
-    priceWithVatKopecks: line.priceWithVatKopecks,
+    priceWithVat: line.priceWithVat,
     volumePieces: line.volumePieces,
     side: {
       volumePieces: line.volumePieces,
       perDay: metrics.perDay,
-      priceWithVatKopecks: line.priceWithVatKopecks,
+      priceWithVat: line.priceWithVat,
       priceExVatTenThousandths: metrics.priceExVatTenThousandths,
-      priceExVatKopecks: null,
+      priceExVat: null,
       unitCost: metrics.unitCost,
-      averageCostWithVatKopecks: metrics.unitCost?.withVatKopecks ?? null,
-      averageCostExVatKopecks: metrics.unitCost?.exVatKopecks ?? null,
-      volumeCostWithVatKopecks: metrics.volumeCostWithVatKopecks,
-      volumeCostExVatKopecks: metrics.volumeCostExVatKopecks,
-      revenueWithVatKopecks: metrics.revenueWithVatKopecks,
-      revenueExVatKopecks: metrics.revenueExVatKopecks,
-      contributionKopecks: metrics.contributionKopecks,
+      averageCostWithVat: metrics.unitCost?.withVat ?? null,
+      averageCostExVat: metrics.unitCost?.exVat ?? null,
+      volumeCostWithVat: metrics.volumeCostWithVat,
+      volumeCostExVat: metrics.volumeCostExVat,
+      revenueWithVat: metrics.revenueWithVat,
+      revenueExVat: metrics.revenueExVat,
+      contribution: metrics.contribution,
       profitabilityHundredths: metrics.profitabilityHundredths,
       vatPercent: product.vatPercent,
       vatPercentHundredths: null,
@@ -335,7 +261,7 @@ function factFromRows(
   let revenueEx = ZERO;
   let costWith = ZERO;
   let costEx = ZERO;
-  let contribution = ZERO;
+  let contributionSum = ZERO;
   let costComplete = true;
   let revenueComplete = true;
   const cost = unitCost(document, product.id);
@@ -343,82 +269,64 @@ function factFromRows(
   for (const row of rows) {
     volume += BigInt(row.inputs.salesPieces);
 
-    if (
-      row.revenueWithVatKopecks === null ||
-      row.revenueExVatKopecks === null
-    ) {
+    if (row.revenueWithVat === null || row.revenueExVat === null) {
       if (row.inputs.salesPieces > 0) {
         revenueComplete = false;
       }
     } else {
-      revenueWith += BigInt(row.revenueWithVatKopecks);
-      revenueEx += BigInt(row.revenueExVatKopecks);
+      revenueWith += BigInt(row.revenueWithVat);
+      revenueEx += BigInt(row.revenueExVat);
     }
 
     if (
       row.inputs.salesPieces > 0 &&
-      (row.salesVolumeCostWithVatKopecks === null ||
-        row.salesVolumeCostExVatKopecks === null ||
-        row.contributionKopecks === null)
+      (row.salesVolumeCostWithVat === null ||
+        row.salesVolumeCostExVat === null ||
+        row.contribution === null)
     ) {
       costComplete = false;
     } else if (
-      row.salesVolumeCostWithVatKopecks !== null &&
-      row.salesVolumeCostExVatKopecks !== null &&
-      row.contributionKopecks !== null
+      row.salesVolumeCostWithVat !== null &&
+      row.salesVolumeCostExVat !== null &&
+      row.contribution !== null
     ) {
-      costWith += BigInt(row.salesVolumeCostWithVatKopecks);
-      costEx += BigInt(row.salesVolumeCostExVatKopecks);
-      contribution += BigInt(row.contributionKopecks);
+      costWith += BigInt(row.salesVolumeCostWithVat);
+      costEx += BigInt(row.salesVolumeCostExVat);
+      contributionSum += BigInt(row.contribution);
     }
   }
 
   const volumePieces = toSafeNumber(volume) ?? 0;
-  const revenueWithVatKopecks = revenueComplete
-    ? toSafeNumber(revenueWith)
-    : null;
-  const revenueExVatKopecks = revenueComplete ? toSafeNumber(revenueEx) : null;
-  const volumeCostWithVatKopecks = costComplete ? toSafeNumber(costWith) : null;
-  const volumeCostExVatKopecks = costComplete ? toSafeNumber(costEx) : null;
-  const contributionKopecks =
-    costComplete && revenueComplete ? toSafeNumber(contribution) : null;
-  const priceWithVatKopecks = averageKopecks(
-    revenueWithVatKopecks,
-    volumePieces,
-  );
-  const priceExVatKopecks = averageKopecks(revenueExVatKopecks, volumePieces);
+  const revenueWithVat = revenueComplete ? toSafeNumber(revenueWith) : null;
+  const revenueExVat = revenueComplete ? toSafeNumber(revenueEx) : null;
+  const volumeCostWithVat = costComplete ? toSafeNumber(costWith) : null;
+  const volumeCostExVat = costComplete ? toSafeNumber(costEx) : null;
+  const contribution =
+    costComplete && revenueComplete ? toSafeNumber(contributionSum) : null;
+  const priceWithVat = averageAmount(revenueWithVat, volumePieces);
+  const priceExVat = averageAmount(revenueExVat, volumePieces);
   const volumeAndEmptyCost =
     volumePieces > 0 && (cost === null || !costComplete);
 
   return {
     volumePieces,
     perDay: days > 0 ? volumePieces / days : 0,
-    priceWithVatKopecks,
+    priceWithVat,
     priceExVatTenThousandths: null,
-    priceExVatKopecks,
+    priceExVat,
     unitCost: volumeAndEmptyCost ? null : cost,
-    averageCostWithVatKopecks: volumeAndEmptyCost
-      ? null
-      : (cost?.withVatKopecks ?? null),
-    averageCostExVatKopecks: volumeAndEmptyCost
-      ? null
-      : (cost?.exVatKopecks ?? null),
-    volumeCostWithVatKopecks: volumeAndEmptyCost
-      ? null
-      : volumeCostWithVatKopecks,
-    volumeCostExVatKopecks: volumeAndEmptyCost ? null : volumeCostExVatKopecks,
-    revenueWithVatKopecks,
-    revenueExVatKopecks,
-    contributionKopecks: volumeAndEmptyCost ? null : contributionKopecks,
+    averageCostWithVat: volumeAndEmptyCost ? null : (cost?.withVat ?? null),
+    averageCostExVat: volumeAndEmptyCost ? null : (cost?.exVat ?? null),
+    volumeCostWithVat: volumeAndEmptyCost ? null : volumeCostWithVat,
+    volumeCostExVat: volumeAndEmptyCost ? null : volumeCostExVat,
+    revenueWithVat,
+    revenueExVat,
+    contribution: volumeAndEmptyCost ? null : contribution,
     profitabilityHundredths: volumeAndEmptyCost
       ? null
-      : priceWithVatKopecks === null || cost === null
+      : priceWithVat === null || cost === null
         ? null
-        : profitabilityHundredths(
-            priceWithVatKopecks,
-            product.vatPercent,
-            cost.exVatKopecks,
-          ),
+        : profitabilityHundredths(priceWithVat, product.vatPercent, cost.exVat),
     vatPercent: product.vatPercent,
     vatPercentHundredths: null,
     costComplete: !volumeAndEmptyCost,
@@ -434,8 +342,8 @@ function emptyFactSide(
   return factFromRows(document, product, [], days);
 }
 
-function factTotalsFromRows(
-  rows: readonly SummaryRow[],
+function totalsFromSides(
+  sides: readonly SummarySide[],
   days: number,
 ): SummarySide {
   let volume = ZERO;
@@ -443,111 +351,112 @@ function factTotalsFromRows(
   let revenueEx = ZERO;
   let costWith = ZERO;
   let costEx = ZERO;
-  let contribution = ZERO;
+  let contributionSum = ZERO;
   let costComplete = true;
   let revenueComplete = true;
 
-  for (const row of rows) {
-    const fact = row.fact;
+  for (const fact of sides) {
     volume += BigInt(fact.volumePieces ?? 0);
 
-    if (
-      fact.revenueWithVatKopecks === null ||
-      fact.revenueExVatKopecks === null
-    ) {
+    if (fact.revenueWithVat === null || fact.revenueExVat === null) {
       if ((fact.volumePieces ?? 0) > 0) {
         revenueComplete = false;
       }
     } else {
-      revenueWith += BigInt(fact.revenueWithVatKopecks);
-      revenueEx += BigInt(fact.revenueExVatKopecks);
+      revenueWith += BigInt(fact.revenueWithVat);
+      revenueEx += BigInt(fact.revenueExVat);
     }
 
     if ((fact.volumePieces ?? 0) > 0 && !fact.costComplete) {
       costComplete = false;
     } else if (
-      fact.volumeCostWithVatKopecks !== null &&
-      fact.volumeCostExVatKopecks !== null &&
-      fact.contributionKopecks !== null
+      fact.volumeCostWithVat !== null &&
+      fact.volumeCostExVat !== null &&
+      fact.contribution !== null
     ) {
-      costWith += BigInt(fact.volumeCostWithVatKopecks);
-      costEx += BigInt(fact.volumeCostExVatKopecks);
-      contribution += BigInt(fact.contributionKopecks);
+      costWith += BigInt(fact.volumeCostWithVat);
+      costEx += BigInt(fact.volumeCostExVat);
+      contributionSum += BigInt(fact.contribution);
     }
   }
 
   const volumePieces = toSafeNumber(volume);
-  const revenueWithVatKopecks = revenueComplete
-    ? toSafeNumber(revenueWith)
-    : null;
-  const revenueExVatKopecks = revenueComplete ? toSafeNumber(revenueEx) : null;
-  const volumeCostWithVatKopecks = costComplete ? toSafeNumber(costWith) : null;
-  const volumeCostExVatKopecks = costComplete ? toSafeNumber(costEx) : null;
-  const contributionKopecks =
-    costComplete && revenueComplete ? toSafeNumber(contribution) : null;
-  const priceWithVatKopecks = averageKopecks(
-    revenueWithVatKopecks,
-    volumePieces,
-  );
-  const priceExVatKopecks = averageKopecks(revenueExVatKopecks, volumePieces);
+  const revenueWithVat = revenueComplete ? toSafeNumber(revenueWith) : null;
+  const revenueExVat = revenueComplete ? toSafeNumber(revenueEx) : null;
+  const volumeCostWithVat = costComplete ? toSafeNumber(costWith) : null;
+  const volumeCostExVat = costComplete ? toSafeNumber(costEx) : null;
+  const contribution =
+    costComplete && revenueComplete ? toSafeNumber(contributionSum) : null;
+  const priceWithVat = averageAmount(revenueWithVat, volumePieces);
+  const priceExVat = averageAmount(revenueExVat, volumePieces);
 
   return {
     volumePieces,
     perDay: volumePieces === null || days === 0 ? null : volumePieces / days,
-    priceWithVatKopecks,
+    priceWithVat,
     priceExVatTenThousandths: null,
-    priceExVatKopecks,
+    priceExVat,
     unitCost: null,
-    averageCostWithVatKopecks: averageKopecks(
-      volumeCostWithVatKopecks,
-      volumePieces,
-    ),
-    averageCostExVatKopecks: averageKopecks(
-      volumeCostExVatKopecks,
-      volumePieces,
-    ),
-    volumeCostWithVatKopecks: costComplete ? volumeCostWithVatKopecks : null,
-    volumeCostExVatKopecks: costComplete ? volumeCostExVatKopecks : null,
-    revenueWithVatKopecks,
-    revenueExVatKopecks,
-    contributionKopecks,
+    averageCostWithVat: averageAmount(volumeCostWithVat, volumePieces),
+    averageCostExVat: averageAmount(volumeCostExVat, volumePieces),
+    volumeCostWithVat: costComplete ? volumeCostWithVat : null,
+    volumeCostExVat: costComplete ? volumeCostExVat : null,
+    revenueWithVat,
+    revenueExVat,
+    contribution,
     profitabilityHundredths:
       costComplete && revenueComplete
-        ? totalProfitabilityHundredths(
-            contributionKopecks,
-            volumeCostExVatKopecks,
-          )
+        ? percentHundredths(contribution, volumeCostExVat)
         : null,
     vatPercent: null,
-    vatPercentHundredths: totalVatHundredths(
-      revenueWithVatKopecks,
-      revenueExVatKopecks,
-    ),
+    vatPercentHundredths: vatPercentHundredths(revenueWithVat, revenueExVat),
     costComplete,
     revenueComplete,
   };
+}
+
+function factTotalsFromRows(
+  rows: readonly SummaryRow[],
+  days: number,
+): SummarySide {
+  return totalsFromSides(
+    rows.map((row) => row.fact),
+    days,
+  );
+}
+
+function planTotalsFromRows(
+  rows: readonly SummaryRow[],
+  days: number,
+): SummarySide | null {
+  const sides = rows.flatMap((row) => (row.plan ? [row.plan] : []));
+  if (sides.length === 0) {
+    return rows.length === 0 ? totalsFromSides([], days) : null;
+  }
+
+  return totalsFromSides(sides, days);
 }
 
 function planTotalsAsSide(totals: SalesPlanTotals): SummarySide {
   return {
     volumePieces: totals.volumePieces,
     perDay: totals.perDay,
-    priceWithVatKopecks: totals.averagePriceWithVatKopecks,
+    priceWithVat: totals.averagePriceWithVat,
     priceExVatTenThousandths: null,
-    priceExVatKopecks: totals.averagePriceExVatKopecks,
+    priceExVat: totals.averagePriceExVat,
     unitCost: null,
-    averageCostWithVatKopecks: totals.averageCostWithVatKopecks,
-    averageCostExVatKopecks: totals.averageCostExVatKopecks,
-    volumeCostWithVatKopecks: totals.volumeCostWithVatKopecks,
-    volumeCostExVatKopecks: totals.volumeCostExVatKopecks,
-    revenueWithVatKopecks: totals.revenueWithVatKopecks,
-    revenueExVatKopecks: totals.revenueExVatKopecks,
-    contributionKopecks: totals.contributionKopecks,
+    averageCostWithVat: totals.averageCostWithVat,
+    averageCostExVat: totals.averageCostExVat,
+    volumeCostWithVat: totals.volumeCostWithVat,
+    volumeCostExVat: totals.volumeCostExVat,
+    revenueWithVat: totals.revenueWithVat,
+    revenueExVat: totals.revenueExVat,
+    contribution: totals.contribution,
     profitabilityHundredths: totals.profitabilityHundredths,
     vatPercent: null,
-    vatPercentHundredths: totalVatHundredths(
-      totals.revenueWithVatKopecks,
-      totals.revenueExVatKopecks,
+    vatPercentHundredths: vatPercentHundredths(
+      totals.revenueWithVat,
+      totals.revenueExVat,
     ),
     costComplete: totals.costComplete,
     revenueComplete: totals.revenueComplete,
@@ -558,53 +467,38 @@ function planTotalsAsSide(totals: SalesPlanTotals): SummarySide {
 export function monthOperatingExpenseAmounts(
   document: PrototypeDocument,
   month: string,
-): { planExVatKopecks: number; factExVatKopecks: number } {
+): { planExVat: number; factExVat: number } {
   const row = document.operatingExpenses.find((item) => item.month === month);
   return {
-    planExVatKopecks: row?.planExVatKopecks ?? 0,
-    factExVatKopecks: row?.factExVatKopecks ?? 0,
+    planExVat: row?.planExVat ?? 0,
+    factExVat: row?.factExVat ?? 0,
   };
 }
 
 function headlineSide(
   totals: SummarySide | null,
-  operatingExpenseExVatKopecks: number,
+  operatingExpenseExVat: number,
 ): SummaryHeadlineSide {
-  const revenueWithVatKopecks = totals?.revenueWithVatKopecks ?? null;
-  const revenueExVatKopecks = totals?.revenueExVatKopecks ?? null;
-  const contributionKopecks = totals?.contributionKopecks ?? null;
-  const profitKopecks =
-    contributionKopecks === null
+  const revenueWithVat = totals?.revenueWithVat ?? null;
+  const revenueExVat = totals?.revenueExVat ?? null;
+  const contribution = totals?.contribution ?? null;
+  const profit =
+    contribution === null ? null : contribution - operatingExpenseExVat;
+  const profitTax =
+    profit === null
       ? null
-      : contributionKopecks - operatingExpenseExVatKopecks;
-  const profitTaxKopecks =
-    profitKopecks === null
-      ? null
-      : roundHalfAwayFromZero(
-          BigInt(profitKopecks) * BigInt(PROFIT_TAX_PERCENT),
-          HUNDRED,
-        );
-  const netProfitKopecks =
-    profitKopecks === null || profitTaxKopecks === null
-      ? null
-      : profitKopecks - profitTaxKopecks;
-  const netProfitabilityHundredths =
-    netProfitKopecks === null || revenueExVatKopecks === null
-      ? null
-      : revenueExVatKopecks === 0
-        ? 0
-        : roundHalfAwayFromZero(
-            BigInt(netProfitKopecks) * TEN_THOUSAND,
-            BigInt(revenueExVatKopecks),
-          );
+      : ratioRound(BigInt(profit) * BigInt(PROFIT_TAX_PERCENT), HUNDRED);
+  const netProfit =
+    profit === null || profitTax === null ? null : profit - profitTax;
+  const netProfitabilityHundredths = percentHundredths(netProfit, revenueExVat);
 
   return {
-    revenueWithVatKopecks,
-    contributionKopecks,
-    operatingExpenseExVatKopecks,
-    profitKopecks,
-    profitTaxKopecks,
-    netProfitKopecks,
+    revenueWithVat,
+    contribution,
+    operatingExpenseExVat,
+    profit,
+    profitTax,
+    netProfit,
     netProfitabilityHundredths,
   };
 }
@@ -617,29 +511,23 @@ function headlineSide(
 export function summaryHeadline(
   planTotals: SummarySide | null,
   factTotals: SummarySide,
-  operatingExpensePlanExVatKopecks: number,
-  operatingExpenseFactExVatKopecks: number,
+  operatingExpensePlanExVat: number,
+  operatingExpenseFactExVat: number,
 ): SummaryHeadline {
-  const plan = headlineSide(planTotals, operatingExpensePlanExVatKopecks);
-  const fact = headlineSide(factTotals, operatingExpenseFactExVatKopecks);
+  const plan = headlineSide(planTotals, operatingExpensePlanExVat);
+  const fact = headlineSide(factTotals, operatingExpenseFactExVat);
 
   return {
     plan,
     fact,
     variance: {
-      revenueWithVatKopecks: minus(
-        fact.revenueWithVatKopecks,
-        plan.revenueWithVatKopecks,
-      ),
-      contributionKopecks: minus(
-        fact.contributionKopecks,
-        plan.contributionKopecks,
-      ),
-      operatingExpenseExVatKopecks:
-        fact.operatingExpenseExVatKopecks - plan.operatingExpenseExVatKopecks,
-      profitKopecks: minus(fact.profitKopecks, plan.profitKopecks),
-      profitTaxKopecks: minus(fact.profitTaxKopecks, plan.profitTaxKopecks),
-      netProfitKopecks: minus(fact.netProfitKopecks, plan.netProfitKopecks),
+      revenueWithVat: minus(fact.revenueWithVat, plan.revenueWithVat),
+      contribution: minus(fact.contribution, plan.contribution),
+      operatingExpenseExVat:
+        fact.operatingExpenseExVat - plan.operatingExpenseExVat,
+      profit: minus(fact.profit, plan.profit),
+      profitTax: minus(fact.profitTax, plan.profitTax),
+      netProfit: minus(fact.netProfit, plan.netProfit),
       netProfitabilityHundredths: minus(
         fact.netProfitabilityHundredths,
         plan.netProfitabilityHundredths,
@@ -653,7 +541,7 @@ export function setOperatingExpenseRejection(
   document: PrototypeDocument,
   month: string,
   side: OperatingExpenseSide,
-  amountExVatKopecks: number,
+  amountExVat: number,
 ): OperatingExpenseRejection | null {
   void document;
   void side;
@@ -663,9 +551,9 @@ export function setOperatingExpenseRejection(
   }
 
   if (
-    !Number.isInteger(amountExVatKopecks) ||
-    amountExVatKopecks < 0 ||
-    amountExVatKopecks > MAX_OPERATING_EXPENSE_KOPECKS
+    !Number.isInteger(amountExVat) ||
+    amountExVat < 0 ||
+    amountExVat > MAX_OPERATING_EXPENSE
   ) {
     return 'amount';
   }
@@ -681,17 +569,15 @@ export function setOperatingExpense(
   document: PrototypeDocument,
   month: string,
   side: OperatingExpenseSide,
-  amountExVatKopecks: number,
+  amountExVat: number,
 ): PrototypeDocument {
-  if (setOperatingExpenseRejection(document, month, side, amountExVatKopecks)) {
+  if (setOperatingExpenseRejection(document, month, side, amountExVat)) {
     return document;
   }
 
   const current = monthOperatingExpenseAmounts(document, month);
-  const nextPlan =
-    side === 'plan' ? amountExVatKopecks : current.planExVatKopecks;
-  const nextFact =
-    side === 'fact' ? amountExVatKopecks : current.factExVatKopecks;
+  const nextPlan = side === 'plan' ? amountExVat : current.planExVat;
+  const nextFact = side === 'fact' ? amountExVat : current.factExVat;
   const withoutMonth = document.operatingExpenses.filter(
     (item) => item.month !== month,
   );
@@ -710,8 +596,8 @@ export function setOperatingExpense(
       ...withoutMonth,
       {
         month,
-        planExVatKopecks: nextPlan,
-        factExVatKopecks: nextFact,
+        planExVat: nextPlan,
+        factExVat: nextFact,
       },
     ],
   };
@@ -730,7 +616,9 @@ export function monthSummary(
   const days = daysInMonth(month);
   const products = summaryGridProducts(document, plan, fact);
   const factDays = salesFactMonth(document, fact, month);
-  const rows: SummaryRow[] = products.map((product) => {
+  const rowByProduct = new Map<string, SummaryRow>();
+
+  for (const product of products) {
     const planned = plan ? planSide(document, plan, product) : null;
     const dayRows = factDays.flatMap((day) =>
       day.rows.filter((row) => row.productId === product.id),
@@ -741,18 +629,40 @@ export function monthSummary(
         : emptyFactSide(document, product, days);
     const planMetrics = planned?.side ?? null;
 
-    return {
+    rowByProduct.set(product.id, {
       productId: product.id,
       name: product.name,
       deleted: product.deletedAt !== null,
       planLineId: planned?.lineId ?? null,
-      planPriceWithVatKopecks: planned?.priceWithVatKopecks ?? null,
+      planPriceWithVat: planned?.priceWithVat ?? null,
       planVolumePieces: planned?.volumePieces ?? null,
+      plan: planMetrics,
+      fact: factSide,
+      variance: varianceOf(factSide, planMetrics),
+    });
+  }
+
+  const groups: SummaryGroup[] = summaryCategories(document).map((category) => {
+    const rows = products
+      .filter((item) => item.categoryId === category.id)
+      .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+      .flatMap((item) => {
+        const row = rowByProduct.get(item.id);
+        return row ? [row] : [];
+      });
+    const factSide = factTotalsFromRows(rows, days);
+    const planMetrics = planTotalsFromRows(rows, days);
+
+    return {
+      categoryId: category.id,
+      name: category.name,
+      rows,
       plan: planMetrics,
       fact: factSide,
       variance: varianceOf(factSide, planMetrics),
     };
   });
+  const rows = groups.flatMap((group) => group.rows);
 
   const planTotals = plan ? salesPlanTotals(document, plan) : null;
   const planTotalsSide = planTotals ? planTotalsAsSide(planTotals) : null;
@@ -763,6 +673,7 @@ export function monthSummary(
     month,
     days,
     plan,
+    groups,
     rows,
     planTotals,
     planTotalsSide,
@@ -771,8 +682,8 @@ export function monthSummary(
     headline: summaryHeadline(
       planTotalsSide,
       factTotals,
-      opex.planExVatKopecks,
-      opex.factExVatKopecks,
+      opex.planExVat,
+      opex.factExVat,
     ),
   };
 }

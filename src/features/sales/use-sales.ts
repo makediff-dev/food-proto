@@ -6,6 +6,7 @@ import {
   addProduct,
   deleteProduct,
   type FieldRejection,
+  productCategoryRejection,
   productNameRejection,
   productUnitCostRejection,
   productVatRejection,
@@ -57,7 +58,7 @@ export function useSales() {
     updateMonthLine(
       month: string,
       lineId: string,
-      priceWithVatKopecks: number,
+      priceWithVat: number,
       volumePieces: number,
     ) {
       const today = new Date();
@@ -81,7 +82,7 @@ export function useSales() {
             next,
             plan.id,
             lineId,
-            priceWithVatKopecks,
+            priceWithVat,
             volumePieces,
             today,
           );
@@ -106,7 +107,7 @@ export function useSales() {
               ensured,
               created.id,
               lineId,
-              priceWithVatKopecks,
+              priceWithVat,
               volumePieces,
               today,
             );
@@ -115,16 +116,18 @@ export function useSales() {
             current,
             plan.id,
             lineId,
-            priceWithVatKopecks,
+            priceWithVat,
             volumePieces,
             today,
           );
         },
       );
     },
-    addProduct(name: string): FieldRejection | null {
+    addProduct(name: string, categoryId: string): FieldRejection | null {
       const id = `product:${crypto.randomUUID()}`;
-      const rejection = productNameRejection(document, name);
+      const rejection =
+        productNameRejection(document, name) ??
+        productCategoryRejection(document, categoryId);
       if (rejection) {
         return rejection;
       }
@@ -132,8 +135,9 @@ export function useSales() {
         addProduct(current, {
           id,
           name,
+          categoryId,
           vatPercent: 20,
-          unitCostWithVatKopecks: 0,
+          unitCostWithVat: 0,
           deletedAt: null,
         }),
       );
@@ -157,18 +161,14 @@ export function useSales() {
     },
     updateProductCost(
       id: string,
-      unitCostWithVatKopecks: number,
+      unitCostWithVat: number,
     ): FieldRejection | null {
-      const rejection = productUnitCostRejection(
-        document,
-        id,
-        unitCostWithVatKopecks,
-      );
+      const rejection = productUnitCostRejection(document, id, unitCostWithVat);
       if (rejection) {
         return rejection;
       }
       updateDocument((current) =>
-        setProductUnitCost(current, id, unitCostWithVatKopecks),
+        setProductUnitCost(current, id, unitCostWithVat),
       );
       return null;
     },
@@ -192,19 +192,19 @@ export function useSales() {
     updateOperatingExpense(
       month: string,
       side: OperatingExpenseSide,
-      amountExVatKopecks: number,
+      amountExVat: number,
     ): OperatingExpenseRejection | null {
       const rejection = setOperatingExpenseRejection(
         document,
         month,
         side,
-        amountExVatKopecks,
+        amountExVat,
       );
       if (rejection) {
         return rejection;
       }
       updateDocument((current) =>
-        setOperatingExpense(current, month, side, amountExVatKopecks),
+        setOperatingExpense(current, month, side, amountExVat),
       );
       return null;
     },

@@ -1,4 +1,4 @@
-import { ratioKopecks, type UnitCost, unitCost } from '@/domain/cost';
+import { type UnitCost, unitCost } from '@/domain/cost';
 import {
   isMonthKey,
   MAX_ID_LENGTH,
@@ -8,11 +8,19 @@ import {
   type SalesPlan,
   type SalesPlanLine,
 } from '@/domain/document';
-import { MAX_PRICE_PER_KILOGRAM_KOPECKS } from '@/domain/units';
+import {
+  averageAmount,
+  fitsSafeMoneyProduct,
+  multiplyAmount,
+  percentHundredths,
+  ratioRound,
+  toSafeNumber,
+} from '@/domain/money';
+import { activeProducts } from '@/domain/products';
+import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
 const HUNDRED = BigInt(100);
 const TEN_THOUSAND = BigInt(10_000);
-const TWO = BigInt(2);
 const ZERO = BigInt(0);
 
 /** Текущий месяц и 23 следующих. Вместе 24. */
@@ -36,16 +44,16 @@ export interface SalesPlanLineMetrics {
   /** Десятитысячные доли рубля: 901273 = 90,1273 ₽. `Svod!G31`, без округления до копейки. */
   priceExVatTenThousandths: number | null;
   /** Копейки. `Svod!I31 = F31 * H31`. */
-  revenueWithVatKopecks: number | null;
+  revenueWithVat: number | null;
   /** Копейки, половина вверх. `Svod!J31`. */
-  revenueExVatKopecks: number | null;
+  revenueExVat: number | null;
   unitCost: UnitCost | null;
   /** Копейки. `Svod!L31 = D31 * H31`, с НДС. */
-  volumeCostWithVatKopecks: number | null;
+  volumeCostWithVat: number | null;
   /** Копейки. `Svod!L31`, без НДС. */
-  volumeCostExVatKopecks: number | null;
+  volumeCostExVat: number | null;
   /** Копейки. `Svod!K31 = J31 - L31`. Одно число, без пары «с НДС». */
-  contributionKopecks: number | null;
+  contribution: number | null;
   /**
    * Сотые доли процента: 1234 = 12,34%.
    * `Svod!E31 = (G31 - D31) / D31 * 100`. Ноль себестоимости — 0.
@@ -58,22 +66,22 @@ export interface SalesPlanLineMetrics {
 export interface SalesPlanTotals {
   volumePieces: number | null;
   perDay: number | null;
-  revenueWithVatKopecks: number | null;
-  revenueExVatKopecks: number | null;
-  volumeCostWithVatKopecks: number | null;
-  volumeCostExVatKopecks: number | null;
-  contributionKopecks: number | null;
+  revenueWithVat: number | null;
+  revenueExVat: number | null;
+  volumeCostWithVat: number | null;
+  volumeCostExVat: number | null;
+  contribution: number | null;
   /** Есть строка с объёмом, у которой себестоимость не считается. */
   costComplete: boolean;
   /** Есть строка с объёмом, у которой нет ставки НДС. */
   revenueComplete: boolean;
   /** `Svod!F141`: выручка с НДС / объём, копейки. */
-  averagePriceWithVatKopecks: number | null;
+  averagePriceWithVat: number | null;
   /** Выручка без НДС / объём, копейки. */
-  averagePriceExVatKopecks: number | null;
+  averagePriceExVat: number | null;
   /** `Svod!D141`: себестоимость объёма / объём, копейки. Только если себестоимость полная. */
-  averageCostWithVatKopecks: number | null;
-  averageCostExVatKopecks: number | null;
+  averageCostWithVat: number | null;
+  averageCostExVat: number | null;
   /** Рентабельность итога: Т-проток / себестоимость объёма без НДС. */
   profitabilityHundredths: number | null;
   productsWithVolume: number;
@@ -87,54 +95,11 @@ function isEntityId(value: string): boolean {
 }
 
 function isPrice(value: number): boolean {
-  return (
-    Number.isInteger(value) &&
-    value >= 0 &&
-    value <= MAX_PRICE_PER_KILOGRAM_KOPECKS
-  );
+  return Number.isInteger(value) && value >= 0 && value <= MAX_PRICE_KOPECKS;
 }
 
 function isVolume(value: number): boolean {
   return Number.isInteger(value) && value >= 0 && value <= MAX_VOLUME_PIECES;
-}
-
-function fitsSafeKopeckProduct(priceKopecks: number, volume: number): boolean {
-  return (
-    BigInt(priceKopecks) * BigInt(volume) <= BigInt(Number.MAX_SAFE_INTEGER)
-  );
-}
-
-function roundHalfAwayFromZero(
-  numerator: bigint,
-  denominator: bigint,
-): number | null {
-  if (denominator < ZERO) {
-    return roundHalfAwayFromZero(-numerator, -denominator);
-  }
-  if (denominator === ZERO) {
-    return null;
-  }
-
-  const negative = numerator < ZERO;
-  const magnitude = negative ? -numerator : numerator;
-  const rounded = (magnitude + denominator / TWO) / denominator;
-  if (rounded > BigInt(Number.MAX_SAFE_INTEGER)) {
-    return null;
-  }
-
-  const value = Number(rounded);
-  return negative ? -value : value;
-}
-
-function toSafeNumber(value: bigint): number | null {
-  if (
-    value > BigInt(Number.MAX_SAFE_INTEGER) ||
-    value < BigInt(Number.MIN_SAFE_INTEGER)
-  ) {
-    return null;
-  }
-
-  return Number(value);
 }
 
 /** `ГГГГ-ММ` по локальному календарю. */
@@ -184,19 +149,15 @@ export function workingSalesPlan(
   );
 }
 
-/** Строки нулевого плана: все рабочие конечные товары, цена из прошлого или 0. */
+/** Строки нулевого плана: все рабочие товары, цена из прошлого или 0. */
 export function defaultSalesPlanLines(
   document: PrototypeDocument,
   month: string,
 ): SalesPlanLine[] {
-  return activeFinalProducts(document).map((product) => ({
+  return activeProducts(document).map((product) => ({
     id: `sales-plan-line:${month}:${product.id}`,
     productId: product.id,
-    priceWithVatKopecks: suggestedPriceWithVatKopecks(
-      document,
-      product.id,
-      month,
-    ),
+    priceWithVat: suggestedPriceWithVat(document, product.id, month),
     volumePieces: 0,
   }));
 }
@@ -238,26 +199,8 @@ export function ensureSalesPlan(
   return addSalesPlan(document, id, month, lines, today);
 }
 
-// Не вызывается: отдельного списка планов больше нет, план появляется с сводки.
-// export function deletedSalesPlans(document: PrototypeDocument): SalesPlan[] {
-//   return document.salesPlans.filter((item) => item.deletedAt !== null);
-// }
-
-export function activeFinalProducts(document: PrototypeDocument): Product[] {
-  return document.products.filter((item) => item.deletedAt === null);
-}
-
-// Не вызывается: месяцы плана больше не выбирают отдельным экраном.
-// export function availablePlanMonths(
-//   document: PrototypeDocument,
-//   today: Date,
-// ): string[] {
-//   const taken = new Set(activeSalesPlans(document).map((item) => item.month));
-//   return horizonMonths(today).filter((month) => !taken.has(month));
-// }
-
 /** Цена с НДС из последнего более раннего рабочего плана, где товар уже был. Иначе 0. */
-export function suggestedPriceWithVatKopecks(
+export function suggestedPriceWithVat(
   document: PrototypeDocument,
   productId: string,
   month: string,
@@ -269,33 +212,19 @@ export function suggestedPriceWithVatKopecks(
   for (const plan of earlier) {
     const line = plan.lines.find((item) => item.productId === productId);
     if (line) {
-      return line.priceWithVatKopecks;
+      return line.priceWithVat;
     }
   }
 
   return 0;
 }
 
-// Не вызывается: отдельного создания плана с подсказкой цены больше нет.
-// export function hasEarlierPlanPrice(
-//   document: PrototypeDocument,
-//   month: string,
-// ): boolean {
-//   return activeSalesPlans(document).some(
-//     (plan) => plan.month < month && plan.lines.length > 0,
-//   );
-// }
-
 export function missingPlanProducts(
   document: PrototypeDocument,
   plan: SalesPlan,
 ): Product[] {
   const present = new Set(plan.lines.map((line) => line.productId));
-  return activeFinalProducts(document).filter((item) => !present.has(item.id));
-}
-
-function multiplyKopecks(unitKopecks: number, volume: number): number | null {
-  return toSafeNumber(BigInt(unitKopecks) * BigInt(volume));
+  return activeProducts(document).filter((item) => !present.has(item.id));
 }
 
 /**
@@ -304,29 +233,29 @@ function multiplyKopecks(unitKopecks: number, volume: number): number | null {
  * 99,14 ₽ и НДС 10% → 90,1273 ₽ внутри, на экране 90,13 ₽.
  */
 export function priceExVatTenThousandths(
-  priceWithVatKopecks: number,
+  priceWithVat: number,
   vatPercent: number,
 ): number | null {
-  return ratioKopecks(
-    BigInt(priceWithVatKopecks) * TEN_THOUSAND,
+  return ratioRound(
+    BigInt(priceWithVat) * TEN_THOUSAND,
     BigInt(100 + vatPercent),
   );
 }
 
 /** Выручка с НДС, копейки. `Svod!I31 = F31 * H31`. */
-export function revenueWithVatKopecks(
-  priceWithVatKopecks: number,
+export function revenueWithVat(
+  priceWithVat: number,
   volumePieces: number,
 ): number | null {
-  return multiplyKopecks(priceWithVatKopecks, volumePieces);
+  return multiplyAmount(priceWithVat, volumePieces);
 }
 
 /**
  * Выручка без НДС, копейки, половина вверх на результате.
  * `Svod!J31`. 99,14 ₽, НДС 10%, 6000 шт → 54 076 364 коп. = 540 763,64 ₽.
  */
-export function revenueExVatKopecks(
-  priceWithVatKopecks: number,
+export function revenueExVat(
+  priceWithVat: number,
   vatPercent: number,
   volumePieces: number,
 ): number | null {
@@ -334,8 +263,8 @@ export function revenueExVatKopecks(
     return 0;
   }
 
-  return ratioKopecks(
-    BigInt(priceWithVatKopecks) * HUNDRED * BigInt(volumePieces),
+  return ratioRound(
+    BigInt(priceWithVat) * HUNDRED * BigInt(volumePieces),
     BigInt(100 + vatPercent),
   );
 }
@@ -345,21 +274,20 @@ export function revenueExVatKopecks(
  * `Svod!E31 = (G31 - D31) / D31 * 100`. Себестоимость 0 → 0.
  */
 export function profitabilityHundredths(
-  priceWithVatKopecks: number,
+  priceWithVat: number,
   vatPercent: number,
-  unitCostExVatKopecks: number,
+  unitCostExVat: number,
 ): number | null {
-  if (unitCostExVatKopecks === 0) {
+  if (unitCostExVat === 0) {
     return 0;
   }
 
   const vat = BigInt(100 + vatPercent);
   const numerator =
-    (BigInt(priceWithVatKopecks) * HUNDRED -
-      BigInt(unitCostExVatKopecks) * vat) *
+    (BigInt(priceWithVat) * HUNDRED - BigInt(unitCostExVat) * vat) *
     TEN_THOUSAND;
-  const denominator = vat * BigInt(unitCostExVatKopecks);
-  return roundHalfAwayFromZero(numerator, denominator);
+  const denominator = vat * BigInt(unitCostExVat);
+  return ratioRound(numerator, denominator);
 }
 
 export function salesPlanLineMetrics(
@@ -372,24 +300,17 @@ export function salesPlanLineMetrics(
   const product = document.products.find((item) => item.id === line.productId);
   const vat = product?.vatPercent ?? null;
   const cost = product ? unitCost(document, product.id) : null;
-  const revenueWith = revenueWithVatKopecks(
-    line.priceWithVatKopecks,
-    line.volumePieces,
-  );
+  const revenueWith = revenueWithVat(line.priceWithVat, line.volumePieces);
   const revenueEx =
     vat === null
       ? line.volumePieces === 0
         ? 0
         : null
-      : revenueExVatKopecks(line.priceWithVatKopecks, vat, line.volumePieces);
+      : revenueExVat(line.priceWithVat, vat, line.volumePieces);
   const volumeCostWith =
-    cost === null
-      ? null
-      : multiplyKopecks(cost.withVatKopecks, line.volumePieces);
+    cost === null ? null : multiplyAmount(cost.withVat, line.volumePieces);
   const volumeCostEx =
-    cost === null
-      ? null
-      : multiplyKopecks(cost.exVatKopecks, line.volumePieces);
+    cost === null ? null : multiplyAmount(cost.exVat, line.volumePieces);
   const contribution =
     revenueEx === null || volumeCostEx === null
       ? null
@@ -397,25 +318,19 @@ export function salesPlanLineMetrics(
 
   return {
     priceExVatTenThousandths:
-      vat === null
-        ? null
-        : priceExVatTenThousandths(line.priceWithVatKopecks, vat),
-    revenueWithVatKopecks: revenueWith,
-    revenueExVatKopecks: revenueEx,
+      vat === null ? null : priceExVatTenThousandths(line.priceWithVat, vat),
+    revenueWithVat: revenueWith,
+    revenueExVat: revenueEx,
     unitCost: cost,
-    volumeCostWithVatKopecks: volumeCostWith,
-    volumeCostExVatKopecks: volumeCostEx,
-    contributionKopecks: contribution,
+    volumeCostWithVat: volumeCostWith,
+    volumeCostExVat: volumeCostEx,
+    contribution: contribution,
     profitabilityHundredths:
       cost === null
         ? null
         : vat === null
           ? null
-          : profitabilityHundredths(
-              line.priceWithVatKopecks,
-              vat,
-              cost.exVatKopecks,
-            ),
+          : profitabilityHundredths(line.priceWithVat, vat, cost.exVat),
     perDay,
   };
 }
@@ -442,97 +357,68 @@ export function salesPlanTotals(
       productsWithVolume += 1;
     }
 
-    if (metrics.revenueWithVatKopecks === null) {
+    if (metrics.revenueWithVat === null) {
       revenueWithComplete = false;
     } else {
-      revenueWith += BigInt(metrics.revenueWithVatKopecks);
+      revenueWith += BigInt(metrics.revenueWithVat);
     }
 
-    if (metrics.revenueExVatKopecks === null) {
+    if (metrics.revenueExVat === null) {
       revenueExComplete = false;
     } else {
-      revenueEx += BigInt(metrics.revenueExVatKopecks);
+      revenueEx += BigInt(metrics.revenueExVat);
     }
 
-    if (line.volumePieces > 0 && metrics.volumeCostExVatKopecks === null) {
+    if (line.volumePieces > 0 && metrics.volumeCostExVat === null) {
       costComplete = false;
     }
 
-    if (metrics.volumeCostWithVatKopecks !== null) {
-      costWith += BigInt(metrics.volumeCostWithVatKopecks);
+    if (metrics.volumeCostWithVat !== null) {
+      costWith += BigInt(metrics.volumeCostWithVat);
     }
-    if (metrics.volumeCostExVatKopecks !== null) {
-      costEx += BigInt(metrics.volumeCostExVatKopecks);
+    if (metrics.volumeCostExVat !== null) {
+      costEx += BigInt(metrics.volumeCostExVat);
     }
   }
 
   const volumePieces = toSafeNumber(volume);
   const revenueComplete = revenueWithComplete && revenueExComplete;
-  const revenueWithVatKopecks = revenueWithComplete
-    ? toSafeNumber(revenueWith)
-    : null;
-  const revenueExVatKopecks = revenueExComplete
-    ? toSafeNumber(revenueEx)
-    : null;
-  const volumeCostWithVatKopecks = toSafeNumber(costWith);
-  const volumeCostExVatKopecks = toSafeNumber(costEx);
-  const contributionKopecks =
+  const revenueWithVat = revenueWithComplete ? toSafeNumber(revenueWith) : null;
+  const revenueExVat = revenueExComplete ? toSafeNumber(revenueEx) : null;
+  const volumeCostWithVat = toSafeNumber(costWith);
+  const volumeCostExVat = toSafeNumber(costEx);
+  const contribution =
     costComplete &&
     revenueComplete &&
-    revenueExVatKopecks !== null &&
-    volumeCostExVatKopecks !== null
-      ? revenueExVatKopecks - volumeCostExVatKopecks
+    revenueExVat !== null &&
+    volumeCostExVat !== null
+      ? revenueExVat - volumeCostExVat
       : null;
 
-  const averagePriceWithVatKopecks =
-    volumePieces !== null && volumePieces > 0 && revenueWithVatKopecks !== null
-      ? ratioKopecks(BigInt(revenueWithVatKopecks), BigInt(volumePieces))
-      : null;
-  const averagePriceExVatKopecks =
-    volumePieces !== null && volumePieces > 0 && revenueExVatKopecks !== null
-      ? ratioKopecks(BigInt(revenueExVatKopecks), BigInt(volumePieces))
-      : null;
-  const averageCostWithVatKopecks =
-    costComplete &&
-    volumePieces !== null &&
-    volumePieces > 0 &&
-    volumeCostWithVatKopecks !== null
-      ? ratioKopecks(BigInt(volumeCostWithVatKopecks), BigInt(volumePieces))
-      : null;
-  const averageCostExVatKopecks =
-    costComplete &&
-    volumePieces !== null &&
-    volumePieces > 0 &&
-    volumeCostExVatKopecks !== null
-      ? ratioKopecks(BigInt(volumeCostExVatKopecks), BigInt(volumePieces))
-      : null;
-
-  let profitability: number | null = null;
-  if (contributionKopecks !== null && volumeCostExVatKopecks !== null) {
-    profitability =
-      volumeCostExVatKopecks === 0
-        ? 0
-        : roundHalfAwayFromZero(
-            BigInt(contributionKopecks) * TEN_THOUSAND,
-            BigInt(volumeCostExVatKopecks),
-          );
-  }
+  const averagePriceWithVat = averageAmount(revenueWithVat, volumePieces);
+  const averagePriceExVat = averageAmount(revenueExVat, volumePieces);
+  const averageCostWithVat = costComplete
+    ? averageAmount(volumeCostWithVat, volumePieces)
+    : null;
+  const averageCostExVat = costComplete
+    ? averageAmount(volumeCostExVat, volumePieces)
+    : null;
 
   return {
     volumePieces,
     perDay: volumePieces === null || days === 0 ? null : volumePieces / days,
-    revenueWithVatKopecks,
-    revenueExVatKopecks,
-    volumeCostWithVatKopecks,
-    volumeCostExVatKopecks,
-    contributionKopecks,
+    revenueWithVat,
+    revenueExVat,
+    volumeCostWithVat,
+    volumeCostExVat,
+    contribution,
     costComplete,
     revenueComplete,
-    averagePriceWithVatKopecks,
-    averagePriceExVatKopecks,
-    averageCostWithVatKopecks,
-    averageCostExVatKopecks,
-    profitabilityHundredths: profitability,
+    averagePriceWithVat,
+    averagePriceExVat,
+    averageCostWithVat,
+    averageCostExVat,
+    profitabilityHundredths: percentHundredths(contribution, volumeCostExVat),
     productsWithVolume,
     lineCount: plan.lines.length,
   };
@@ -553,16 +439,16 @@ function planIsOpen(plan: SalesPlan, today: Date): boolean {
 }
 
 function lineNumbersRejection(
-  priceWithVatKopecks: number,
+  priceWithVat: number,
   volumePieces: number,
 ): SalesPlanRejection | null {
-  if (!isPrice(priceWithVatKopecks)) {
+  if (!isPrice(priceWithVat)) {
     return 'price';
   }
   if (!isVolume(volumePieces)) {
     return 'volume';
   }
-  if (!fitsSafeKopeckProduct(priceWithVatKopecks, volumePieces)) {
+  if (!fitsSafeMoneyProduct(priceWithVat, volumePieces)) {
     return 'overflow';
   }
 
@@ -586,9 +472,7 @@ function createRejection(
     return 'taken';
   }
 
-  const expected = new Set(
-    activeFinalProducts(document).map((item) => item.id),
-  );
+  const expected = new Set(activeProducts(document).map((item) => item.id));
   if (expected.size === 0 || lines.length !== expected.size) {
     return 'products';
   }
@@ -606,10 +490,7 @@ function createRejection(
       return 'products';
     }
 
-    const numbers = lineNumbersRejection(
-      line.priceWithVatKopecks,
-      line.volumePieces,
-    );
+    const numbers = lineNumbersRejection(line.priceWithVat, line.volumePieces);
     if (numbers) {
       return numbers;
     }
@@ -642,17 +523,6 @@ export function addSalesPlan(
   return { ...document, salesPlans: [...document.salesPlans, plan] };
 }
 
-// Не вызывается: план создаёт ensureSalesPlan, отдельного сообщения об отказе нет.
-// export function addSalesPlanRejection(
-//   document: PrototypeDocument,
-//   id: string,
-//   month: string,
-//   lines: readonly SalesPlanLine[],
-//   today: Date,
-// ): SalesPlanRejection | null {
-//   return createRejection(document, id, month, lines, today);
-// }
-
 function openPlan(
   document: PrototypeDocument,
   planId: string,
@@ -668,7 +538,7 @@ export function updateSalesPlanLineRejection(
   document: PrototypeDocument,
   planId: string,
   lineId: string,
-  priceWithVatKopecks: number,
+  priceWithVat: number,
   volumePieces: number,
   today: Date,
 ): SalesPlanRejection | null {
@@ -690,14 +560,14 @@ export function updateSalesPlanLineRejection(
     return 'locked';
   }
 
-  return lineNumbersRejection(priceWithVatKopecks, volumePieces);
+  return lineNumbersRejection(priceWithVat, volumePieces);
 }
 
 export function updateSalesPlanLine(
   document: PrototypeDocument,
   planId: string,
   lineId: string,
-  priceWithVatKopecks: number,
+  priceWithVat: number,
   volumePieces: number,
   today: Date,
 ): PrototypeDocument {
@@ -706,7 +576,7 @@ export function updateSalesPlanLine(
       document,
       planId,
       lineId,
-      priceWithVatKopecks,
+      priceWithVat,
       volumePieces,
       today,
     )
@@ -720,7 +590,7 @@ export function updateSalesPlanLine(
     return document;
   }
   if (
-    line.priceWithVatKopecks === priceWithVatKopecks &&
+    line.priceWithVat === priceWithVat &&
     line.volumePieces === volumePieces
   ) {
     return document;
@@ -734,7 +604,7 @@ export function updateSalesPlanLine(
             ...item,
             lines: item.lines.map((entry) =>
               entry.id === lineId
-                ? { ...entry, priceWithVatKopecks, volumePieces }
+                ? { ...entry, priceWithVat, volumePieces }
                 : entry,
             ),
           }
@@ -804,11 +674,7 @@ export function addMissingPlanLines(
   const nextLines: SalesPlanLine[] = lines.map((line) => ({
     id: line.id,
     productId: line.productId,
-    priceWithVatKopecks: suggestedPriceWithVatKopecks(
-      document,
-      line.productId,
-      plan.month,
-    ),
+    priceWithVat: suggestedPriceWithVat(document, line.productId, plan.month),
     volumePieces: 0,
   }));
 
@@ -821,82 +687,3 @@ export function addMissingPlanLines(
     ),
   };
 }
-
-// Не вызывается: отдельного списка планов больше нет.
-// export function deleteSalesPlan(
-//   document: PrototypeDocument,
-//   id: string,
-//   deletedAt: string,
-// ): PrototypeDocument {
-//   if (!isDeletionMark(deletedAt)) {
-//     return document;
-//   }
-//
-//   const current = document.salesPlans.find(
-//     (item) => item.id === id && item.deletedAt === null,
-//   );
-//   if (!current) {
-//     return document;
-//   }
-//
-//   return {
-//     ...document,
-//     salesPlans: document.salesPlans.map((item) =>
-//       item.id === id ? { ...item, deletedAt } : item,
-//     ),
-//   };
-// }
-//
-// export function restoreSalesPlanRejection(
-//   document: PrototypeDocument,
-//   id: string,
-// ): SalesPlanRejection | null {
-//   const current = document.salesPlans.find(
-//     (item) => item.id === id && item.deletedAt !== null,
-//   );
-//   if (!current) {
-//     return 'missing';
-//   }
-//   if (monthIsTaken(document, current.month)) {
-//     return 'taken';
-//   }
-//
-//   return null;
-// }
-//
-// export function restoreSalesPlan(
-//   document: PrototypeDocument,
-//   id: string,
-// ): PrototypeDocument {
-//   if (restoreSalesPlanRejection(document, id)) {
-//     return document;
-//   }
-//
-//   return {
-//     ...document,
-//     salesPlans: document.salesPlans.map((item) =>
-//       item.id === id ? { ...item, deletedAt: null } : item,
-//     ),
-//   };
-// }
-//
-// export function compareSalesPlans(
-//   left: SalesPlan,
-//   right: SalesPlan,
-//   today: Date,
-// ): number {
-//   const rank: Record<PlanPhase, number> = { current: 0, future: 1, past: 2 };
-//   const leftPhase = planPhase(left.month, today);
-//   const rightPhase = planPhase(right.month, today);
-//   if (rank[leftPhase] !== rank[rightPhase]) {
-//     return rank[leftPhase] - rank[rightPhase];
-//   }
-//   if (leftPhase === 'past' && left.month !== right.month) {
-//     return right.month < left.month ? -1 : 1;
-//   }
-//   if (left.month !== right.month) {
-//     return left.month < right.month ? -1 : 1;
-//   }
-//
-//   return left.id < right.id ? -1 : 1;
-// }

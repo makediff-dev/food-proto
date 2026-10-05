@@ -1,4 +1,5 @@
-import { ratioKopecks, type UnitCost, unitCost } from '@/domain/cost';
+import { activeCategories } from '@/domain/categories';
+import { type UnitCost, unitCost } from '@/domain/cost';
 import {
   isDeletionMark,
   isMonthKey,
@@ -11,17 +12,23 @@ import {
   type SalesFactCell,
 } from '@/domain/document';
 import {
+  averageAmount,
+  fitsSafeMoneyProduct,
+  multiplyAmount,
+  percentHundredths,
+  toSafeNumber,
+  vatPercentHundredths,
+} from '@/domain/money';
+import {
   daysInMonth,
   monthKeyFromDate,
   priceExVatTenThousandths,
   profitabilityHundredths,
-  revenueExVatKopecks,
-  revenueWithVatKopecks,
+  revenueExVat,
+  revenueWithVat,
 } from '@/domain/sales-plan';
-import { MAX_PRICE_PER_KILOGRAM_KOPECKS } from '@/domain/units';
+import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
-const TEN_THOUSAND = BigInt(10_000);
-const TWO = BigInt(2);
 const ZERO = BigInt(0);
 
 export type SalesFactRejection =
@@ -38,7 +45,7 @@ export type SalesFactRejection =
 
 /** Серые вводы дня. На экране пустой день — нули, в документ он не пишется. */
 export interface SalesFactInputs {
-  priceWithVatKopecks: number;
+  priceWithVat: number;
   salesPieces: number;
   outputPieces: number;
   transferPieces: number;
@@ -60,16 +67,16 @@ export interface SalesFactRow {
   distributionEnd: number;
   /** Десятитысячные доли рубля. На экране до копеек, в выручку без НДС не подставляются. */
   priceExVatTenThousandths: number | null;
-  revenueWithVatKopecks: number | null;
-  revenueExVatKopecks: number | null;
+  revenueWithVat: number | null;
+  revenueExVat: number | null;
   /** Себестоимость 1 шт с товара. Обе колонки «Себест, р/ед» совпадают. */
   unitCost: UnitCost | null;
-  salesVolumeCostWithVatKopecks: number | null;
-  salesVolumeCostExVatKopecks: number | null;
-  outputVolumeCostWithVatKopecks: number | null;
-  outputVolumeCostExVatKopecks: number | null;
+  salesVolumeCostWithVat: number | null;
+  salesVolumeCostExVat: number | null;
+  outputVolumeCostWithVat: number | null;
+  outputVolumeCostExVat: number | null;
   /** Выручка без НДС − себестоимость объёма продаж без НДС. */
-  contributionKopecks: number | null;
+  contribution: number | null;
   profitabilityHundredths: number | null;
 }
 
@@ -85,36 +92,45 @@ export interface SalesFactTotals {
   writeOffPieces: number | null;
   productionEnd: number | null;
   distributionEnd: number | null;
-  revenueWithVatKopecks: number | null;
-  revenueExVatKopecks: number | null;
+  revenueWithVat: number | null;
+  revenueExVat: number | null;
   /** Есть строка с объёмом продаж, у которой себестоимость не считается. */
   salesCostComplete: boolean;
   /** Есть строка с объёмом выпуска, у которой себестоимость не считается. */
   outputCostComplete: boolean;
   revenueComplete: boolean;
-  salesVolumeCostWithVatKopecks: number | null;
-  salesVolumeCostExVatKopecks: number | null;
-  outputVolumeCostWithVatKopecks: number | null;
-  outputVolumeCostExVatKopecks: number | null;
-  contributionKopecks: number | null;
+  salesVolumeCostWithVat: number | null;
+  salesVolumeCostExVat: number | null;
+  outputVolumeCostWithVat: number | null;
+  outputVolumeCostExVat: number | null;
+  contribution: number | null;
   /** Выручка с НДС / объём продаж, копейки. Не формула цены строки. */
-  priceWithVatKopecks: number | null;
+  priceWithVat: number | null;
   /** Выручка без НДС / объём продаж, копейки. */
-  priceExVatKopecks: number | null;
+  priceExVat: number | null;
   /**
    * Сотые доли процента. `O = IF(I=0,0,H/I*100-100)`.
    * Нет цены без НДС — пусто.
    */
   vatPercentHundredths: number | null;
-  salesUnitCostWithVatKopecks: number | null;
-  salesUnitCostExVatKopecks: number | null;
-  outputUnitCostWithVatKopecks: number | null;
-  outputUnitCostExVatKopecks: number | null;
+  salesUnitCostWithVat: number | null;
+  salesUnitCostExVat: number | null;
+  outputUnitCostWithVat: number | null;
+  outputUnitCostExVat: number | null;
   profitabilityHundredths: number | null;
+}
+
+/** Строка группы как на сводке. Пустая категория тоже входит. */
+export interface SalesFactGroup {
+  categoryId: string;
+  name: string;
+  rows: SalesFactRow[];
+  totals: SalesFactTotals;
 }
 
 export interface SalesFactDayView {
   occurredOn: string;
+  groups: SalesFactGroup[];
   rows: SalesFactRow[];
   totals: SalesFactTotals;
 }
@@ -131,11 +147,7 @@ function isEntityId(value: string): boolean {
 }
 
 function isPrice(value: number): boolean {
-  return (
-    Number.isInteger(value) &&
-    value >= 0 &&
-    value <= MAX_PRICE_PER_KILOGRAM_KOPECKS
-  );
+  return Number.isInteger(value) && value >= 0 && value <= MAX_PRICE_KOPECKS;
 }
 
 function isPieces(value: number): boolean {
@@ -150,52 +162,9 @@ function isOpening(value: number): boolean {
   );
 }
 
-function fitsSafeKopeckProduct(priceKopecks: number, volume: number): boolean {
-  return (
-    BigInt(priceKopecks) * BigInt(volume) <= BigInt(Number.MAX_SAFE_INTEGER)
-  );
-}
-
-function toSafeNumber(value: bigint): number | null {
-  if (
-    value > BigInt(Number.MAX_SAFE_INTEGER) ||
-    value < BigInt(Number.MIN_SAFE_INTEGER)
-  ) {
-    return null;
-  }
-
-  return Number(value);
-}
-
-function roundHalfAwayFromZero(
-  numerator: bigint,
-  denominator: bigint,
-): number | null {
-  if (denominator < ZERO) {
-    return roundHalfAwayFromZero(-numerator, -denominator);
-  }
-  if (denominator === ZERO) {
-    return null;
-  }
-
-  const negative = numerator < ZERO;
-  const magnitude = negative ? -numerator : numerator;
-  const rounded = (magnitude + denominator / TWO) / denominator;
-  if (rounded > BigInt(Number.MAX_SAFE_INTEGER)) {
-    return null;
-  }
-
-  const value = Number(rounded);
-  return negative ? -value : value;
-}
-
-function multiplyKopecks(unitKopecks: number, volume: number): number | null {
-  return toSafeNumber(BigInt(unitKopecks) * BigInt(volume));
-}
-
 export function blankInputs(): SalesFactInputs {
   return {
-    priceWithVatKopecks: 0,
+    priceWithVat: 0,
     salesPieces: 0,
     outputPieces: 0,
     transferPieces: 0,
@@ -208,7 +177,7 @@ export function blankInputs(): SalesFactInputs {
 
 export function inputsAreBlank(inputs: SalesFactInputs): boolean {
   return (
-    inputs.priceWithVatKopecks === 0 &&
+    inputs.priceWithVat === 0 &&
     inputs.salesPieces === 0 &&
     inputs.outputPieces === 0 &&
     inputs.transferPieces === 0 &&
@@ -221,7 +190,7 @@ export function inputsAreBlank(inputs: SalesFactInputs): boolean {
 
 function inputsFromCell(cell: SalesFactCell): SalesFactInputs {
   return {
-    priceWithVatKopecks: cell.priceWithVatKopecks,
+    priceWithVat: cell.priceWithVat,
     salesPieces: cell.salesPieces,
     outputPieces: cell.outputPieces,
     transferPieces: cell.transferPieces,
@@ -234,7 +203,7 @@ function inputsFromCell(cell: SalesFactCell): SalesFactInputs {
 
 function sameInputs(left: SalesFactInputs, right: SalesFactInputs): boolean {
   return (
-    left.priceWithVatKopecks === right.priceWithVatKopecks &&
+    left.priceWithVat === right.priceWithVat &&
     left.salesPieces === right.salesPieces &&
     left.outputPieces === right.outputPieces &&
     left.transferPieces === right.transferPieces &&
@@ -317,7 +286,7 @@ export function openingOf(
   };
 }
 
-function finalProduct(
+function productById(
   document: PrototypeDocument,
   productId: string,
 ): Product | null {
@@ -419,36 +388,21 @@ function rowMetrics(
   const inputs = stock.inputs;
   const vat = product.vatPercent;
   const cost = unitCost(document, product.id);
-  const revenueWith = revenueWithVatKopecks(
-    inputs.priceWithVatKopecks,
-    inputs.salesPieces,
-  );
+  const revenueWith = revenueWithVat(inputs.priceWithVat, inputs.salesPieces);
   const revenueEx =
     vat === null
       ? inputs.salesPieces === 0
         ? 0
         : null
-      : revenueExVatKopecks(
-          inputs.priceWithVatKopecks,
-          vat,
-          inputs.salesPieces,
-        );
+      : revenueExVat(inputs.priceWithVat, vat, inputs.salesPieces);
   const salesVolumeWith =
-    cost === null
-      ? null
-      : multiplyKopecks(cost.withVatKopecks, inputs.salesPieces);
+    cost === null ? null : multiplyAmount(cost.withVat, inputs.salesPieces);
   const salesVolumeEx =
-    cost === null
-      ? null
-      : multiplyKopecks(cost.exVatKopecks, inputs.salesPieces);
+    cost === null ? null : multiplyAmount(cost.exVat, inputs.salesPieces);
   const outputVolumeWith =
-    cost === null
-      ? null
-      : multiplyKopecks(cost.withVatKopecks, inputs.outputPieces);
+    cost === null ? null : multiplyAmount(cost.withVat, inputs.outputPieces);
   const outputVolumeEx =
-    cost === null
-      ? null
-      : multiplyKopecks(cost.exVatKopecks, inputs.outputPieces);
+    cost === null ? null : multiplyAmount(cost.exVat, inputs.outputPieces);
   const contribution =
     revenueEx === null || salesVolumeEx === null
       ? null
@@ -465,81 +419,20 @@ function rowMetrics(
     productionEnd: stock.productionEnd,
     distributionEnd: stock.distributionEnd,
     priceExVatTenThousandths:
-      vat === null
-        ? null
-        : priceExVatTenThousandths(inputs.priceWithVatKopecks, vat),
-    revenueWithVatKopecks: revenueWith,
-    revenueExVatKopecks: revenueEx,
+      vat === null ? null : priceExVatTenThousandths(inputs.priceWithVat, vat),
+    revenueWithVat: revenueWith,
+    revenueExVat: revenueEx,
     unitCost: cost,
-    salesVolumeCostWithVatKopecks: salesVolumeWith,
-    salesVolumeCostExVatKopecks: salesVolumeEx,
-    outputVolumeCostWithVatKopecks: outputVolumeWith,
-    outputVolumeCostExVatKopecks: outputVolumeEx,
-    contributionKopecks: contribution,
+    salesVolumeCostWithVat: salesVolumeWith,
+    salesVolumeCostExVat: salesVolumeEx,
+    outputVolumeCostWithVat: outputVolumeWith,
+    outputVolumeCostExVat: outputVolumeEx,
+    contribution: contribution,
     profitabilityHundredths:
       cost === null || vat === null
         ? null
-        : profitabilityHundredths(
-            inputs.priceWithVatKopecks,
-            vat,
-            cost.exVatKopecks,
-          ),
+        : profitabilityHundredths(inputs.priceWithVat, vat, cost.exVat),
   };
-}
-
-function averageKopecks(
-  amount: number | null,
-  volume: number | null,
-): number | null {
-  if (amount === null || volume === null || volume <= 0) {
-    return null;
-  }
-
-  return ratioKopecks(BigInt(amount), BigInt(volume));
-}
-
-/**
- * НДС «Всего»: выручка с НДС / выручка без НДС × 100 − 100.
- * Через суммы выручек, без промежуточного округления средних цен —
- * иначе при одной строке ставка уезжает на сотые доли процента.
- */
-function totalVatHundredths(
-  revenueWithVatKopecks: number | null,
-  revenueExVatKopecks: number | null,
-): number | null {
-  if (revenueWithVatKopecks === null || revenueExVatKopecks === null) {
-    return null;
-  }
-  if (revenueExVatKopecks === 0) {
-    return 0;
-  }
-
-  return roundHalfAwayFromZero(
-    (BigInt(revenueWithVatKopecks) - BigInt(revenueExVatKopecks)) *
-      TEN_THOUSAND,
-    BigInt(revenueExVatKopecks),
-  );
-}
-
-/**
- * Рентабельность «Всего»: Т-проток / себестоимость объёма продаж без НДС.
- * Как на плане — из сумм, не из средних цен, уже округлённых до копейки.
- */
-function totalProfitabilityHundredths(
-  contributionKopecks: number | null,
-  salesVolumeCostExVatKopecks: number | null,
-): number | null {
-  if (contributionKopecks === null || salesVolumeCostExVatKopecks === null) {
-    return null;
-  }
-  if (salesVolumeCostExVatKopecks === 0) {
-    return 0;
-  }
-
-  return roundHalfAwayFromZero(
-    BigInt(contributionKopecks) * TEN_THOUSAND,
-    BigInt(salesVolumeCostExVatKopecks),
-  );
 }
 
 function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
@@ -560,7 +453,7 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
   let salesCostEx = ZERO;
   let outputCostWith = ZERO;
   let outputCostEx = ZERO;
-  let contribution = ZERO;
+  let contributionSum = ZERO;
   let salesCostComplete = true;
   let outputCostComplete = true;
   let revenueComplete = true;
@@ -578,83 +471,72 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
     productionEnd += BigInt(row.productionEnd);
     distributionEnd += BigInt(row.distributionEnd);
 
-    if (
-      row.revenueWithVatKopecks === null ||
-      row.revenueExVatKopecks === null
-    ) {
+    if (row.revenueWithVat === null || row.revenueExVat === null) {
       if (row.inputs.salesPieces > 0) {
         revenueComplete = false;
       }
     } else {
-      revenueWith += BigInt(row.revenueWithVatKopecks);
-      revenueEx += BigInt(row.revenueExVatKopecks);
+      revenueWith += BigInt(row.revenueWithVat);
+      revenueEx += BigInt(row.revenueExVat);
     }
 
     if (
       row.inputs.salesPieces > 0 &&
-      (row.salesVolumeCostWithVatKopecks === null ||
-        row.salesVolumeCostExVatKopecks === null ||
-        row.contributionKopecks === null)
+      (row.salesVolumeCostWithVat === null ||
+        row.salesVolumeCostExVat === null ||
+        row.contribution === null)
     ) {
       salesCostComplete = false;
     } else if (
-      row.salesVolumeCostWithVatKopecks !== null &&
-      row.salesVolumeCostExVatKopecks !== null &&
-      row.contributionKopecks !== null
+      row.salesVolumeCostWithVat !== null &&
+      row.salesVolumeCostExVat !== null &&
+      row.contribution !== null
     ) {
-      salesCostWith += BigInt(row.salesVolumeCostWithVatKopecks);
-      salesCostEx += BigInt(row.salesVolumeCostExVatKopecks);
-      contribution += BigInt(row.contributionKopecks);
+      salesCostWith += BigInt(row.salesVolumeCostWithVat);
+      salesCostEx += BigInt(row.salesVolumeCostExVat);
+      contributionSum += BigInt(row.contribution);
     }
 
     if (
       row.inputs.outputPieces > 0 &&
-      (row.outputVolumeCostWithVatKopecks === null ||
-        row.outputVolumeCostExVatKopecks === null)
+      (row.outputVolumeCostWithVat === null ||
+        row.outputVolumeCostExVat === null)
     ) {
       outputCostComplete = false;
     } else if (
-      row.outputVolumeCostWithVatKopecks !== null &&
-      row.outputVolumeCostExVatKopecks !== null
+      row.outputVolumeCostWithVat !== null &&
+      row.outputVolumeCostExVat !== null
     ) {
-      outputCostWith += BigInt(row.outputVolumeCostWithVatKopecks);
-      outputCostEx += BigInt(row.outputVolumeCostExVatKopecks);
+      outputCostWith += BigInt(row.outputVolumeCostWithVat);
+      outputCostEx += BigInt(row.outputVolumeCostExVat);
     }
   }
 
   const salesVolume = toSafeNumber(salesPieces);
   const outputVolume = toSafeNumber(outputPieces);
-  const revenueWithVatKopecks = revenueComplete
-    ? toSafeNumber(revenueWith)
-    : null;
-  const revenueExVatKopecks = revenueComplete ? toSafeNumber(revenueEx) : null;
-  const salesVolumeCostWithVatKopecks = salesCostComplete
+  const revenueWithVat = revenueComplete ? toSafeNumber(revenueWith) : null;
+  const revenueExVat = revenueComplete ? toSafeNumber(revenueEx) : null;
+  const salesVolumeCostWithVat = salesCostComplete
     ? toSafeNumber(salesCostWith)
     : null;
-  const salesVolumeCostExVatKopecks = salesCostComplete
+  const salesVolumeCostExVat = salesCostComplete
     ? toSafeNumber(salesCostEx)
     : null;
-  const outputVolumeCostWithVatKopecks = outputCostComplete
+  const outputVolumeCostWithVat = outputCostComplete
     ? toSafeNumber(outputCostWith)
     : null;
-  const outputVolumeCostExVatKopecks = outputCostComplete
+  const outputVolumeCostExVat = outputCostComplete
     ? toSafeNumber(outputCostEx)
     : null;
-  const priceWithVatKopecks = averageKopecks(
-    revenueWithVatKopecks,
+  const priceWithVat = averageAmount(revenueWithVat, salesVolume);
+  const priceExVat = averageAmount(revenueExVat, salesVolume);
+  const salesUnitCostWithVat = averageAmount(
+    salesVolumeCostWithVat,
     salesVolume,
   );
-  const priceExVatKopecks = averageKopecks(revenueExVatKopecks, salesVolume);
-  const salesUnitCostWithVatKopecks = averageKopecks(
-    salesVolumeCostWithVatKopecks,
-    salesVolume,
-  );
-  const salesUnitCostExVatKopecks = averageKopecks(
-    salesVolumeCostExVatKopecks,
-    salesVolume,
-  );
-  const contributionKopecks =
-    salesCostComplete && revenueComplete ? toSafeNumber(contribution) : null;
+  const salesUnitCostExVat = averageAmount(salesVolumeCostExVat, salesVolume);
+  const contribution =
+    salesCostComplete && revenueComplete ? toSafeNumber(contributionSum) : null;
 
   return {
     productionStart: toSafeNumber(productionStart),
@@ -668,40 +550,53 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
     writeOffPieces: toSafeNumber(writeOffPieces),
     productionEnd: toSafeNumber(productionEnd),
     distributionEnd: toSafeNumber(distributionEnd),
-    revenueWithVatKopecks,
-    revenueExVatKopecks,
+    revenueWithVat,
+    revenueExVat,
     salesCostComplete,
     outputCostComplete,
     revenueComplete,
-    salesVolumeCostWithVatKopecks,
-    salesVolumeCostExVatKopecks,
-    outputVolumeCostWithVatKopecks,
-    outputVolumeCostExVatKopecks,
-    contributionKopecks,
-    priceWithVatKopecks,
-    priceExVatKopecks,
-    vatPercentHundredths: totalVatHundredths(
-      revenueWithVatKopecks,
-      revenueExVatKopecks,
-    ),
-    salesUnitCostWithVatKopecks,
-    salesUnitCostExVatKopecks,
-    outputUnitCostWithVatKopecks: averageKopecks(
-      outputVolumeCostWithVatKopecks,
-      outputVolume,
-    ),
-    outputUnitCostExVatKopecks: averageKopecks(
-      outputVolumeCostExVatKopecks,
-      outputVolume,
-    ),
+    salesVolumeCostWithVat,
+    salesVolumeCostExVat,
+    outputVolumeCostWithVat,
+    outputVolumeCostExVat,
+    contribution,
+    priceWithVat,
+    priceExVat,
+    vatPercentHundredths: vatPercentHundredths(revenueWithVat, revenueExVat),
+    salesUnitCostWithVat,
+    salesUnitCostExVat,
+    outputUnitCostWithVat: averageAmount(outputVolumeCostWithVat, outputVolume),
+    outputUnitCostExVat: averageAmount(outputVolumeCostExVat, outputVolume),
     profitabilityHundredths:
       salesCostComplete && revenueComplete
-        ? totalProfitabilityHundredths(
-            contributionKopecks,
-            salesVolumeCostExVatKopecks,
-          )
+        ? percentHundredths(contribution, salesVolumeCostExVat)
         : null,
   };
+}
+
+function salesFactGroups(
+  document: PrototypeDocument,
+  products: readonly Product[],
+  rows: readonly SalesFactRow[],
+): SalesFactGroup[] {
+  const byId = new Map(rows.map((row) => [row.productId, row]));
+
+  return activeCategories(document).map((category) => {
+    const groupRows = products
+      .filter((item) => item.categoryId === category.id)
+      .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+      .flatMap((item) => {
+        const row = byId.get(item.id);
+        return row ? [row] : [];
+      });
+
+    return {
+      categoryId: category.id,
+      name: category.name,
+      rows: groupRows,
+      totals: dayTotals(groupRows),
+    };
+  });
 }
 
 /** Дни месяца сверху вниз. `fact` — рабочая или удалённая запись, либо пустой месяц. */
@@ -730,13 +625,20 @@ export function salesFactMonth(
       };
       return rowMetrics(document, product, stock);
     });
+    const groups = salesFactGroups(document, products, rows);
+    const groupedRows = groups.flatMap((group) => group.rows);
 
-    return { occurredOn, rows, totals: dayTotals(rows) };
+    return {
+      occurredOn,
+      groups,
+      rows: groupedRows,
+      totals: dayTotals(groupedRows),
+    };
   });
 }
 
 function inputRejection(inputs: SalesFactInputs): SalesFactRejection | null {
-  if (!isPrice(inputs.priceWithVatKopecks)) {
+  if (!isPrice(inputs.priceWithVat)) {
     return 'price';
   }
 
@@ -752,7 +654,7 @@ function inputRejection(inputs: SalesFactInputs): SalesFactRejection | null {
   if (pieces.some((value) => !isPieces(value))) {
     return 'pieces';
   }
-  if (!fitsSafeKopeckProduct(inputs.priceWithVatKopecks, inputs.salesPieces)) {
+  if (!fitsSafeMoneyProduct(inputs.priceWithVat, inputs.salesPieces)) {
     return 'overflow';
   }
 
@@ -769,7 +671,7 @@ function editableProduct(
     return 'month';
   }
 
-  const product = finalProduct(document, productId);
+  const product = productById(document, productId);
   if (!product) {
     return 'product';
   }

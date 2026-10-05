@@ -5,6 +5,7 @@ import { type ReactNode, useId, useState } from 'react';
 import {
   adjacentDay,
   type SalesFactDayView,
+  type SalesFactGroup,
   type SalesFactInputs,
   type SalesFactRejection,
   type SalesFactRow,
@@ -23,7 +24,11 @@ import {
   parseFactPrice,
   SALES_FACT_ERROR,
 } from '@/features/sales-fact/text';
-import { IconChevronDown, IconChevronUp } from '@/features/shell/icons';
+import {
+  IconChevronDown,
+  IconChevronRight,
+  IconChevronUp,
+} from '@/features/shell/icons';
 
 const gridFieldClassName =
   'w-full min-w-0 cursor-text appearance-none border-0 bg-transparent p-0 text-right text-sm text-ink shadow-none outline-none';
@@ -141,7 +146,7 @@ const LAST_SALES_KEY = COLUMNS.filter((column) => column.group === 'sales').at(
 const INPUTS: Partial<
   Record<ColumnKey, { field: keyof SalesFactInputs; kind: 'price' | 'pieces' }>
 > = {
-  price: { field: 'priceWithVatKopecks', kind: 'price' },
+  price: { field: 'priceWithVat', kind: 'price' },
   salesPieces: { field: 'salesPieces', kind: 'pieces' },
   outputPieces: { field: 'outputPieces', kind: 'pieces' },
   transfer: { field: 'transferPieces', kind: 'pieces' },
@@ -176,6 +181,20 @@ export function SalesFactTable({
   ) => SalesFactRejection | null;
   expanded?: boolean;
 }) {
+  const [openIds, setOpenIds] = useState<ReadonlySet<string>>(() => new Set());
+
+  function toggleGroup(categoryId: string) {
+    setOpenIds((current) => {
+      const next = new Set(current);
+      if (next.has(categoryId)) {
+        next.delete(categoryId);
+      } else {
+        next.add(categoryId);
+      }
+      return next;
+    });
+  }
+
   return (
     <div
       className={
@@ -234,84 +253,39 @@ export function SalesFactTable({
         </thead>
         {days.map((day, dayIndex) => {
           const dayBreak = days.length > 1 && dayIndex < days.length - 1;
+          const dateCell = (
+            <th
+              scope="rowgroup"
+              rowSpan={visibleDayRows(day.groups, openIds)}
+              className={`sticky left-0 z-10 h-px w-10 max-w-10 border-r border-r-line bg-sheet p-0 align-middle font-normal ${
+                dayBreak
+                  ? 'border-b-[3px] border-b-muted'
+                  : 'border-b border-b-line'
+              }`}
+            >
+              <DayLabel
+                occurredOn={day.occurredOn}
+                showArrows={showDayArrows}
+                onDay={onDay}
+              />
+            </th>
+          );
           return (
             <tbody key={day.occurredOn}>
-              {day.rows.map((row, index) => (
-                <tr key={`${day.occurredOn}:${row.productId}`}>
-                  {index === 0 ? (
-                    <th
-                      scope="rowgroup"
-                      rowSpan={day.rows.length + 1}
-                      className={`sticky left-0 z-10 h-px w-10 max-w-10 border-r border-r-line bg-sheet p-0 align-middle font-normal ${
-                        dayBreak
-                          ? 'border-b-[3px] border-b-muted'
-                          : 'border-b border-b-line'
-                      }`}
-                    >
-                      <DayLabel
-                        occurredOn={day.occurredOn}
-                        showArrows={showDayArrows}
-                        onDay={onDay}
-                      />
-                    </th>
-                  ) : null}
-                  <th
-                    scope="row"
-                    className="sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle font-normal"
-                  >
-                    <ProductName row={row} />
-                  </th>
-                  {COLUMNS.map((column) => {
-                    const canEdit =
-                      Boolean(INPUTS[column.key]) && editable && !row.deleted;
-                    const highlightCell = canEdit && column.key !== 'price';
-                    return (
-                      <td
-                        key={column.key}
-                        className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass(column.key)} ${
-                          highlightCell ? editableCellClassName : ''
-                        }`}
-                        onClick={(event) => {
-                          if (!canEdit) {
-                            return;
-                          }
-                          const field =
-                            event.currentTarget.querySelector('input');
-                          if (
-                            field instanceof HTMLInputElement &&
-                            document.activeElement !== field
-                          ) {
-                            field.focus();
-                          }
-                        }}
-                        onKeyDown={(event) => {
-                          if (!canEdit) {
-                            return;
-                          }
-                          if (event.key !== 'Enter' && event.key !== ' ') {
-                            return;
-                          }
-                          const field =
-                            event.currentTarget.querySelector('input');
-                          if (field instanceof HTMLInputElement) {
-                            field.focus();
-                          }
-                        }}
-                      >
-                        <RowCell
-                          column={column.key}
-                          row={row}
-                          editable={editable && !row.deleted}
-                          onCommit={(inputs) =>
-                            onCell(day.occurredOn, row.productId, inputs)
-                          }
-                        />
-                      </td>
-                    );
-                  })}
-                </tr>
+              {day.groups.map((group, groupIndex) => (
+                <CategoryBlock
+                  key={group.categoryId}
+                  group={group}
+                  open={openIds.has(group.categoryId)}
+                  dateCell={groupIndex === 0 ? dateCell : null}
+                  editable={editable}
+                  occurredOn={day.occurredOn}
+                  onToggle={() => toggleGroup(group.categoryId)}
+                  onCell={onCell}
+                />
               ))}
               <tr>
+                {day.groups.length === 0 ? dateCell : null}
                 <th
                   scope="row"
                   className={`sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-t-[1.5px] border-t-muted border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink ${
@@ -340,6 +314,158 @@ export function SalesFactTable({
         })}
       </table>
     </div>
+  );
+}
+
+function visibleDayRows(
+  groups: readonly SalesFactGroup[],
+  openIds: ReadonlySet<string>,
+): number {
+  return groups.reduce(
+    (count, group) =>
+      count + 1 + (openIds.has(group.categoryId) ? group.rows.length : 0),
+    1,
+  );
+}
+
+function CategoryBlock({
+  group,
+  open,
+  dateCell,
+  editable,
+  occurredOn,
+  onToggle,
+  onCell,
+}: {
+  group: SalesFactGroup;
+  open: boolean;
+  dateCell: ReactNode;
+  editable: boolean;
+  occurredOn: string;
+  onToggle: () => void;
+  onCell: (
+    occurredOn: string,
+    productId: string,
+    inputs: SalesFactInputs,
+  ) => SalesFactRejection | null;
+}) {
+  const productCount = group.rows.length;
+
+  return (
+    <>
+      <tr>
+        {dateCell}
+        <th
+          scope="row"
+          className="sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink"
+        >
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-label={
+                open
+                  ? `Свернуть товары категории ${group.name}`
+                  : `Развернуть товары категории ${group.name}`
+              }
+              title={open ? 'Свернуть' : 'Развернуть'}
+              onClick={onToggle}
+              className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              {open ? <IconChevronDown /> : <IconChevronRight />}
+            </button>
+            <span className="flex h-8 min-w-max flex-1 items-center text-sm font-semibold leading-none text-ink">
+              {group.name} ({productCount})
+            </span>
+          </div>
+        </th>
+        {COLUMNS.map((column) => (
+          <td
+            key={column.key}
+            className={`w-px border-b border-b-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass(column.key)}`}
+          >
+            <TotalCell column={column.key} totals={group.totals} />
+          </td>
+        ))}
+      </tr>
+      {open
+        ? group.rows.map((row) => (
+            <ProductRow
+              key={`${occurredOn}:${row.productId}`}
+              row={row}
+              editable={editable}
+              onCommit={(inputs) => onCell(occurredOn, row.productId, inputs)}
+            />
+          ))
+        : null}
+    </>
+  );
+}
+
+function ProductRow({
+  row,
+  editable,
+  onCommit,
+}: {
+  row: SalesFactRow;
+  editable: boolean;
+  onCommit: (inputs: SalesFactInputs) => SalesFactRejection | null;
+}) {
+  return (
+    <tr>
+      <th
+        scope="row"
+        className="sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 pl-8 text-left align-middle font-normal"
+      >
+        <ProductName row={row} />
+      </th>
+      {COLUMNS.map((column) => {
+        const canEdit = Boolean(INPUTS[column.key]) && editable && !row.deleted;
+        const highlightCell = canEdit && column.key !== 'price';
+        return (
+          <td
+            key={column.key}
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass(column.key)} ${
+              highlightCell ? editableCellClassName : ''
+            }`}
+            onClick={(event) => {
+              if (!canEdit) {
+                return;
+              }
+              const field = event.currentTarget.querySelector('input');
+              if (
+                field instanceof HTMLInputElement &&
+                document.activeElement !== field
+              ) {
+                field.focus();
+              }
+            }}
+            onKeyDown={(event) => {
+              if (!canEdit) {
+                return;
+              }
+              if (event.key !== 'Enter' && event.key !== ' ') {
+                return;
+              }
+              if (event.target instanceof HTMLInputElement) {
+                return;
+              }
+              const field = event.currentTarget.querySelector('input');
+              if (field instanceof HTMLInputElement) {
+                field.focus();
+              }
+            }}
+          >
+            <RowCell
+              column={column.key}
+              row={row}
+              editable={editable && !row.deleted}
+              onCommit={onCommit}
+            />
+          </td>
+        );
+      })}
+    </tr>
   );
 }
 
@@ -439,15 +565,13 @@ function RowCell({
         top={
           <GridNumber
             label={`Цена с НДС, ${row.name}`}
-            value={factPriceDraft(row.inputs.priceWithVatKopecks)}
+            value={factPriceDraft(row.inputs.priceWithVat)}
             disabled={!editable}
             inputMode="decimal"
             unit="₽"
             invalidMessage={SALES_FACT_ERROR.price}
             parse={parseFactPrice}
-            onCommit={(next) =>
-              onCommit({ ...row.inputs, priceWithVatKopecks: next })
-            }
+            onCommit={(next) => onCommit({ ...row.inputs, priceWithVat: next })}
           />
         }
         bottom={
@@ -507,8 +631,8 @@ function RowCell({
     case 'outputUnitCost':
       return row.unitCost ? (
         <VatPair
-          withVat={<MoneyAmount kopecks={row.unitCost.withVatKopecks} />}
-          exVat={<MoneyAmount kopecks={row.unitCost.exVatKopecks} />}
+          withVat={<MoneyAmount amount={row.unitCost.withVat} />}
+          exVat={<MoneyAmount amount={row.unitCost.exVat} />}
         />
       ) : (
         <Muted>{keepWithNext('Себестоимость не считается')}</Muted>
@@ -516,29 +640,29 @@ function RowCell({
     case 'salesVolumeCost':
       return (
         <VatMoneyOrEmpty
-          withVat={row.salesVolumeCostWithVatKopecks}
-          exVat={row.salesVolumeCostExVatKopecks}
+          withVat={row.salesVolumeCostWithVat}
+          exVat={row.salesVolumeCostExVat}
         />
       );
     case 'outputVolumeCost':
       return (
         <VatMoneyOrEmpty
-          withVat={row.outputVolumeCostWithVatKopecks}
-          exVat={row.outputVolumeCostExVatKopecks}
+          withVat={row.outputVolumeCostWithVat}
+          exVat={row.outputVolumeCostExVat}
         />
       );
     case 'revenue':
       return (
         <VatMoneyOrEmpty
-          withVat={row.revenueWithVatKopecks}
-          exVat={row.revenueExVatKopecks}
+          withVat={row.revenueWithVat}
+          exVat={row.revenueExVat}
         />
       );
     case 'contribution':
-      return row.contributionKopecks === null ? (
+      return row.contribution === null ? (
         <Empty />
       ) : (
-        <MoneyAmount kopecks={row.contributionKopecks} />
+        <MoneyAmount amount={row.contribution} />
       );
     case 'profitability':
       return row.profitabilityHundredths === null ? (
@@ -598,55 +722,55 @@ function TotalCell({
     case 'price':
       return (
         <VatMoneyOrEmpty
-          withVat={totals.priceWithVatKopecks}
-          exVat={totals.priceExVatKopecks}
+          withVat={totals.priceWithVat}
+          exVat={totals.priceExVat}
         />
       );
     case 'revenue':
       return (
         <VatMoneyOrEmpty
-          withVat={totals.revenueWithVatKopecks}
-          exVat={totals.revenueExVatKopecks}
+          withVat={totals.revenueWithVat}
+          exVat={totals.revenueExVat}
         />
       );
     case 'contribution':
       return !totals.salesCostComplete || !totals.revenueComplete ? (
         <Muted>{keepWithNext('не по всем товарам')}</Muted>
-      ) : totals.contributionKopecks === null ? (
+      ) : totals.contribution === null ? (
         <Empty />
       ) : (
-        <MoneyAmount kopecks={totals.contributionKopecks} />
+        <MoneyAmount amount={totals.contribution} />
       );
     case 'salesUnitCost':
       return (
         <AverageCost
           complete={totals.salesCostComplete}
-          withVat={totals.salesUnitCostWithVatKopecks}
-          exVat={totals.salesUnitCostExVatKopecks}
+          withVat={totals.salesUnitCostWithVat}
+          exVat={totals.salesUnitCostExVat}
         />
       );
     case 'outputUnitCost':
       return (
         <AverageCost
           complete={totals.outputCostComplete}
-          withVat={totals.outputUnitCostWithVatKopecks}
-          exVat={totals.outputUnitCostExVatKopecks}
+          withVat={totals.outputUnitCostWithVat}
+          exVat={totals.outputUnitCostExVat}
         />
       );
     case 'salesVolumeCost':
       return (
         <VolumeTotal
           complete={totals.salesCostComplete}
-          withVat={totals.salesVolumeCostWithVatKopecks}
-          exVat={totals.salesVolumeCostExVatKopecks}
+          withVat={totals.salesVolumeCostWithVat}
+          exVat={totals.salesVolumeCostExVat}
         />
       );
     case 'outputVolumeCost':
       return (
         <VolumeTotal
           complete={totals.outputCostComplete}
-          withVat={totals.outputVolumeCostWithVatKopecks}
-          exVat={totals.outputVolumeCostExVatKopecks}
+          withVat={totals.outputVolumeCostWithVat}
+          exVat={totals.outputVolumeCostExVat}
         />
       );
     case 'profitability':
@@ -730,8 +854,8 @@ function PlacePair({
   );
 }
 
-function MoneyAmount({ kopecks }: { kopecks: number }) {
-  return <span className="whitespace-nowrap">{formatMoney(kopecks)}</span>;
+function MoneyAmount({ amount }: { amount: number }) {
+  return <span className="whitespace-nowrap">{formatMoney(amount)}</span>;
 }
 
 function VatMoneyOrEmpty({
@@ -747,8 +871,8 @@ function VatMoneyOrEmpty({
 
   return (
     <VatPair
-      withVat={withVat === null ? <Empty /> : <MoneyAmount kopecks={withVat} />}
-      exVat={exVat === null ? <Empty /> : <MoneyAmount kopecks={exVat} />}
+      withVat={withVat === null ? <Empty /> : <MoneyAmount amount={withVat} />}
+      exVat={exVat === null ? <Empty /> : <MoneyAmount amount={exVat} />}
     />
   );
 }
@@ -915,6 +1039,8 @@ function GridNumber({
           onBlur={(event) => commit(event.currentTarget.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
+              event.preventDefault();
+              event.stopPropagation();
               event.currentTarget.blur();
             }
           }}

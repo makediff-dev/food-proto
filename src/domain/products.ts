@@ -12,9 +12,14 @@ import {
   type PrototypeDocument,
   type SalesPlanLine,
 } from '@/domain/document';
-import { MAX_PRICE_PER_KILOGRAM_KOPECKS } from '@/domain/units';
+import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
-export type FieldRejection = NameRejection | 'vat' | 'cost' | 'missing';
+export type FieldRejection =
+  | NameRejection
+  | 'vat'
+  | 'cost'
+  | 'missing'
+  | 'category';
 
 function isEntityId(value: string): boolean {
   return (
@@ -31,23 +36,18 @@ function isVat(value: number): boolean {
 }
 
 function isUnitCost(value: number): boolean {
-  return (
-    Number.isInteger(value) &&
-    value >= 0 &&
-    value <= MAX_PRICE_PER_KILOGRAM_KOPECKS
-  );
+  return Number.isInteger(value) && value >= 0 && value <= MAX_PRICE_KOPECKS;
 }
 
-// Не вызывается: сводка берёт activeFinalProducts.
-// export function activeProducts(document: PrototypeDocument): Product[] {
-//   return document.products.filter((item) => item.deletedAt === null);
-// }
+export function activeProducts(document: PrototypeDocument): Product[] {
+  return document.products.filter((item) => item.deletedAt === null);
+}
 
 export function deletedProducts(document: PrototypeDocument): Product[] {
   return document.products.filter((item) => item.deletedAt !== null);
 }
 
-function suggestedPriceWithVatKopecks(
+function suggestedPriceWithVat(
   document: PrototypeDocument,
   productId: string,
   month: string,
@@ -59,7 +59,7 @@ function suggestedPriceWithVatKopecks(
   for (const plan of earlier) {
     const line = plan.lines.find((item) => item.productId === productId);
     if (line) {
-      return line.priceWithVatKopecks;
+      return line.priceWithVat;
     }
   }
 
@@ -78,16 +78,20 @@ function appendPlanLines(document: PrototypeDocument, productId: string) {
     const line: SalesPlanLine = {
       id: `sales-plan-line:${plan.month}:${productId}`,
       productId,
-      priceWithVatKopecks: suggestedPriceWithVatKopecks(
-        document,
-        productId,
-        plan.month,
-      ),
+      priceWithVat: suggestedPriceWithVat(document, productId, plan.month),
       volumePieces: 0,
     };
 
     return { ...plan, lines: [...plan.lines, line] };
   });
+}
+
+export function productCategoryRejection(
+  document: PrototypeDocument,
+  categoryId: string,
+): FieldRejection | null {
+  const category = document.categories.find((item) => item.id === categoryId);
+  return category ? null : 'category';
 }
 
 export function productNameRejection(
@@ -117,13 +121,13 @@ export function productVatRejection(
 export function productUnitCostRejection(
   document: PrototypeDocument,
   id: string,
-  unitCostWithVatKopecks: number,
+  unitCostWithVat: number,
 ): FieldRejection | null {
   const product = document.products.find((item) => item.id === id);
   if (!product) {
     return 'missing';
   }
-  if (!isUnitCost(unitCostWithVatKopecks)) {
+  if (!isUnitCost(unitCostWithVat)) {
     return 'cost';
   }
 
@@ -146,16 +150,20 @@ export function addProduct(
   }
 
   const vatPercent = product.vatPercent ?? 20;
-  const unitCostWithVatKopecks = product.unitCostWithVatKopecks ?? 0;
-  if (!isVat(vatPercent) || !isUnitCost(unitCostWithVatKopecks)) {
+  const unitCostWithVat = product.unitCostWithVat ?? 0;
+  const category = document.categories.find(
+    (item) => item.id === product.categoryId,
+  );
+  if (!category || !isVat(vatPercent) || !isUnitCost(unitCostWithVat)) {
     return document;
   }
 
   const next: Product = {
     id: product.id,
     name: normalizeName(product.name),
+    categoryId: product.categoryId,
     vatPercent,
-    unitCostWithVatKopecks,
+    unitCostWithVat,
     deletedAt: null,
   };
 
@@ -215,21 +223,21 @@ export function setProductVat(
 export function setProductUnitCost(
   document: PrototypeDocument,
   id: string,
-  unitCostWithVatKopecks: number,
+  unitCostWithVat: number,
 ): PrototypeDocument {
-  if (productUnitCostRejection(document, id, unitCostWithVatKopecks)) {
+  if (productUnitCostRejection(document, id, unitCostWithVat)) {
     return document;
   }
 
   const current = document.products.find((item) => item.id === id);
-  if (!current || current.unitCostWithVatKopecks === unitCostWithVatKopecks) {
+  if (!current || current.unitCostWithVat === unitCostWithVat) {
     return document;
   }
 
   return {
     ...document,
     products: document.products.map((item) =>
-      item.id === id ? { ...item, unitCostWithVatKopecks } : item,
+      item.id === id ? { ...item, unitCostWithVat } : item,
     ),
   };
 }

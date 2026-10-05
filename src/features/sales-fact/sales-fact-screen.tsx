@@ -4,7 +4,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
-import { isOccurredOn } from '@/domain/document';
+import { activeCategories } from '@/domain/categories';
+import {
+  isOccurredOn,
+  type Product,
+  type PrototypeDocument,
+  type SalesFact,
+} from '@/domain/document';
 import {
   defaultSalesFactDay,
   monthDates,
@@ -273,12 +279,7 @@ function Workspace({
               </div>
               {products.length > 0 ? (
                 <Openings
-                  products={products.map((product) => ({
-                    id: product.id,
-                    name: product.name,
-                    deleted: product.deletedAt !== null,
-                    ...openingOf(fact, product.id),
-                  }))}
+                  groups={openingGroups(sales.document, products, fact)}
                   editable={editable}
                   onOpening={(
                     productId,
@@ -335,11 +336,6 @@ function Workspace({
               </div>
             </div>
           </div>
-
-          <p className="text-sm leading-6 text-muted">
-            Себестоимость штуки — та же, что на «Сводке»: ввод с НДС у товара,
-            без НДС считается. Отдельной фактической себестоимости нет.
-          </p>
 
           {hasTable ? (
             <section
@@ -461,17 +457,42 @@ function MonthStep({
   );
 }
 
+function openingGroups(
+  document: PrototypeDocument,
+  products: readonly Product[],
+  fact: SalesFact | null,
+) {
+  return activeCategories(document).flatMap((category) => {
+    const items = products
+      .filter((product) => product.categoryId === category.id)
+      .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+      .map((product) => ({
+        id: product.id,
+        name: product.name,
+        deleted: product.deletedAt !== null,
+        ...openingOf(fact, product.id),
+      }));
+    return items.length === 0
+      ? []
+      : [{ id: category.id, name: category.name, products: items }];
+  });
+}
+
 function Openings({
-  products,
+  groups,
   editable,
   onOpening,
 }: {
-  products: {
+  groups: {
     id: string;
     name: string;
-    deleted: boolean;
-    productionPieces: number;
-    distributionPieces: number;
+    products: {
+      id: string;
+      name: string;
+      deleted: boolean;
+      productionPieces: number;
+      distributionPieces: number;
+    }[];
   }[];
   editable: boolean;
   onOpening: (
@@ -483,44 +504,53 @@ function Openings({
   return (
     <section className="border-t border-line pt-3 lg:shrink-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4">
       <h2 className="text-xs text-muted">Остатки на 1-е число</h2>
-      <ul className="mt-1.5 flex flex-col gap-1.5">
-        {products.map((product) => (
-          <li
-            key={product.id}
-            className="flex flex-wrap items-center gap-x-2 gap-y-1"
-          >
-            <p className="text-sm text-ink">
-              {product.name}
-              {product.deleted ? (
-                <span className="text-muted"> · удалён</span>
-              ) : null}
+      <ul className="mt-1.5 flex flex-col gap-3">
+        {groups.map((group) => (
+          <li key={group.id}>
+            <p className="text-sm font-semibold text-ink">
+              {group.name} ({group.products.length})
             </p>
-            <OpeningField
-              label={`Остаток на начало на производстве, ${product.name}`}
-              caption="На произв., шт"
-              value={product.productionPieces}
-              disabled={!editable || product.deleted}
-              onCommit={(productionPieces) =>
-                onOpening(
-                  product.id,
-                  productionPieces,
-                  product.distributionPieces,
-                )
-              }
-            />
-            <OpeningField
-              label={`Остаток на начало на РЦ, ${product.name}`}
-              caption="На РЦ, шт"
-              value={product.distributionPieces}
-              disabled={!editable || product.deleted}
-              onCommit={(distributionPieces) =>
-                onOpening(
-                  product.id,
-                  product.productionPieces,
-                  distributionPieces,
-                )
-              }
-            />
+            <ul className="mt-1.5 flex flex-col gap-1.5">
+              {group.products.map((product) => (
+                <li
+                  key={product.id}
+                  className="flex flex-wrap items-center gap-x-2 gap-y-1"
+                >
+                  <p className="text-sm text-ink">
+                    {product.name}
+                    {product.deleted ? (
+                      <span className="text-muted"> · удалён</span>
+                    ) : null}
+                  </p>
+                  <OpeningField
+                    label={`Остаток на начало на производстве, ${product.name}`}
+                    caption="На произв., шт"
+                    value={product.productionPieces}
+                    disabled={!editable || product.deleted}
+                    onCommit={(productionPieces) =>
+                      onOpening(
+                        product.id,
+                        productionPieces,
+                        product.distributionPieces,
+                      )
+                    }
+                  />
+                  <OpeningField
+                    label={`Остаток на начало на РЦ, ${product.name}`}
+                    caption="На РЦ, шт"
+                    value={product.distributionPieces}
+                    disabled={!editable || product.deleted}
+                    onCommit={(distributionPieces) =>
+                      onOpening(
+                        product.id,
+                        product.productionPieces,
+                        distributionPieces,
+                      )
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
           </li>
         ))}
       </ul>
@@ -594,6 +624,8 @@ function OpeningField({
           onBlur={(event) => commit(event.currentTarget.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
+              event.preventDefault();
+              event.stopPropagation();
               event.currentTarget.blur();
             }
           }}

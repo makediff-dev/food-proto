@@ -1,5 +1,5 @@
-import { formatRublesFromKopecks } from '@/domain/units';
+import { formatRubles } from '@/domain/units';
 
-export function formatMoney(kopecks: number): string {
-  return formatRublesFromKopecks(kopecks, true);
+export function formatMoney(amount: number): string {
+  return formatRubles(amount, true);
 }

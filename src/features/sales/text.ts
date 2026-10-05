@@ -1,11 +1,8 @@
-import {
-  MAX_OPERATING_EXPENSE_KOPECKS,
-  MAX_VOLUME_PIECES,
-} from '@/domain/document';
+import { MAX_OPERATING_EXPENSE, MAX_VOLUME_PIECES } from '@/domain/document';
 import type { SalesPlanRejection } from '@/domain/sales-plan';
 import type { OperatingExpenseRejection } from '@/domain/summary';
 import { parseDecimal } from '@/domain/units';
-import { parseKopecks } from '@/features/sales/fields';
+import { parseMoney } from '@/features/sales/fields';
 
 export const SALES_PLAN_ERROR: Record<SalesPlanRejection, string> = {
   missing: 'Запись не найдена.',
@@ -109,14 +106,14 @@ export function formatPercentHundredths(hundredths: number): string {
 
 // Не вызывается: сводка рисует пару с НДС / без НДС в двух строках клетки.
 // export function formatMoneyPair(
-//   withVatKopecks: number,
-//   exVatKopecks: number,
+//   withVat: number,
+//   exVat: number,
 // ): string {
-//   return `${formatMoney(withVatKopecks)} с НДС · ${formatMoney(exVatKopecks)} без НДС`;
+//   return `${formatMoney(withVat)} с НДС · ${formatMoney(exVat)} без НДС`;
 // }
 //
-// export function formatContribution(kopecks: number): string {
-//   return formatMoney(kopecks);
+// export function formatContribution(amount: number): string {
+//   return formatMoney(amount);
 // }
 
 export function parseVolumePieces(raw: string): number | null {
@@ -134,7 +131,7 @@ export function parseVolumePieces(raw: string): number | null {
 }
 
 export function parsePlanPrice(raw: string): number | null {
-  return parseKopecks(raw);
+  return parseMoney(raw);
 }
 
 /** Операционные расходы свода: рубли → копейки, ноль допустим. */
@@ -144,23 +141,23 @@ export function parseOperatingExpense(raw: string): number | null {
     return null;
   }
 
-  const kopecks = Math.round(rubles * 100);
+  const amount = Math.round(rubles * 100);
   if (
-    !Number.isInteger(kopecks) ||
-    kopecks < 0 ||
-    kopecks > MAX_OPERATING_EXPENSE_KOPECKS
+    !Number.isInteger(amount) ||
+    amount < 0 ||
+    amount > MAX_OPERATING_EXPENSE
   ) {
     return null;
   }
 
-  return kopecks;
+  return amount;
 }
 
-export function priceDraft(kopecks: number): string {
+export function priceDraft(amount: number): string {
   return new Intl.NumberFormat('ru-RU', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(kopecks / 100);
+  }).format(amount / 100);
 }
 
 export function volumeDraft(pieces: number): string {

@@ -1,6 +1,6 @@
 import { MAX_VOLUME_PIECES } from '@/domain/document';
 import type { SalesFactRejection } from '@/domain/sales-fact';
-import { parseKopecks } from '@/features/sales/fields';
+import { parseMoney } from '@/features/sales/fields';
 import {
   formatPieces,
   parseVolumePieces,
@@ -60,15 +60,15 @@ export function parseSignedPieces(raw: string): number | null {
 }
 
 export function parseFactPrice(raw: string): number | null {
-  return parseKopecks(raw);
+  return parseMoney(raw);
 }
 
 export function parseFactPieces(raw: string): number | null {
   return parseVolumePieces(raw);
 }
 
-export function factPriceDraft(kopecks: number): string {
-  return priceDraft(kopecks);
+export function factPriceDraft(amount: number): string {
+  return priceDraft(amount);
 }
 
 export function factPiecesDraft(pieces: number): string {

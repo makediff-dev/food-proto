@@ -1,5 +1,5 @@
 import type { FieldRejection } from '@/domain/products';
-import { parseDecimal, rublesToKopecks } from '@/domain/units';
+import { fromRubles, parseDecimal } from '@/domain/units';
 
 export const fieldClassName =
   'h-11 w-full border border-line bg-paper px-3 text-base text-ink outline-none focus-visible:border-ink focus-visible:bg-sheet focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60';
@@ -14,15 +14,16 @@ export const FIELD_ERROR: Record<FieldRejection, string> = {
   vat: 'Укажите НДС целым числом от 0 до 100.',
   cost: 'Укажите себестоимость с НДС.',
   missing: 'Запись не найдена.',
+  category: 'Выберите категорию.',
 };
 
-export function parseKopecks(raw: string): number | null {
+export function parseMoney(raw: string): number | null {
   const rubles = parseDecimal(raw);
   if (rubles === null) {
     return null;
   }
 
-  return rublesToKopecks(rubles);
+  return fromRubles(rubles);
 }
 
 export function parseWholePercent(raw: string): number | null {

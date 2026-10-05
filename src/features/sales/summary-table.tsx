@@ -5,6 +5,7 @@ import { type ReactNode, useId, useState } from 'react';
 import type { UnitCost } from '@/domain/cost';
 import type { SalesPlanRejection } from '@/domain/sales-plan';
 import type {
+  SummaryGroup,
   SummaryRow,
   SummarySide,
   SummaryVariance,
@@ -22,13 +23,18 @@ import {
   SALES_PLAN_ERROR,
   volumeDraft,
 } from '@/features/sales/text';
-import { IconTrash } from '@/features/shell/icons';
+import {
+  IconChevronDown,
+  IconChevronRight,
+  IconPlus,
+  IconTrash,
+} from '@/features/shell/icons';
 
 const gridFieldClassName =
   'w-full min-w-0 cursor-text appearance-none border-0 bg-transparent p-0 text-right text-sm text-ink shadow-none outline-none';
 
 const gridNameClassName =
-  'absolute inset-0 w-full cursor-text appearance-none border-0 bg-transparent p-0 text-left text-sm text-ink shadow-none outline-none';
+  'absolute inset-0 w-full cursor-text appearance-none border-0 bg-transparent p-0 text-left text-sm leading-8 text-ink shadow-none outline-none';
 
 const editableCellClassName = 'bg-[#e4e4e0]';
 
@@ -139,7 +145,7 @@ function sectionRightClass(
 }
 
 export function SummaryTable({
-  rows,
+  groups,
   planTotals,
   factTotals,
   variance,
@@ -151,8 +157,9 @@ export function SummaryTable({
   onProductCostAction,
   onRenameProduct,
   onDeleteProduct,
+  onAddProduct,
 }: {
-  rows: SummaryRow[];
+  groups: SummaryGroup[];
   planTotals: SummarySide | null;
   factTotals: SummarySide;
   variance: SummaryVariance;
@@ -161,23 +168,24 @@ export function SummaryTable({
   expanded?: boolean;
   onPlanLineAction: (
     lineId: string,
-    priceWithVatKopecks: number,
+    priceWithVat: number,
     volumePieces: number,
   ) => SalesPlanRejection | null;
   onProductVatAction: (productId: string, vatPercent: number) => string | null;
   onProductCostAction: (
     productId: string,
-    unitCostWithVatKopecks: number,
+    unitCostWithVat: number,
   ) => string | null;
   onRenameProduct: (productId: string, name: string) => string | null;
   onDeleteProduct: (productId: string, name: string) => void;
+  onAddProduct: (categoryId: string) => void;
 }) {
   return (
     <div
       className={
         expanded
           ? 'h-dvh contain-paint overflow-auto bg-sheet'
-          : 'max-h-[calc(100dvh-14rem)] contain-paint overflow-auto border border-line bg-sheet'
+          : 'contain-paint overflow-x-auto border border-line bg-sheet'
       }
     >
       <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
@@ -246,118 +254,19 @@ export function SummaryTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.productId}>
-              <th
-                scope="row"
-                className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle font-normal"
-              >
-                <div className="flex items-start gap-2">
-                  <div className="flex min-w-max flex-1 flex-col gap-1">
-                    {row.deleted || !vatEditable ? (
-                      <span className="text-sm text-ink">{row.name}</span>
-                    ) : (
-                      <GridText
-                        label={`Название, ${row.name}`}
-                        value={row.name}
-                        invalidMessage={FIELD_ERROR.empty}
-                        onCommit={(next) =>
-                          onRenameProduct(row.productId, next)
-                        }
-                      />
-                    )}
-                    {row.deleted ? (
-                      <span className="text-sm text-muted">удалён</span>
-                    ) : null}
-                  </div>
-                  {row.deleted || !vatEditable ? null : (
-                    <button
-                      type="button"
-                      aria-label={`Удалить ${row.name}`}
-                      title="Удалить"
-                      onClick={() => onDeleteProduct(row.productId, row.name)}
-                      className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                    >
-                      <IconTrash />
-                    </button>
-                  )}
-                </div>
-              </th>
-              {SIDE_COLUMNS.map((column) => {
-                const canEdit =
-                  !row.deleted &&
-                  ((editable &&
-                    row.planLineId !== null &&
-                    (column.key === 'price' || column.key === 'volume')) ||
-                    (vatEditable &&
-                      (column.key === 'vat' || column.key === 'unitCost')));
-                return (
-                  <td
-                    key={`plan:${column.key}`}
-                    className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('plan', column.key)} ${
-                      canEdit &&
-                      (
-                        column.key === 'volume' ||
-                          column.key === 'vat' ||
-                          column.key === 'unitCost'
-                      )
-                        ? editableCellClassName
-                        : ''
-                    }`}
-                    onClick={(event) => {
-                      if (!canEdit) {
-                        return;
-                      }
-                      const field = event.currentTarget.querySelector('input');
-                      if (
-                        field instanceof HTMLInputElement &&
-                        document.activeElement !== field
-                      ) {
-                        field.focus();
-                      }
-                    }}
-                    onKeyDown={(event) => {
-                      if (!canEdit) {
-                        return;
-                      }
-                      if (event.key !== 'Enter' && event.key !== ' ') {
-                        return;
-                      }
-                      const field = event.currentTarget.querySelector('input');
-                      if (field instanceof HTMLInputElement) {
-                        field.focus();
-                      }
-                    }}
-                  >
-                    <PlanCell
-                      column={column.key}
-                      row={row}
-                      editable={editable && !row.deleted}
-                      vatEditable={vatEditable && !row.deleted}
-                      onPlanLine={onPlanLineAction}
-                      onProductVat={onProductVatAction}
-                      onProductCost={onProductCostAction}
-                    />
-                  </td>
-                );
-              })}
-              {SIDE_COLUMNS.map((column) => (
-                <td
-                  key={`fact:${column.key}`}
-                  className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('fact', column.key)}`}
-                >
-                  <SideCell column={column.key} side={row.fact} kind="row" />
-                </td>
-              ))}
-              {VARIANCE_COLUMNS.map((column) => (
-                <td
-                  key={`var:${column.key}`}
-                  className="w-px border-r border-r-line border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0"
-                >
-                  <VarianceCell column={column.key} variance={row.variance} />
-                </td>
-              ))}
-            </tr>
+          {groups.map((group) => (
+            <CategoryBlock
+              key={group.categoryId}
+              group={group}
+              editable={editable}
+              vatEditable={vatEditable}
+              onPlanLineAction={onPlanLineAction}
+              onProductVatAction={onProductVatAction}
+              onProductCostAction={onProductCostAction}
+              onRenameProduct={onRenameProduct}
+              onDeleteProduct={onDeleteProduct}
+              onAddProduct={onAddProduct}
+            />
           ))}
           <tr>
             <th
@@ -405,6 +314,266 @@ export function SummaryTable({
   );
 }
 
+function CategoryBlock({
+  group,
+  editable,
+  vatEditable,
+  onPlanLineAction,
+  onProductVatAction,
+  onProductCostAction,
+  onRenameProduct,
+  onDeleteProduct,
+  onAddProduct,
+}: {
+  group: SummaryGroup;
+  editable: boolean;
+  vatEditable: boolean;
+  onPlanLineAction: (
+    lineId: string,
+    priceWithVat: number,
+    volumePieces: number,
+  ) => SalesPlanRejection | null;
+  onProductVatAction: (productId: string, vatPercent: number) => string | null;
+  onProductCostAction: (
+    productId: string,
+    unitCostWithVat: number,
+  ) => string | null;
+  onRenameProduct: (productId: string, name: string) => string | null;
+  onDeleteProduct: (productId: string, name: string) => void;
+  onAddProduct: (categoryId: string) => void;
+}) {
+  const header = 'bg-paper';
+  const [open, setOpen] = useState(false);
+  const productCount = group.rows.length;
+
+  return (
+    <>
+      <tr>
+        <th
+          scope="row"
+          className={`sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted px-3 py-2 text-left align-middle font-normal text-ink ${header}`}
+        >
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-label={
+                open
+                  ? `Свернуть товары категории ${group.name}`
+                  : `Развернуть товары категории ${group.name}`
+              }
+              title={open ? 'Свернуть' : 'Развернуть'}
+              onClick={() => setOpen((current) => !current)}
+              className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              {open ? <IconChevronDown /> : <IconChevronRight />}
+            </button>
+            <span className="flex h-8 min-w-max flex-1 items-center text-sm font-semibold leading-none text-ink">
+              {group.name} ({productCount})
+            </span>
+            {vatEditable ? (
+              <button
+                type="button"
+                aria-label={`Добавить товар в ${group.name}`}
+                title="Добавить товар"
+                onClick={() => {
+                  setOpen(true);
+                  onAddProduct(group.categoryId);
+                }}
+                className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              >
+                <IconPlus />
+              </button>
+            ) : null}
+          </div>
+        </th>
+        {SIDE_COLUMNS.map((column) => (
+          <td
+            key={`plan-group:${column.key}`}
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header} ${sectionRightClass('plan', column.key)}`}
+          >
+            {group.plan ? (
+              <SideCell column={column.key} side={group.plan} kind="total" />
+            ) : (
+              <Empty />
+            )}
+          </td>
+        ))}
+        {SIDE_COLUMNS.map((column) => (
+          <td
+            key={`fact-group:${column.key}`}
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header} ${sectionRightClass('fact', column.key)}`}
+          >
+            <SideCell column={column.key} side={group.fact} kind="total" />
+          </td>
+        ))}
+        {VARIANCE_COLUMNS.map((column) => (
+          <td
+            key={`var-group:${column.key}`}
+            className={`w-px border-r border-r-line border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header}`}
+          >
+            <VarianceCell column={column.key} variance={group.variance} />
+          </td>
+        ))}
+      </tr>
+      {open
+        ? group.rows.map((row) => (
+            <ProductRow
+              key={row.productId}
+              row={row}
+              editable={editable}
+              vatEditable={vatEditable}
+              onPlanLineAction={onPlanLineAction}
+              onProductVatAction={onProductVatAction}
+              onProductCostAction={onProductCostAction}
+              onRenameProduct={onRenameProduct}
+              onDeleteProduct={onDeleteProduct}
+            />
+          ))
+        : null}
+    </>
+  );
+}
+
+function ProductRow({
+  row,
+  editable,
+  vatEditable,
+  onPlanLineAction,
+  onProductVatAction,
+  onProductCostAction,
+  onRenameProduct,
+  onDeleteProduct,
+}: {
+  row: SummaryRow;
+  editable: boolean;
+  vatEditable: boolean;
+  onPlanLineAction: (
+    lineId: string,
+    priceWithVat: number,
+    volumePieces: number,
+  ) => SalesPlanRejection | null;
+  onProductVatAction: (productId: string, vatPercent: number) => string | null;
+  onProductCostAction: (
+    productId: string,
+    unitCostWithVat: number,
+  ) => string | null;
+  onRenameProduct: (productId: string, name: string) => string | null;
+  onDeleteProduct: (productId: string, name: string) => void;
+}) {
+  return (
+    <tr>
+      <th
+        scope="row"
+        className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 pl-8 text-left align-middle font-normal"
+      >
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            {row.deleted || !vatEditable ? (
+              <span className="flex h-8 min-w-max flex-1 items-center text-sm leading-none text-ink">
+                {row.name}
+              </span>
+            ) : (
+              <GridText
+                label={`Название, ${row.name}`}
+                value={row.name}
+                invalidMessage={FIELD_ERROR.empty}
+                onCommit={(next) => onRenameProduct(row.productId, next)}
+              />
+            )}
+            {row.deleted || !vatEditable ? null : (
+              <button
+                type="button"
+                aria-label={`Удалить ${row.name}`}
+                title="Удалить"
+                onClick={() => onDeleteProduct(row.productId, row.name)}
+                className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              >
+                <IconTrash />
+              </button>
+            )}
+          </div>
+          {row.deleted ? (
+            <span className="text-sm text-muted">удалён</span>
+          ) : null}
+        </div>
+      </th>
+      {SIDE_COLUMNS.map((column) => {
+        const canEdit =
+          !row.deleted &&
+          ((editable &&
+            row.planLineId !== null &&
+            (column.key === 'price' || column.key === 'volume')) ||
+            (vatEditable &&
+              (column.key === 'vat' || column.key === 'unitCost')));
+        return (
+          <td
+            key={`plan:${column.key}`}
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('plan', column.key)} ${
+              canEdit && (column.key === 'volume' || column.key === 'vat')
+                ? editableCellClassName
+                : ''
+            }`}
+            onClick={(event) => {
+              if (!canEdit) {
+                return;
+              }
+              const field = event.currentTarget.querySelector('input');
+              if (
+                field instanceof HTMLInputElement &&
+                document.activeElement !== field
+              ) {
+                field.focus();
+              }
+            }}
+            onKeyDown={(event) => {
+              if (!canEdit) {
+                return;
+              }
+              if (event.key !== 'Enter' && event.key !== ' ') {
+                return;
+              }
+              if (event.target instanceof HTMLInputElement) {
+                return;
+              }
+              const field = event.currentTarget.querySelector('input');
+              if (field instanceof HTMLInputElement) {
+                field.focus();
+              }
+            }}
+          >
+            <PlanCell
+              column={column.key}
+              row={row}
+              editable={editable && !row.deleted}
+              vatEditable={vatEditable && !row.deleted}
+              onPlanLine={onPlanLineAction}
+              onProductVat={onProductVatAction}
+              onProductCost={onProductCostAction}
+            />
+          </td>
+        );
+      })}
+      {SIDE_COLUMNS.map((column) => (
+        <td
+          key={`fact:${column.key}`}
+          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('fact', column.key)}`}
+        >
+          <SideCell column={column.key} side={row.fact} kind="row" />
+        </td>
+      ))}
+      {VARIANCE_COLUMNS.map((column) => (
+        <td
+          key={`var:${column.key}`}
+          className="w-px border-r border-r-line border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0"
+        >
+          <VarianceCell column={column.key} variance={row.variance} />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
 function PlanCell({
   column,
   row,
@@ -420,14 +589,11 @@ function PlanCell({
   vatEditable: boolean;
   onPlanLine: (
     lineId: string,
-    priceWithVatKopecks: number,
+    priceWithVat: number,
     volumePieces: number,
   ) => SalesPlanRejection | null;
   onProductVat: (productId: string, vatPercent: number) => string | null;
-  onProductCost: (
-    productId: string,
-    unitCostWithVatKopecks: number,
-  ) => string | null;
+  onProductCost: (productId: string, unitCostWithVat: number) => string | null;
 }) {
   if (column === 'vat') {
     return (
@@ -458,7 +624,7 @@ function PlanCell({
         top={
           <GridNumber
             label={`Себестоимость с НДС, ${row.name}`}
-            value={priceDraft(cost.withVatKopecks)}
+            value={priceDraft(cost.withVat)}
             disabled={!vatEditable}
             inputMode="decimal"
             unit="₽"
@@ -467,7 +633,7 @@ function PlanCell({
             onCommit={(next) => onProductCost(row.productId, next)}
           />
         }
-        bottom={<MoneyAmount kopecks={cost.exVatKopecks} />}
+        bottom={<MoneyAmount amount={cost.exVat} />}
       />
     );
   }
@@ -485,7 +651,7 @@ function PlanCell({
         top={
           <GridNumber
             label={`Плановая цена с НДС, ${row.name}`}
-            value={priceDraft(row.planPriceWithVatKopecks ?? 0)}
+            value={priceDraft(row.planPriceWithVat ?? 0)}
             disabled={!editable}
             inputMode="decimal"
             unit="₽"
@@ -527,7 +693,7 @@ function PlanCell({
         onCommit={(next) => {
           const rejection = onPlanLine(
             row.planLineId ?? '',
-            row.planPriceWithVatKopecks ?? 0,
+            row.planPriceWithVat ?? 0,
             next,
           );
           return rejection ? SALES_PLAN_ERROR[rejection] : null;
@@ -557,8 +723,8 @@ function SideCell({
 
         return (
           <VatMoneyOrEmpty
-            withVat={side.averageCostWithVatKopecks}
-            exVat={side.averageCostExVatKopecks}
+            withVat={side.averageCostWithVat}
+            exVat={side.averageCostExVat}
           />
         );
       }
@@ -577,13 +743,13 @@ function SideCell({
     case 'price':
       if (
         side.priceExVatTenThousandths !== null &&
-        side.priceWithVatKopecks !== null
+        side.priceWithVat !== null
       ) {
         return (
           <StackedPair
             topLabel="с НДС"
             bottomLabel="без НДС"
-            top={<MoneyAmount kopecks={side.priceWithVatKopecks} />}
+            top={<MoneyAmount amount={side.priceWithVat} />}
             bottom={
               <span className="whitespace-nowrap">
                 {formatPriceExVat(side.priceExVatTenThousandths)}
@@ -593,10 +759,7 @@ function SideCell({
         );
       }
       return (
-        <VatMoneyOrEmpty
-          withVat={side.priceWithVatKopecks}
-          exVat={side.priceExVatKopecks}
-        />
+        <VatMoneyOrEmpty withVat={side.priceWithVat} exVat={side.priceExVat} />
       );
     case 'volume':
       return side.volumePieces === null ? (
@@ -612,18 +775,18 @@ function SideCell({
       }
       return (
         <VatMoneyOrEmpty
-          withVat={side.revenueWithVatKopecks}
-          exVat={side.revenueExVatKopecks}
+          withVat={side.revenueWithVat}
+          exVat={side.revenueExVat}
         />
       );
     case 'contribution':
       if (kind === 'total' && (!side.costComplete || !side.revenueComplete)) {
         return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
       }
-      return side.contributionKopecks === null ? (
+      return side.contribution === null ? (
         <Empty />
       ) : (
-        <MoneyAmount kopecks={side.contributionKopecks} />
+        <MoneyAmount amount={side.contribution} />
       );
     case 'volumeCost':
       if (kind === 'total' && !side.costComplete) {
@@ -631,8 +794,8 @@ function SideCell({
       }
       return (
         <VatMoneyOrEmpty
-          withVat={side.volumeCostWithVatKopecks}
-          exVat={side.volumeCostExVatKopecks}
+          withVat={side.volumeCostWithVat}
+          exVat={side.volumeCostExVat}
         />
       );
     case 'perDay':
@@ -671,16 +834,16 @@ function VarianceCell({
   if (column === 'revenue') {
     return (
       <VatMoneyOrEmpty
-        withVat={variance.revenueWithVatKopecks}
-        exVat={variance.revenueExVatKopecks}
+        withVat={variance.revenueWithVat}
+        exVat={variance.revenueExVat}
       />
     );
   }
 
-  return variance.contributionKopecks === null ? (
+  return variance.contribution === null ? (
     <Empty />
   ) : (
-    <MoneyAmount kopecks={variance.contributionKopecks} />
+    <MoneyAmount amount={variance.contribution} />
   );
 }
 
@@ -691,14 +854,14 @@ function UnitCostValue({ cost }: { cost: UnitCost | null }) {
 
   return (
     <VatPair
-      withVat={<MoneyAmount kopecks={cost.withVatKopecks} />}
-      exVat={<MoneyAmount kopecks={cost.exVatKopecks} />}
+      withVat={<MoneyAmount amount={cost.withVat} />}
+      exVat={<MoneyAmount amount={cost.exVat} />}
     />
   );
 }
 
-function MoneyAmount({ kopecks }: { kopecks: number }) {
-  return <span className="whitespace-nowrap">{formatMoney(kopecks)}</span>;
+function MoneyAmount({ amount }: { amount: number }) {
+  return <span className="whitespace-nowrap">{formatMoney(amount)}</span>;
 }
 
 function VatMoneyOrEmpty({
@@ -714,8 +877,8 @@ function VatMoneyOrEmpty({
 
   return (
     <VatPair
-      withVat={withVat === null ? <Empty /> : <MoneyAmount kopecks={withVat} />}
-      exVat={exVat === null ? <Empty /> : <MoneyAmount kopecks={exVat} />}
+      withVat={withVat === null ? <Empty /> : <MoneyAmount amount={withVat} />}
+      exVat={exVat === null ? <Empty /> : <MoneyAmount amount={exVat} />}
     />
   );
 }
@@ -881,6 +1044,8 @@ function GridNumber({
           onBlur={(event) => commit(event.currentTarget.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
+              event.preventDefault();
+              event.stopPropagation();
               event.currentTarget.blur();
             }
           }}
@@ -935,12 +1100,15 @@ function GridText({
   }
 
   return (
-    <div>
+    <div className="min-w-max flex-1">
       <label htmlFor={inputId} className="sr-only">
         {label}
       </label>
-      <div className="relative">
-        <span className="invisible block whitespace-nowrap text-sm" aria-hidden>
+      <div className="relative min-w-max flex-1">
+        <span
+          className="invisible flex h-8 items-center whitespace-nowrap text-sm leading-none"
+          aria-hidden
+        >
           {shown.length > 0 ? shown : '\u00a0'}
         </span>
         <input
@@ -957,6 +1125,8 @@ function GridText({
           onBlur={(event) => commit(event.currentTarget.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
+              event.preventDefault();
+              event.stopPropagation();
               event.currentTarget.blur();
             }
           }}

@@ -1,4 +1,5 @@
 import {
+  catalogCategories,
   type Product,
   type PrototypeDocument,
   type SalesPlan,
@@ -13,9 +14,10 @@ import {
 const burger: Product = {
   id: 'product-burger',
   name: 'Гамбургер',
+  categoryId: 'category-rolls',
   /** `Svod!N63`, роллы и сэндвичи. */
   vatPercent: 20,
-  unitCostWithVatKopecks: 3_930,
+  unitCostWithVat: 3_930,
   deletedAt: null,
 };
 
@@ -29,7 +31,7 @@ const salesPlans: SalesPlan[] = [
         id: 'plan-2026-09-burger',
         productId: 'product-burger',
         /** `Svod!F63`, 85,13 ₽. */
-        priceWithVatKopecks: 8_513,
+        priceWithVat: 8_513,
         /** `Svod!H63`. */
         volumePieces: 20_000,
       },
@@ -39,6 +41,7 @@ const salesPlans: SalesPlan[] = [
 
 export const mockDocument: PrototypeDocument = {
   schemaVersion: SCHEMA_VERSION,
+  categories: catalogCategories(),
   products: [burger],
   salesPlans,
   salesFacts: [],
@@ -48,6 +51,7 @@ export const mockDocument: PrototypeDocument = {
 export function createMockDocument(): PrototypeDocument {
   return {
     schemaVersion: mockDocument.schemaVersion,
+    categories: mockDocument.categories.map((item) => ({ ...item })),
     products: mockDocument.products.map((item) => ({ ...item })),
     salesPlans: mockDocument.salesPlans.map((item) => ({
       ...item,
