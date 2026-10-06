@@ -11,6 +11,7 @@
   --sidebar-line: #343432;
   --sidebar-active: #2c2c2a;
   --mark: #8d3326;
+  --negative: #d44532;
   --background: var(--paper);
   --foreground: var(--ink);
 }
@@ -26,6 +27,7 @@
   --color-sidebar-line: var(--sidebar-line);
   --color-sidebar-active: var(--sidebar-active);
   --color-mark: var(--mark);
+  --color-negative: var(--negative);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-onest);

@@ -9,17 +9,18 @@ import {
 /**
  * Мок: два салата, одно горячее и гамбургер. План сентября. Факт продаж и операционные расходы пустые.
  * В книге строки салатов пустые (`Svod!C15:C29`), имена и цены салатов — для мока.
- * Себестоимость гамбургера 39,30 ₽ с НДС — прежний итог рецепта. Без НДС 32,75 ₽
+ * НДС у всех товаров 20%. В книге у горячих `Svod!N31` 10%, у роллов `Svod!N63` 20%.
+ * Себестоимость 1 шт с НДС — мок: у гуляша в книге `Svod!D31` 0, у салатов кэша нет.
+ * У гамбургера 39,30 ₽ — прежний итог рецепта. Без НДС 32,75 ₽
  * (3930 × 100 / 120, половина вверх), а не смешанные ставки рецепта (34,84 ₽).
- * У салатов и гуляша себестоимость 0, как кэш `Svod!D`.
  */
 const caesar: Product = {
   id: 'product-caesar',
   name: 'Цезарь с курицей',
   categoryId: 'category-salads',
-  /** Как у горячих блюд, `Svod!N31`. В книге у салатов ставки нет. */
-  vatPercent: 10,
-  unitCostWithVat: 0,
+  vatPercent: 20,
+  /** 44,50 ₽. В книге строки салата нет. */
+  unitCostWithVat: 4_450,
   deletedAt: null,
 };
 
@@ -27,8 +28,9 @@ const olivier: Product = {
   id: 'product-olivier',
   name: 'Оливье',
   categoryId: 'category-salads',
-  vatPercent: 10,
-  unitCostWithVat: 0,
+  vatPercent: 20,
+  /** 31,60 ₽. В книге строки салата нет. */
+  unitCostWithVat: 3_160,
   deletedAt: null,
 };
 
@@ -36,10 +38,9 @@ const goulash: Product = {
   id: 'product-goulash',
   name: 'Гуляш из курицы с рисом',
   categoryId: 'category-hot',
-  /** `Svod!N31`. */
-  vatPercent: 10,
-  /** `Svod!D31` в файле 0. */
-  unitCostWithVat: 0,
+  vatPercent: 20,
+  /** 45,80 ₽. `Svod!D31` в файле 0. */
+  unitCostWithVat: 4_580,
   deletedAt: null,
 };
 
@@ -47,7 +48,6 @@ const burger: Product = {
   id: 'product-burger',
   name: 'Гамбургер',
   categoryId: 'category-rolls',
-  /** `Svod!N63`, роллы и сэндвичи. */
   vatPercent: 20,
   unitCostWithVat: 3_930,
   deletedAt: null,
@@ -86,7 +86,6 @@ const salesPlans: SalesPlan[] = [
         productId: 'product-burger',
         /** `Svod!F63`, 85,13 ₽. */
         priceWithVat: 8_513,
-        /** `Svod!H63`. */
         volumePieces: 20_000,
       },
     ],

@@ -5,6 +5,7 @@ import { useId, useState } from 'react';
 import type {
   SummaryHeadline as Headline,
   OperatingExpenseSide,
+  SummaryLens,
 } from '@/domain/summary';
 import { formatMoney } from '@/features/sales/money';
 import {
@@ -14,6 +15,7 @@ import {
   priceDraft,
 } from '@/features/sales/text';
 import { IconRuble } from '@/features/shell/icons';
+import { TableNumber } from '@/features/shell/table-number';
 
 const editableCellClassName = 'bg-[#e4e4e0]';
 
@@ -51,12 +53,14 @@ const ROWS: { id: HeadlineRowId; label: string }[] = [
 export function SummaryHeadlineTable({
   headline,
   month,
+  view,
   planEditable,
   factEditable,
   onOperatingExpense,
 }: {
   headline: Headline;
   month: string;
+  view: SummaryLens;
   planEditable: boolean;
   factEditable: boolean;
   onOperatingExpense: (
@@ -68,7 +72,9 @@ export function SummaryHeadlineTable({
     <div className="w-full overflow-x-auto border border-line bg-sheet sm:w-[26rem]">
       <table className="w-full border-separate border-spacing-0 text-[11px] leading-tight text-ink">
         <caption className="sr-only">
-          Свод периода: план, факт и отклонение. Операционные расходы без НДС.
+          {view === 'current'
+            ? 'Свод периода: план (корр.), факт и отклонение. Операционные расходы без НДС.'
+            : 'Свод периода: план, факт (прогноз) и отклонение. Операционные расходы без НДС.'}
         </caption>
         <thead>
           <tr>
@@ -76,10 +82,10 @@ export function SummaryHeadlineTable({
               Показатель
             </th>
             <th scope="col" className={valueHeadClassName}>
-              План
+              {view === 'current' ? 'План (корр.)' : 'План'}
             </th>
             <th scope="col" className={valueHeadClassName}>
-              Факт
+              {view === 'forecast' ? 'Факт (прогноз)' : 'Факт'}
             </th>
             <th scope="col" className={valueHeadClassName}>
               Откл.
@@ -190,9 +196,9 @@ function HeadlineValue({
   return values.netProfitabilityHundredths === null ? (
     <Empty />
   ) : (
-    <span className="whitespace-nowrap">
+    <TableNumber value={values.netProfitabilityHundredths}>
       {formatPercentHundredths(values.netProfitabilityHundredths)}
-    </span>
+    </TableNumber>
   );
 }
 
@@ -227,9 +233,9 @@ function VarianceValue({
   return variance.netProfitabilityHundredths === null ? (
     <Empty />
   ) : (
-    <span className="whitespace-nowrap">
+    <TableNumber value={variance.netProfitabilityHundredths}>
       {formatPercentHundredths(variance.netProfitabilityHundredths)}
-    </span>
+    </TableNumber>
   );
 }
 
@@ -242,7 +248,7 @@ function MoneyOrEmpty({ amount }: { amount: number | null }) {
 }
 
 function MoneyAmount({ amount }: { amount: number }) {
-  return <span className="whitespace-nowrap">{formatMoney(amount)}</span>;
+  return <TableNumber value={amount}>{formatMoney(amount)}</TableNumber>;
 }
 
 function Empty() {

@@ -39,6 +39,7 @@ import {
   IconUndo,
 } from '@/features/shell/icons';
 import { PageFrame } from '@/features/shell/page-frame';
+import { TableNumber } from '@/features/shell/table-number';
 
 interface LineDraft {
   key: string;
@@ -385,7 +386,13 @@ function SaleForm({
                         />
                       </td>
                       <td className="border-b border-line px-3 py-2 text-right whitespace-nowrap">
-                        {ex === null ? '—' : formatMoney(ex)}
+                        {ex === null ? (
+                          '—'
+                        ) : (
+                          <TableNumber value={ex}>
+                            {formatMoney(ex)}
+                          </TableNumber>
+                        )}
                       </td>
                       <td className="border-b border-line px-2 py-2 text-right">
                         <button

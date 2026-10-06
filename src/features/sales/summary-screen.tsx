@@ -205,6 +205,7 @@ function Workspace({
           <SummaryHeadlineTable
             headline={summary.headline}
             month={month}
+            view={view}
             planEditable={planMetricsEditable}
             factEditable={catalogEditable}
             onOperatingExpense={(side, amountExVat) => {
@@ -312,6 +313,7 @@ function Workspace({
                 planTotals={summary.planTotalsSide}
                 factTotals={summary.factTotals}
                 variance={summary.variance}
+                view={view}
                 editable={editable}
                 vatEditable={planMetricsEditable}
                 catalogEditable={catalogEditable}

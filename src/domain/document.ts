@@ -1,7 +1,7 @@
 import { fitsSafeMoneyProduct } from '@/domain/money';
 import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
-export const SCHEMA_VERSION = 31 as const;
+export const SCHEMA_VERSION = 32 as const;
 
 export const MAX_LABEL_LENGTH = 200;
 

@@ -6,6 +6,7 @@ import type { UnitCost } from '@/domain/cost';
 import type { SalesPlanRejection } from '@/domain/sales-plan';
 import type {
   SummaryGroup,
+  SummaryLens,
   SummaryRow,
   SummarySide,
   SummaryVariance,
@@ -29,6 +30,7 @@ import {
   IconPlus,
   IconTrash,
 } from '@/features/shell/icons';
+import { TableNumber } from '@/features/shell/table-number';
 
 const gridFieldClassName =
   'w-full min-w-0 cursor-text appearance-none border-0 bg-transparent p-0 text-right text-sm text-ink shadow-none outline-none';
@@ -149,6 +151,7 @@ export function SummaryTable({
   planTotals,
   factTotals,
   variance,
+  view,
   editable,
   vatEditable,
   catalogEditable,
@@ -166,6 +169,7 @@ export function SummaryTable({
   planTotals: SummarySide | null;
   factTotals: SummarySide;
   variance: SummaryVariance;
+  view: SummaryLens;
   editable: boolean;
   vatEditable: boolean;
   catalogEditable: boolean;
@@ -196,7 +200,9 @@ export function SummaryTable({
     >
       <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
         <caption className="sr-only">
-          Сводка месяца: план, факт и отклонение
+          {view === 'current'
+            ? 'Сводка месяца: план (корр.), факт и отклонение'
+            : 'Сводка месяца: план, факт (прогноз) и отклонение'}
         </caption>
         <thead className="sticky top-0 z-30">
           <tr>
@@ -206,14 +212,22 @@ export function SummaryTable({
               scope="colgroup"
               className="border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
             >
-              {keepWithNext('Плановые показатели')}
+              {keepWithNext(
+                view === 'current'
+                  ? 'Плановые показатели (корр.)'
+                  : 'Плановые показатели',
+              )}
             </th>
             <th
               colSpan={SIDE_COLUMNS.length}
               scope="colgroup"
               className="border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
             >
-              {keepWithNext('Фактические показатели')}
+              {keepWithNext(
+                view === 'forecast'
+                  ? 'Фактические показатели (прогноз)'
+                  : 'Фактические показатели',
+              )}
             </th>
             <th
               colSpan={VARIANCE_COLUMNS.length}
@@ -721,9 +735,9 @@ function PlanCell({
           row.plan.priceExVatTenThousandths === null ? (
             <Empty />
           ) : (
-            <span className="whitespace-nowrap">
+            <TableNumber value={row.plan.priceExVatTenThousandths}>
               {formatPriceExVat(row.plan.priceExVatTenThousandths)}
-            </span>
+            </TableNumber>
           )
         }
       />
@@ -790,9 +804,9 @@ function SideCell({
       return side.profitabilityHundredths === null ? (
         <Empty />
       ) : (
-        <span className="whitespace-nowrap">
+        <TableNumber value={side.profitabilityHundredths}>
           {formatPercentHundredths(side.profitabilityHundredths)}
-        </span>
+        </TableNumber>
       );
     case 'price':
       if (
@@ -805,9 +819,9 @@ function SideCell({
             bottomLabel="без НДС"
             top={<MoneyAmount amount={side.priceWithVat} />}
             bottom={
-              <span className="whitespace-nowrap">
+              <TableNumber value={side.priceExVatTenThousandths}>
                 {formatPriceExVat(side.priceExVatTenThousandths)}
-              </span>
+              </TableNumber>
             }
           />
         );
@@ -819,9 +833,9 @@ function SideCell({
       return side.volumePieces === null ? (
         <Empty />
       ) : (
-        <span className="whitespace-nowrap">
+        <TableNumber value={side.volumePieces}>
           {formatPieces(side.volumePieces)} шт
-        </span>
+        </TableNumber>
       );
     case 'revenue':
       if (kind === 'total' && !side.revenueComplete) {
@@ -856,22 +870,24 @@ function SideCell({
       return side.perDay === null ? (
         <Empty />
       ) : (
-        <span className="whitespace-nowrap">{formatPerDay(side.perDay)}</span>
+        <TableNumber value={side.perDay}>
+          {formatPerDay(side.perDay)}
+        </TableNumber>
       );
     case 'vat':
       if (kind === 'total') {
         return side.vatPercentHundredths === null ? (
           <Empty />
         ) : (
-          <span className="whitespace-nowrap">
+          <TableNumber value={side.vatPercentHundredths}>
             {formatPercentHundredths(side.vatPercentHundredths)}
-          </span>
+          </TableNumber>
         );
       }
       return side.vatPercent === null ? (
         <Empty />
       ) : (
-        <span className="whitespace-nowrap">{side.vatPercent} %</span>
+        <TableNumber value={side.vatPercent}>{side.vatPercent} %</TableNumber>
       );
     default:
       return <Empty />;
@@ -915,7 +931,7 @@ function UnitCostValue({ cost }: { cost: UnitCost | null }) {
 }
 
 function MoneyAmount({ amount }: { amount: number }) {
-  return <span className="whitespace-nowrap">{formatMoney(amount)}</span>;
+  return <TableNumber value={amount}>{formatMoney(amount)}</TableNumber>;
 }
 
 function VatMoneyOrEmpty({

@@ -17,6 +17,7 @@ import {
   IconChevronRight,
   IconChevronUp,
 } from '@/features/shell/icons';
+import { TableNumber } from '@/features/shell/table-number';
 
 /** Предлоги, союзы и частицы, которые не оставляют в конце строки. */
 const HANGING_WORDS = new Set([
@@ -449,15 +450,15 @@ function RowCell({ column, row }: { column: ColumnKey; row: SalesFactRow }) {
       return row.profitabilityHundredths === null ? (
         <Empty />
       ) : (
-        <span className="whitespace-nowrap">
+        <TableNumber value={row.profitabilityHundredths}>
           {formatPercentHundredths(row.profitabilityHundredths)}
-        </span>
+        </TableNumber>
       );
     case 'vat':
       return row.vatPercent === null ? (
         <Empty />
       ) : (
-        <span className="whitespace-nowrap">{row.vatPercent} %</span>
+        <TableNumber value={row.vatPercent}>{row.vatPercent} %</TableNumber>
       );
     default:
       return <Empty />;
@@ -517,17 +518,17 @@ function TotalCell({
         totals.profitabilityHundredths === null ? (
         <Empty />
       ) : (
-        <span className="whitespace-nowrap">
+        <TableNumber value={totals.profitabilityHundredths}>
           {formatPercentHundredths(totals.profitabilityHundredths)}
-        </span>
+        </TableNumber>
       );
     case 'vat':
       return totals.vatPercentHundredths === null ? (
         <Empty />
       ) : (
-        <span className="whitespace-nowrap">
+        <TableNumber value={totals.vatPercentHundredths}>
           {formatPercentHundredths(totals.vatPercentHundredths)}
-        </span>
+        </TableNumber>
       );
     default:
       return <Empty />;
@@ -572,12 +573,12 @@ function Pieces({ value }: { value: number | null }) {
   }
 
   return (
-    <span className="whitespace-nowrap">{formatSignedPieces(value)} шт</span>
+    <TableNumber value={value}>{formatSignedPieces(value)} шт</TableNumber>
   );
 }
 
 function MoneyAmount({ amount }: { amount: number }) {
-  return <span className="whitespace-nowrap">{formatMoney(amount)}</span>;
+  return <TableNumber value={amount}>{formatMoney(amount)}</TableNumber>;
 }
 
 function VatMoneyOrEmpty({
