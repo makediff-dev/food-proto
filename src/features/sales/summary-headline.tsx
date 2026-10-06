@@ -14,7 +14,6 @@ import {
   parseOperatingExpense,
   priceDraft,
 } from '@/features/sales/text';
-import { IconRuble } from '@/features/shell/icons';
 import { TableNumber } from '@/features/shell/table-number';
 
 const editableCellClassName = 'bg-[#e4e4e0]';
@@ -305,7 +304,7 @@ function ExpenseInput({
       <label htmlFor={inputId} className="sr-only">
         {label}
       </label>
-      <div className="flex min-w-0 items-baseline justify-end gap-1">
+      <div className="flex min-w-0 items-baseline justify-end">
         <input
           id={inputId}
           value={shown}
@@ -332,9 +331,11 @@ function ExpenseInput({
               event.currentTarget.blur();
             }
           }}
-          className="w-full min-w-0 cursor-text appearance-none border-0 bg-transparent p-0 text-right text-[11px] text-ink shadow-none outline-none"
+          className="w-full min-w-0 cursor-text appearance-none border-0 bg-transparent p-0 font-[inherit] text-right text-[11px] leading-tight text-ink shadow-none outline-none"
         />
-        <IconRuble className="size-3 shrink-0 text-muted" />
+        <span aria-hidden="true" className="whitespace-nowrap leading-tight">
+          {'\u00a0'}₽
+        </span>
       </div>
       {error ? (
         <p id={errorId} className="mt-0.5 text-left text-[10px] text-ink">
