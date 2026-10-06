@@ -98,7 +98,6 @@ export const mockDocument: PrototypeDocument = {
   categories: catalogCategories(),
   products: [caesar, olivier, goulash, burger],
   salesPlans,
-  salesFacts: [],
   sales: [],
   operatingExpenses: [],
 };
@@ -111,13 +110,6 @@ export function createMockDocument(): PrototypeDocument {
     salesPlans: mockDocument.salesPlans.map((item) => ({
       ...item,
       lines: item.lines.map((entry) => ({ ...entry })),
-    })),
-    salesFacts: mockDocument.salesFacts.map((item) => ({
-      ...item,
-      days: item.days.map((day) => ({
-        ...day,
-        cells: day.cells.map((cell) => ({ ...cell })),
-      })),
     })),
     sales: mockDocument.sales.map((item) => ({
       ...item,

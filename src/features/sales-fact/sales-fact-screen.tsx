@@ -9,11 +9,9 @@ import { saleTotals, workingSalesInMonth } from '@/domain/sales';
 import {
   defaultSalesFactDay,
   monthDates,
-  salesFactById,
   salesFactGridProducts,
   salesFactMonth,
   salesFactMonthOpen,
-  workingSalesFact,
 } from '@/domain/sales-fact';
 import { monthKeyFromDate, shiftMonth } from '@/domain/sales-plan';
 import {
@@ -21,21 +19,16 @@ import {
   primaryButtonClassName,
 } from '@/features/sales/fields';
 import { formatMoney } from '@/features/sales/money';
-import { formatMonth } from '@/features/sales/text';
 import {
   deletedSalesHref,
-  SALES_FACT_SECTION_TITLE,
+  SALES_SECTION_TITLE,
   type SalesFactView,
   saleHref,
   saleNewHref,
   salesFactHref,
 } from '@/features/sales-fact/paths';
 import { SalesFactTable } from '@/features/sales-fact/sales-fact-table';
-import {
-  formatSaleDate,
-  formatSalesFactDay,
-  SALES_FACT_ERROR,
-} from '@/features/sales-fact/text';
+import { formatSaleDate, formatSalesFactDay } from '@/features/sales-fact/text';
 import { useSalesFact } from '@/features/sales-fact/use-sales-fact';
 import {
   IconChevronLeft,
@@ -45,68 +38,26 @@ import {
   IconFullscreenExit,
   IconPlan,
   IconPlus,
-  IconTrash,
   IconUndo,
 } from '@/features/shell/icons';
 import { PageFrame } from '@/features/shell/page-frame';
 
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as const;
 
+const LEDE = 'Дневной факт продаж: цена, объём и выручка из журнала продаж.';
+
 export function SalesFactScreen({
   month,
   day,
   view,
-  showDeleted,
-  factId,
 }: {
   month: string;
   day: string;
   view: SalesFactView;
-  showDeleted: boolean;
-  factId: string;
 }) {
-  const sales = useSalesFact();
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
-
-  if (showDeleted && !factId) {
-    return <DeletedList />;
-  }
-
-  const opened = factId ? salesFactById(sales.document, factId) : null;
-  const readOnly = showDeleted;
-  const selectedMonth = readOnly
-    ? (opened?.month ?? currentMonth)
-    : resolveMonth(month, today);
-  const fact = readOnly
-    ? opened && opened.deletedAt !== null
-      ? opened
-      : null
-    : workingSalesFact(sales.document, selectedMonth);
-
-  if (readOnly && !fact) {
-    return (
-      <PageFrame
-        title={SALES_FACT_SECTION_TITLE}
-        full
-        lede="Дневной факт продаж и выпуска: цена, объём и остатки на производстве и на РЦ."
-      >
-        <p className="border border-line bg-sheet px-4 py-4 text-sm text-ink">
-          Запись не найдена.
-        </p>
-        <Link
-          href={salesFactHref({
-            month: currentMonth,
-            currentMonth,
-            showDeleted: true,
-          })}
-          className={quietLinkClassName}
-        >
-          <IconUndo />К удалённым
-        </Link>
-      </PageFrame>
-    );
-  }
+  const selectedMonth = resolveMonth(month, today);
 
   return (
     <Workspace
@@ -115,8 +66,6 @@ export function SalesFactScreen({
       view={view}
       currentMonth={currentMonth}
       today={today}
-      readOnly={readOnly}
-      factId={fact?.id ?? ''}
     />
   );
 }
@@ -127,35 +76,21 @@ function Workspace({
   view,
   currentMonth,
   today,
-  readOnly,
-  factId,
 }: {
   month: string;
   dayQuery: string;
   view: SalesFactView;
   currentMonth: string;
   today: Date;
-  readOnly: boolean;
-  factId: string;
 }) {
   const sales = useSalesFact();
   const router = useRouter();
   const monthFieldId = useId();
   const [fullscreen, setFullscreen] = useState(false);
-  const fact = readOnly
-    ? salesFactById(sales.document, factId)
-    : workingSalesFact(sales.document, month);
-  const products = salesFactGridProducts(sales.document, fact, month);
+  const products = salesFactGridProducts(sales.document, month);
   const days = useMemo(
-    () =>
-      salesFactMonth(
-        sales.document,
-        readOnly
-          ? salesFactById(sales.document, factId)
-          : workingSalesFact(sales.document, month),
-        month,
-      ),
-    [sales.document, readOnly, factId, month],
+    () => salesFactMonth(sales.document, month),
+    [sales.document, month],
   );
   const fallbackDay = defaultSalesFactDay(month);
   const selectedDay = resolveDay(month, dayQuery, fallbackDay);
@@ -163,8 +98,6 @@ function Workspace({
     view === 'all'
       ? days
       : days.filter((item) => item.occurredOn === selectedDay);
-  const editable =
-    sales.hydrated && !readOnly && salesFactMonthOpen(month, today);
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
   const nextDisabled = nextMonth > currentMonth;
@@ -205,8 +138,6 @@ function Workspace({
         day: targetDay,
         defaultDay: defaultSalesFactDay(targetMonth),
         view: next.view ?? view,
-        showDeleted: readOnly,
-        factId: readOnly ? factId : undefined,
       }),
       { scroll: false },
     );
@@ -214,11 +145,7 @@ function Workspace({
 
   return (
     <>
-      <PageFrame
-        title={SALES_FACT_SECTION_TITLE}
-        full
-        lede="Дневной факт продаж и выпуска: цена, объём и остатки на производстве и на РЦ."
-      >
+      <PageFrame title={SALES_SECTION_TITLE} full lede={LEDE}>
         <div className="flex flex-col gap-4">
           <div className="border border-line bg-sheet">
             <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-end lg:justify-between">
@@ -228,54 +155,34 @@ function Workspace({
                     Месяц
                   </label>
                   <div className="mt-2 flex items-center gap-2">
-                    {readOnly ? null : (
-                      <MonthStep
-                        label="Предыдущий месяц"
-                        direction="previous"
-                        disabled={!salesFactMonthOpen(previousMonth, today)}
-                        onClick={() => open({ month: previousMonth })}
-                      />
-                    )}
-                    {readOnly ? (
-                      <p className="text-sm text-ink">{formatMonth(month)}</p>
-                    ) : (
-                      <input
-                        id={monthFieldId}
-                        type="month"
-                        min="2000-01"
-                        max={currentMonth}
-                        value={month}
-                        onChange={(event) => {
-                          const next = event.target.value;
-                          if (salesFactMonthOpen(next, today)) {
-                            open({ month: next });
-                          }
-                        }}
-                        className={`w-44 ${fieldClassName}`}
-                      />
-                    )}
-                    {readOnly ? null : (
-                      <MonthStep
-                        label="Следующий месяц"
-                        direction="next"
-                        disabled={nextDisabled}
-                        onClick={() => open({ month: nextMonth })}
-                      />
-                    )}
+                    <MonthStep
+                      label="Предыдущий месяц"
+                      direction="previous"
+                      disabled={!salesFactMonthOpen(previousMonth, today)}
+                      onClick={() => open({ month: previousMonth })}
+                    />
+                    <input
+                      id={monthFieldId}
+                      type="month"
+                      min="2000-01"
+                      max={currentMonth}
+                      value={month}
+                      onChange={(event) => {
+                        const next = event.target.value;
+                        if (salesFactMonthOpen(next, today)) {
+                          open({ month: next });
+                        }
+                      }}
+                      className={`w-44 ${fieldClassName}`}
+                    />
+                    <MonthStep
+                      label="Следующий месяц"
+                      direction="next"
+                      disabled={nextDisabled}
+                      onClick={() => open({ month: nextMonth })}
+                    />
                   </div>
                 </div>
-                {readOnly ? (
-                  <RestoreButton
-                    factId={factId}
-                    monthLabel={formatMonth(month)}
-                  />
-                ) : (
-                  <DeleteMonthButton
-                    factId={fact?.id ?? ''}
-                    monthLabel={formatMonth(month)}
-                    disabled={!sales.hydrated || !fact}
-                  />
-                )}
               </div>
               <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
                 <DayDateControl
@@ -292,8 +199,6 @@ function Workspace({
                     day: selectedDay,
                     defaultDay: fallbackDay,
                     view: 'all',
-                    showDeleted: readOnly,
-                    factId: readOnly ? factId : undefined,
                   })}
                   aria-current={view === 'all' ? 'page' : undefined}
                   className={viewLinkClass(view === 'all')}
@@ -301,25 +206,11 @@ function Workspace({
                   <IconEye />
                   Все даты
                 </Link>
-                <Link
-                  href={salesFactHref({
-                    month: currentMonth,
-                    currentMonth,
-                    showDeleted: true,
-                  })}
-                  className={quietLinkClassName}
-                >
-                  <IconUndo />
-                  {readOnly ? 'К удалённым' : 'Удалённые'}
-                  {readOnly || sales.deleted.length === 0
-                    ? ''
-                    : ` ${sales.deleted.length}`}
-                </Link>
               </div>
             </div>
           </div>
 
-          {readOnly ? null : <SalesJournal month={month} day={selectedDay} />}
+          <SalesJournal month={month} day={selectedDay} />
 
           {hasTable ? (
             <section
@@ -332,13 +223,9 @@ function Workspace({
             >
               <SalesFactTable
                 days={visible}
-                editable={editable}
                 showDayArrows={view === 'day'}
                 expanded={tableExpanded}
                 onDay={(next) => open({ day: next })}
-                onCell={(occurredOn, productId, inputs) =>
-                  sales.setCell(month, occurredOn, productId, inputs)
-                }
               />
             </section>
           ) : (
@@ -494,150 +381,6 @@ function MonthStep({
     >
       {direction === 'previous' ? <IconChevronLeft /> : <IconChevronRight />}
     </button>
-  );
-}
-
-function DeleteMonthButton({
-  factId,
-  monthLabel,
-  disabled,
-}: {
-  factId: string;
-  monthLabel: string;
-  disabled: boolean;
-}) {
-  const sales = useSalesFact();
-
-  return (
-    <button
-      type="button"
-      aria-label={`Удалить факт ${monthLabel}`}
-      title="Удалить"
-      disabled={disabled}
-      onClick={() => {
-        const confirmed = window.confirm(
-          `Удалить факт продаж за ${monthLabel}? Он пропадёт из рабочего месяца. Вернуть можно среди удалённых.`,
-        );
-        if (confirmed) {
-          sales.remove(factId);
-        }
-      }}
-      className="inline-flex size-11 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-40"
-    >
-      <IconTrash />
-    </button>
-  );
-}
-
-function RestoreButton({
-  factId,
-  monthLabel,
-}: {
-  factId: string;
-  monthLabel: string;
-}) {
-  const sales = useSalesFact();
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const today = useMemo(() => new Date(), []);
-  const currentMonth = monthKeyFromDate(today);
-
-  return (
-    <div className="flex flex-col gap-2">
-      <button
-        type="button"
-        disabled={!sales.hydrated}
-        onClick={() => {
-          const rejection = sales.restore(factId);
-          if (rejection) {
-            setError(SALES_FACT_ERROR[rejection]);
-            return;
-          }
-          router.push(
-            salesFactHref({
-              month: monthOf(sales.document, factId) ?? currentMonth,
-              currentMonth,
-            }),
-          );
-        }}
-        className="inline-flex h-11 items-center justify-center gap-2 border border-line bg-sheet px-4 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
-      >
-        <IconUndo />
-        Вернуть {monthLabel}
-      </button>
-      {error ? <p className="text-sm text-ink">{error}</p> : null}
-    </div>
-  );
-}
-
-function monthOf(
-  document: { salesFacts: { id: string; month: string }[] },
-  factId: string,
-): string | null {
-  return document.salesFacts.find((item) => item.id === factId)?.month ?? null;
-}
-
-function DeletedList() {
-  const sales = useSalesFact();
-  const today = useMemo(() => new Date(), []);
-  const currentMonth = monthKeyFromDate(today);
-  const [error, setError] = useState<string | null>(null);
-
-  return (
-    <PageFrame
-      title={SALES_FACT_SECTION_TITLE}
-      full
-      lede="Удалённые месяцы факта продаж можно открыть и вернуть."
-    >
-      <div className="flex flex-col gap-4">
-        <Link
-          href={salesFactHref({ month: currentMonth, currentMonth })}
-          className={`w-full sm:w-auto ${quietLinkClassName}`}
-        >
-          <IconUndo />К рабочему месяцу
-        </Link>
-        {error ? <p className="text-sm text-ink">{error}</p> : null}
-        {sales.deleted.length === 0 ? (
-          <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-            Удалённых месяцев нет.
-          </p>
-        ) : (
-          <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {sales.deleted.map((item) => (
-              <li key={item.id} className="border border-line bg-sheet p-4">
-                <p className="text-sm text-ink">{formatMonth(item.month)}</p>
-                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                  <Link
-                    href={salesFactHref({
-                      month: item.month,
-                      currentMonth,
-                      showDeleted: true,
-                      factId: item.id,
-                    })}
-                    className={quietLinkClassName}
-                  >
-                    <IconEye />
-                    Открыть
-                  </Link>
-                  <button
-                    type="button"
-                    disabled={!sales.hydrated}
-                    onClick={() => {
-                      const rejection = sales.restore(item.id);
-                      setError(rejection ? SALES_FACT_ERROR[rejection] : null);
-                    }}
-                    className={quietLinkClassName}
-                  >
-                    <IconUndo />
-                    Вернуть
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </PageFrame>
   );
 }
 

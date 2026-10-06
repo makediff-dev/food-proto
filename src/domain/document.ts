@@ -1,7 +1,7 @@
 import { fitsSafeMoneyProduct } from '@/domain/money';
 import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
-export const SCHEMA_VERSION = 30 as const;
+export const SCHEMA_VERSION = 31 as const;
 
 export const MAX_LABEL_LENGTH = 200;
 
@@ -88,29 +88,6 @@ export interface SalesPlan {
   deletedAt: string | null;
 }
 
-/**
- * Серые клетки дня по товару, кроме продаж.
- * Цена и объём продаж считаются из журнала продаж и сюда не пишутся.
- * Выручка, цены без НДС и остатки сюда не пишутся.
- * Ноль допустим. Клетка из одних нулей в документ не попадает.
- */
-export interface SalesFactCell {
-  id: string;
-  productId: string;
-  /** Объём производства, шт. Ввод сетки факта продаж. */
-  outputPieces: number;
-  /** Перемещение на РЦ, шт. */
-  transferPieces: number;
-  /** Питание сотрудников, шт. */
-  staffMealsPieces: number;
-  /** Образцы для клиентов, шт. */
-  samplesPieces: number;
-  /** Возвраты клиентов, шт. В выручку не входят. */
-  returnsPieces: number;
-  /** Списание, шт. Складской документ не создаёт. */
-  writeOffPieces: number;
-}
-
 /** Строка продажи. Цена штуки в документ не пишется. */
 export interface SaleLine {
   id: string;
@@ -132,26 +109,6 @@ export interface Sale {
   /** Календарный день, `ГГГГ-ММ-ДД`. */
   occurredOn: string;
   lines: SaleLine[];
-  deletedAt: string | null;
-}
-
-/** День месяца факта продаж. Пустой день в документ не пишется. */
-export interface SalesFactDay {
-  /** Календарный день этого месяца, `ГГГГ-ММ-ДД`. */
-  occurredOn: string;
-  cells: SalesFactCell[];
-}
-
-/**
- * Факт продаж на календарный месяц. Лист `Sales&Production`, не сводная строка.
- * На один месяц — одна рабочая запись. Остатки в документ не пишутся:
- * их считает `src/domain/sales-fact.ts`.
- */
-export interface SalesFact {
-  id: string;
-  /** `ГГГГ-ММ`. */
-  month: string;
-  days: SalesFactDay[];
   deletedAt: string | null;
 }
 
@@ -178,7 +135,6 @@ export interface PrototypeDocument {
   categories: ProductCategory[];
   products: Product[];
   salesPlans: SalesPlan[];
-  salesFacts: SalesFact[];
   sales: Sale[];
   operatingExpenses: MonthOperatingExpense[];
 }
@@ -544,190 +500,6 @@ function parseOperatingExpenses(
   return items;
 }
 
-function dateInMonth(date: string, month: string): boolean {
-  return date.startsWith(`${month}-`) && isOccurredOn(date);
-}
-
-function parseSalesFactCell(
-  value: unknown,
-  products: readonly Product[],
-): SalesFactCell | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const id = parseId(value.id);
-  const productId = parseId(value.productId);
-  const product = products.find((item) => item.id === productId);
-  const outputPieces = parseInteger(value.outputPieces, 0, MAX_VOLUME_PIECES);
-  const transferPieces = parseInteger(
-    value.transferPieces,
-    0,
-    MAX_VOLUME_PIECES,
-  );
-  const staffMealsPieces = parseInteger(
-    value.staffMealsPieces,
-    0,
-    MAX_VOLUME_PIECES,
-  );
-  const samplesPieces = parseInteger(value.samplesPieces, 0, MAX_VOLUME_PIECES);
-  const returnsPieces = parseInteger(value.returnsPieces, 0, MAX_VOLUME_PIECES);
-  const writeOffPieces = parseInteger(
-    value.writeOffPieces,
-    0,
-    MAX_VOLUME_PIECES,
-  );
-
-  if (
-    !id ||
-    !productId ||
-    !product ||
-    outputPieces === null ||
-    transferPieces === null ||
-    staffMealsPieces === null ||
-    samplesPieces === null ||
-    returnsPieces === null ||
-    writeOffPieces === null ||
-    'priceWithVat' in value ||
-    'salesPieces' in value
-  ) {
-    return null;
-  }
-
-  const blank =
-    outputPieces === 0 &&
-    transferPieces === 0 &&
-    staffMealsPieces === 0 &&
-    samplesPieces === 0 &&
-    returnsPieces === 0 &&
-    writeOffPieces === 0;
-  if (blank) {
-    return null;
-  }
-
-  return {
-    id,
-    productId,
-    outputPieces,
-    transferPieces,
-    staffMealsPieces,
-    samplesPieces,
-    returnsPieces,
-    writeOffPieces,
-  };
-}
-
-function parseSalesFactDay(
-  value: unknown,
-  month: string,
-  products: readonly Product[],
-): SalesFactDay | null {
-  if (!isRecord(value) || !Array.isArray(value.cells)) {
-    return null;
-  }
-
-  if (
-    typeof value.occurredOn !== 'string' ||
-    !dateInMonth(value.occurredOn, month)
-  ) {
-    return null;
-  }
-
-  const seenCells = new Set<string>();
-  const seenProducts = new Set<string>();
-  const cells: SalesFactCell[] = [];
-
-  for (const entry of value.cells) {
-    const cell = parseSalesFactCell(entry, products);
-    if (!cell || seenCells.has(cell.id) || seenProducts.has(cell.productId)) {
-      return null;
-    }
-
-    seenCells.add(cell.id);
-    seenProducts.add(cell.productId);
-    cells.push(cell);
-  }
-
-  if (cells.length === 0) {
-    return null;
-  }
-
-  return { occurredOn: value.occurredOn, cells };
-}
-
-function parseSalesFact(
-  value: unknown,
-  products: readonly Product[],
-): SalesFact | null {
-  if (!isRecord(value) || !Array.isArray(value.days) || 'openings' in value) {
-    return null;
-  }
-
-  const id = parseId(value.id);
-  const deletedAt = parseDeletedAt(value.deletedAt);
-
-  if (
-    !id ||
-    deletedAt === undefined ||
-    typeof value.month !== 'string' ||
-    !isMonthKey(value.month)
-  ) {
-    return null;
-  }
-
-  const seenDays = new Set<string>();
-  const seenCellIds = new Set<string>();
-  const days: SalesFactDay[] = [];
-
-  for (const entry of value.days) {
-    const day = parseSalesFactDay(entry, value.month, products);
-    if (!day || seenDays.has(day.occurredOn)) {
-      return null;
-    }
-
-    for (const cell of day.cells) {
-      if (seenCellIds.has(cell.id)) {
-        return null;
-      }
-      seenCellIds.add(cell.id);
-    }
-
-    seenDays.add(day.occurredOn);
-    days.push(day);
-  }
-
-  if (days.length === 0) {
-    return null;
-  }
-
-  return { id, month: value.month, days, deletedAt };
-}
-
-function parseSalesFacts(
-  value: unknown,
-  products: readonly Product[],
-): SalesFact[] | null {
-  const facts = parseMovementList(value, (entry) =>
-    parseSalesFact(entry, products),
-  );
-  if (!facts) {
-    return null;
-  }
-
-  const activeMonths = new Set<string>();
-  for (const fact of facts) {
-    if (fact.deletedAt !== null) {
-      continue;
-    }
-    if (activeMonths.has(fact.month)) {
-      return null;
-    }
-    activeMonths.add(fact.month);
-  }
-
-  return facts;
-}
-
 function parseSaleLine(
   value: unknown,
   productIds: ReadonlySet<string>,
@@ -850,11 +622,10 @@ export function parsePrototypeDocument(
 
   const productIds = new Set(products.map((item) => item.id));
   const salesPlans = parseSalesPlans(value.salesPlans, productIds);
-  const salesFacts = parseSalesFacts(value.salesFacts, products);
   const sales = parseSales(value.sales, productIds);
   const operatingExpenses = parseOperatingExpenses(value.operatingExpenses);
 
-  if (!salesPlans || !salesFacts || !sales || !operatingExpenses) {
+  if (!salesPlans || !sales || !operatingExpenses) {
     return null;
   }
 
@@ -863,7 +634,6 @@ export function parsePrototypeDocument(
     categories,
     products,
     salesPlans,
-    salesFacts,
     sales,
     operatingExpenses,
   };

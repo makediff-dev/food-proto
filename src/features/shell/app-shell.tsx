@@ -5,12 +5,12 @@ import { usePathname } from 'next/navigation';
 import { type ReactNode, useEffect, useState } from 'react';
 
 import { useDocumentStore } from '@/data/document-store';
-import { SALES_FACT_SECTION_TITLE } from '@/features/sales-fact/paths';
+import { SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
 import { IconMenu, IconUndo } from '@/features/shell/icons';
 
 const SECTIONS = [
   { href: '/', label: 'Сводка' },
-  { href: '/sales-fact', label: SALES_FACT_SECTION_TITLE },
+  { href: '/sales', label: SALES_SECTION_TITLE },
 ] as const;
 
 const QUESTIONS_HREF = '/questions';

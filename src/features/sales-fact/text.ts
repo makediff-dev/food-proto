@@ -1,23 +1,7 @@
 import { MAX_SALE_LINE_AMOUNT, MAX_VOLUME_PIECES } from '@/domain/document';
 import type { SaleRejection } from '@/domain/sales';
-import type { SalesFactRejection } from '@/domain/sales-fact';
 import { fromRublesUpTo, parseDecimal } from '@/domain/units';
-import { parseMoney } from '@/features/sales/fields';
-import {
-  formatPieces,
-  parseVolumePieces,
-  priceDraft,
-} from '@/features/sales/text';
-
-export const SALES_FACT_ERROR: Record<SalesFactRejection, string> = {
-  missing: 'Запись не найдена.',
-  month: 'Будущий месяц не создаётся.',
-  date: 'Эта дата не входит в месяц.',
-  product: 'Выберите конечный товар.',
-  locked: 'Удалённый товар в факте не меняется.',
-  pieces: 'Укажите целое число штук от нуля.',
-  taken: 'На этот месяц уже есть рабочая запись.',
-};
+import { formatPieces } from '@/features/sales/text';
 
 export function formatSalesFactDay(iso: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
@@ -38,22 +22,6 @@ export function formatSalesFactDay(iso: string): string {
 
 export function formatSignedPieces(value: number): string {
   return formatPieces(value);
-}
-
-export function parseFactPrice(raw: string): number | null {
-  return parseMoney(raw);
-}
-
-export function parseFactPieces(raw: string): number | null {
-  return parseVolumePieces(raw);
-}
-
-export function factPriceDraft(amount: number): string {
-  return priceDraft(amount);
-}
-
-export function factPiecesDraft(pieces: number): string {
-  return String(pieces);
 }
 
 export const SALE_ERROR: Record<SaleRejection, string> = {

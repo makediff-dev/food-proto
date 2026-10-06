@@ -21,7 +21,7 @@ import { formatMoney } from '@/features/sales/money';
 import { priceDraft } from '@/features/sales/text';
 import {
   deletedSalesHref,
-  SALES_FACT_SECTION_TITLE,
+  SALES_SECTION_TITLE,
   saleHref,
   salesFactHref,
 } from '@/features/sales-fact/paths';
@@ -73,7 +73,7 @@ export function SaleScreen({
   if (saleId && !existing) {
     return (
       <PageFrame
-        title={SALES_FACT_SECTION_TITLE}
+        title={SALES_SECTION_TITLE}
         lede="Продажа заказчику: дата, товары и сумма."
       >
         <p className="border border-line bg-sheet px-4 py-4 text-sm text-ink">
@@ -83,7 +83,7 @@ export function SaleScreen({
           href={salesFactHref({ month: currentMonth, currentMonth })}
           className={quietLinkClassName}
         >
-          <IconUndo />К факту продаж
+          <IconUndo />К продажам
         </Link>
       </PageFrame>
     );
@@ -225,7 +225,7 @@ function SaleForm({
 
   return (
     <PageFrame
-      title={SALES_FACT_SECTION_TITLE}
+      title={SALES_SECTION_TITLE}
       lede="Продажа заказчику: дата, товары и сумма."
     >
       <div className="flex flex-col gap-4">
@@ -240,7 +240,7 @@ function SaleForm({
             })}
             className={quietLinkClassName}
           >
-            <IconUndo />К факту продаж
+            <IconUndo />К продажам
           </Link>
           {saleId ? (
             <button
@@ -462,7 +462,7 @@ function DeletedSale({
 
   return (
     <PageFrame
-      title={SALES_FACT_SECTION_TITLE}
+      title={SALES_SECTION_TITLE}
       lede="Удалённую продажу можно открыть и вернуть."
     >
       <div className="flex flex-col gap-4">
@@ -504,7 +504,7 @@ function DeletedSale({
           href={salesFactHref({ month: currentMonth, currentMonth })}
           className={quietLinkClassName}
         >
-          <IconUndo />К факту продаж
+          <IconUndo />К продажам
         </Link>
       </div>
     </PageFrame>

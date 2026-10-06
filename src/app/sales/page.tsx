@@ -2,12 +2,12 @@ import type { Metadata } from 'next';
 
 import {
   parseSalesFactQuery,
-  SALES_FACT_SECTION_TITLE,
+  SALES_SECTION_TITLE,
 } from '@/features/sales-fact/paths';
 import { SalesFactScreen } from '@/features/sales-fact/sales-fact-screen';
 
 export const metadata: Metadata = {
-  title: SALES_FACT_SECTION_TITLE,
+  title: SALES_SECTION_TITLE,
 };
 
 export default async function SalesFactPage({
@@ -17,20 +17,12 @@ export default async function SalesFactPage({
     month?: string;
     day?: string;
     view?: string;
-    deleted?: string;
-    fact?: string;
   }>;
 }) {
   const params = await searchParams;
   const query = parseSalesFactQuery(params);
 
   return (
-    <SalesFactScreen
-      month={query.month}
-      day={query.day}
-      view={query.view}
-      showDeleted={query.showDeleted}
-      factId={query.factId}
-    />
+    <SalesFactScreen month={query.month} day={query.day} view={query.view} />
   );
 }

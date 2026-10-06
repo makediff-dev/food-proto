@@ -7,7 +7,6 @@ import {
   type Product,
   type ProductCategory,
   type PrototypeDocument,
-  type SalesFact,
   type SalesPlan,
 } from '@/domain/document';
 import {
@@ -22,7 +21,6 @@ import {
   type SalesFactRow,
   salesFactGridProducts,
   salesFactMonth,
-  workingSalesFact,
 } from '@/domain/sales-fact';
 import {
   daysInMonth,
@@ -199,11 +197,10 @@ export function summaryMonthOpen(month: string, today: Date): boolean {
 export function summaryGridProducts(
   document: PrototypeDocument,
   plan: SalesPlan | null,
-  fact: SalesFact | null,
   month: string,
 ): Product[] {
   const referenced = new Set(plan?.lines.map((line) => line.productId) ?? []);
-  const fromFact = salesFactGridProducts(document, fact, month);
+  const fromFact = salesFactGridProducts(document, month);
   const seen = new Set(fromFact.map((item) => item.id));
 
   const extra = document.products.filter(
@@ -620,17 +617,16 @@ export function setOperatingExpense(
 
 /**
  * Строки и итог сводки месяца. План — рабочая запись или виртуальный нулевой.
- * Факт — сумма дней рабочего факта продаж; в документ ничего не пишется.
+ * Факт — сумма дней журнала продаж; в документ ничего не пишется.
  */
 export function monthSummary(
   document: PrototypeDocument,
   month: string,
   plan: SalesPlan | null = salesPlanForMonth(document, month),
-  fact: SalesFact | null = workingSalesFact(document, month),
 ): SummaryView {
   const days = daysInMonth(month);
-  const products = summaryGridProducts(document, plan, fact, month);
-  const factDays = salesFactMonth(document, fact, month);
+  const products = summaryGridProducts(document, plan, month);
+  const factDays = salesFactMonth(document, month);
   const rowByProduct = new Map<string, SummaryRow>();
 
   for (const product of products) {

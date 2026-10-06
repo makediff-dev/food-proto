@@ -7,7 +7,7 @@ import { saleTotals } from '@/domain/sales';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { formatMoney } from '@/features/sales/money';
 import {
-  SALES_FACT_SECTION_TITLE,
+  SALES_SECTION_TITLE,
   saleHref,
   salesFactHref,
 } from '@/features/sales-fact/paths';
@@ -24,7 +24,7 @@ export function DeletedSalesScreen() {
 
   return (
     <PageFrame
-      title={SALES_FACT_SECTION_TITLE}
+      title={SALES_SECTION_TITLE}
       lede="Удалённые продажи можно открыть и вернуть."
     >
       <div className="flex flex-col gap-4">
@@ -32,7 +32,7 @@ export function DeletedSalesScreen() {
           href={salesFactHref({ month: currentMonth, currentMonth })}
           className={quietLinkClassName}
         >
-          <IconUndo />К факту продаж
+          <IconUndo />К продажам
         </Link>
         {error ? <p className="text-sm text-ink">{error}</p> : null}
         {journal.deleted.length === 0 ? (

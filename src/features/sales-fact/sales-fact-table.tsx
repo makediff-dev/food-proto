@@ -1,34 +1,22 @@
 'use client';
 
-import { type ReactNode, useId, useState } from 'react';
+import { type ReactNode, useState } from 'react';
 
 import {
   adjacentDay,
   type SalesFactDayView,
   type SalesFactGroup,
-  type SalesFactInputs,
-  type SalesFactRejection,
   type SalesFactRow,
   type SalesFactTotals,
 } from '@/domain/sales-fact';
 import { formatMoney } from '@/features/sales/money';
 import { formatPercentHundredths } from '@/features/sales/text';
-import {
-  factPiecesDraft,
-  formatSignedPieces,
-  parseFactPieces,
-  SALES_FACT_ERROR,
-} from '@/features/sales-fact/text';
+import { formatSignedPieces } from '@/features/sales-fact/text';
 import {
   IconChevronDown,
   IconChevronRight,
   IconChevronUp,
 } from '@/features/shell/icons';
-
-const gridFieldClassName =
-  'w-full min-w-0 cursor-text appearance-none border-0 bg-transparent p-0 text-right text-sm text-ink shadow-none outline-none';
-
-const editableCellClassName = 'bg-[#e4e4e0]';
 
 /** Предлоги, союзы и частицы, которые не оставляют в конце строки. */
 const HANGING_WORDS = new Set([
@@ -91,7 +79,6 @@ function ColumnLabel({ label }: { label: string }) {
 }
 
 type ColumnKey =
-  | 'opening'
   | 'salesUnitCost'
   | 'profitability'
   | 'price'
@@ -99,79 +86,28 @@ type ColumnKey =
   | 'revenue'
   | 'contribution'
   | 'salesVolumeCost'
-  | 'vat'
-  | 'outputUnitCost'
-  | 'outputPieces'
-  | 'outputVolumeCost'
-  | 'transfer'
-  | 'staffMeals'
-  | 'samples'
-  | 'returns'
-  | 'writeOff'
-  | 'closing';
+  | 'vat';
 
-const COLUMNS: { key: ColumnKey; label: string; group: 'sales' | 'output' }[] =
-  [
-    { key: 'opening', label: 'Остаток на начало', group: 'sales' },
-    { key: 'salesUnitCost', label: 'Себест продажи', group: 'sales' },
-    { key: 'profitability', label: 'Рентаб', group: 'sales' },
-    { key: 'price', label: 'Цена', group: 'sales' },
-    { key: 'salesPieces', label: 'Объём продаж', group: 'sales' },
-    { key: 'revenue', label: 'Выручка', group: 'sales' },
-    { key: 'contribution', label: 'Т-проток', group: 'sales' },
-    { key: 'salesVolumeCost', label: 'Себест объёма', group: 'sales' },
-    { key: 'vat', label: 'НДС', group: 'sales' },
-    { key: 'outputUnitCost', label: 'Себест произв', group: 'output' },
-    { key: 'outputPieces', label: 'Объём произв', group: 'output' },
-    { key: 'outputVolumeCost', label: 'Себест объёма произв', group: 'output' },
-    { key: 'transfer', label: 'Перемещение на РЦ', group: 'output' },
-    { key: 'staffMeals', label: 'Питание сотрудников', group: 'output' },
-    { key: 'samples', label: 'Образцы для клиентов', group: 'output' },
-    { key: 'returns', label: 'Возвраты клиентов', group: 'output' },
-    { key: 'writeOff', label: 'Списание', group: 'output' },
-    { key: 'closing', label: 'Остаток на конец', group: 'output' },
-  ];
-
-const SALES_SPAN = COLUMNS.filter((column) => column.group === 'sales').length;
-const OUTPUT_SPAN = COLUMNS.length - SALES_SPAN;
-const LAST_SALES_KEY = COLUMNS.filter((column) => column.group === 'sales').at(
-  -1,
-)?.key;
-
-const INPUTS: Partial<
-  Record<ColumnKey, { field: keyof SalesFactInputs; kind: 'pieces' }>
-> = {
-  outputPieces: { field: 'outputPieces', kind: 'pieces' },
-  transfer: { field: 'transferPieces', kind: 'pieces' },
-  staffMeals: { field: 'staffMealsPieces', kind: 'pieces' },
-  samples: { field: 'samplesPieces', kind: 'pieces' },
-  returns: { field: 'returnsPieces', kind: 'pieces' },
-  writeOff: { field: 'writeOffPieces', kind: 'pieces' },
-};
-
-function sectionRightClass(column: ColumnKey): string {
-  return column === LAST_SALES_KEY
-    ? 'border-r-[1.5px] border-r-muted'
-    : 'border-r border-r-line';
-}
+const COLUMNS: { key: ColumnKey; label: string }[] = [
+  { key: 'salesUnitCost', label: 'Себест продажи' },
+  { key: 'profitability', label: 'Рентаб' },
+  { key: 'price', label: 'Цена' },
+  { key: 'salesPieces', label: 'Объём продаж' },
+  { key: 'revenue', label: 'Выручка' },
+  { key: 'contribution', label: 'Т-проток' },
+  { key: 'salesVolumeCost', label: 'Себест объёма' },
+  { key: 'vat', label: 'НДС' },
+];
 
 export function SalesFactTable({
   days,
-  editable,
   showDayArrows,
   onDay,
-  onCell,
   expanded = false,
 }: {
   days: SalesFactDayView[];
-  editable: boolean;
   showDayArrows: boolean;
   onDay: (day: string) => void;
-  onCell: (
-    occurredOn: string,
-    productId: string,
-    inputs: SalesFactInputs,
-  ) => SalesFactRejection | null;
   expanded?: boolean;
 }) {
   const [openIds, setOpenIds] = useState<ReadonlySet<string>>(() => new Set());
@@ -206,18 +142,11 @@ export function SalesFactTable({
               className="sticky left-0 z-40 border-b border-b-line border-r-[1.5px] border-r-muted bg-paper"
             />
             <th
-              colSpan={SALES_SPAN}
-              scope="colgroup"
-              className="border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
-            >
-              {keepWithNext('Фактические показатели продаж за дату')}
-            </th>
-            <th
-              colSpan={OUTPUT_SPAN}
+              colSpan={COLUMNS.length}
               scope="colgroup"
               className="border-b border-b-line bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
             >
-              {keepWithNext('Фактические показатели производства за дату')}
+              {keepWithNext('Фактические показатели продаж за дату')}
             </th>
           </tr>
           <tr>
@@ -237,7 +166,7 @@ export function SalesFactTable({
               <th
                 key={column.key}
                 scope="col"
-                className={`w-px whitespace-normal border-b border-b-line ${sectionRightClass(column.key)} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
+                className="w-px whitespace-normal border-b border-b-line border-r border-r-line bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0"
               >
                 <ColumnLabel label={column.label} />
               </th>
@@ -271,10 +200,7 @@ export function SalesFactTable({
                   group={group}
                   open={openIds.has(group.categoryId)}
                   dateCell={groupIndex === 0 ? dateCell : null}
-                  editable={editable}
-                  occurredOn={day.occurredOn}
                   onToggle={() => toggleGroup(group.categoryId)}
-                  onCell={onCell}
                 />
               ))}
               <tr>
@@ -292,7 +218,7 @@ export function SalesFactTable({
                 {COLUMNS.map((column) => (
                   <td
                     key={column.key}
-                    className={`w-px border-t-[1.5px] border-t-muted bg-paper px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass(column.key)} ${
+                    className={`w-px border-t-[1.5px] border-t-muted border-r border-r-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0 ${
                       dayBreak
                         ? 'border-b-[3px] border-b-muted'
                         : 'border-b border-b-line'
@@ -325,22 +251,12 @@ function CategoryBlock({
   group,
   open,
   dateCell,
-  editable,
-  occurredOn,
   onToggle,
-  onCell,
 }: {
   group: SalesFactGroup;
   open: boolean;
   dateCell: ReactNode;
-  editable: boolean;
-  occurredOn: string;
   onToggle: () => void;
-  onCell: (
-    occurredOn: string,
-    productId: string,
-    inputs: SalesFactInputs,
-  ) => SalesFactRejection | null;
 }) {
   const productCount = group.rows.length;
 
@@ -378,35 +294,20 @@ function CategoryBlock({
         {COLUMNS.map((column) => (
           <td
             key={column.key}
-            className={`w-px border-b border-b-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass(column.key)}`}
+            className="w-px border-b border-b-line border-r border-r-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0"
           >
             <TotalCell column={column.key} totals={group.totals} />
           </td>
         ))}
       </tr>
       {open
-        ? group.rows.map((row) => (
-            <ProductRow
-              key={`${occurredOn}:${row.productId}`}
-              row={row}
-              editable={editable}
-              onCommit={(inputs) => onCell(occurredOn, row.productId, inputs)}
-            />
-          ))
+        ? group.rows.map((row) => <ProductRow key={row.productId} row={row} />)
         : null}
     </>
   );
 }
 
-function ProductRow({
-  row,
-  editable,
-  onCommit,
-}: {
-  row: SalesFactRow;
-  editable: boolean;
-  onCommit: (inputs: SalesFactInputs) => SalesFactRejection | null;
-}) {
+function ProductRow({ row }: { row: SalesFactRow }) {
   return (
     <tr>
       <th
@@ -415,52 +316,14 @@ function ProductRow({
       >
         <ProductName row={row} />
       </th>
-      {COLUMNS.map((column) => {
-        const canEdit = Boolean(INPUTS[column.key]) && editable && !row.deleted;
-        const highlightCell = canEdit;
-        return (
-          <td
-            key={column.key}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass(column.key)} ${
-              highlightCell ? editableCellClassName : ''
-            }`}
-            onClick={(event) => {
-              if (!canEdit) {
-                return;
-              }
-              const field = event.currentTarget.querySelector('input');
-              if (
-                field instanceof HTMLInputElement &&
-                document.activeElement !== field
-              ) {
-                field.focus();
-              }
-            }}
-            onKeyDown={(event) => {
-              if (!canEdit) {
-                return;
-              }
-              if (event.key !== 'Enter' && event.key !== ' ') {
-                return;
-              }
-              if (event.target instanceof HTMLInputElement) {
-                return;
-              }
-              const field = event.currentTarget.querySelector('input');
-              if (field instanceof HTMLInputElement) {
-                field.focus();
-              }
-            }}
-          >
-            <RowCell
-              column={column.key}
-              row={row}
-              editable={editable && !row.deleted}
-              onCommit={onCommit}
-            />
-          </td>
-        );
-      })}
+      {COLUMNS.map((column) => (
+        <td
+          key={column.key}
+          className="w-px border-b border-b-line border-r border-r-line px-1.5 py-2 text-right align-middle last:border-r-0"
+        >
+          <RowCell column={column.key} row={row} />
+        </td>
+      ))}
     </tr>
   );
 }
@@ -541,17 +404,7 @@ function ProductName({ row }: { row: SalesFactRow }) {
   );
 }
 
-function RowCell({
-  column,
-  row,
-  editable,
-  onCommit,
-}: {
-  column: ColumnKey;
-  row: SalesFactRow;
-  editable: boolean;
-  onCommit: (inputs: SalesFactInputs) => SalesFactRejection | null;
-}) {
+function RowCell({ column, row }: { column: ColumnKey; row: SalesFactRow }) {
   if (column === 'price') {
     return (
       <VatMoneyOrEmpty withVat={row.priceWithVat} exVat={row.priceExVat} />
@@ -562,40 +415,8 @@ function RowCell({
     return <Pieces value={row.salesPieces} />;
   }
 
-  const input = INPUTS[column];
-  if (input) {
-    const value = row.inputs[input.field];
-    return (
-      <GridNumber
-        label={`${COLUMNS.find((item) => item.key === column)?.label ?? ''}, ${row.name}`}
-        value={factPiecesDraft(value)}
-        disabled={!editable}
-        inputMode="numeric"
-        unit="шт"
-        invalidMessage={SALES_FACT_ERROR.pieces}
-        parse={parseFactPieces}
-        onCommit={(next) => onCommit({ ...row.inputs, [input.field]: next })}
-      />
-    );
-  }
-
   switch (column) {
-    case 'opening':
-      return (
-        <PlacePair
-          production={row.productionStart}
-          distribution={row.distributionStart}
-        />
-      );
-    case 'closing':
-      return (
-        <PlacePair
-          production={row.productionEnd}
-          distribution={row.distributionEnd}
-        />
-      );
     case 'salesUnitCost':
-    case 'outputUnitCost':
       return row.unitCost ? (
         <VatPair
           withVat={<MoneyAmount amount={row.unitCost.withVat} />}
@@ -609,13 +430,6 @@ function RowCell({
         <VatMoneyOrEmpty
           withVat={row.salesVolumeCostWithVat}
           exVat={row.salesVolumeCostExVat}
-        />
-      );
-    case 'outputVolumeCost':
-      return (
-        <VatMoneyOrEmpty
-          withVat={row.outputVolumeCostWithVat}
-          exVat={row.outputVolumeCostExVat}
         />
       );
     case 'revenue':
@@ -658,34 +472,8 @@ function TotalCell({
   totals: SalesFactTotals;
 }) {
   switch (column) {
-    case 'opening':
-      return (
-        <PlacePair
-          production={totals.productionStart}
-          distribution={totals.distributionStart}
-        />
-      );
-    case 'closing':
-      return (
-        <PlacePair
-          production={totals.productionEnd}
-          distribution={totals.distributionEnd}
-        />
-      );
     case 'salesPieces':
       return <Pieces value={totals.salesPieces} />;
-    case 'outputPieces':
-      return <Pieces value={totals.outputPieces} />;
-    case 'transfer':
-      return <Pieces value={totals.transferPieces} />;
-    case 'staffMeals':
-      return <Pieces value={totals.staffMealsPieces} />;
-    case 'samples':
-      return <Pieces value={totals.samplesPieces} />;
-    case 'returns':
-      return <Pieces value={totals.returnsPieces} />;
-    case 'writeOff':
-      return <Pieces value={totals.writeOffPieces} />;
     case 'price':
       return (
         <VatMoneyOrEmpty
@@ -716,28 +504,12 @@ function TotalCell({
           exVat={totals.salesUnitCostExVat}
         />
       );
-    case 'outputUnitCost':
-      return (
-        <AverageCost
-          complete={totals.outputCostComplete}
-          withVat={totals.outputUnitCostWithVat}
-          exVat={totals.outputUnitCostExVat}
-        />
-      );
     case 'salesVolumeCost':
       return (
         <VolumeTotal
           complete={totals.salesCostComplete}
           withVat={totals.salesVolumeCostWithVat}
           exVat={totals.salesVolumeCostExVat}
-        />
-      );
-    case 'outputVolumeCost':
-      return (
-        <VolumeTotal
-          complete={totals.outputCostComplete}
-          withVat={totals.outputVolumeCostWithVat}
-          exVat={totals.outputVolumeCostExVat}
         />
       );
     case 'profitability':
@@ -804,23 +576,6 @@ function Pieces({ value }: { value: number | null }) {
   );
 }
 
-function PlacePair({
-  production,
-  distribution,
-}: {
-  production: number | null;
-  distribution: number | null;
-}) {
-  return (
-    <StackedPair
-      topLabel="на произв."
-      bottomLabel="на РЦ"
-      top={<Pieces value={production} />}
-      bottom={<Pieces value={distribution} />}
-    />
-  );
-}
-
 function MoneyAmount({ amount }: { amount: number }) {
   return <span className="whitespace-nowrap">{formatMoney(amount)}</span>;
 }
@@ -844,20 +599,11 @@ function VatMoneyOrEmpty({
   );
 }
 
-function VatPair({
-  withVat,
-  exVat,
-  withVatHighlighted = false,
-}: {
-  withVat: ReactNode;
-  exVat: ReactNode;
-  withVatHighlighted?: boolean;
-}) {
+function VatPair({ withVat, exVat }: { withVat: ReactNode; exVat: ReactNode }) {
   return (
     <StackedPair
       topLabel="с НДС"
       bottomLabel="без НДС"
-      topHighlighted={withVatHighlighted}
       top={withVat}
       bottom={exVat}
     />
@@ -869,21 +615,15 @@ function StackedPair({
   bottomLabel,
   top,
   bottom,
-  topHighlighted = false,
 }: {
   topLabel: string;
   bottomLabel: string;
   top: ReactNode;
   bottom: ReactNode;
-  topHighlighted?: boolean;
 }) {
   return (
     <div className="-mx-1.5 -my-2 flex min-w-[4.5rem] flex-col">
-      <div
-        className={`flex flex-col items-end border-b border-line px-1.5 py-1 ${
-          topHighlighted ? editableCellClassName : ''
-        }`}
-      >
+      <div className="flex flex-col items-end border-b border-line px-1.5 py-1">
         <span className="text-[0.5rem] leading-none text-muted">
           {topLabel}
         </span>
@@ -905,123 +645,4 @@ function Empty() {
 
 function Muted({ children }: { children: string }) {
   return <span className="text-sm text-muted">{children}</span>;
-}
-
-/** Оставляет цифры; для цены — ещё одну дробную запятую. Точку приводит к запятой. */
-function sanitizeFactDraft(raw: string, mode: 'decimal' | 'numeric'): string {
-  let result = '';
-  let hasComma = false;
-
-  for (const char of raw) {
-    if (char >= '0' && char <= '9') {
-      result += char;
-      continue;
-    }
-
-    if (mode === 'decimal' && (char === ',' || char === '.') && !hasComma) {
-      result += ',';
-      hasComma = true;
-    }
-  }
-
-  return result;
-}
-
-function GridNumber({
-  label,
-  value,
-  disabled,
-  inputMode,
-  unit,
-  invalidMessage,
-  parse,
-  onCommit,
-}: {
-  label: string;
-  value: string;
-  disabled: boolean;
-  inputMode: 'decimal' | 'numeric';
-  unit?: string;
-  invalidMessage: string;
-  parse: (raw: string) => number | null;
-  onCommit: (value: number) => SalesFactRejection | null;
-}) {
-  const inputId = useId();
-  const errorId = useId();
-  const [draft, setDraft] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const shown = draft ?? value;
-
-  function commit(raw: string) {
-    const parsed = parse(raw);
-    if (parsed === null) {
-      setError(invalidMessage);
-      setDraft(raw);
-      return;
-    }
-
-    const rejection = onCommit(parsed);
-    if (rejection) {
-      setError(SALES_FACT_ERROR[rejection]);
-      setDraft(raw);
-      return;
-    }
-
-    setDraft(null);
-    setError(null);
-  }
-
-  if (disabled) {
-    return (
-      <>
-        <span className="sr-only">{label}</span>
-        <span className="whitespace-nowrap">
-          {shown}
-          {unit ? ` ${unit}` : ''}
-        </span>
-      </>
-    );
-  }
-
-  return (
-    <div className="min-w-0">
-      <label htmlFor={inputId} className="sr-only">
-        {label}
-      </label>
-      <div className="flex items-baseline justify-end gap-1">
-        <input
-          id={inputId}
-          value={shown}
-          inputMode={inputMode}
-          autoComplete="off"
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-          onFocus={() => {
-            setDraft(sanitizeFactDraft(value, inputMode));
-            setError(null);
-          }}
-          onChange={(event) =>
-            setDraft(sanitizeFactDraft(event.target.value, inputMode))
-          }
-          onBlur={(event) => commit(event.currentTarget.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              event.stopPropagation();
-              event.currentTarget.blur();
-            }
-          }}
-          className={gridFieldClassName}
-        />
-        {unit ? (
-          <span className="shrink-0 text-sm text-ink">{unit}</span>
-        ) : null}
-      </div>
-      {error ? (
-        <p id={errorId} className="mt-1 text-sm text-ink">
-          {error}
-        </p>
-      ) : null}
-    </div>
-  );
 }
