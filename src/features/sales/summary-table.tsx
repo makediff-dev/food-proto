@@ -151,6 +151,7 @@ export function SummaryTable({
   variance,
   editable,
   vatEditable,
+  catalogEditable,
   expanded = false,
   onPlanLineAction,
   onProductVatAction,
@@ -167,6 +168,7 @@ export function SummaryTable({
   variance: SummaryVariance;
   editable: boolean;
   vatEditable: boolean;
+  catalogEditable: boolean;
   expanded?: boolean;
   onPlanLineAction: (
     lineId: string,
@@ -264,6 +266,7 @@ export function SummaryTable({
               group={group}
               editable={editable}
               vatEditable={vatEditable}
+              catalogEditable={catalogEditable}
               onPlanLineAction={onPlanLineAction}
               onProductVatAction={onProductVatAction}
               onProductCostAction={onProductCostAction}
@@ -324,6 +327,7 @@ function CategoryBlock({
   group,
   editable,
   vatEditable,
+  catalogEditable,
   onPlanLineAction,
   onProductVatAction,
   onProductCostAction,
@@ -336,6 +340,7 @@ function CategoryBlock({
   group: SummaryGroup;
   editable: boolean;
   vatEditable: boolean;
+  catalogEditable: boolean;
   onPlanLineAction: (
     lineId: string,
     priceWithVat: number,
@@ -387,7 +392,7 @@ function CategoryBlock({
                 <GridText
                   label={`Категория, ${group.name}`}
                   value={group.name}
-                  disabled={!vatEditable}
+                  disabled={!catalogEditable}
                   invalidMessage={FIELD_ERROR.empty}
                   onCommit={(next) => onRenameCategory(group.categoryId, next)}
                 />
@@ -400,7 +405,7 @@ function CategoryBlock({
               <>
                 <button
                   type="button"
-                  disabled={!vatEditable}
+                  disabled={!catalogEditable}
                   aria-label={`Добавить товар в ${group.name}`}
                   title="Добавить товар"
                   onClick={() => {
@@ -413,7 +418,7 @@ function CategoryBlock({
                 </button>
                 <button
                   type="button"
-                  disabled={!vatEditable}
+                  disabled={!catalogEditable}
                   aria-label={`Удалить категорию ${group.name}`}
                   title="Удалить категорию"
                   onClick={() => onDeleteCategory(group.categoryId, group.name)}
@@ -461,6 +466,7 @@ function CategoryBlock({
               row={row}
               editable={editable}
               vatEditable={vatEditable}
+              catalogEditable={catalogEditable}
               onPlanLineAction={onPlanLineAction}
               onProductVatAction={onProductVatAction}
               onProductCostAction={onProductCostAction}
@@ -477,6 +483,7 @@ function ProductRow({
   row,
   editable,
   vatEditable,
+  catalogEditable,
   onPlanLineAction,
   onProductVatAction,
   onProductCostAction,
@@ -486,6 +493,7 @@ function ProductRow({
   row: SummaryRow;
   editable: boolean;
   vatEditable: boolean;
+  catalogEditable: boolean;
   onPlanLineAction: (
     lineId: string,
     priceWithVat: number,
@@ -507,7 +515,7 @@ function ProductRow({
       >
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            {row.deleted || !vatEditable ? (
+            {row.deleted || !catalogEditable ? (
               <span className="flex h-8 min-w-max flex-1 items-center text-sm leading-none text-ink">
                 {row.name}
               </span>
@@ -519,7 +527,7 @@ function ProductRow({
                 onCommit={(next) => onRenameProduct(row.productId, next)}
               />
             )}
-            {row.deleted || !vatEditable ? null : (
+            {row.deleted || !catalogEditable ? null : (
               <button
                 type="button"
                 aria-label={`Удалить ${row.name}`}
@@ -681,6 +689,10 @@ function PlanCell({
   }
 
   if (column === 'price') {
+    if (!editable) {
+      return <SideCell column={column} side={row.plan} kind="row" />;
+    }
+
     return (
       <StackedPair
         topHighlighted={editable}
@@ -719,6 +731,10 @@ function PlanCell({
   }
 
   if (column === 'volume') {
+    if (!editable) {
+      return <SideCell column={column} side={row.plan} kind="row" />;
+    }
+
     return (
       <GridNumber
         label={`Плановый объём, ${row.name}`}

@@ -12,6 +12,7 @@ import {
 } from '@/domain/document';
 import {
   averageAmount,
+  multiplyAmount,
   percentHundredths,
   ratioRound,
   toSafeNumber,
@@ -27,6 +28,9 @@ import {
   daysInMonth,
   monthKeyFromDate,
   PLAN_HORIZON_MONTHS,
+  planPhase,
+  revenueExVat,
+  revenueWithVat,
   type SalesPlanTotals,
   salesPlanForMonth,
   salesPlanLineMetrics,
@@ -139,6 +143,14 @@ export interface SummaryHeadline {
 }
 
 export type OperatingExpenseSide = 'plan' | 'fact';
+
+/** Текущая сводка урезает план; сводка за месяц растягивает факт. */
+export type SummaryLens = 'current' | 'forecast';
+
+type VolumeScale =
+  | { kind: 'identity' }
+  | { kind: 'zero' }
+  | { kind: 'ratio'; numerator: number; denominator: number };
 
 export type OperatingExpenseRejection = 'month' | 'amount';
 
@@ -690,6 +702,271 @@ export function monthSummary(
       factTotals,
       opex.planExVat,
       opex.factExVat,
+    ),
+  };
+}
+
+/** Прошедшие дни месяца к сегодня. Будущий месяц — 0. */
+export function elapsedDaysInMonth(month: string, today: Date): number {
+  const phase = planPhase(month, today);
+  if (phase === 'past') {
+    return daysInMonth(month);
+  }
+  if (phase === 'future') {
+    return 0;
+  }
+
+  return today.getDate();
+}
+
+function planVolumeScale(
+  month: string,
+  today: Date,
+  lens: SummaryLens,
+): VolumeScale {
+  const days = daysInMonth(month);
+  const elapsed = elapsedDaysInMonth(month, today);
+  if (lens !== 'current') {
+    return { kind: 'identity' };
+  }
+  if (elapsed === 0) {
+    return { kind: 'zero' };
+  }
+  if (elapsed === days) {
+    return { kind: 'identity' };
+  }
+
+  return { kind: 'ratio', numerator: elapsed, denominator: days };
+}
+
+function factVolumeScale(
+  month: string,
+  today: Date,
+  lens: SummaryLens,
+): VolumeScale {
+  const days = daysInMonth(month);
+  const elapsed = elapsedDaysInMonth(month, today);
+  if (lens !== 'forecast') {
+    return { kind: 'identity' };
+  }
+  if (elapsed === 0) {
+    return { kind: 'zero' };
+  }
+  if (elapsed === days) {
+    return { kind: 'identity' };
+  }
+
+  return { kind: 'ratio', numerator: days, denominator: elapsed };
+}
+
+function scaleInteger(
+  value: number,
+  numerator: number,
+  denominator: number,
+): number | null {
+  return ratioRound(BigInt(value) * BigInt(numerator), BigInt(denominator));
+}
+
+function scaleAmount(value: number | null, scale: VolumeScale): number | null {
+  if (value === null) {
+    return null;
+  }
+  if (scale.kind === 'identity') {
+    return value;
+  }
+  if (scale.kind === 'zero') {
+    return 0;
+  }
+
+  return scaleInteger(value, scale.numerator, scale.denominator);
+}
+
+function planSideAtVolume(
+  side: SummarySide,
+  volumePieces: number,
+  perDayDays: number,
+): SummarySide {
+  const vat = side.vatPercent;
+  const price = side.priceWithVat;
+  const revenueWith =
+    price === null ? null : revenueWithVat(price, volumePieces);
+  const revenueEx =
+    vat === null
+      ? volumePieces === 0
+        ? 0
+        : null
+      : price === null
+        ? null
+        : revenueExVat(price, vat, volumePieces);
+  const cost = side.unitCost;
+  const volumeCostWith =
+    cost === null ? null : multiplyAmount(cost.withVat, volumePieces);
+  const volumeCostEx =
+    cost === null ? null : multiplyAmount(cost.exVat, volumePieces);
+  const contribution =
+    revenueEx === null || volumeCostEx === null
+      ? null
+      : revenueEx - volumeCostEx;
+  const costMissing = volumePieces > 0 && volumeCostEx === null;
+  const revenueMissing = revenueWith === null || revenueEx === null;
+
+  return {
+    ...side,
+    volumePieces,
+    perDay: perDayDays > 0 ? volumePieces / perDayDays : 0,
+    volumeCostWithVat: volumeCostWith,
+    volumeCostExVat: volumeCostEx,
+    revenueWithVat: revenueWith,
+    revenueExVat: revenueEx,
+    contribution,
+    costComplete: !costMissing,
+    revenueComplete: !revenueMissing,
+  };
+}
+
+function applyPlanScale(
+  side: SummarySide | null,
+  scale: VolumeScale,
+  perDayDays: number,
+): SummarySide | null {
+  if (!side) {
+    return null;
+  }
+  if (scale.kind === 'identity') {
+    return side;
+  }
+  if (scale.kind === 'zero') {
+    return planSideAtVolume(side, 0, perDayDays);
+  }
+
+  const volume = scaleInteger(
+    side.volumePieces ?? 0,
+    scale.numerator,
+    scale.denominator,
+  );
+  if (volume === null) {
+    return {
+      ...side,
+      volumePieces: null,
+      perDay: null,
+      volumeCostWithVat: null,
+      volumeCostExVat: null,
+      revenueWithVat: null,
+      revenueExVat: null,
+      contribution: null,
+      costComplete: false,
+      revenueComplete: false,
+    };
+  }
+
+  return planSideAtVolume(side, volume, perDayDays);
+}
+
+function applyFactScale(
+  side: SummarySide,
+  scale: VolumeScale,
+  monthDays: number,
+): SummarySide {
+  if (scale.kind === 'identity') {
+    return side;
+  }
+
+  const volumePieces = scaleAmount(side.volumePieces, scale);
+  const nextRevenueWithVat = scaleAmount(side.revenueWithVat, scale);
+  const nextRevenueExVat = scaleAmount(side.revenueExVat, scale);
+  const volumeCostWithVat = scaleAmount(side.volumeCostWithVat, scale);
+  const volumeCostExVat = scaleAmount(side.volumeCostExVat, scale);
+  const contribution = scaleAmount(side.contribution, scale);
+  const volumeAndEmptyCost =
+    (volumePieces ?? 0) > 0 && (side.unitCost === null || !side.costComplete);
+
+  return {
+    ...side,
+    volumePieces,
+    perDay:
+      volumePieces === null || monthDays === 0
+        ? null
+        : volumePieces / monthDays,
+    priceWithVat: averageAmount(nextRevenueWithVat, volumePieces),
+    priceExVat: averageAmount(nextRevenueExVat, volumePieces),
+    averageCostWithVat: volumeAndEmptyCost
+      ? null
+      : averageAmount(volumeCostWithVat, volumePieces),
+    averageCostExVat: volumeAndEmptyCost
+      ? null
+      : averageAmount(volumeCostExVat, volumePieces),
+    volumeCostWithVat: volumeAndEmptyCost ? null : volumeCostWithVat,
+    volumeCostExVat: volumeAndEmptyCost ? null : volumeCostExVat,
+    revenueWithVat: nextRevenueWithVat,
+    revenueExVat: nextRevenueExVat,
+    contribution: volumeAndEmptyCost ? null : contribution,
+    profitabilityHundredths: volumeAndEmptyCost
+      ? null
+      : percentHundredths(contribution, volumeCostExVat),
+    costComplete: !volumeAndEmptyCost,
+    revenueComplete: side.revenueComplete,
+  };
+}
+
+/**
+ * Текущая сводка: план × прошедшие дни / дни месяца.
+ * Прогнозируемая: факт × дни месяца / прошедшие дни.
+ * Операционные расходы не трогает. В документ не пишет.
+ */
+export function applySummaryLens(
+  view: SummaryView,
+  lens: SummaryLens,
+  today: Date,
+): SummaryView {
+  const planScale = planVolumeScale(view.month, today, lens);
+  const factScale = factVolumeScale(view.month, today, lens);
+  if (planScale.kind === 'identity' && factScale.kind === 'identity') {
+    return view;
+  }
+
+  const elapsed = elapsedDaysInMonth(view.month, today);
+  const monthDays = view.days;
+  const planPerDayDays =
+    lens === 'current' && elapsed > 0 ? elapsed : monthDays;
+
+  const groups: SummaryGroup[] = view.groups.map((group) => {
+    const rows = group.rows.map((row) => {
+      const plan = applyPlanScale(row.plan, planScale, planPerDayDays);
+      const fact = applyFactScale(row.fact, factScale, monthDays);
+      return {
+        ...row,
+        plan,
+        fact,
+        variance: varianceOf(fact, plan),
+      };
+    });
+    const fact = factTotalsFromRows(rows, monthDays);
+    const plan = planTotalsFromRows(rows, planPerDayDays);
+
+    return {
+      ...group,
+      rows,
+      plan,
+      fact,
+      variance: varianceOf(fact, plan),
+    };
+  });
+  const rows = groups.flatMap((group) => group.rows);
+  const planTotalsSide = planTotalsFromRows(rows, planPerDayDays);
+  const factTotals = factTotalsFromRows(rows, monthDays);
+
+  return {
+    ...view,
+    groups,
+    rows,
+    planTotalsSide,
+    factTotals,
+    variance: varianceOf(factTotals, planTotalsSide),
+    headline: summaryHeadline(
+      planTotalsSide,
+      factTotals,
+      view.headline.plan.operatingExpenseExVat,
+      view.headline.fact.operatingExpenseExVat,
     ),
   };
 }

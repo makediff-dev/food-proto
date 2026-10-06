@@ -15,8 +15,10 @@ import {
   workingSalesPlan,
 } from '@/domain/sales-plan';
 import {
+  applySummaryLens,
   lastHorizonMonth,
   monthSummary,
+  type SummaryLens,
   summaryMonthOpen,
 } from '@/domain/summary';
 import {
@@ -44,7 +46,13 @@ import {
 } from '@/features/shell/icons';
 import { PageFrame } from '@/features/shell/page-frame';
 
-export function SummaryScreen({ month }: { month: string }) {
+export function SummaryScreen({
+  month,
+  view,
+}: {
+  month: string;
+  view: SummaryLens;
+}) {
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = resolveMonth(month, today);
@@ -54,6 +62,7 @@ export function SummaryScreen({ month }: { month: string }) {
       month={selectedMonth}
       currentMonth={currentMonth}
       today={today}
+      view={view}
     />
   );
 }
@@ -62,10 +71,12 @@ function Workspace({
   month,
   currentMonth,
   today,
+  view,
 }: {
   month: string;
   currentMonth: string;
   today: Date;
+  view: SummaryLens;
 }) {
   const sales = useSales();
   const router = useRouter();
@@ -79,8 +90,8 @@ function Workspace({
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const storedPlan = workingSalesPlan(sales.document, month);
   const summary = useMemo(
-    () => monthSummary(sales.document, month),
-    [sales.document, month],
+    () => applySummaryLens(monthSummary(sales.document, month), view, today),
+    [sales.document, month, today, view],
   );
   const products = activeProducts(sales.document);
   const categories = activeCategories(sales.document);
@@ -88,8 +99,10 @@ function Workspace({
   const removedCategories = deletedCategories(sales.document);
   const removedCount = removedProducts.length + removedCategories.length;
   const phase = planPhase(month, today);
-  const editable = sales.hydrated && phase !== 'past' && products.length > 0;
-  const vatEditable = sales.hydrated;
+  const catalogEditable = sales.hydrated;
+  const planMetricsEditable = sales.hydrated && view === 'forecast';
+  const editable =
+    planMetricsEditable && phase !== 'past' && products.length > 0;
   const missing =
     editable && storedPlan
       ? missingPlanProducts(sales.document, storedPlan)
@@ -120,10 +133,13 @@ function Workspace({
     };
   }, [tableExpanded]);
 
-  function open(nextMonthKey: string) {
-    router.push(summaryHref({ month: nextMonthKey, currentMonth }), {
-      scroll: false,
-    });
+  function open(nextMonthKey: string, nextView: SummaryLens = view) {
+    router.push(
+      summaryHref({ month: nextMonthKey, currentMonth, view: nextView }),
+      {
+        scroll: false,
+      },
+    );
   }
 
   function addMissing() {
@@ -142,9 +158,14 @@ function Workspace({
   return (
     <>
       <PageFrame
-        title="Сводка"
+        title={
+          <SummaryModeTitle
+            view={view}
+            onSelect={(next) => open(month, next)}
+          />
+        }
         full
-        lede={lede(phase, daysInMonth(month))}
+        lede={lede(phase, daysInMonth(month), view)}
         intro={
           <div className="w-full border border-line bg-sheet p-4">
             <label htmlFor={monthFieldId} className="text-sm text-muted">
@@ -184,7 +205,8 @@ function Workspace({
           <SummaryHeadlineTable
             headline={summary.headline}
             month={month}
-            editable={sales.hydrated}
+            planEditable={planMetricsEditable}
+            factEditable={catalogEditable}
             onOperatingExpense={(side, amountExVat) => {
               const rejection = sales.updateOperatingExpense(
                 month,
@@ -291,7 +313,8 @@ function Workspace({
                 factTotals={summary.factTotals}
                 variance={summary.variance}
                 editable={editable}
-                vatEditable={vatEditable}
+                vatEditable={planMetricsEditable}
+                catalogEditable={catalogEditable}
                 expanded={tableExpanded}
                 onPlanLineAction={(lineId, priceWithVat, volumePieces) => {
                   return sales.updateMonthLine(
@@ -656,13 +679,89 @@ function DeletedRecords({
   );
 }
 
-function lede(phase: ReturnType<typeof planPhase>, days: number): string {
+function lede(
+  phase: ReturnType<typeof planPhase>,
+  days: number,
+  view: SummaryLens,
+): string {
   const length = `В месяце ${daysPhrase(days)}.`;
+  if (view === 'forecast') {
+    if (phase === 'past') {
+      return `Месяц прошёл. План и факт — за весь месяц. ${length}`;
+    }
+    if (phase === 'future') {
+      return `План на месяц. Прогноз факта нулевой: продаж ещё нет. Плановые показатели, НДС и себестоимость правят здесь. ${length}`;
+    }
+
+    return `План на месяц. Факт — прогноз до конца месяца тем же темпом, что уже есть. Плановые показатели правят здесь. Факт считается из дней раздела «Факт. продажи и производство». ${length}`;
+  }
+
   if (phase === 'past') {
     return `Месяц прошёл, план только для просмотра. Факт считается из дней раздела «Факт. продажи и производство». ${length}`;
   }
+  if (phase === 'future') {
+    return `План урезан до нуля: месяц ещё не начался. Факт нулевой. Плановые показатели правят в сводке за месяц. ${length}`;
+  }
 
-  return `План, факт и отклонение выбранного месяца. Товары, НДС и себестоимость правят здесь. Факт считается из дней раздела «Факт. продажи и производство». ${length}`;
+  return `Факт на сегодня. План урезан на прошедшую долю месяца. Плановые показатели здесь только для просмотра; правят в сводке за месяц. Факт считается из дней раздела «Факт. продажи и производство». ${length}`;
+}
+
+function SummaryModeTitle({
+  view,
+  onSelect,
+}: {
+  view: SummaryLens;
+  onSelect: (next: SummaryLens) => void;
+}) {
+  return (
+    <>
+      Сводка{' '}
+      <ModeWord
+        label="текущая"
+        active={view === 'current'}
+        onClick={() => onSelect('current')}
+      />
+      {'/'}
+      <ModeWord
+        label="за месяц"
+        active={view === 'forecast'}
+        onClick={() => onSelect('forecast')}
+      />
+    </>
+  );
+}
+
+function ModeWord({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  if (active) {
+    return (
+      <span className="underline decoration-ink underline-offset-4">
+        {label}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      aria-label={
+        label === 'текущая'
+          ? 'Показать текущую сводку'
+          : 'Показать сводку за месяц'
+      }
+      onClick={onClick}
+      className="font-[inherit] text-inherit underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+    >
+      {label}
+    </button>
+  );
 }
 
 function resolveMonth(month: string, today: Date): string {

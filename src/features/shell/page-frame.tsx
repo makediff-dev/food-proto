@@ -10,7 +10,7 @@ export function PageFrame({
   aside,
   children,
 }: {
-  title: string;
+  title: ReactNode;
   lede: string;
   wide?: boolean;
   full?: boolean;

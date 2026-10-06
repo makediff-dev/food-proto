@@ -51,12 +51,14 @@ const ROWS: { id: HeadlineRowId; label: string }[] = [
 export function SummaryHeadlineTable({
   headline,
   month,
-  editable,
+  planEditable,
+  factEditable,
   onOperatingExpense,
 }: {
   headline: Headline;
   month: string;
-  editable: boolean;
+  planEditable: boolean;
+  factEditable: boolean;
   onOperatingExpense: (
     side: OperatingExpenseSide,
     amountExVat: number,
@@ -100,26 +102,26 @@ export function SummaryHeadlineTable({
                 )}
               </th>
               <td
-                className={`${valueCellClassName} ${row.id === 'opex' && editable ? editableCellClassName : ''}`}
+                className={`${valueCellClassName} ${row.id === 'opex' && planEditable ? editableCellClassName : ''}`}
               >
                 <HeadlineValue
                   row={row.id}
                   side="plan"
                   headline={headline}
                   month={month}
-                  editable={editable}
+                  editable={planEditable}
                   onOperatingExpense={onOperatingExpense}
                 />
               </td>
               <td
-                className={`${valueCellClassName} ${row.id === 'opex' && editable ? editableCellClassName : ''}`}
+                className={`${valueCellClassName} ${row.id === 'opex' && factEditable ? editableCellClassName : ''}`}
               >
                 <HeadlineValue
                   row={row.id}
                   side="fact"
                   headline={headline}
                   month={month}
-                  editable={editable}
+                  editable={factEditable}
                   onOperatingExpense={onOperatingExpense}
                 />
               </td>
