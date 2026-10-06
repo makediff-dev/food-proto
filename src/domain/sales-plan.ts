@@ -350,7 +350,14 @@ export function salesPlanTotals(
   let revenueExComplete = true;
   let productsWithVolume = 0;
 
+  const workingIds = new Set(activeProducts(document).map((item) => item.id));
+  let lineCount = 0;
+
   for (const line of plan.lines) {
+    if (!workingIds.has(line.productId)) {
+      continue;
+    }
+    lineCount += 1;
     const metrics = salesPlanLineMetrics(document, plan, line);
     volume += BigInt(line.volumePieces);
     if (line.volumePieces > 0) {
@@ -420,7 +427,7 @@ export function salesPlanTotals(
     averageCostExVat,
     profitabilityHundredths: percentHundredths(contribution, volumeCostExVat),
     productsWithVolume,
-    lineCount: plan.lines.length,
+    lineCount,
   };
 }
 

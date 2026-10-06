@@ -149,6 +149,14 @@ export function IconEye() {
   );
 }
 
+export function IconList() {
+  return (
+    <Glyph>
+      <path d="M4 5h2M8 5h8M4 10h2M8 10h8M4 15h2M8 15h8" />
+    </Glyph>
+  );
+}
+
 // Не вызывается: каталог сырья, производных и отдельных экранов плана/факта убран.
 // export function IconEyeOff() {
 //   return (

@@ -226,7 +226,9 @@ export function useSales() {
       if (!current || current.deletedAt === null) {
         return 'missing';
       }
-      const rejection = productNameRejection(document, current.name, id);
+      const rejection =
+        productNameRejection(document, current.name, id) ??
+        productCategoryRejection(document, current.categoryId);
       if (rejection) {
         return rejection;
       }

@@ -85,7 +85,6 @@ function Workspace({
   const [addOpen, setAddOpen] = useState(false);
   const [addCategoryOpen, setAddCategoryOpen] = useState(false);
   const [addCategoryId, setAddCategoryId] = useState<string | null>(null);
-  const [showDeleted, setShowDeleted] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
   const storedPlan = workingSalesPlan(sales.document, month);
@@ -250,15 +249,6 @@ function Workspace({
               <IconPlus />
               Добавить категорию
             </button>
-            <button
-              type="button"
-              onClick={() => setShowDeleted((current) => !current)}
-              className="inline-flex h-11 items-center justify-center gap-2 border border-line bg-sheet px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-            >
-              <IconUndo />
-              {showDeleted ? 'Скрыть удалённые' : 'Удалённые'}
-              {removedCount === 0 ? '' : ` ${removedCount}`}
-            </button>
           </div>
 
           {missing.length > 0 ? (
@@ -282,7 +272,7 @@ function Workspace({
             </div>
           ) : null}
 
-          {showDeleted ? (
+          {removedCount > 0 ? (
             <DeletedRecords
               categories={removedCategories}
               products={removedProducts}
@@ -350,7 +340,7 @@ function Workspace({
                 }}
                 onDeleteCategory={(categoryId, name) => {
                   const confirmed = window.confirm(
-                    `Удалить категорию «${name}»? Она пропадёт из рабочего списка. Товары останутся в этой категории. Вернуть можно среди удалённых.`,
+                    `Удалить категорию «${name}»? Она и её товары пропадут из рабочего списка. Вернуть можно среди удалённых.`,
                   );
                   if (confirmed) {
                     sales.deleteCategory(categoryId);

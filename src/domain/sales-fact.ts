@@ -1,4 +1,4 @@
-import { visibleCategories } from '@/domain/categories';
+import { activeCategories } from '@/domain/categories';
 import { type UnitCost, unitCost } from '@/domain/cost';
 import {
   isMonthKey,
@@ -14,6 +14,7 @@ import {
   toSafeNumber,
   vatPercentHundredths,
 } from '@/domain/money';
+import { activeProducts } from '@/domain/products';
 import { workingSales } from '@/domain/sales';
 import { daysInMonth, monthKeyFromDate } from '@/domain/sales-plan';
 
@@ -129,15 +130,6 @@ function productById(
   return document.products.find((item) => item.id === productId) ?? null;
 }
 
-function salesInMonth(
-  document: PrototypeDocument,
-  month: string,
-): ReturnType<typeof workingSales> {
-  return workingSales(document).filter((item) =>
-    item.occurredOn.startsWith(`${month}-`),
-  );
-}
-
 export function saleDayProduct(
   document: PrototypeDocument,
   occurredOn: string,
@@ -179,21 +171,9 @@ export function saleDayProduct(
   };
 }
 
-/** Рабочие товары и те, на которые в этом месяце есть продажа. */
-export function salesFactGridProducts(
-  document: PrototypeDocument,
-  month: string,
-): Product[] {
-  const referenced = new Set<string>();
-  for (const sale of salesInMonth(document, month)) {
-    for (const line of sale.lines) {
-      referenced.add(line.productId);
-    }
-  }
-
-  return document.products.filter(
-    (item) => item.deletedAt === null || referenced.has(item.id),
-  );
+/** Рабочие товары. Удалённые в сетку и в суммы факта не входят. */
+export function salesFactGridProducts(document: PrototypeDocument): Product[] {
+  return activeProducts(document);
 }
 
 function rowMetrics(
@@ -323,7 +303,7 @@ function salesFactGroups(
 ): SalesFactGroup[] {
   const byId = new Map(rows.map((row) => [row.productId, row]));
 
-  return visibleCategories(document, products).map((category) => {
+  return activeCategories(document).map((category) => {
     const groupRows = products
       .filter((item) => item.categoryId === category.id)
       .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
@@ -347,7 +327,7 @@ export function salesFactMonth(
   document: PrototypeDocument,
   month: string,
 ): SalesFactDayView[] {
-  const products = salesFactGridProducts(document, month);
+  const products = salesFactGridProducts(document);
 
   return monthDates(month).map((occurredOn) => {
     const rows = products.map((product) =>

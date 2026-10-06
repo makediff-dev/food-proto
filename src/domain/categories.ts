@@ -30,17 +30,6 @@ export function deletedCategories(
   return document.categories.filter((item) => item.deletedAt !== null);
 }
 
-/** Рабочие категории и удалённые, у которых есть товары в текущей сетке. */
-export function visibleCategories(
-  document: PrototypeDocument,
-  products: readonly { categoryId: string }[],
-): ProductCategory[] {
-  const used = new Set(products.map((item) => item.categoryId));
-  return document.categories.filter(
-    (item) => item.deletedAt === null || used.has(item.id),
-  );
-}
-
 export function categoryNameRejection(
   document: PrototypeDocument,
   name: string,
@@ -122,6 +111,11 @@ export function deleteCategory(
     categories: document.categories.map((item) =>
       item.id === id ? { ...item, deletedAt } : item,
     ),
+    products: document.products.map((item) =>
+      item.categoryId === id && item.deletedAt === null
+        ? { ...item, deletedAt }
+        : item,
+    ),
   };
 }
 
@@ -136,10 +130,24 @@ export function restoreCategory(
     return document;
   }
 
+  let products = document.products;
+  for (const product of document.products) {
+    if (product.categoryId !== id || product.deletedAt === null) {
+      continue;
+    }
+    if (rejectName(product.name, products, product.id)) {
+      continue;
+    }
+    products = products.map((item) =>
+      item.id === product.id ? { ...item, deletedAt: null } : item,
+    );
+  }
+
   return {
     ...document,
     categories: document.categories.map((item) =>
       item.id === id ? { ...item, deletedAt: null } : item,
     ),
+    products,
   };
 }

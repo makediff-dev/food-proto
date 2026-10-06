@@ -23,7 +23,7 @@ import {
   deletedSalesHref,
   SALES_SECTION_TITLE,
   saleHref,
-  salesFactHref,
+  salesJournalHref,
 } from '@/features/sales-fact/paths';
 import {
   formatSaleDate,
@@ -81,10 +81,10 @@ export function SaleScreen({
           Запись не найдена.
         </p>
         <Link
-          href={salesFactHref({ month: currentMonth, currentMonth })}
+          href={salesJournalHref({ month: currentMonth, currentMonth })}
           className={quietLinkClassName}
         >
-          <IconUndo />К продажам
+          <IconUndo />К журналу продаж
         </Link>
       </PageFrame>
     );
@@ -212,12 +212,9 @@ function SaleForm({
 
     const saleMonth = occurredOn.slice(0, 7);
     router.replace(
-      salesFactHref({
+      salesJournalHref({
         month: saleMonth || currentMonth,
         currentMonth,
-        day: occurredOn,
-        defaultDay: `${saleMonth || currentMonth}-01`,
-        view: 'day',
       }),
     );
   }
@@ -232,16 +229,13 @@ function SaleForm({
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <Link
-            href={salesFactHref({
+            href={salesJournalHref({
               month: month || currentMonth,
               currentMonth,
-              day: occurredOn,
-              defaultDay: `${month || currentMonth}-01`,
-              view: 'day',
             })}
             className={quietLinkClassName}
           >
-            <IconUndo />К продажам
+            <IconUndo />К журналу продаж
           </Link>
           {saleId ? (
             <button
@@ -256,7 +250,7 @@ function SaleForm({
                 }
                 journal.remove(saleId);
                 router.push(
-                  salesFactHref({
+                  salesJournalHref({
                     month: month || currentMonth,
                     currentMonth,
                   }),
@@ -508,10 +502,10 @@ function DeletedSale({
         </button>
         {error ? <p className="text-sm text-ink">{error}</p> : null}
         <Link
-          href={salesFactHref({ month: currentMonth, currentMonth })}
+          href={salesJournalHref({ month: currentMonth, currentMonth })}
           className={quietLinkClassName}
         >
-          <IconUndo />К продажам
+          <IconUndo />К журналу продаж
         </Link>
       </div>
     </PageFrame>

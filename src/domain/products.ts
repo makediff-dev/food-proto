@@ -279,6 +279,13 @@ export function restoreProduct(
     return document;
   }
 
+  const category = document.categories.find(
+    (item) => item.id === current.categoryId && item.deletedAt === null,
+  );
+  if (!category) {
+    return document;
+  }
+
   return {
     ...document,
     products: document.products.map((item) =>

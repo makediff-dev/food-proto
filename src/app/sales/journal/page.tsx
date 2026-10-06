@@ -1,0 +1,24 @@
+import type { Metadata } from 'next';
+
+import {
+  parseSalesJournalQuery,
+  SALES_SECTION_TITLE,
+} from '@/features/sales-fact/paths';
+import { SalesJournalScreen } from '@/features/sales-fact/sales-journal-screen';
+
+export const metadata: Metadata = {
+  title: SALES_SECTION_TITLE,
+};
+
+export default async function SalesJournalPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    month?: string;
+  }>;
+}) {
+  const params = await searchParams;
+  const query = parseSalesJournalQuery(params);
+
+  return <SalesJournalScreen month={query.month} />;
+}

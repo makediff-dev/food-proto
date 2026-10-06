@@ -1,4 +1,4 @@
-import { visibleCategories } from '@/domain/categories';
+import { activeCategories } from '@/domain/categories';
 import { type UnitCost, unitCost } from '@/domain/cost';
 import {
   isMonthKey,
@@ -17,11 +17,8 @@ import {
   toSafeNumber,
   vatPercentHundredths,
 } from '@/domain/money';
-import {
-  type SalesFactRow,
-  salesFactGridProducts,
-  salesFactMonth,
-} from '@/domain/sales-fact';
+import { activeProducts } from '@/domain/products';
+import { type SalesFactRow, salesFactMonth } from '@/domain/sales-fact';
 import {
   daysInMonth,
   monthKeyFromDate,
@@ -194,27 +191,13 @@ export function summaryMonthOpen(month: string, today: Date): boolean {
   );
 }
 
-export function summaryGridProducts(
-  document: PrototypeDocument,
-  plan: SalesPlan | null,
-  month: string,
-): Product[] {
-  const referenced = new Set(plan?.lines.map((line) => line.productId) ?? []);
-  const fromFact = salesFactGridProducts(document, month);
-  const seen = new Set(fromFact.map((item) => item.id));
-
-  const extra = document.products.filter(
-    (item) => referenced.has(item.id) && !seen.has(item.id),
-  );
-
-  return [...fromFact, ...extra];
+/** Рабочие товары. Удалённые в сетку и в суммы сводки не входят. */
+export function summaryGridProducts(document: PrototypeDocument): Product[] {
+  return activeProducts(document);
 }
 
-function summaryCategories(
-  document: PrototypeDocument,
-  products: readonly Product[],
-): ProductCategory[] {
-  return visibleCategories(document, products);
+function summaryCategories(document: PrototypeDocument): ProductCategory[] {
+  return activeCategories(document);
 }
 
 function planSide(
@@ -625,7 +608,7 @@ export function monthSummary(
   plan: SalesPlan | null = salesPlanForMonth(document, month),
 ): SummaryView {
   const days = daysInMonth(month);
-  const products = summaryGridProducts(document, plan, month);
+  const products = summaryGridProducts(document);
   const factDays = salesFactMonth(document, month);
   const rowByProduct = new Map<string, SummaryRow>();
 
@@ -653,29 +636,27 @@ export function monthSummary(
     });
   }
 
-  const groups: SummaryGroup[] = summaryCategories(document, products).map(
-    (category) => {
-      const rows = products
-        .filter((item) => item.categoryId === category.id)
-        .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
-        .flatMap((item) => {
-          const row = rowByProduct.get(item.id);
-          return row ? [row] : [];
-        });
-      const factSide = factTotalsFromRows(rows, days);
-      const planMetrics = planTotalsFromRows(rows, days);
+  const groups: SummaryGroup[] = summaryCategories(document).map((category) => {
+    const rows = products
+      .filter((item) => item.categoryId === category.id)
+      .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+      .flatMap((item) => {
+        const row = rowByProduct.get(item.id);
+        return row ? [row] : [];
+      });
+    const factSide = factTotalsFromRows(rows, days);
+    const planMetrics = planTotalsFromRows(rows, days);
 
-      return {
-        categoryId: category.id,
-        name: category.name,
-        deleted: category.deletedAt !== null,
-        rows,
-        plan: planMetrics,
-        fact: factSide,
-        variance: varianceOf(factSide, planMetrics),
-      };
-    },
-  );
+    return {
+      categoryId: category.id,
+      name: category.name,
+      deleted: category.deletedAt !== null,
+      rows,
+      plan: planMetrics,
+      fact: factSide,
+      variance: varianceOf(factSide, planMetrics),
+    };
+  });
   const rows = groups.flatMap((group) => group.rows);
 
   const planTotals = plan ? salesPlanTotals(document, plan) : null;

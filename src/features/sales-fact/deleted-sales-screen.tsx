@@ -9,7 +9,7 @@ import { formatMoney } from '@/features/sales/money';
 import {
   SALES_SECTION_TITLE,
   saleHref,
-  salesFactHref,
+  salesJournalHref,
 } from '@/features/sales-fact/paths';
 import { formatSaleDate, SALE_ERROR } from '@/features/sales-fact/text';
 import { useSalesJournal } from '@/features/sales-fact/use-sales-journal';
@@ -29,10 +29,10 @@ export function DeletedSalesScreen() {
     >
       <div className="flex flex-col gap-4">
         <Link
-          href={salesFactHref({ month: currentMonth, currentMonth })}
+          href={salesJournalHref({ month: currentMonth, currentMonth })}
           className={quietLinkClassName}
         >
-          <IconUndo />К продажам
+          <IconUndo />К журналу продаж
         </Link>
         {error ? <p className="text-sm text-ink">{error}</p> : null}
         {journal.deleted.length === 0 ? (

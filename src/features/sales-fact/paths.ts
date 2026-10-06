@@ -40,6 +40,25 @@ export function salesFactHref(options: {
   return query ? `/sales?${query}` : '/sales';
 }
 
+export function parseSalesJournalQuery(params: { month?: string }): {
+  month: string;
+} {
+  return {
+    month: params.month ?? '',
+  };
+}
+
+export function salesJournalHref(options: {
+  month: string;
+  currentMonth: string;
+}): string {
+  if (options.month && options.month !== options.currentMonth) {
+    return `/sales/journal?month=${encodeURIComponent(options.month)}`;
+  }
+
+  return '/sales/journal';
+}
+
 export function saleNewHref(day?: string): string {
   if (!day) {
     return '/sales/new';
