@@ -53,6 +53,7 @@ export function SummaryHeadlineTable({
   headline,
   periodLabel,
   view,
+  periodClosed = false,
   planEditable,
   factEditable,
   onOperatingExpense,
@@ -60,6 +61,7 @@ export function SummaryHeadlineTable({
   headline: Headline;
   periodLabel: string;
   view: SummaryLens;
+  periodClosed?: boolean;
   planEditable: boolean;
   factEditable: boolean;
   onOperatingExpense: (
@@ -68,7 +70,8 @@ export function SummaryHeadlineTable({
   ) => string | null;
 }) {
   const planLabel = view === 'current' ? 'План (корр.)' : 'План';
-  const factLabel = view === 'forecast' ? 'Факт (прогноз)' : 'Факт';
+  const factIsForecast = view === 'forecast' && !periodClosed;
+  const factLabel = factIsForecast ? 'Факт (прогноз)' : 'Факт';
 
   return (
     <div className="w-full overflow-x-auto border border-line bg-sheet">
@@ -76,7 +79,9 @@ export function SummaryHeadlineTable({
         <caption className="sr-only">
           {view === 'current'
             ? 'Свод периода: план (корр.), факт и отклонение. Операционные расходы без НДС.'
-            : 'Свод периода: план, факт (прогноз) и отклонение. Операционные расходы без НДС.'}
+            : factIsForecast
+              ? 'Свод периода: план, факт (прогноз) и отклонение. Операционные расходы без НДС.'
+              : 'Свод периода: план, факт и отклонение. Операционные расходы без НДС.'}
         </caption>
         <thead>
           <tr>

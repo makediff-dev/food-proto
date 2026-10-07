@@ -98,6 +98,9 @@ function Workspace({
   const hasTable = summary.groups.length > 0;
   const tableExpanded = fullscreen && hasTable;
   const periodLabel = singleMonth ? periodFrom : `${periodFrom} — ${periodTo}`;
+  const periodClosed = periodTo < currentMonth;
+  const actualAvailable =
+    periodFrom <= currentMonth && currentMonth <= periodTo;
   const title = summaryPageTitle({
     view,
     from: periodFrom,
@@ -181,7 +184,7 @@ function Workspace({
               <IconPlan />
               Прогноз
             </button>
-          ) : (
+          ) : actualAvailable ? (
             <button
               type="button"
               className={primaryButtonClassName}
@@ -190,7 +193,7 @@ function Workspace({
               <IconFact />
               Фактическая
             </button>
-          )
+          ) : null
         }
         intro={
           <div className="flex flex-col gap-4">
@@ -262,6 +265,7 @@ function Workspace({
               headline={summary.headline}
               periodLabel={periodLabel}
               view={view}
+              periodClosed={periodClosed}
               planEditable={false}
               factEditable={catalogEditable}
               onOperatingExpense={(side, amountExVat) => {
@@ -292,6 +296,7 @@ function Workspace({
                 factTotals={summary.factTotals}
                 variance={summary.variance}
                 view={view}
+                periodClosed={periodClosed}
                 editable={false}
                 vatEditable={false}
                 catalogEditable={false}

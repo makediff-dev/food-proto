@@ -160,6 +160,7 @@ export function SummaryTable({
   factTotals,
   variance,
   view,
+  periodClosed = false,
   part = 'full',
   editable,
   vatEditable,
@@ -179,6 +180,7 @@ export function SummaryTable({
   factTotals: SummarySide;
   variance: SummaryVariance;
   view: SummaryLens;
+  periodClosed?: boolean;
   part?: 'full' | 'plan';
   editable: boolean;
   vatEditable: boolean;
@@ -201,6 +203,7 @@ export function SummaryTable({
   onAddProduct: (categoryId: string) => void;
 }) {
   const showFact = part === 'full';
+  const factIsForecast = view === 'forecast' && !periodClosed;
   const planHeader =
     part === 'plan'
       ? 'Плановые показатели'
@@ -212,7 +215,9 @@ export function SummaryTable({
       ? 'Планирование месяца: плановые показатели'
       : view === 'current'
         ? 'Сводка месяца: план (корр.), факт и отклонение'
-        : 'Сводка месяца: план, факт (прогноз) и отклонение';
+        : factIsForecast
+          ? 'Сводка месяца: план, факт (прогноз) и отклонение'
+          : 'Сводка месяца: план, факт и отклонение';
 
   return (
     <div
@@ -244,7 +249,7 @@ export function SummaryTable({
                   className="border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
                 >
                   {keepWithNext(
-                    view === 'forecast'
+                    factIsForecast
                       ? 'Фактические показатели (прогноз)'
                       : 'Фактические показатели',
                   )}
@@ -786,8 +791,14 @@ function PlanCell({
     );
   }
 
-  if (!row.plan || row.planLineId === null) {
+  if (!row.plan) {
     return <Empty />;
+  }
+
+  // Интервал месяцев складывает план, но строки одного товара уже не одна.
+  // Цифры есть в `row.plan`; править их можно только у строки одного месяца.
+  if (row.planLineId === null) {
+    return <SideCell column={column} side={row.plan} kind="row" />;
   }
 
   if (column === 'price') {
