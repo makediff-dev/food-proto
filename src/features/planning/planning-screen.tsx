@@ -8,10 +8,8 @@ import { normalizeName } from '@/domain/directory';
 import { MAX_LABEL_LENGTH } from '@/domain/document';
 import { activeProducts, deletedProducts } from '@/domain/products';
 import {
-  daysInMonth,
   missingPlanProducts,
   monthKeyFromDate,
-  planPhase,
   shiftMonth,
   workingSalesPlan,
 } from '@/domain/sales-plan';
@@ -30,8 +28,12 @@ import {
   monthFieldClassName,
   primaryButtonClassName,
 } from '@/features/sales/fields';
+import { PlanHeadlineTable } from '@/features/sales/summary-headline';
 import { SummaryTable } from '@/features/sales/summary-table';
-import { daysPhrase, SALES_PLAN_ERROR } from '@/features/sales/text';
+import {
+  OPERATING_EXPENSE_ERROR,
+  SALES_PLAN_ERROR,
+} from '@/features/sales/text';
 import { useSales } from '@/features/sales/use-sales';
 import { Dialog } from '@/features/shell/dialog';
 import {
@@ -84,7 +86,6 @@ function Workspace({
   const removedProducts = deletedProducts(sales.document);
   const removedCategories = deletedCategories(sales.document);
   const removedCount = removedProducts.length + removedCategories.length;
-  const phase = planPhase(month, today);
   const catalogEditable = sales.hydrated;
   const planEditable = sales.hydrated && products.length > 0;
   const missing =
@@ -141,37 +142,51 @@ function Workspace({
       <PageFrame
         title={PLANNING_SECTION_TITLE}
         full
-        lede={lede(phase, daysInMonth(month))}
         intro={
-          <div className="w-full border border-line bg-sheet p-4">
-            <div className="flex items-center gap-2">
-              <MonthStep
-                label="Предыдущий месяц"
-                direction="previous"
-                disabled={!summaryMonthOpen(previousMonth, today)}
-                onClick={() => open(previousMonth)}
-              />
-              <input
-                type="month"
-                aria-label="Месяц"
-                min="2000-01"
-                max={horizonEnd}
-                value={month}
-                onChange={(event) => {
-                  const next = event.target.value;
-                  if (summaryMonthOpen(next, today)) {
-                    open(next);
-                  }
-                }}
-                className={monthFieldClassName}
-              />
-              <MonthStep
-                label="Следующий месяц"
-                direction="next"
-                disabled={nextMonth > horizonEnd}
-                onClick={() => open(nextMonth)}
-              />
+          <div className="flex flex-col gap-4">
+            <div className="w-full border border-line bg-sheet p-4">
+              <div className="flex items-center gap-2">
+                <MonthStep
+                  label="Предыдущий месяц"
+                  direction="previous"
+                  disabled={!summaryMonthOpen(previousMonth, today)}
+                  onClick={() => open(previousMonth)}
+                />
+                <input
+                  type="month"
+                  aria-label="Месяц"
+                  min="2000-01"
+                  max={horizonEnd}
+                  value={month}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    if (summaryMonthOpen(next, today)) {
+                      open(next);
+                    }
+                  }}
+                  className={monthFieldClassName}
+                />
+                <MonthStep
+                  label="Следующий месяц"
+                  direction="next"
+                  disabled={nextMonth > horizonEnd}
+                  onClick={() => open(nextMonth)}
+                />
+              </div>
             </div>
+            <PlanHeadlineTable
+              headline={summary.headline}
+              periodLabel={month}
+              editable={sales.hydrated}
+              onOperatingExpense={(amountExVat) => {
+                const rejection = sales.updateOperatingExpense(
+                  month,
+                  'plan',
+                  amountExVat,
+                );
+                return rejection ? OPERATING_EXPENSE_ERROR[rejection] : null;
+              }}
+            />
           </div>
         }
         aside={
@@ -628,18 +643,6 @@ function DeletedRecords({
       )}
     </div>
   );
-}
-
-function lede(phase: ReturnType<typeof planPhase>, days: number): string {
-  const length = `В месяце ${daysPhrase(days)}.`;
-  if (phase === 'past') {
-    return `План месяца: категории, товары, цена, объём, НДС и себестоимость. Факт смотрят на «Сводке». Месяц прошёл — план правят так же. ${length}`;
-  }
-  if (phase === 'future') {
-    return `План месяца: категории, товары, цена, объём, НДС и себестоимость. Факт смотрят на «Сводке». ${length}`;
-  }
-
-  return `План месяца: категории, товары, цена, объём, НДС и себестоимость. Факт смотрят на «Сводке». ${length}`;
 }
 
 function resolveMonth(month: string, today: Date): string {

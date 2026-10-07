@@ -174,14 +174,14 @@ export function IconList() {
 //   );
 // }
 //
-// export function IconFact() {
-//   return (
-//     <Glyph>
-//       <path d="M6 3h8v14H6V3zM8 7h4M8 10h4M8 13h3" />
-//     </Glyph>
-//   );
-// }
-//
+export function IconFact() {
+  return (
+    <Glyph>
+      <path d="M6 3h8v14H6V3zM8 7h4M8 10h4M8 13h3" />
+    </Glyph>
+  );
+}
+
 // export function IconLamp() {
 //   return (
 //     <svg viewBox="0 0 20 20" aria-hidden="true" className="size-4 shrink-0">

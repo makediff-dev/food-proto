@@ -2,29 +2,41 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { activeCategories } from '@/domain/categories';
-import { monthKeyFromDate, planPhase, shiftMonth } from '@/domain/sales-plan';
+import { monthKeyFromDate } from '@/domain/sales-plan';
 import {
   applySummaryLens,
+  elapsedDaysInMonth,
   isSingleMonthSummary,
   lastHorizonMonth,
-  monthsInRange,
   normalizeMonthRange,
   rangeSummary,
   type SummaryLens,
   summaryMonthOpen,
 } from '@/domain/summary';
 import { planningHref } from '@/features/planning/paths';
-import { monthFieldClassName } from '@/features/sales/fields';
+import {
+  monthFieldClassName,
+  primaryButtonClassName,
+} from '@/features/sales/fields';
 import { summaryHref } from '@/features/sales/paths';
 import { SummaryHeadlineTable } from '@/features/sales/summary-headline';
 import { SummaryTable } from '@/features/sales/summary-table';
-import { daysPhrase, OPERATING_EXPENSE_ERROR } from '@/features/sales/text';
+import {
+  daysPhrase,
+  formatMonth,
+  formatMonthNameGenitive,
+  OPERATING_EXPENSE_ERROR,
+} from '@/features/sales/text';
 import { useSales } from '@/features/sales/use-sales';
-import { IconFullscreen, IconFullscreenExit } from '@/features/shell/icons';
-import { MonthStep } from '@/features/shell/month-step';
+import {
+  IconFact,
+  IconFullscreen,
+  IconFullscreenExit,
+  IconPlan,
+} from '@/features/shell/icons';
 import { PageFrame } from '@/features/shell/page-frame';
 
 export function SummaryScreen({
@@ -69,31 +81,54 @@ function Workspace({
   const fromFieldId = useId();
   const toFieldId = useId();
   const [fullscreen, setFullscreen] = useState(false);
-  const singleMonth = from === to;
-  const activeView: SummaryLens = singleMonth ? view : 'forecast';
+  const isActual = view === 'current';
+  const periodFrom = isActual ? currentMonth : from;
+  const periodTo = isActual ? currentMonth : to;
+  const singleMonth = periodFrom === periodTo;
+  const activeView: SummaryLens =
+    isActual && singleMonth ? 'current' : 'forecast';
+  const lastForecastRange = useRef({ from: periodFrom, to: periodTo });
+  if (activeView === 'forecast') {
+    lastForecastRange.current = { from: periodFrom, to: periodTo };
+  }
   const summary = useMemo(() => {
-    const base = rangeSummary(sales.document, from, to);
+    const base = rangeSummary(sales.document, periodFrom, periodTo);
     if (!isSingleMonthSummary(base)) {
       return base;
     }
     return applySummaryLens(base, activeView, today);
-  }, [sales.document, from, to, today, activeView]);
+  }, [sales.document, periodFrom, periodTo, today, activeView]);
   const categories = activeCategories(sales.document);
-  const phase = singleMonth ? planPhase(from, today) : null;
   const catalogEditable = sales.hydrated && singleMonth;
-  const planOperatingEditable =
-    sales.hydrated && singleMonth && activeView === 'forecast';
-  const monthCount = monthsInRange(from, to).length;
-  const previousFrom = shiftMonth(from, -1);
-  const previousTo = shiftMonth(to, -1);
-  const nextFrom = shiftMonth(from, 1);
-  const nextTo = shiftMonth(to, 1);
   const horizonEnd = lastHorizonMonth(today);
-  const canStepPrevious = summaryMonthOpen(previousFrom, today);
-  const canStepNext = nextTo <= horizonEnd;
   const hasTable = summary.groups.length > 0;
   const tableExpanded = fullscreen && hasTable;
-  const periodLabel = singleMonth ? from : `${from} — ${to}`;
+  const periodLabel = singleMonth ? periodFrom : `${periodFrom} — ${periodTo}`;
+  const title = summaryPageTitle({
+    view: activeView,
+    from: periodFrom,
+    to: periodTo,
+    currentMonth,
+    today,
+  });
+
+  useEffect(() => {
+    if (!isActual) {
+      return;
+    }
+    if (from === currentMonth && to === currentMonth) {
+      return;
+    }
+    router.replace(
+      summaryHref({
+        from: currentMonth,
+        to: currentMonth,
+        currentMonth,
+        view: 'current',
+      }),
+      { scroll: false },
+    );
+  }, [isActual, from, to, currentMonth, router]);
 
   useEffect(() => {
     if (!tableExpanded) {
@@ -122,11 +157,17 @@ function Workspace({
   ) {
     const range = normalizeMonthRange(nextFrom, nextTo);
     const viewForHref =
-      range.from === range.to ? nextView : ('forecast' as const);
+      nextView === 'current' && range.from === range.to
+        ? ('current' as const)
+        : ('forecast' as const);
+    const hrefRange =
+      viewForHref === 'current'
+        ? { from: currentMonth, to: currentMonth }
+        : range;
     router.push(
       summaryHref({
-        from: range.from,
-        to: range.to,
+        from: hrefRange.from,
+        to: hrefRange.to,
         currentMonth,
         view: viewForHref,
       }),
@@ -139,95 +180,107 @@ function Workspace({
   return (
     <>
       <PageFrame
-        title={
-          <SummaryModeTitle
-            view={activeView}
-            singleMonth={singleMonth}
-            onSelect={(next) => open(from, to, next)}
-          />
-        }
+        title={title}
         full
-        lede={lede({
-          singleMonth,
-          phase,
-          days: summary.days,
-          monthCount,
-          view: activeView,
-        })}
-        intro={
-          <div className="w-full border border-line bg-sheet p-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <label htmlFor={fromFieldId} className="text-sm text-muted">
-                  С
-                </label>
-                <input
-                  id={fromFieldId}
-                  type="month"
-                  min="2000-01"
-                  max={horizonEnd}
-                  value={from}
-                  onChange={(event) => {
-                    const next = event.target.value;
-                    if (summaryMonthOpen(next, today)) {
-                      open(next, to);
-                    }
-                  }}
-                  className={monthFieldClassName}
-                />
-              </div>
-              <div className="flex min-w-0 items-center gap-2">
-                <label htmlFor={toFieldId} className="text-sm text-muted">
-                  По
-                </label>
-                <input
-                  id={toFieldId}
-                  type="month"
-                  min="2000-01"
-                  max={horizonEnd}
-                  value={to}
-                  onChange={(event) => {
-                    const next = event.target.value;
-                    if (summaryMonthOpen(next, today)) {
-                      open(from, next);
-                    }
-                  }}
-                  className={monthFieldClassName}
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <MonthStep
-                  label="Предыдущий период"
-                  direction="previous"
-                  disabled={!canStepPrevious}
-                  onClick={() => open(previousFrom, previousTo)}
-                />
-                <MonthStep
-                  label="Следующий период"
-                  direction="next"
-                  disabled={!canStepNext}
-                  onClick={() => open(nextFrom, nextTo)}
-                />
-              </div>
-            </div>
-          </div>
-        }
         aside={
-          <SummaryHeadlineTable
-            headline={summary.headline}
-            periodLabel={periodLabel}
-            view={activeView}
-            planEditable={planOperatingEditable}
-            factEditable={catalogEditable}
-            onOperatingExpense={(side, amountExVat) => {
-              const rejection = sales.updateOperatingExpense(
-                from,
-                side,
-                amountExVat,
-              );
-              return rejection ? OPERATING_EXPENSE_ERROR[rejection] : null;
-            }}
-          />
+          activeView === 'current' ? (
+            <button
+              type="button"
+              className={primaryButtonClassName}
+              onClick={() =>
+                open(
+                  lastForecastRange.current.from,
+                  lastForecastRange.current.to,
+                  'forecast',
+                )
+              }
+            >
+              <IconPlan />
+              Прогноз
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={primaryButtonClassName}
+              onClick={() => open(currentMonth, currentMonth, 'current')}
+            >
+              <IconFact />
+              Фактическая
+            </button>
+          )
+        }
+        intro={
+          <div className="flex flex-col gap-4">
+            {activeView === 'forecast' ? (
+              <div className="w-full border border-line bg-sheet p-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <label htmlFor={fromFieldId} className="text-sm text-muted">
+                      С
+                    </label>
+                    <input
+                      id={fromFieldId}
+                      type="month"
+                      min="2000-01"
+                      max={horizonEnd}
+                      value={periodFrom}
+                      onChange={(event) => {
+                        const next = event.target.value;
+                        if (!summaryMonthOpen(next, today)) {
+                          return;
+                        }
+                        open(
+                          next,
+                          next > periodTo ? next : periodTo,
+                          'forecast',
+                        );
+                      }}
+                      className={monthFieldClassName}
+                    />
+                  </div>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <label htmlFor={toFieldId} className="text-sm text-muted">
+                      По
+                    </label>
+                    <input
+                      id={toFieldId}
+                      type="month"
+                      min="2000-01"
+                      max={horizonEnd}
+                      value={periodTo}
+                      onChange={(event) => {
+                        const next = event.target.value;
+                        if (!summaryMonthOpen(next, today)) {
+                          return;
+                        }
+                        open(
+                          next < periodFrom ? next : periodFrom,
+                          next,
+                          'forecast',
+                        );
+                      }}
+                      className={monthFieldClassName}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            <SummaryHeadlineTable
+              headline={summary.headline}
+              periodLabel={periodLabel}
+              view={activeView}
+              planEditable={false}
+              factEditable={catalogEditable}
+              onOperatingExpense={(side, amountExVat) => {
+                const rejection = sales.updateOperatingExpense(
+                  periodFrom,
+                  side,
+                  amountExVat,
+                );
+                return rejection ? OPERATING_EXPENSE_ERROR[rejection] : null;
+              }}
+            />
+          </div>
         }
       >
         <div className="flex flex-col gap-4">
@@ -266,7 +319,7 @@ function Workspace({
                 <>
                   Категорий пока нет.{' '}
                   <Link
-                    href={planningHref({ month: from, currentMonth })}
+                    href={planningHref({ month: periodFrom, currentMonth })}
                     className="text-ink underline underline-offset-4 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                   >
                     Добавьте категорию и товар в «Планировании»
@@ -277,7 +330,7 @@ function Workspace({
                 <>
                   Товаров пока нет.{' '}
                   <Link
-                    href={planningHref({ month: from, currentMonth })}
+                    href={planningHref({ month: periodFrom, currentMonth })}
                     className="text-ink underline underline-offset-4 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                   >
                     Добавьте товар в «Планировании»
@@ -300,114 +353,34 @@ function Workspace({
   );
 }
 
-function lede({
-  singleMonth,
-  phase,
-  days,
-  monthCount,
+function summaryPageTitle({
   view,
+  from,
+  to,
+  currentMonth,
+  today,
 }: {
-  singleMonth: boolean;
-  phase: ReturnType<typeof planPhase> | null;
-  days: number;
-  monthCount: number;
   view: SummaryLens;
+  from: string;
+  to: string;
+  currentMonth: string;
+  today: Date;
 }): string {
-  if (!singleMonth) {
-    return `Сумма ${monthsPhrase(monthCount)}. Режим «текущая» для интервала недоступен. План правят в «Планировании» по месяцам. Операционные расходы здесь только смотрят — сумма по месяцам. Факт считается из дней раздела «Продажи». В периоде ${daysPhrase(days)}.`;
+  if (view === 'current') {
+    const days = elapsedDaysInMonth(currentMonth, today);
+    return `Фактическая сводка за ${daysPhrase(days)} ${formatMonthNameGenitive(currentMonth)}`;
   }
 
-  const length = `В месяце ${daysPhrase(days)}.`;
-  if (view === 'forecast') {
-    if (phase === 'past') {
-      return `Месяц прошёл. План и факт — за весь месяц. План правят в «Планировании». ${length}`;
-    }
-    if (phase === 'future') {
-      return `План на месяц. Прогноз факта нулевой: продаж ещё нет. План правят в «Планировании». ${length}`;
-    }
-
-    return `План на месяц. Факт — прогноз до конца месяца тем же темпом, что уже есть. План правят в «Планировании». Факт считается из дней раздела «Продажи». ${length}`;
+  const endIsPast = to < currentMonth;
+  if (from === to) {
+    return endIsPast
+      ? `Сводка за ${formatMonth(from)}`
+      : `Прогноз на ${formatMonth(from)}`;
   }
 
-  if (phase === 'past') {
-    return `Месяц прошёл. Факт считается из дней раздела «Продажи». План правят в «Планировании». ${length}`;
-  }
-  if (phase === 'future') {
-    return `План урезан до нуля: месяц ещё не начался. Факт нулевой. План правят в «Планировании». ${length}`;
-  }
-
-  return `Факт на сегодня. План урезан на прошедшую долю месяца. Плановые показатели здесь только для просмотра; правят в «Планировании». Факт считается из дней раздела «Продажи». ${length}`;
-}
-
-function SummaryModeTitle({
-  view,
-  singleMonth,
-  onSelect,
-}: {
-  view: SummaryLens;
-  singleMonth: boolean;
-  onSelect: (next: SummaryLens) => void;
-}) {
-  if (!singleMonth) {
-    return (
-      <>
-        Сводка{' '}
-        <span className="underline decoration-ink underline-offset-4">
-          за период
-        </span>
-      </>
-    );
-  }
-
-  return (
-    <>
-      Сводка{' '}
-      <ModeWord
-        label="текущая"
-        active={view === 'current'}
-        onClick={() => onSelect('current')}
-      />
-      {'/'}
-      <ModeWord
-        label="за месяц"
-        active={view === 'forecast'}
-        onClick={() => onSelect('forecast')}
-      />
-    </>
-  );
-}
-
-function ModeWord({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  if (active) {
-    return (
-      <span className="underline decoration-ink underline-offset-4">
-        {label}
-      </span>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      aria-label={
-        label === 'текущая'
-          ? 'Показать текущую сводку'
-          : 'Показать сводку за месяц'
-      }
-      onClick={onClick}
-      className="font-[inherit] text-inherit underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-    >
-      {label}
-    </button>
-  );
+  return endIsPast
+    ? `Сводка за период с ${formatMonth(from)} до ${formatMonth(to)}`
+    : `Прогноз на период с ${formatMonth(from)} до ${formatMonth(to)}`;
 }
 
 function resolveRange(
@@ -419,18 +392,6 @@ function resolveRange(
   const rawFrom = summaryMonthOpen(from, today) ? from : current;
   const rawTo = summaryMonthOpen(to, today) ? to : rawFrom;
   return normalizeMonthRange(rawFrom, rawTo);
-}
-
-function monthsPhrase(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  const word =
-    mod10 === 1 && mod100 !== 11
-      ? 'полный месяц'
-      : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
-        ? 'полных месяца'
-        : 'полных месяцев';
-  return `${count} ${word}`;
 }
 
 function FullscreenToggle({

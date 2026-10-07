@@ -40,11 +40,36 @@ const MONTHS = [
   'Декабрь',
 ] as const;
 
+const MONTHS_GENITIVE = [
+  'января',
+  'февраля',
+  'марта',
+  'апреля',
+  'мая',
+  'июня',
+  'июля',
+  'августа',
+  'сентября',
+  'октября',
+  'ноября',
+  'декабря',
+] as const;
+
+export function formatMonthName(month: string): string {
+  const mon = Number(month.slice(5, 7));
+  return MONTHS[mon - 1] ?? month;
+}
+
+/** Родительный падеж: «за 7 дней октября». */
+export function formatMonthNameGenitive(month: string): string {
+  const mon = Number(month.slice(5, 7));
+  return MONTHS_GENITIVE[mon - 1] ?? month;
+}
+
 export function formatMonth(month: string): string {
   const year = Number(month.slice(0, 4));
-  const mon = Number(month.slice(5, 7));
-  const name = MONTHS[mon - 1];
-  return name ? `${name} ${year}` : month;
+  const name = formatMonthName(month);
+  return name === month ? month : `${name} ${year}`;
 }
 
 // Не вызывается: год месяца на сводке больше не подписывают отдельно.

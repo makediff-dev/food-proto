@@ -67,8 +67,11 @@ export function SummaryHeadlineTable({
     amountExVat: number,
   ) => string | null;
 }) {
+  const planLabel = view === 'current' ? 'План (корр.)' : 'План';
+  const factLabel = view === 'forecast' ? 'Факт (прогноз)' : 'Факт';
+
   return (
-    <div className="w-full overflow-x-auto border border-line bg-sheet sm:w-[26rem]">
+    <div className="w-full overflow-x-auto border border-line bg-sheet">
       <table className="w-full border-separate border-spacing-0 text-[11px] leading-tight text-ink">
         <caption className="sr-only">
           {view === 'current'
@@ -78,27 +81,18 @@ export function SummaryHeadlineTable({
         <thead>
           <tr>
             <th scope="col" className={labelHeadClassName}>
-              Показатель
+              <span className="sr-only">Показатель</span>
             </th>
-            <th scope="col" className={valueHeadClassName}>
-              {view === 'current' ? 'План (корр.)' : 'План'}
-            </th>
-            <th scope="col" className={valueHeadClassName}>
-              {view === 'forecast' ? 'Факт (прогноз)' : 'Факт'}
-            </th>
-            <th scope="col" className={valueHeadClassName}>
-              Откл.
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {ROWS.map((row) => (
-            <tr key={row.id}>
-              <th scope="row" className={labelCellClassName}>
+            {ROWS.map((row) => (
+              <th
+                key={row.id}
+                scope="col"
+                className={`${valueHeadClassName} whitespace-nowrap`}
+              >
                 {row.id === 'tax' ? (
                   <span>
-                    {row.label}
-                    <span className="mt-0.5 block text-[10px] text-muted">
+                    {row.label}{' '}
+                    <span className="text-[10px] text-muted">
                       {headline.taxPercent}&nbsp;%
                     </span>
                   </span>
@@ -106,35 +100,69 @@ export function SummaryHeadlineTable({
                   row.label
                 )}
               </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th
+              scope="row"
+              className={`${labelCellClassName} whitespace-nowrap`}
+            >
+              {planLabel}
+            </th>
+            {ROWS.map((row) => (
               <td
-                className={`${valueCellClassName} ${row.id === 'opex' && planEditable ? editableCellClassName : ''}`}
+                key={row.id}
+                className={`${valueCellClassName} min-w-28 ${row.id === 'opex' && planEditable ? editableCellClassName : ''}`}
               >
                 <HeadlineValue
                   row={row.id}
                   side="plan"
                   headline={headline}
                   periodLabel={periodLabel}
-                  editable={planEditable}
+                  editable={row.id === 'opex' && planEditable}
                   onOperatingExpense={onOperatingExpense}
                 />
               </td>
+            ))}
+          </tr>
+          <tr>
+            <th
+              scope="row"
+              className={`${labelCellClassName} whitespace-nowrap`}
+            >
+              {factLabel}
+            </th>
+            {ROWS.map((row) => (
               <td
-                className={`${valueCellClassName} ${row.id === 'opex' && factEditable ? editableCellClassName : ''}`}
+                key={row.id}
+                className={`${valueCellClassName} min-w-28 ${row.id === 'opex' && factEditable ? editableCellClassName : ''}`}
               >
                 <HeadlineValue
                   row={row.id}
                   side="fact"
                   headline={headline}
                   periodLabel={periodLabel}
-                  editable={factEditable}
+                  editable={row.id === 'opex' && factEditable}
                   onOperatingExpense={onOperatingExpense}
                 />
               </td>
-              <td className={valueCellClassName}>
+            ))}
+          </tr>
+          <tr>
+            <th
+              scope="row"
+              className={`${labelCellClassName} whitespace-nowrap`}
+            >
+              Откл.
+            </th>
+            {ROWS.map((row) => (
+              <td key={row.id} className={`${valueCellClassName} min-w-28`}>
                 <VarianceValue row={row.id} headline={headline} />
               </td>
-            </tr>
-          ))}
+            ))}
+          </tr>
         </tbody>
       </table>
     </div>
@@ -273,6 +301,81 @@ function MoneyAmount({
     <TableNumber value={amount} signed={signed} sense={sense}>
       {formatMoney(amount)}
     </TableNumber>
+  );
+}
+
+/** Плановые показатели месяца: столбец «План» верхнего блока, строки стали колонками. */
+export function PlanHeadlineTable({
+  headline,
+  periodLabel,
+  editable,
+  onOperatingExpense,
+}: {
+  headline: Headline;
+  periodLabel: string;
+  editable: boolean;
+  onOperatingExpense: (amountExVat: number) => string | null;
+}) {
+  return (
+    <div className="w-full overflow-x-auto border border-line bg-sheet">
+      <table className="w-full border-separate border-spacing-0 text-[11px] leading-tight text-ink">
+        <caption className="sr-only">
+          {`Плановые показатели, ${periodLabel}. Операционные расходы без НДС.`}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" className={labelHeadClassName}>
+              <span className="sr-only">Показатель</span>
+            </th>
+            {ROWS.map((row) => (
+              <th
+                key={row.id}
+                scope="col"
+                className={`${valueHeadClassName} whitespace-nowrap`}
+              >
+                {row.id === 'tax' ? (
+                  <span>
+                    {row.label}{' '}
+                    <span className="text-[10px] text-muted">
+                      {headline.taxPercent}&nbsp;%
+                    </span>
+                  </span>
+                ) : (
+                  row.label
+                )}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th
+              scope="row"
+              className={`${labelCellClassName} whitespace-nowrap`}
+            >
+              План
+            </th>
+            {ROWS.map((row) => (
+              <td
+                key={row.id}
+                className={`${valueCellClassName} min-w-28 ${row.id === 'opex' && editable ? editableCellClassName : ''}`}
+              >
+                <HeadlineValue
+                  row={row.id}
+                  side="plan"
+                  headline={headline}
+                  periodLabel={periodLabel}
+                  editable={row.id === 'opex' && editable}
+                  onOperatingExpense={(_side, amountExVat) =>
+                    onOperatingExpense(amountExVat)
+                  }
+                />
+              </td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+    </div>
   );
 }
 

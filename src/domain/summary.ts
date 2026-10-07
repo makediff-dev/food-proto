@@ -145,7 +145,7 @@ export interface SummaryHeadline {
 
 export type OperatingExpenseSide = 'plan' | 'fact';
 
-/** Текущая сводка урезает план; сводка за месяц растягивает факт. */
+/** Фактическая сводка урезает план; прогноз растягивает факт. */
 export type SummaryLens = 'current' | 'forecast';
 
 type VolumeScale =
@@ -530,7 +530,7 @@ function headlineSide(
 /**
  * Верхний блок свода `Svod!D2:L8`.
  * Выручка и Т-проток — суммы по товарам, без вычета Factoring.
- * Операционные расходы — ввод на сводке, без листа Operation Expense.
+ * Операционные расходы — план в «Планировании», факт на сводке; без листа Operation Expense.
  */
 export function summaryHeadline(
   planTotals: SummarySide | null,

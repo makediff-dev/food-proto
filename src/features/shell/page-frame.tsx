@@ -29,13 +29,13 @@ export function PageFrame({
   children?: ReactNode;
 }) {
   const heading = (
-    <h1 className="flex h-11 min-w-0 items-center font-figure text-2xl leading-none tracking-tight text-ink">
+    <h1 className="flex min-h-11 min-w-0 items-center font-figure text-2xl leading-tight tracking-tight text-ink">
       {title}
     </h1>
   );
 
   const titleRow = back ? (
-    <div className="flex h-11 min-w-0 items-center gap-2">
+    <div className="flex min-h-11 min-w-0 items-center gap-2">
       {back}
       {heading}
     </div>
