@@ -66,6 +66,17 @@ export function amountExVat(
   return ratioRound(BigInt(amountWithVat) * HUNDRED, BigInt(100 + vatPercent));
 }
 
+/** Сумма с НДС, копейки, половина вверх. Обратно к `amountExVat`. */
+export function amountWithVat(
+  amountExVatValue: number,
+  vatPercent: number,
+): number | null {
+  return ratioRound(
+    BigInt(amountExVatValue) * BigInt(100 + vatPercent),
+    HUNDRED,
+  );
+}
+
 export function percentHundredths(
   part: number | null,
   whole: number | null,

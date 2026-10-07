@@ -50,14 +50,13 @@ export function IconUndo() {
   );
 }
 
-// Не вызывается: каталог сырья, производных и отдельных экранов плана/факта убран.
-// export function IconArrowLeft() {
-//   return (
-//     <Glyph>
-//       <path d="M12 4 6 10l6 6M6 10h10" />
-//     </Glyph>
-//   );
-// }
+export function IconArrowLeft() {
+  return (
+    <Glyph>
+      <path d="M12 4 6 10l6 6M6 10h10" />
+    </Glyph>
+  );
+}
 
 export function IconChevronLeft() {
   return (

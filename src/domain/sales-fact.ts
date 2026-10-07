@@ -101,7 +101,12 @@ export function monthDates(month: string): string[] {
 }
 
 /** День, который таблица показывает, пока в адресе нет другой даты. */
-export function defaultSalesFactDay(month: string): string {
+export function defaultSalesFactDay(month: string, today: Date): string {
+  const todayKey = `${monthKeyFromDate(today)}-${String(today.getDate()).padStart(2, '0')}`;
+  if (todayKey.startsWith(`${month}-`) && isOccurredOn(todayKey)) {
+    return todayKey;
+  }
+
   return `${month}-01`;
 }
 

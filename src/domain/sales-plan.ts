@@ -9,6 +9,7 @@ import {
   type SalesPlanLine,
 } from '@/domain/document';
 import {
+  amountWithVat,
   averageAmount,
   fitsSafeMoneyProduct,
   multiplyAmount,
@@ -129,11 +130,14 @@ export function planPhase(month: string, today: Date): PlanPhase {
   return month < current ? 'past' : 'future';
 }
 
-export function horizonMonths(today: Date): string[] {
-  const start = monthKeyFromDate(today);
-  return Array.from({ length: PLAN_HORIZON_MONTHS }, (_, index) =>
-    shiftMonth(start, index),
-  );
+/** Прошедший, текущий и будущий в горизонте — как на сводке с 2000-01. */
+export function planMonthOpen(month: string, today: Date): boolean {
+  if (!isMonthKey(month) || month < '2000-01') {
+    return false;
+  }
+
+  const end = shiftMonth(monthKeyFromDate(today), PLAN_HORIZON_MONTHS - 1);
+  return month <= end;
 }
 
 export function activeSalesPlans(document: PrototypeDocument): SalesPlan[] {
@@ -180,7 +184,7 @@ export function salesPlanForMonth(
   );
 }
 
-/** Пишет нулевой план, если рабочего ещё нет и месяц в горизонте. */
+/** Пишет нулевой план, если рабочего ещё нет и месяц открыт для правки. */
 export function ensureSalesPlan(
   document: PrototypeDocument,
   id: string,
@@ -240,6 +244,17 @@ export function priceExVatTenThousandths(
     BigInt(priceWithVat) * TEN_THOUSAND,
     BigInt(100 + vatPercent),
   );
+}
+
+/**
+ * Цена с НДС, копейки, из цены без НДС (копейки).
+ * Обратно к округлённой до копейки цене без НДС на сводке.
+ */
+export function priceWithVatFromExVat(
+  priceExVat: number,
+  vatPercent: number,
+): number | null {
+  return amountWithVat(priceExVat, vatPercent);
 }
 
 /** Выручка с НДС, копейки. `Svod!I31 = F31 * H31`. */
@@ -442,7 +457,7 @@ function monthIsTaken(
 }
 
 function planIsOpen(plan: SalesPlan, today: Date): boolean {
-  return plan.deletedAt === null && planPhase(plan.month, today) !== 'past';
+  return plan.deletedAt === null && planMonthOpen(plan.month, today);
 }
 
 function lineNumbersRejection(
@@ -472,7 +487,7 @@ function createRejection(
   if (!isEntityId(id) || document.salesPlans.some((item) => item.id === id)) {
     return 'missing';
   }
-  if (!isMonthKey(month) || !horizonMonths(today).includes(month)) {
+  if (!planMonthOpen(month, today)) {
     return 'month';
   }
   if (monthIsTaken(document, month)) {

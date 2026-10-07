@@ -1,7 +1,5 @@
 import type { PrototypeDocument } from '@/domain/document';
-import { ratioRound } from '@/domain/money';
-
-const HUNDRED = BigInt(100);
+import { amountExVat, amountWithVat } from '@/domain/money';
 
 export interface UnitCost {
   /** Копейки за 1 шт с НДС, половина вверх. */
@@ -15,7 +13,15 @@ export interface UnitCost {
  * Как цена без НДС: `H / (100 + F) * 100`. `DSM Meat!J8`.
  */
 export function costExVat(withVat: number, vatPercent: number): number | null {
-  return ratioRound(BigInt(withVat) * HUNDRED, BigInt(100 + vatPercent));
+  return amountExVat(withVat, vatPercent);
+}
+
+/**
+ * Себестоимость с НДС, копейки.
+ * Обратно к `costExVat`: ввод без НДС на сводке пересчитывает хранимую сумму.
+ */
+export function costWithVat(exVat: number, vatPercent: number): number | null {
+  return amountWithVat(exVat, vatPercent);
 }
 
 /**

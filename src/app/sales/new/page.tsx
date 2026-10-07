@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
+import { NEW_SALE_TITLE } from '@/features/sales-fact/paths';
 import { SaleScreen } from '@/features/sales-fact/sale-screen';
 
 export const metadata: Metadata = {
-  title: SALES_SECTION_TITLE,
+  title: NEW_SALE_TITLE,
 };
 
 export default async function NewSalePage({

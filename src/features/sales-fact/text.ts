@@ -1,6 +1,7 @@
 import { MAX_SALE_LINE_AMOUNT, MAX_VOLUME_PIECES } from '@/domain/document';
 import type { SaleRejection } from '@/domain/sales';
 import { fromRublesUpTo, parseDecimal } from '@/domain/units';
+import { parseMoney } from '@/features/sales/fields';
 import { formatPieces } from '@/features/sales/text';
 
 export function formatSalesFactDay(iso: string): string {
@@ -76,4 +77,22 @@ export function parseSaleAmount(raw: string): number | null {
   }
 
   return fromRublesUpTo(rubles, MAX_SALE_LINE_AMOUNT);
+}
+
+/** Сумма введена, штук нет: в продажу такую строку нельзя. */
+export function hasAmountWithoutPieces(
+  pieces: string,
+  amount: string,
+): boolean {
+  const parsedAmount = parseSaleAmount(amount);
+  if (parsedAmount === null || parsedAmount <= 0) {
+    return false;
+  }
+
+  return parseSalePieces(pieces) === null;
+}
+
+/** Цена штуки с НДС, копейки. Потолок как у плановой цены. */
+export function parseSalePrice(raw: string): number | null {
+  return parseMoney(raw);
 }

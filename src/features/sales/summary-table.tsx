@@ -2,8 +2,12 @@
 
 import { type ReactNode, useId, useState } from 'react';
 
-import type { UnitCost } from '@/domain/cost';
-import type { SalesPlanRejection } from '@/domain/sales-plan';
+import { costWithVat, type UnitCost } from '@/domain/cost';
+import { amountExVat } from '@/domain/money';
+import {
+  priceWithVatFromExVat,
+  type SalesPlanRejection,
+} from '@/domain/sales-plan';
 import type {
   SummaryGroup,
   SummaryLens,
@@ -135,7 +139,11 @@ const LAST_FACT_KEY = SIDE_COLUMNS.at(-1)?.key;
 function sectionRightClass(
   kind: 'plan' | 'fact' | 'variance',
   key: string,
+  part: 'full' | 'plan',
 ): string {
+  if (part === 'plan') {
+    return 'border-r border-r-line';
+  }
   if (kind === 'plan' && key === LAST_PLAN_KEY) {
     return 'border-r-[1.5px] border-r-muted';
   }
@@ -152,6 +160,7 @@ export function SummaryTable({
   factTotals,
   variance,
   view,
+  part = 'full',
   editable,
   vatEditable,
   catalogEditable,
@@ -170,6 +179,7 @@ export function SummaryTable({
   factTotals: SummarySide;
   variance: SummaryVariance;
   view: SummaryLens;
+  part?: 'full' | 'plan';
   editable: boolean;
   vatEditable: boolean;
   catalogEditable: boolean;
@@ -190,6 +200,20 @@ export function SummaryTable({
   onDeleteCategory: (categoryId: string, name: string) => void;
   onAddProduct: (categoryId: string) => void;
 }) {
+  const showFact = part === 'full';
+  const planHeader =
+    part === 'plan'
+      ? 'Плановые показатели'
+      : view === 'current'
+        ? 'Плановые показатели (корр.)'
+        : 'Плановые показатели';
+  const caption =
+    part === 'plan'
+      ? 'Планирование месяца: плановые показатели'
+      : view === 'current'
+        ? 'Сводка месяца: план (корр.), факт и отклонение'
+        : 'Сводка месяца: план, факт (прогноз) и отклонение';
+
   return (
     <div
       className={
@@ -199,43 +223,41 @@ export function SummaryTable({
       }
     >
       <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
-        <caption className="sr-only">
-          {view === 'current'
-            ? 'Сводка месяца: план (корр.), факт и отклонение'
-            : 'Сводка месяца: план, факт (прогноз) и отклонение'}
-        </caption>
+        <caption className="sr-only">{caption}</caption>
         <thead className="sticky top-0 z-30">
           <tr>
             <th className="sticky left-0 z-40 border-b border-b-line border-r-[1.5px] border-r-muted bg-paper" />
             <th
               colSpan={SIDE_COLUMNS.length}
               scope="colgroup"
-              className="border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
+              className={`border-b border-b-line bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink ${
+                showFact ? 'border-r-[1.5px] border-r-muted' : ''
+              }`}
             >
-              {keepWithNext(
-                view === 'current'
-                  ? 'Плановые показатели (корр.)'
-                  : 'Плановые показатели',
-              )}
+              {keepWithNext(planHeader)}
             </th>
-            <th
-              colSpan={SIDE_COLUMNS.length}
-              scope="colgroup"
-              className="border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
-            >
-              {keepWithNext(
-                view === 'forecast'
-                  ? 'Фактические показатели (прогноз)'
-                  : 'Фактические показатели',
-              )}
-            </th>
-            <th
-              colSpan={VARIANCE_COLUMNS.length}
-              scope="colgroup"
-              className="border-b border-b-line bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
-            >
-              Отклонение
-            </th>
+            {showFact ? (
+              <>
+                <th
+                  colSpan={SIDE_COLUMNS.length}
+                  scope="colgroup"
+                  className="border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
+                >
+                  {keepWithNext(
+                    view === 'forecast'
+                      ? 'Фактические показатели (прогноз)'
+                      : 'Фактические показатели',
+                  )}
+                </th>
+                <th
+                  colSpan={VARIANCE_COLUMNS.length}
+                  scope="colgroup"
+                  className="border-b border-b-line bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
+                >
+                  Отклонение
+                </th>
+              </>
+            ) : null}
           </tr>
           <tr>
             <th
@@ -248,29 +270,33 @@ export function SummaryTable({
               <th
                 key={`plan:${column.key}`}
                 scope="col"
-                className={`w-px whitespace-normal border-b border-b-line ${sectionRightClass('plan', column.key)} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
+                className={`w-px whitespace-normal border-b border-b-line ${sectionRightClass('plan', column.key, part)} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
               >
                 <ColumnLabel label={column.label} />
               </th>
             ))}
-            {SIDE_COLUMNS.map((column) => (
-              <th
-                key={`fact:${column.key}`}
-                scope="col"
-                className={`w-px whitespace-normal border-b border-b-line ${sectionRightClass('fact', column.key)} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
-              >
-                <ColumnLabel label={column.label} />
-              </th>
-            ))}
-            {VARIANCE_COLUMNS.map((column) => (
-              <th
-                key={`var:${column.key}`}
-                scope="col"
-                className="w-px whitespace-normal border-r border-r-line border-b border-b-line bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0"
-              >
-                <ColumnLabel label={column.label} />
-              </th>
-            ))}
+            {showFact
+              ? SIDE_COLUMNS.map((column) => (
+                  <th
+                    key={`fact:${column.key}`}
+                    scope="col"
+                    className={`w-px whitespace-normal border-b border-b-line ${sectionRightClass('fact', column.key, part)} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
+                  >
+                    <ColumnLabel label={column.label} />
+                  </th>
+                ))
+              : null}
+            {showFact
+              ? VARIANCE_COLUMNS.map((column) => (
+                  <th
+                    key={`var:${column.key}`}
+                    scope="col"
+                    className="w-px whitespace-normal border-r border-r-line border-b border-b-line bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0"
+                  >
+                    <ColumnLabel label={column.label} />
+                  </th>
+                ))
+              : null}
           </tr>
         </thead>
         <tbody>
@@ -278,6 +304,7 @@ export function SummaryTable({
             <CategoryBlock
               key={group.categoryId}
               group={group}
+              part={part}
               editable={editable}
               vatEditable={vatEditable}
               catalogEditable={catalogEditable}
@@ -301,7 +328,7 @@ export function SummaryTable({
             {SIDE_COLUMNS.map((column) => (
               <td
                 key={`plan-total:${column.key}`}
-                className={`w-px border-t-[1.5px] border-t-muted border-b border-b-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('plan', column.key)}`}
+                className={`w-px border-t-[1.5px] border-t-muted border-b border-b-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('plan', column.key, part)}`}
               >
                 {planTotals ? (
                   <SideCell
@@ -314,22 +341,30 @@ export function SummaryTable({
                 )}
               </td>
             ))}
-            {SIDE_COLUMNS.map((column) => (
-              <td
-                key={`fact-total:${column.key}`}
-                className={`w-px border-t-[1.5px] border-t-muted border-b border-b-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('fact', column.key)}`}
-              >
-                <SideCell column={column.key} side={factTotals} kind="total" />
-              </td>
-            ))}
-            {VARIANCE_COLUMNS.map((column) => (
-              <td
-                key={`var-total:${column.key}`}
-                className="w-px border-t-[1.5px] border-t-muted border-r border-r-line border-b border-b-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0"
-              >
-                <VarianceCell column={column.key} variance={variance} />
-              </td>
-            ))}
+            {showFact
+              ? SIDE_COLUMNS.map((column) => (
+                  <td
+                    key={`fact-total:${column.key}`}
+                    className={`w-px border-t-[1.5px] border-t-muted border-b border-b-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('fact', column.key, part)}`}
+                  >
+                    <SideCell
+                      column={column.key}
+                      side={factTotals}
+                      kind="total"
+                    />
+                  </td>
+                ))
+              : null}
+            {showFact
+              ? VARIANCE_COLUMNS.map((column) => (
+                  <td
+                    key={`var-total:${column.key}`}
+                    className="w-px border-t-[1.5px] border-t-muted border-r border-r-line border-b border-b-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0"
+                  >
+                    <VarianceCell column={column.key} variance={variance} />
+                  </td>
+                ))
+              : null}
           </tr>
         </tbody>
       </table>
@@ -339,6 +374,7 @@ export function SummaryTable({
 
 function CategoryBlock({
   group,
+  part,
   editable,
   vatEditable,
   catalogEditable,
@@ -352,6 +388,7 @@ function CategoryBlock({
   onAddProduct,
 }: {
   group: SummaryGroup;
+  part: 'full' | 'plan';
   editable: boolean;
   vatEditable: boolean;
   catalogEditable: boolean;
@@ -374,6 +411,7 @@ function CategoryBlock({
   const header = 'bg-paper';
   const [open, setOpen] = useState(false);
   const productCount = group.rows.length;
+  const showFact = part === 'full';
 
   return (
     <>
@@ -397,7 +435,7 @@ function CategoryBlock({
             >
               {open ? <IconChevronDown /> : <IconChevronRight />}
             </button>
-            {group.deleted ? (
+            {group.deleted || !catalogEditable ? (
               <span className="flex h-8 min-w-max flex-1 items-center text-sm font-semibold leading-none text-ink">
                 {group.name} ({productCount})
               </span>
@@ -406,7 +444,6 @@ function CategoryBlock({
                 <GridText
                   label={`Категория, ${group.name}`}
                   value={group.name}
-                  disabled={!catalogEditable}
                   invalidMessage={FIELD_ERROR.empty}
                   onCommit={(next) => onRenameCategory(group.categoryId, next)}
                 />
@@ -415,39 +452,37 @@ function CategoryBlock({
             )}
             {group.deleted ? (
               <span className="text-sm text-muted">удалена</span>
-            ) : (
+            ) : catalogEditable ? (
               <>
                 <button
                   type="button"
-                  disabled={!catalogEditable}
                   aria-label={`Добавить товар в ${group.name}`}
                   title="Добавить товар"
                   onClick={() => {
                     setOpen(true);
                     onAddProduct(group.categoryId);
                   }}
-                  className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
+                  className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 >
                   <IconPlus />
                 </button>
                 <button
                   type="button"
-                  disabled={!catalogEditable}
                   aria-label={`Удалить категорию ${group.name}`}
                   title="Удалить категорию"
                   onClick={() => onDeleteCategory(group.categoryId, group.name)}
-                  className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-60"
+                  className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 >
                   <IconTrash />
                 </button>
               </>
-            )}
+            ) : null}
           </div>
         </th>
         {SIDE_COLUMNS.map((column) => (
           <td
             key={`plan-group:${column.key}`}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header} ${sectionRightClass('plan', column.key)}`}
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header} ${sectionRightClass('plan', column.key, part)}`}
           >
             {group.plan ? (
               <SideCell column={column.key} side={group.plan} kind="total" />
@@ -456,28 +491,33 @@ function CategoryBlock({
             )}
           </td>
         ))}
-        {SIDE_COLUMNS.map((column) => (
-          <td
-            key={`fact-group:${column.key}`}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header} ${sectionRightClass('fact', column.key)}`}
-          >
-            <SideCell column={column.key} side={group.fact} kind="total" />
-          </td>
-        ))}
-        {VARIANCE_COLUMNS.map((column) => (
-          <td
-            key={`var-group:${column.key}`}
-            className={`w-px border-r border-r-line border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header}`}
-          >
-            <VarianceCell column={column.key} variance={group.variance} />
-          </td>
-        ))}
+        {showFact
+          ? SIDE_COLUMNS.map((column) => (
+              <td
+                key={`fact-group:${column.key}`}
+                className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header} ${sectionRightClass('fact', column.key, part)}`}
+              >
+                <SideCell column={column.key} side={group.fact} kind="total" />
+              </td>
+            ))
+          : null}
+        {showFact
+          ? VARIANCE_COLUMNS.map((column) => (
+              <td
+                key={`var-group:${column.key}`}
+                className={`w-px border-r border-r-line border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header}`}
+              >
+                <VarianceCell column={column.key} variance={group.variance} />
+              </td>
+            ))
+          : null}
       </tr>
       {open
         ? group.rows.map((row) => (
             <ProductRow
               key={row.productId}
               row={row}
+              part={part}
               editable={editable}
               vatEditable={vatEditable}
               catalogEditable={catalogEditable}
@@ -495,6 +535,7 @@ function CategoryBlock({
 
 function ProductRow({
   row,
+  part,
   editable,
   vatEditable,
   catalogEditable,
@@ -505,6 +546,7 @@ function ProductRow({
   onDeleteProduct,
 }: {
   row: SummaryRow;
+  part: 'full' | 'plan';
   editable: boolean;
   vatEditable: boolean;
   catalogEditable: boolean;
@@ -521,6 +563,8 @@ function ProductRow({
   onRenameProduct: (productId: string, name: string) => string | null;
   onDeleteProduct: (productId: string, name: string) => void;
 }) {
+  const showFact = part === 'full';
+
   return (
     <tr>
       <th
@@ -569,7 +613,7 @@ function ProductRow({
         return (
           <td
             key={`plan:${column.key}`}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('plan', column.key)} ${
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('plan', column.key, part)} ${
               canEdit && (column.key === 'volume' || column.key === 'vat')
                 ? editableCellClassName
                 : ''
@@ -578,7 +622,13 @@ function ProductRow({
               if (!canEdit) {
                 return;
               }
-              const field = event.currentTarget.querySelector('input');
+              if (event.target instanceof HTMLInputElement) {
+                return;
+              }
+              const field = editableFieldNear(
+                event.target,
+                event.currentTarget,
+              );
               if (
                 field instanceof HTMLInputElement &&
                 document.activeElement !== field
@@ -596,7 +646,10 @@ function ProductRow({
               if (event.target instanceof HTMLInputElement) {
                 return;
               }
-              const field = event.currentTarget.querySelector('input');
+              const field = editableFieldNear(
+                event.target,
+                event.currentTarget,
+              );
               if (field instanceof HTMLInputElement) {
                 field.focus();
               }
@@ -614,22 +667,26 @@ function ProductRow({
           </td>
         );
       })}
-      {SIDE_COLUMNS.map((column) => (
-        <td
-          key={`fact:${column.key}`}
-          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('fact', column.key)}`}
-        >
-          <SideCell column={column.key} side={row.fact} kind="row" />
-        </td>
-      ))}
-      {VARIANCE_COLUMNS.map((column) => (
-        <td
-          key={`var:${column.key}`}
-          className="w-px border-r border-r-line border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0"
-        >
-          <VarianceCell column={column.key} variance={row.variance} />
-        </td>
-      ))}
+      {showFact
+        ? SIDE_COLUMNS.map((column) => (
+            <td
+              key={`fact:${column.key}`}
+              className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('fact', column.key, part)}`}
+            >
+              <SideCell column={column.key} side={row.fact} kind="row" />
+            </td>
+          ))
+        : null}
+      {showFact
+        ? VARIANCE_COLUMNS.map((column) => (
+            <td
+              key={`var:${column.key}`}
+              className="w-px border-r border-r-line border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0"
+            >
+              <VarianceCell column={column.key} variance={row.variance} />
+            </td>
+          ))
+        : null}
     </tr>
   );
 }
@@ -656,11 +713,16 @@ function PlanCell({
   onProductCost: (productId: string, unitCostWithVat: number) => string | null;
 }) {
   if (column === 'vat') {
+    if (!vatEditable) {
+      const side = row.plan ?? row.fact;
+      return <SideCell column={column} side={side} kind="row" />;
+    }
+
     return (
       <GridNumber
         label={`НДС, ${row.name}`}
         value={String(row.plan?.vatPercent ?? row.fact.vatPercent ?? '')}
-        disabled={!vatEditable}
+        disabled={false}
         inputMode="numeric"
         unit="%"
         invalidMessage={FIELD_ERROR.vat}
@@ -671,21 +733,29 @@ function PlanCell({
   }
 
   if (column === 'unitCost') {
+    if (!vatEditable) {
+      const side = row.plan ?? row.fact;
+      return <SideCell column={column} side={side} kind="row" />;
+    }
+
     const cost = row.plan?.unitCost ?? row.fact.unitCost;
     if (!cost) {
       return <UnitCostValue cost={null} />;
     }
 
+    const vatPercent = row.plan?.vatPercent ?? row.fact.vatPercent;
+
     return (
       <StackedPair
-        topHighlighted={vatEditable}
+        topHighlighted
+        bottomHighlighted
         topLabel="с НДС"
         bottomLabel="без НДС"
         top={
           <GridNumber
             label={`Себестоимость с НДС, ${row.name}`}
             value={priceDraft(cost.withVat)}
-            disabled={!vatEditable}
+            disabled={false}
             inputMode="decimal"
             unit="₽"
             invalidMessage={FIELD_ERROR.cost}
@@ -693,7 +763,27 @@ function PlanCell({
             onCommit={(next) => onProductCost(row.productId, next)}
           />
         }
-        bottom={<MoneyAmount amount={cost.exVat} />}
+        bottom={
+          <GridNumber
+            label={`Себестоимость без НДС, ${row.name}`}
+            value={priceDraft(cost.exVat)}
+            disabled={false}
+            inputMode="decimal"
+            unit="₽"
+            invalidMessage={FIELD_ERROR.cost}
+            parse={parsePlanPrice}
+            onCommit={(next) => {
+              if (vatPercent === null) {
+                return FIELD_ERROR.vat;
+              }
+              const withVat = costWithVat(next, vatPercent);
+              if (withVat === null) {
+                return FIELD_ERROR.cost;
+              }
+              return onProductCost(row.productId, withVat);
+            }}
+          />
+        }
       />
     );
   }
@@ -707,9 +797,16 @@ function PlanCell({
       return <SideCell column={column} side={row.plan} kind="row" />;
     }
 
+    const vatPercent = row.plan.vatPercent;
+    const priceExVatKopecks =
+      vatPercent === null
+        ? null
+        : amountExVat(row.planPriceWithVat ?? 0, vatPercent);
+
     return (
       <StackedPair
         topHighlighted={editable}
+        bottomHighlighted={editable}
         topLabel="с НДС"
         bottomLabel="без НДС"
         top={
@@ -732,12 +829,33 @@ function PlanCell({
           />
         }
         bottom={
-          row.plan.priceExVatTenThousandths === null ? (
+          priceExVatKopecks === null ? (
             <Empty />
           ) : (
-            <TableNumber value={row.plan.priceExVatTenThousandths}>
-              {formatPriceExVat(row.plan.priceExVatTenThousandths)}
-            </TableNumber>
+            <GridNumber
+              label={`Плановая цена без НДС, ${row.name}`}
+              value={priceDraft(priceExVatKopecks)}
+              disabled={!editable}
+              inputMode="decimal"
+              unit="₽"
+              invalidMessage={SALES_PLAN_ERROR.price}
+              parse={parsePlanPrice}
+              onCommit={(next) => {
+                if (vatPercent === null) {
+                  return FIELD_ERROR.vat;
+                }
+                const withVat = priceWithVatFromExVat(next, vatPercent);
+                if (withVat === null) {
+                  return SALES_PLAN_ERROR.price;
+                }
+                const rejection = onPlanLine(
+                  row.planLineId ?? '',
+                  withVat,
+                  row.planVolumePieces ?? 0,
+                );
+                return rejection ? SALES_PLAN_ERROR[rejection] : null;
+              }}
+            />
           )
         }
       />
@@ -904,6 +1022,7 @@ function VarianceCell({
   if (column === 'revenue') {
     return (
       <VatMoneyOrEmpty
+        signed
         withVat={variance.revenueWithVat}
         exVat={variance.revenueExVat}
       />
@@ -913,7 +1032,7 @@ function VarianceCell({
   return variance.contribution === null ? (
     <Empty />
   ) : (
-    <MoneyAmount amount={variance.contribution} />
+    <MoneyAmount amount={variance.contribution} signed />
   );
 }
 
@@ -930,16 +1049,28 @@ function UnitCostValue({ cost }: { cost: UnitCost | null }) {
   );
 }
 
-function MoneyAmount({ amount }: { amount: number }) {
-  return <TableNumber value={amount}>{formatMoney(amount)}</TableNumber>;
+function MoneyAmount({
+  amount,
+  signed = false,
+}: {
+  amount: number;
+  signed?: boolean;
+}) {
+  return (
+    <TableNumber value={amount} signed={signed}>
+      {formatMoney(amount)}
+    </TableNumber>
+  );
 }
 
 function VatMoneyOrEmpty({
   withVat,
   exVat,
+  signed = false,
 }: {
   withVat: number | null;
   exVat: number | null;
+  signed?: boolean;
 }) {
   if (withVat === null && exVat === null) {
     return <Empty />;
@@ -947,8 +1078,20 @@ function VatMoneyOrEmpty({
 
   return (
     <VatPair
-      withVat={withVat === null ? <Empty /> : <MoneyAmount amount={withVat} />}
-      exVat={exVat === null ? <Empty /> : <MoneyAmount amount={exVat} />}
+      withVat={
+        withVat === null ? (
+          <Empty />
+        ) : (
+          <MoneyAmount amount={withVat} signed={signed} />
+        )
+      }
+      exVat={
+        exVat === null ? (
+          <Empty />
+        ) : (
+          <MoneyAmount amount={exVat} signed={signed} />
+        )
+      }
     />
   );
 }
@@ -973,22 +1116,41 @@ function VatPair({
   );
 }
 
+function editableFieldNear(
+  target: EventTarget | null,
+  cell: HTMLElement,
+): HTMLInputElement | null {
+  if (target instanceof Element) {
+    const section = target.closest('[data-editable-field]');
+    const inSection = section?.querySelector('input');
+    if (inSection instanceof HTMLInputElement) {
+      return inSection;
+    }
+  }
+
+  const fallback = cell.querySelector('input');
+  return fallback instanceof HTMLInputElement ? fallback : null;
+}
+
 function StackedPair({
   topLabel,
   bottomLabel,
   top,
   bottom,
   topHighlighted = false,
+  bottomHighlighted = false,
 }: {
   topLabel: string;
   bottomLabel: string;
   top: ReactNode;
   bottom: ReactNode;
   topHighlighted?: boolean;
+  bottomHighlighted?: boolean;
 }) {
   return (
     <div className="-mx-1.5 -my-2 flex min-w-18 flex-col">
       <div
+        data-editable-field=""
         className={`flex flex-col items-end border-b border-line px-1.5 py-1 ${
           topHighlighted ? editableCellClassName : ''
         }`}
@@ -998,7 +1160,12 @@ function StackedPair({
         </span>
         {top}
       </div>
-      <div className="flex flex-col items-end px-1.5 py-1">
+      <div
+        data-editable-field=""
+        className={`flex flex-col items-end px-1.5 py-1 ${
+          bottomHighlighted ? editableCellClassName : ''
+        }`}
+      >
         <span className="text-[0.5rem] leading-none text-muted">
           {bottomLabel}
         </span>
@@ -1092,7 +1259,7 @@ function GridNumber({
   }
 
   return (
-    <div className="min-w-0">
+    <div data-editable-field="" className="min-w-0">
       <label htmlFor={inputId} className="sr-only">
         {label}
       </label>

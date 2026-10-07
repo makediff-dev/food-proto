@@ -9,12 +9,12 @@ export const SALES_PLAN_ERROR: Record<SalesPlanRejection, string> = {
   month: 'Этот месяц выбрать нельзя.',
   taken: 'На этот месяц уже есть рабочий план.',
   products: 'В плане должны быть все рабочие товары.',
-  price: 'Укажите цену с НДС.',
+  price: 'Укажите цену.',
   volume: 'Укажите объём целым числом штук.',
   overflow: 'Такие цена и объём не помещаются в расчёт.',
   'duplicate-line': 'Этот товар уже есть в плане.',
   locked: 'Удалённый товар в плане не меняется.',
-  closed: 'Месяц прошёл, план только для просмотра.',
+  closed: 'Этот план сейчас нельзя править.',
 };
 
 export const OPERATING_EXPENSE_ERROR: Record<

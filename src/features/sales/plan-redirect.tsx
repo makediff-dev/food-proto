@@ -20,9 +20,11 @@ export function PlanRedirect({ id }: { id: string }) {
     }
 
     const plan = sales.document.salesPlans.find((item) => item.id === id);
+    const month = plan?.month ?? currentMonth;
     router.replace(
       summaryHref({
-        month: plan?.month ?? currentMonth,
+        from: month,
+        to: month,
         currentMonth,
       }),
     );

@@ -1,5 +1,9 @@
 export const SALES_SECTION_TITLE = 'Продажи';
 
+export const SALES_JOURNAL_TITLE = 'Журнал продаж';
+
+export const NEW_SALE_TITLE = 'Новая продажа';
+
 export type SalesFactView = 'day' | 'all';
 
 export function parseSalesFactQuery(params: {

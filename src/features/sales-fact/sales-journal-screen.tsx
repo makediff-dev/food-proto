@@ -2,21 +2,20 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useId, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import type { PrototypeDocument, Sale } from '@/domain/document';
 import { saleTotals, workingSalesInMonth } from '@/domain/sales';
 import { salesFactMonthOpen } from '@/domain/sales-fact';
 import { monthKeyFromDate, shiftMonth } from '@/domain/sales-plan';
 import {
-  fieldClassName,
+  monthFieldClassName,
   primaryButtonClassName,
 } from '@/features/sales/fields';
 import { formatMoney } from '@/features/sales/money';
 import { formatPieces } from '@/features/sales/text';
 import {
-  deletedSalesHref,
-  SALES_SECTION_TITLE,
+  SALES_JOURNAL_TITLE,
   saleHref,
   saleNewHref,
   salesFactHref,
@@ -24,16 +23,10 @@ import {
 } from '@/features/sales-fact/paths';
 import { formatSaleDate } from '@/features/sales-fact/text';
 import { useSalesFact } from '@/features/sales-fact/use-sales-fact';
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconPlus,
-  IconUndo,
-} from '@/features/shell/icons';
+import { IconArrowLeft, IconPlus } from '@/features/shell/icons';
+import { MonthStep } from '@/features/shell/month-step';
 import { PageFrame } from '@/features/shell/page-frame';
 import { TableNumber } from '@/features/shell/table-number';
-
-const LEDE = 'Отдельные продажи месяца по датам: заказчик, товары и сумма.';
 
 export function SalesJournalScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);
@@ -60,12 +53,8 @@ function Workspace({
 }) {
   const sales = useSalesFact();
   const router = useRouter();
-  const monthFieldId = useId();
   const items = workingSalesInMonth(sales.document, month);
   const days = groupSalesByDay(items);
-  const deletedCount = sales.document.sales.filter(
-    (item) => item.deletedAt !== null,
-  ).length;
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
   const nextDisabled = nextMonth > currentMonth;
@@ -77,31 +66,28 @@ function Workspace({
   }
 
   return (
-    <PageFrame title={SALES_SECTION_TITLE} full lede={LEDE}>
+    <PageFrame
+      title={SALES_JOURNAL_TITLE}
+      full
+      back={
+        <Link
+          href={salesFactHref({ month, currentMonth })}
+          aria-label="Назад"
+          className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        >
+          <IconArrowLeft />
+        </Link>
+      }
+      aside={
+        <Link href={saleNewHref()} className={primaryButtonClassName}>
+          <IconPlus />
+          Добавить продажу
+        </Link>
+      }
+    >
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href={saleNewHref()} className={primaryButtonClassName}>
-            <IconPlus />
-            Добавить продажу
-          </Link>
-          <Link href={deletedSalesHref()} className={quietLinkClassName}>
-            <IconUndo />
-            Удалённые продажи
-            {deletedCount === 0 ? '' : ` ${deletedCount}`}
-          </Link>
-          <Link
-            href={salesFactHref({ month, currentMonth })}
-            className={quietLinkClassName}
-          >
-            <IconUndo />К продажам
-          </Link>
-        </div>
-
         <div className="border border-line bg-sheet p-4">
-          <label htmlFor={monthFieldId} className="text-sm text-muted">
-            Месяц
-          </label>
-          <div className="mt-2 flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <MonthStep
               label="Предыдущий месяц"
               direction="previous"
@@ -109,8 +95,8 @@ function Workspace({
               onClick={() => open(previousMonth)}
             />
             <input
-              id={monthFieldId}
               type="month"
+              aria-label="Месяц"
               min="2000-01"
               max={currentMonth}
               value={month}
@@ -120,7 +106,7 @@ function Workspace({
                   open(next);
                 }
               }}
-              className={`w-44 ${fieldClassName}`}
+              className={monthFieldClassName}
             />
             <MonthStep
               label="Следующий месяц"
@@ -230,30 +216,3 @@ function saleComposition(document: PrototypeDocument, sale: Sale): string {
     })
     .join('; ');
 }
-
-function MonthStep({
-  label,
-  direction,
-  disabled,
-  onClick,
-}: {
-  label: string;
-  direction: 'previous' | 'next';
-  disabled: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="inline-flex size-11 items-center justify-center border border-line bg-sheet text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {direction === 'previous' ? <IconChevronLeft /> : <IconChevronRight />}
-    </button>
-  );
-}
-
-const quietLinkClassName =
-  'inline-flex h-11 items-center justify-center gap-2 border border-line bg-sheet px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink';

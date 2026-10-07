@@ -23,6 +23,7 @@ import {
   daysInMonth,
   monthKeyFromDate,
   PLAN_HORIZON_MONTHS,
+  planMonthOpen,
   planPhase,
   revenueExVat,
   revenueWithVat,
@@ -88,6 +89,11 @@ export interface SummaryGroup {
 }
 
 export interface SummaryView {
+  /** Первый месяц периода. Для одного месяца совпадает с `to`. */
+  from: string;
+  /** Последний месяц периода. */
+  to: string;
+  /** То же, что `from` — для одномесячных экранов и линзы. */
   month: string;
   days: number;
   plan: SalesPlan | null;
@@ -184,11 +190,34 @@ export function lastHorizonMonth(today: Date): string {
   return shiftMonth(monthKeyFromDate(today), PLAN_HORIZON_MONTHS - 1);
 }
 
-/** Сводка: с 2000-01 до горизонта плана. Будущий месяц открыт. */
+/** Сводка: с 2000-01 до горизонта плана. Прошедший и будущий открыты. */
 export function summaryMonthOpen(month: string, today: Date): boolean {
-  return (
-    isMonthKey(month) && month >= '2000-01' && month <= lastHorizonMonth(today)
-  );
+  return planMonthOpen(month, today);
+}
+
+/** Меняет местами концы, если `from` позже `to`. */
+export function normalizeMonthRange(
+  from: string,
+  to: string,
+): { from: string; to: string } {
+  return from <= to ? { from, to } : { from: to, to: from };
+}
+
+/** Ключи месяцев от `from` до `to` включительно. Концы нормализуются. */
+export function monthsInRange(from: string, to: string): string[] {
+  const range = normalizeMonthRange(from, to);
+  const months: string[] = [];
+  let cursor = range.from;
+  while (cursor <= range.to) {
+    months.push(cursor);
+    cursor = shiftMonth(cursor, 1);
+  }
+  return months;
+}
+
+/** Один месяц в периоде — линза и правка оперрасходов доступны. */
+export function isSingleMonthSummary(view: SummaryView): boolean {
+  return view.from === view.to;
 }
 
 /** Рабочие товары. Удалённые в сетку и в суммы сводки не входят. */
@@ -665,6 +694,8 @@ export function monthSummary(
   const opex = monthOperatingExpenseAmounts(document, month);
 
   return {
+    from: month,
+    to: month,
     month,
     days,
     plan,
@@ -680,6 +711,150 @@ export function monthSummary(
       opex.planExVat,
       opex.factExVat,
     ),
+  };
+}
+
+/**
+ * Сводка за интервал месяцев: сумма полных месяцев без линзы.
+ * Один месяц — то же, что `monthSummary`.
+ */
+export function rangeSummary(
+  document: PrototypeDocument,
+  from: string,
+  to: string,
+): SummaryView {
+  const range = normalizeMonthRange(from, to);
+  if (range.from === range.to) {
+    return monthSummary(document, range.from);
+  }
+
+  const months = monthsInRange(range.from, range.to);
+  const views = months.map((month) => monthSummary(document, month));
+  const days = views.reduce((sum, view) => sum + view.days, 0);
+  const first = views[0];
+  if (!first) {
+    return monthSummary(document, range.from);
+  }
+
+  const groups: SummaryGroup[] = first.groups.map((group) => {
+    const monthGroups = views.flatMap((view) => {
+      const match = view.groups.find(
+        (item) => item.categoryId === group.categoryId,
+      );
+      return match ? [match] : [];
+    });
+    const rows = group.rows.map((row) => {
+      const monthRows = monthGroups.flatMap((monthGroup) => {
+        const monthRow = monthGroup.rows.find(
+          (item) => item.productId === row.productId,
+        );
+        return monthRow ? [monthRow] : [];
+      });
+      return mergeSummaryRows(monthRows, days);
+    });
+    const fact = factTotalsFromRows(rows, days);
+    const planMetrics = planTotalsFromRows(rows, days);
+
+    return {
+      categoryId: group.categoryId,
+      name: group.name,
+      deleted: group.deleted,
+      rows,
+      plan: planMetrics,
+      fact,
+      variance: varianceOf(fact, planMetrics),
+    };
+  });
+  const rows = groups.flatMap((group) => group.rows);
+  const planTotalsSide = planTotalsFromRows(rows, days);
+  const factTotals = factTotalsFromRows(rows, days);
+  let planOpex = 0;
+  let factOpex = 0;
+  for (const view of views) {
+    planOpex += view.headline.plan.operatingExpenseExVat;
+    factOpex += view.headline.fact.operatingExpenseExVat;
+  }
+
+  return {
+    from: range.from,
+    to: range.to,
+    month: range.from,
+    days,
+    plan: null,
+    groups,
+    rows,
+    planTotals: null,
+    planTotalsSide,
+    factTotals,
+    variance: varianceOf(factTotals, planTotalsSide),
+    headline: summaryHeadline(planTotalsSide, factTotals, planOpex, factOpex),
+  };
+}
+
+function mergeSummaryRows(
+  rows: readonly SummaryRow[],
+  days: number,
+): SummaryRow {
+  const sample = rows[0];
+  if (!sample) {
+    throw new Error('mergeSummaryRows: пустой список строк');
+  }
+  if (rows.length === 1) {
+    return sample;
+  }
+
+  const planSides = rows.flatMap((row) => (row.plan ? [row.plan] : []));
+  const factSides = rows.map((row) => row.fact);
+  const plan =
+    planSides.length === 0 ? null : mergeProductSides(planSides, days);
+  const fact = mergeProductSides(factSides, days);
+
+  return {
+    productId: sample.productId,
+    name: sample.name,
+    deleted: sample.deleted,
+    planLineId: null,
+    planPriceWithVat: plan?.priceWithVat ?? null,
+    planVolumePieces: plan?.volumePieces ?? null,
+    plan,
+    fact,
+    variance: varianceOf(fact, plan),
+  };
+}
+
+/** Сумма сторон товара: аддитивные поля складываются, цена — из сумм. */
+function mergeProductSides(
+  sides: readonly SummarySide[],
+  days: number,
+): SummarySide {
+  const merged = totalsFromSides(sides, days);
+  const sample = sides[0];
+  if (!sample) {
+    return merged;
+  }
+
+  const unitCostValue = sides.every(
+    (side) =>
+      side.unitCost !== null &&
+      sample.unitCost !== null &&
+      side.unitCost.withVat === sample.unitCost.withVat &&
+      side.unitCost.exVat === sample.unitCost.exVat,
+  )
+    ? sample.unitCost
+    : null;
+
+  return {
+    ...merged,
+    unitCost: unitCostValue,
+    averageCostWithVat:
+      unitCostValue !== null
+        ? unitCostValue.withVat
+        : merged.averageCostWithVat,
+    averageCostExVat:
+      unitCostValue !== null ? unitCostValue.exVat : merged.averageCostExVat,
+    vatPercent: sample.vatPercent,
+    vatPercentHundredths: null,
+    priceExVatTenThousandths: null,
   };
 }
 

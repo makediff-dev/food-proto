@@ -130,7 +130,7 @@ export function SalesFactTable({
       className={
         expanded
           ? 'h-dvh contain-paint overflow-auto bg-sheet'
-          : 'max-h-[calc(100dvh-14rem)] contain-paint overflow-auto border border-line bg-sheet'
+          : 'h-full min-h-0 contain-paint overflow-auto border border-line bg-sheet'
       }
     >
       {/* contain-paint не даёт широкой таблице растянуть прокрутку страницы */}

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { isOccurredOn } from '@/domain/document';
 import {
@@ -14,7 +14,7 @@ import {
 } from '@/domain/sales-fact';
 import { monthKeyFromDate, shiftMonth } from '@/domain/sales-plan';
 import {
-  fieldClassName,
+  monthFieldClassName,
   primaryButtonClassName,
 } from '@/features/sales/fields';
 import {
@@ -28,8 +28,6 @@ import { SalesFactTable } from '@/features/sales-fact/sales-fact-table';
 import { formatSalesFactDay } from '@/features/sales-fact/text';
 import { useSalesFact } from '@/features/sales-fact/use-sales-fact';
 import {
-  IconChevronLeft,
-  IconChevronRight,
   IconEye,
   IconFullscreen,
   IconFullscreenExit,
@@ -37,11 +35,10 @@ import {
   IconPlan,
   IconPlus,
 } from '@/features/shell/icons';
+import { MonthStep } from '@/features/shell/month-step';
 import { PageFrame } from '@/features/shell/page-frame';
 
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as const;
-
-const LEDE = 'Дневной факт продаж: цена, объём и выручка из журнала продаж.';
 
 export function SalesFactScreen({
   month,
@@ -82,14 +79,13 @@ function Workspace({
 }) {
   const sales = useSalesFact();
   const router = useRouter();
-  const monthFieldId = useId();
   const [fullscreen, setFullscreen] = useState(false);
   const products = salesFactGridProducts(sales.document);
   const days = useMemo(
     () => salesFactMonth(sales.document, month),
     [sales.document, month],
   );
-  const fallbackDay = defaultSalesFactDay(month);
+  const fallbackDay = defaultSalesFactDay(month, today);
   const selectedDay = resolveDay(month, dayQuery, fallbackDay);
   const visible =
     view === 'all'
@@ -123,17 +119,18 @@ function Workspace({
 
   function open(next: { month?: string; day?: string; view?: SalesFactView }) {
     const targetMonth = next.month ?? month;
+    const targetDefaultDay = defaultSalesFactDay(targetMonth, today);
     const targetDay = resolveDay(
       targetMonth,
       next.day ?? selectedDay,
-      defaultSalesFactDay(targetMonth),
+      targetDefaultDay,
     );
     router.push(
       salesFactHref({
         month: targetMonth,
         currentMonth,
         day: targetDay,
-        defaultDay: defaultSalesFactDay(targetMonth),
+        defaultDay: targetDefaultDay,
         view: next.view ?? view,
       }),
       { scroll: false },
@@ -142,44 +139,56 @@ function Workspace({
 
   return (
     <>
-      <PageFrame title={SALES_SECTION_TITLE} full lede={LEDE}>
-        <div className="flex flex-col gap-4">
-          <div className="border border-line bg-sheet">
+      <PageFrame
+        title={SALES_SECTION_TITLE}
+        full
+        fill
+        aside={
+          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+            <Link
+              href={salesJournalHref({ month, currentMonth })}
+              className={quietLinkClassName}
+            >
+              <IconList />
+              Журнал продаж
+            </Link>
+            <Link href={saleNewHref()} className={primaryButtonClassName}>
+              <IconPlus />
+              Добавить продажу
+            </Link>
+          </div>
+        }
+      >
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
+          <div className="shrink-0 border border-line bg-sheet">
             <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-end lg:justify-between">
-              <div className="flex shrink-0 items-end gap-2">
-                <div>
-                  <label htmlFor={monthFieldId} className="text-sm text-muted">
-                    Месяц
-                  </label>
-                  <div className="mt-2 flex items-center gap-2">
-                    <MonthStep
-                      label="Предыдущий месяц"
-                      direction="previous"
-                      disabled={!salesFactMonthOpen(previousMonth, today)}
-                      onClick={() => open({ month: previousMonth })}
-                    />
-                    <input
-                      id={monthFieldId}
-                      type="month"
-                      min="2000-01"
-                      max={currentMonth}
-                      value={month}
-                      onChange={(event) => {
-                        const next = event.target.value;
-                        if (salesFactMonthOpen(next, today)) {
-                          open({ month: next });
-                        }
-                      }}
-                      className={`w-44 ${fieldClassName}`}
-                    />
-                    <MonthStep
-                      label="Следующий месяц"
-                      direction="next"
-                      disabled={nextDisabled}
-                      onClick={() => open({ month: nextMonth })}
-                    />
-                  </div>
-                </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <MonthStep
+                  label="Предыдущий месяц"
+                  direction="previous"
+                  disabled={!salesFactMonthOpen(previousMonth, today)}
+                  onClick={() => open({ month: previousMonth })}
+                />
+                <input
+                  type="month"
+                  aria-label="Месяц"
+                  min="2000-01"
+                  max={currentMonth}
+                  value={month}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    if (salesFactMonthOpen(next, today)) {
+                      open({ month: next });
+                    }
+                  }}
+                  className={monthFieldClassName}
+                />
+                <MonthStep
+                  label="Следующий месяц"
+                  direction="next"
+                  disabled={nextDisabled}
+                  onClick={() => open({ month: nextMonth })}
+                />
               </div>
               <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
                 <DayDateControl
@@ -207,27 +216,10 @@ function Workspace({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Link
-              href={saleNewHref(selectedDay)}
-              className={primaryButtonClassName}
-            >
-              <IconPlus />
-              Добавить продажу
-            </Link>
-            <Link
-              href={salesJournalHref({ month, currentMonth })}
-              className={quietLinkClassName}
-            >
-              <IconList />
-              Журнал продаж
-            </Link>
-          </div>
-
           {hasTable ? (
             <section
               className={
-                tableExpanded ? 'fixed inset-0 z-50 bg-paper' : undefined
+                tableExpanded ? 'fixed inset-0 z-50 bg-paper' : 'min-h-0 flex-1'
               }
               aria-label={
                 tableExpanded ? 'Таблица на весь экран' : 'Таблица факта'
@@ -241,7 +233,7 @@ function Workspace({
               />
             </section>
           ) : (
-            <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
+            <p className="shrink-0 border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
               Сначала добавьте товар на{' '}
               <Link
                 href="/"
@@ -314,30 +306,6 @@ function resolveDay(month: string, day: string, fallback: string): string {
   }
 
   return fallback;
-}
-
-function MonthStep({
-  label,
-  direction,
-  disabled,
-  onClick,
-}: {
-  label: string;
-  direction: 'previous' | 'next';
-  disabled: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="inline-flex size-11 items-center justify-center border border-line bg-sheet text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {direction === 'previous' ? <IconChevronLeft /> : <IconChevronRight />}
-    </button>
-  );
 }
 
 function DayDateControl({

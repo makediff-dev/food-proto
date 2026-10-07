@@ -10,7 +10,12 @@ import {
   type Sale,
   type SaleLine,
 } from '@/domain/document';
-import { amountExVat, toSafeNumber } from '@/domain/money';
+import {
+  amountExVat,
+  averageAmount,
+  multiplyAmount,
+  toSafeNumber,
+} from '@/domain/money';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 
 const ZERO = BigInt(0);
@@ -82,6 +87,30 @@ export function workingSalesInMonth(
       }
       return left.customerName.localeCompare(right.customerName, 'ru');
     });
+}
+
+/**
+ * Сумма строки с НДС из цены штуки и объёма.
+ * В документ пишется сумма; цена штуки в документ не пишется.
+ */
+export function saleLineAmountWithVat(
+  priceWithVat: number,
+  pieces: number,
+): number | null {
+  const amount = multiplyAmount(priceWithVat, pieces);
+  if (amount === null || amount > MAX_SALE_LINE_AMOUNT) {
+    return null;
+  }
+
+  return amount;
+}
+
+/** Цена штуки с НДС из суммы строки и объёма. В документ не пишется. */
+export function saleLinePriceWithVat(
+  amountWithVat: number,
+  pieces: number,
+): number | null {
+  return averageAmount(amountWithVat, pieces);
 }
 
 export function saleTotals(

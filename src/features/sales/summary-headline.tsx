@@ -14,7 +14,7 @@ import {
   parseOperatingExpense,
   priceDraft,
 } from '@/features/sales/text';
-import { TableNumber } from '@/features/shell/table-number';
+import { TableNumber, type VarianceSense } from '@/features/shell/table-number';
 
 const editableCellClassName = 'bg-[#e4e4e0]';
 
@@ -51,14 +51,14 @@ const ROWS: { id: HeadlineRowId; label: string }[] = [
 
 export function SummaryHeadlineTable({
   headline,
-  month,
+  periodLabel,
   view,
   planEditable,
   factEditable,
   onOperatingExpense,
 }: {
   headline: Headline;
-  month: string;
+  periodLabel: string;
   view: SummaryLens;
   planEditable: boolean;
   factEditable: boolean;
@@ -113,7 +113,7 @@ export function SummaryHeadlineTable({
                   row={row.id}
                   side="plan"
                   headline={headline}
-                  month={month}
+                  periodLabel={periodLabel}
                   editable={planEditable}
                   onOperatingExpense={onOperatingExpense}
                 />
@@ -125,7 +125,7 @@ export function SummaryHeadlineTable({
                   row={row.id}
                   side="fact"
                   headline={headline}
-                  month={month}
+                  periodLabel={periodLabel}
                   editable={factEditable}
                   onOperatingExpense={onOperatingExpense}
                 />
@@ -145,14 +145,14 @@ function HeadlineValue({
   row,
   side,
   headline,
-  month,
+  periodLabel,
   editable,
   onOperatingExpense,
 }: {
   row: HeadlineRowId;
   side: OperatingExpenseSide;
   headline: Headline;
-  month: string;
+  periodLabel: string;
   editable: boolean;
   onOperatingExpense: (
     side: OperatingExpenseSide,
@@ -166,8 +166,8 @@ function HeadlineValue({
       <ExpenseInput
         label={
           side === 'plan'
-            ? `Операционные расходы, план, ${month}`
-            : `Операционные расходы, факт, ${month}`
+            ? `Операционные расходы, план, ${periodLabel}`
+            : `Операционные расходы, факт, ${periodLabel}`
         }
         value={values.operatingExpenseExVat}
         disabled={!editable}
@@ -211,43 +211,69 @@ function VarianceValue({
   const variance = headline.variance;
 
   if (row === 'opex') {
-    return <MoneyAmount amount={variance.operatingExpenseExVat} />;
+    return (
+      <MoneyAmount
+        amount={variance.operatingExpenseExVat}
+        signed
+        sense="cost"
+      />
+    );
   }
   if (row === 'revenue') {
-    return <MoneyOrEmpty amount={variance.revenueWithVat} />;
+    return <MoneyOrEmpty amount={variance.revenueWithVat} signed />;
   }
   if (row === 'contribution') {
-    return <MoneyOrEmpty amount={variance.contribution} />;
+    return <MoneyOrEmpty amount={variance.contribution} signed />;
   }
   if (row === 'profit') {
-    return <MoneyOrEmpty amount={variance.profit} />;
+    return <MoneyOrEmpty amount={variance.profit} signed />;
   }
   if (row === 'tax') {
-    return <MoneyOrEmpty amount={variance.profitTax} />;
+    return <MoneyOrEmpty amount={variance.profitTax} signed sense="cost" />;
   }
   if (row === 'net') {
-    return <MoneyOrEmpty amount={variance.netProfit} />;
+    return <MoneyOrEmpty amount={variance.netProfit} signed />;
   }
 
   return variance.netProfitabilityHundredths === null ? (
     <Empty />
   ) : (
-    <TableNumber value={variance.netProfitabilityHundredths}>
+    <TableNumber value={variance.netProfitabilityHundredths} signed>
       {formatPercentHundredths(variance.netProfitabilityHundredths)}
     </TableNumber>
   );
 }
 
-function MoneyOrEmpty({ amount }: { amount: number | null }) {
+function MoneyOrEmpty({
+  amount,
+  signed = false,
+  sense = 'income',
+}: {
+  amount: number | null;
+  signed?: boolean;
+  sense?: VarianceSense;
+}) {
   if (amount === null) {
     return <Empty />;
   }
 
-  return <MoneyAmount amount={amount} />;
+  return <MoneyAmount amount={amount} signed={signed} sense={sense} />;
 }
 
-function MoneyAmount({ amount }: { amount: number }) {
-  return <TableNumber value={amount}>{formatMoney(amount)}</TableNumber>;
+function MoneyAmount({
+  amount,
+  signed = false,
+  sense = 'income',
+}: {
+  amount: number;
+  signed?: boolean;
+  sense?: VarianceSense;
+}) {
+  return (
+    <TableNumber value={amount} signed={signed} sense={sense}>
+      {formatMoney(amount)}
+    </TableNumber>
+  );
 }
 
 function Empty() {

@@ -4,15 +4,25 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useId, useMemo, useState } from 'react';
 
+import { activeCategories } from '@/domain/categories';
 import {
   isOccurredOn,
   MAX_LABEL_LENGTH,
+  type Product,
+  type ProductCategory,
+  type PrototypeDocument,
   type SaleLine,
 } from '@/domain/document';
-import { amountExVat } from '@/domain/money';
 import { activeProducts } from '@/domain/products';
-import { defaultSaleDay, saleByIdOrNull, saleTotals } from '@/domain/sales';
-import { monthKeyFromDate } from '@/domain/sales-plan';
+import {
+  defaultSaleDay,
+  saleByIdOrNull,
+  saleLineAmountWithVat,
+  saleLinePriceWithVat,
+  saleTotals,
+} from '@/domain/sales';
+import { monthKeyFromDate, salesPlanForMonth } from '@/domain/sales-plan';
+import { planningHref } from '@/features/planning/paths';
 import {
   fieldClassName,
   primaryButtonClassName,
@@ -21,42 +31,133 @@ import { formatMoney } from '@/features/sales/money';
 import { priceDraft } from '@/features/sales/text';
 import {
   deletedSalesHref,
+  NEW_SALE_TITLE,
   SALES_SECTION_TITLE,
   saleHref,
   salesJournalHref,
 } from '@/features/sales-fact/paths';
 import {
+  emptySaleLineDraft,
+  SaleFormTable,
+  type SaleLineDraft,
+  type SaleLineField,
+} from '@/features/sales-fact/sale-form-table';
+import {
   formatSaleDate,
+  hasAmountWithoutPieces,
   parseSaleAmount,
   parseSalePieces,
+  parseSalePrice,
   SALE_ERROR,
 } from '@/features/sales-fact/text';
 import { useSalesJournal } from '@/features/sales-fact/use-sales-journal';
 import {
+  IconArrowLeft,
   IconCheck,
-  IconPlus,
   IconTrash,
   IconUndo,
 } from '@/features/shell/icons';
 import { PageFrame } from '@/features/shell/page-frame';
-import { TableNumber } from '@/features/shell/table-number';
 
-interface LineDraft {
-  key: string;
-  id: string;
-  productId: string;
-  pieces: string;
-  amount: string;
+function lineDraftFromSale(line: SaleLine): SaleLineDraft {
+  const price = saleLinePriceWithVat(line.amountWithVat, line.pieces);
+  return {
+    id: line.id,
+    pieces: String(line.pieces),
+    price: price === null ? '' : priceDraft(price),
+    amount: priceDraft(line.amountWithVat),
+  };
 }
 
-function emptyLine(): LineDraft {
-  return {
-    key: crypto.randomUUID(),
-    id: `sale-line:${crypto.randomUUID()}`,
-    productId: '',
-    pieces: '',
-    amount: '',
-  };
+function planPriceWithVat(
+  document: PrototypeDocument,
+  productId: string,
+  month: string,
+): number {
+  if (!productId || !month) {
+    return 0;
+  }
+
+  const plan = salesPlanForMonth(document, month);
+  const line = plan.lines.find((item) => item.productId === productId);
+  return line?.priceWithVat ?? 0;
+}
+
+function withAmountFromPrice(line: SaleLineDraft): SaleLineDraft {
+  const price = parseSalePrice(line.price);
+  const pieces = parseSalePieces(line.pieces);
+  if (price === null || pieces === null) {
+    return line;
+  }
+
+  const amount = saleLineAmountWithVat(price, pieces);
+  if (amount === null) {
+    return line;
+  }
+
+  return { ...line, amount: priceDraft(amount) };
+}
+
+function withPriceFromAmount(line: SaleLineDraft): SaleLineDraft {
+  const amount = parseSaleAmount(line.amount);
+  const pieces = parseSalePieces(line.pieces);
+  if (amount === null || pieces === null) {
+    return line;
+  }
+
+  const price = saleLinePriceWithVat(amount, pieces);
+  if (price === null) {
+    return line;
+  }
+
+  return { ...line, price: priceDraft(price) };
+}
+
+function saleFormProducts(
+  document: PrototypeDocument,
+  lineProductIds: readonly string[],
+): Product[] {
+  const referenced = new Set(lineProductIds);
+  const active = activeProducts(document);
+  const deletedOnSale = document.products.filter(
+    (item) => item.deletedAt !== null && referenced.has(item.id),
+  );
+  return [...active, ...deletedOnSale];
+}
+
+function saleFormCategories(
+  document: PrototypeDocument,
+  products: readonly Product[],
+): ProductCategory[] {
+  const productCategoryIds = new Set(products.map((item) => item.categoryId));
+  const active = activeCategories(document);
+  const deletedWithProducts = document.categories.filter(
+    (item) => item.deletedAt !== null && productCategoryIds.has(item.id),
+  );
+  return [...active, ...deletedWithProducts];
+}
+
+function initialDrafts(
+  document: PrototypeDocument,
+  existingLines: readonly SaleLine[],
+  month: string,
+): Record<string, SaleLineDraft> {
+  const byProduct = new Map(
+    existingLines.map((line) => [line.productId, lineDraftFromSale(line)]),
+  );
+  const products = saleFormProducts(
+    document,
+    existingLines.map((line) => line.productId),
+  );
+  const drafts: Record<string, SaleLineDraft> = {};
+
+  for (const product of products) {
+    drafts[product.id] =
+      byProduct.get(product.id) ??
+      emptySaleLineDraft(planPriceWithVat(document, product.id, month));
+  }
+
+  return drafts;
 }
 
 export function SaleScreen({
@@ -75,17 +176,21 @@ export function SaleScreen({
     return (
       <PageFrame
         title={SALES_SECTION_TITLE}
-        lede="Продажа заказчику: дата, товары и сумма."
+        full
+        lede="Продажа заказчику: дата, товары, цена и сумма."
+        back={
+          <Link
+            href={salesJournalHref({ month: currentMonth, currentMonth })}
+            aria-label="Назад"
+            className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            <IconArrowLeft />
+          </Link>
+        }
       >
         <p className="border border-line bg-sheet px-4 py-4 text-sm text-ink">
           Запись не найдена.
         </p>
-        <Link
-          href={salesJournalHref({ month: currentMonth, currentMonth })}
-          className={quietLinkClassName}
-        >
-          <IconUndo />К журналу продаж
-        </Link>
       </PageFrame>
     );
   }
@@ -109,17 +214,11 @@ export function SaleScreen({
       saleId={existing?.id ?? null}
       initialCustomer={existing?.customerName ?? ''}
       initialDay={initialDay}
-      initialLines={
-        existing
-          ? existing.lines.map((line) => ({
-              key: line.id,
-              id: line.id,
-              productId: line.productId,
-              pieces: String(line.pieces),
-              amount: priceDraft(line.amountWithVat),
-            }))
-          : [emptyLine()]
-      }
+      initialDrafts={initialDrafts(
+        journal.document,
+        existing?.lines ?? [],
+        initialDay.slice(0, 7),
+      )}
     />
   );
 }
@@ -128,12 +227,12 @@ function SaleForm({
   saleId,
   initialCustomer,
   initialDay,
-  initialLines,
+  initialDrafts,
 }: {
   saleId: string | null;
   initialCustomer: string;
   initialDay: string;
-  initialLines: LineDraft[];
+  initialDrafts: Record<string, SaleLineDraft>;
 }) {
   const journal = useSalesJournal();
   const router = useRouter();
@@ -144,53 +243,78 @@ function SaleForm({
   const dateId = useId();
   const [customer, setCustomer] = useState(initialCustomer);
   const [occurredOn, setOccurredOn] = useState(initialDay);
-  const [lines, setLines] = useState(initialLines);
+  const [drafts, setDrafts] = useState(initialDrafts);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [lineError, setLineError] = useState<string | null>(null);
-  const products = activeProducts(journal.document);
-  const referenced = new Set(
-    lines.map((line) => line.productId).filter(Boolean),
-  );
-  const catalog = journal.document.products.filter(
-    (item) => item.deletedAt === null || referenced.has(item.id),
-  );
 
-  function setLine(key: string, patch: Partial<LineDraft>) {
-    setLines((current) =>
-      current.map((line) => (line.key === key ? { ...line, ...patch } : line)),
-    );
+  const products = saleFormProducts(journal.document, Object.keys(drafts));
+  const categories = saleFormCategories(journal.document, products);
+
+  function setLine(productId: string, field: SaleLineField, raw: string) {
+    setDrafts((current) => {
+      const line = current[productId];
+      if (!line) {
+        return current;
+      }
+
+      if (field === 'pieces') {
+        const next = { ...line, pieces: raw };
+        const updated =
+          parseSalePrice(line.price) !== null
+            ? withAmountFromPrice(next)
+            : withPriceFromAmount(next);
+        return { ...current, [productId]: updated };
+      }
+
+      if (field === 'price') {
+        return {
+          ...current,
+          [productId]: withAmountFromPrice({ ...line, price: raw }),
+        };
+      }
+
+      return {
+        ...current,
+        [productId]: withPriceFromAmount({ ...line, amount: raw }),
+      };
+    });
   }
 
   function parsedLines(): SaleLine[] | null {
     const result: SaleLine[] = [];
-    const seen = new Set<string>();
 
-    for (const line of lines) {
-      if (!line.productId) {
-        setSaveError(SALE_ERROR.product);
-        return null;
+    for (const product of products) {
+      const line = drafts[product.id];
+      if (!line) {
+        continue;
       }
-      if (seen.has(line.productId)) {
-        setSaveError(SALE_ERROR['duplicate-line']);
-        return null;
-      }
+
       const pieces = parseSalePieces(line.pieces);
-      if (pieces === null) {
+      const amount = parseSaleAmount(line.amount);
+      const amountEntered = amount !== null && amount > 0;
+      if (!amountEntered && pieces === null) {
+        continue;
+      }
+
+      if (hasAmountWithoutPieces(line.pieces, line.amount) || pieces === null) {
         setSaveError(SALE_ERROR.pieces);
         return null;
       }
-      const amount = parseSaleAmount(line.amount);
       if (amount === null) {
         setSaveError(SALE_ERROR.amount);
         return null;
       }
-      seen.add(line.productId);
+
       result.push({
         id: line.id,
-        productId: line.productId,
+        productId: product.id,
         pieces,
         amountWithVat: amount,
       });
+    }
+
+    if (result.length === 0) {
+      setSaveError(SALE_ERROR.lines);
+      return null;
     }
 
     return result;
@@ -220,225 +344,125 @@ function SaleForm({
   }
 
   const month = occurredOn.slice(0, 7);
+  const backHref = salesJournalHref({
+    month: month || currentMonth,
+    currentMonth,
+  });
 
   return (
     <PageFrame
-      title={SALES_SECTION_TITLE}
-      lede="Продажа заказчику: дата, товары и сумма."
+      title={saleId ? SALES_SECTION_TITLE : NEW_SALE_TITLE}
+      full
+      lede={
+        saleId ? 'Продажа заказчику: дата, товары, цена и сумма.' : undefined
+      }
+      back={
+        saleId ? (
+          <Link
+            href={backHref}
+            aria-label="Назад"
+            className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            <IconArrowLeft />
+          </Link>
+        ) : (
+          <button
+            type="button"
+            aria-label="Назад"
+            onClick={() => router.back()}
+            className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            <IconArrowLeft />
+          </button>
+        )
+      }
     >
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href={salesJournalHref({
-              month: month || currentMonth,
-              currentMonth,
-            })}
-            className={quietLinkClassName}
-          >
-            <IconUndo />К журналу продаж
-          </Link>
-          {saleId ? (
+        <div className="flex flex-wrap items-start gap-4">
+          {products.length === 0 ? (
+            <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
+              Сначала добавьте товар в{' '}
+              <Link
+                href={planningHref()}
+                className="text-ink underline outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              >
+                Планировании
+              </Link>
+              .
+            </p>
+          ) : (
+            <SaleFormTable
+              categories={categories}
+              products={products}
+              drafts={drafts}
+              onChange={setLine}
+            />
+          )}
+
+          <div className="sticky top-16 z-20 flex w-72 shrink-0 flex-col gap-4 self-start border border-line bg-sheet p-4 lg:top-4">
+            <div>
+              <label htmlFor={dateId} className="text-sm text-muted">
+                Дата
+              </label>
+              <input
+                id={dateId}
+                type="date"
+                min="2000-01-01"
+                max={maxDay}
+                value={occurredOn}
+                onChange={(event) => setOccurredOn(event.target.value)}
+                className={`mt-2 ${fieldClassName}`}
+              />
+            </div>
+            <div>
+              <label htmlFor={customerId} className="text-sm text-muted">
+                Заказчик
+              </label>
+              <input
+                id={customerId}
+                value={customer}
+                maxLength={MAX_LABEL_LENGTH}
+                onChange={(event) => setCustomer(event.target.value)}
+                className={`mt-2 ${fieldClassName}`}
+              />
+            </div>
             <button
               type="button"
-              aria-label="Удалить продажу"
-              onClick={() => {
-                const confirmed = window.confirm(
-                  'Удалить продажу? Она пропадёт из рабочего списка. Вернуть можно среди удалённых.',
-                );
-                if (!confirmed) {
-                  return;
-                }
-                journal.remove(saleId);
-                router.push(
-                  salesJournalHref({
-                    month: month || currentMonth,
-                    currentMonth,
-                  }),
-                );
-              }}
-              className="inline-flex h-11 items-center justify-center gap-2 px-3 text-sm text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              disabled={!journal.hydrated}
+              onClick={save}
+              className={`${primaryButtonClassName} w-full`}
             >
-              <IconTrash />
-              Удалить
+              <IconCheck />
+              Сохранить
             </button>
-          ) : null}
-        </div>
-
-        <div className="grid gap-4 border border-line bg-sheet p-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor={dateId} className="text-sm text-muted">
-              Дата
-            </label>
-            <input
-              id={dateId}
-              type="date"
-              min="2000-01-01"
-              max={maxDay}
-              value={occurredOn}
-              onChange={(event) => setOccurredOn(event.target.value)}
-              className={`mt-2 ${fieldClassName}`}
-            />
-          </div>
-          <div>
-            <label htmlFor={customerId} className="text-sm text-muted">
-              Заказчик
-            </label>
-            <input
-              id={customerId}
-              value={customer}
-              maxLength={MAX_LABEL_LENGTH}
-              onChange={(event) => setCustomer(event.target.value)}
-              className={`mt-2 ${fieldClassName}`}
-            />
-          </div>
-        </div>
-
-        {products.length === 0 ? (
-          <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-            Сначала добавьте товар на{' '}
-            <Link
-              href="/"
-              className="text-ink underline outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-            >
-              Сводке
-            </Link>
-            .
-          </p>
-        ) : (
-          <div className="overflow-x-auto border border-line bg-sheet">
-            <table className="w-full min-w-[40rem] border-separate border-spacing-0 text-sm">
-              <caption className="sr-only">Товары продажи</caption>
-              <thead>
-                <tr>
-                  <th className="border-b border-line px-3 py-2 text-left font-normal text-muted">
-                    Товар
-                  </th>
-                  <th className="border-b border-line px-3 py-2 text-right font-normal text-muted">
-                    Шт
-                  </th>
-                  <th className="border-b border-line px-3 py-2 text-right font-normal text-muted">
-                    Сумма с НДС
-                  </th>
-                  <th className="border-b border-line px-3 py-2 text-right font-normal text-muted">
-                    Сумма без НДС
-                  </th>
-                  <th className="border-b border-line px-3 py-2">
-                    <span className="sr-only">Удалить строку</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {lines.map((line) => {
-                  const product = catalog.find(
-                    (item) => item.id === line.productId,
+            {saleId ? (
+              <button
+                type="button"
+                aria-label="Удалить продажу"
+                onClick={() => {
+                  const confirmed = window.confirm(
+                    'Удалить продажу? Она пропадёт из рабочего списка. Вернуть можно среди удалённых.',
                   );
-                  const amount = parseSaleAmount(line.amount);
-                  const ex =
-                    product && amount !== null
-                      ? amountExVat(amount, product.vatPercent)
-                      : null;
-                  return (
-                    <tr key={line.key}>
-                      <td className="border-b border-line px-3 py-2">
-                        <select
-                          aria-label="Товар"
-                          value={line.productId}
-                          onChange={(event) =>
-                            setLine(line.key, { productId: event.target.value })
-                          }
-                          className={fieldClassName}
-                        >
-                          <option value="">Выберите товар</option>
-                          {catalog.map((item) => (
-                            <option key={item.id} value={item.id}>
-                              {item.name}
-                              {item.deletedAt ? ' · удалён' : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="border-b border-line px-3 py-2">
-                        <input
-                          aria-label="Штуки"
-                          inputMode="numeric"
-                          value={line.pieces}
-                          onChange={(event) =>
-                            setLine(line.key, { pieces: event.target.value })
-                          }
-                          className={`${fieldClassName} text-right`}
-                        />
-                      </td>
-                      <td className="border-b border-line px-3 py-2">
-                        <input
-                          aria-label="Сумма с НДС"
-                          inputMode="decimal"
-                          value={line.amount}
-                          onChange={(event) =>
-                            setLine(line.key, { amount: event.target.value })
-                          }
-                          className={`${fieldClassName} text-right`}
-                        />
-                      </td>
-                      <td className="border-b border-line px-3 py-2 text-right whitespace-nowrap">
-                        {ex === null ? (
-                          '—'
-                        ) : (
-                          <TableNumber value={ex}>
-                            {formatMoney(ex)}
-                          </TableNumber>
-                        )}
-                      </td>
-                      <td className="border-b border-line px-2 py-2 text-right">
-                        <button
-                          type="button"
-                          aria-label="Удалить строку"
-                          onClick={() => {
-                            setLines((current) =>
-                              current.filter((item) => item.key !== line.key),
-                            );
-                            setLineError(null);
-                          }}
-                          className="inline-flex size-11 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                        >
-                          <IconTrash />
-                        </button>
-                      </td>
-                    </tr>
+                  if (!confirmed) {
+                    return;
+                  }
+                  journal.remove(saleId);
+                  router.push(
+                    salesJournalHref({
+                      month: month || currentMonth,
+                      currentMonth,
+                    }),
                   );
-                })}
-              </tbody>
-            </table>
+                }}
+                className="inline-flex h-11 w-full items-center justify-center gap-2 text-sm text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              >
+                <IconTrash />
+                Удалить
+              </button>
+            ) : null}
+            {saveError ? <p className="text-sm text-ink">{saveError}</p> : null}
           </div>
-        )}
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-          <button
-            type="button"
-            onClick={() => {
-              if (products.length === 0) {
-                setLineError('Сначала добавьте товар на Сводке.');
-                return;
-              }
-              setLines((current) => [...current, emptyLine()]);
-              setLineError(null);
-            }}
-            className={quietLinkClassName}
-          >
-            <IconPlus />
-            Добавить товар
-          </button>
-          <button
-            type="button"
-            disabled={!journal.hydrated}
-            onClick={save}
-            className={primaryButtonClassName}
-          >
-            <IconCheck />
-            Сохранить
-          </button>
         </div>
-        {lineError ? <p className="text-sm text-ink">{lineError}</p> : null}
-        {saveError ? <p className="text-sm text-ink">{saveError}</p> : null}
       </div>
     </PageFrame>
   );
@@ -464,6 +488,7 @@ function DeletedSale({
   return (
     <PageFrame
       title={SALES_SECTION_TITLE}
+      full
       lede="Удалённую продажу можно открыть и вернуть."
     >
       <div className="flex flex-col gap-4">
