@@ -1,4 +1,3 @@
-import { activeCategories } from '@/domain/categories';
 import { type UnitCost, unitCost } from '@/domain/cost';
 import {
   isMonthKey,
@@ -17,7 +16,7 @@ import {
   toSafeNumber,
   vatPercentHundredths,
 } from '@/domain/money';
-import { activeProducts } from '@/domain/products';
+import { periodGridCategories, periodGridProducts } from '@/domain/period-grid';
 import { type SalesFactRow, salesFactMonth } from '@/domain/sales-fact';
 import {
   daysInMonth,
@@ -215,18 +214,42 @@ export function monthsInRange(from: string, to: string): string[] {
   return months;
 }
 
-/** Один месяц в периоде — линза и правка оперрасходов доступны. */
+/**
+ * Расширяет интервал так, чтобы в него входил `month`.
+ * Фактическая сводка смотрит только такой период.
+ */
+export function ensureRangeIncludesMonth(
+  from: string,
+  to: string,
+  month: string,
+): { from: string; to: string } {
+  const range = normalizeMonthRange(from, to);
+  return {
+    from: range.from > month ? month : range.from,
+    to: range.to < month ? month : range.to,
+  };
+}
+
+/** Один месяц в периоде — на сводке можно править операционные расходы. */
 export function isSingleMonthSummary(view: SummaryView): boolean {
   return view.from === view.to;
 }
 
-/** Рабочие товары. Удалённые в сетку и в суммы сводки не входят. */
-export function summaryGridProducts(document: PrototypeDocument): Product[] {
-  return activeProducts(document);
+/**
+ * Товары сетки месяца: рабочие и архивные с планом или продажей в этом месяце.
+ */
+export function summaryGridProducts(
+  document: PrototypeDocument,
+  month: string,
+): Product[] {
+  return periodGridProducts(document, month);
 }
 
-function summaryCategories(document: PrototypeDocument): ProductCategory[] {
-  return activeCategories(document);
+function summaryCategories(
+  document: PrototypeDocument,
+  products: readonly Product[],
+): ProductCategory[] {
+  return periodGridCategories(document, products);
 }
 
 function planSide(
@@ -637,7 +660,7 @@ export function monthSummary(
   plan: SalesPlan | null = salesPlanForMonth(document, month),
 ): SummaryView {
   const days = daysInMonth(month);
-  const products = summaryGridProducts(document);
+  const products = summaryGridProducts(document, month);
   const factDays = salesFactMonth(document, month);
   const rowByProduct = new Map<string, SummaryRow>();
 
@@ -665,27 +688,29 @@ export function monthSummary(
     });
   }
 
-  const groups: SummaryGroup[] = summaryCategories(document).map((category) => {
-    const rows = products
-      .filter((item) => item.categoryId === category.id)
-      .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
-      .flatMap((item) => {
-        const row = rowByProduct.get(item.id);
-        return row ? [row] : [];
-      });
-    const factSide = factTotalsFromRows(rows, days);
-    const planMetrics = planTotalsFromRows(rows, days);
+  const groups: SummaryGroup[] = summaryCategories(document, products).map(
+    (category) => {
+      const rows = products
+        .filter((item) => item.categoryId === category.id)
+        .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+        .flatMap((item) => {
+          const row = rowByProduct.get(item.id);
+          return row ? [row] : [];
+        });
+      const factSide = factTotalsFromRows(rows, days);
+      const planMetrics = planTotalsFromRows(rows, days);
 
-    return {
-      categoryId: category.id,
-      name: category.name,
-      deleted: category.deletedAt !== null,
-      rows,
-      plan: planMetrics,
-      fact: factSide,
-      variance: varianceOf(factSide, planMetrics),
-    };
-  });
+      return {
+        categoryId: category.id,
+        name: category.name,
+        deleted: category.deletedAt !== null,
+        rows,
+        plan: planMetrics,
+        fact: factSide,
+        variance: varianceOf(factSide, planMetrics),
+      };
+    },
+  );
   const rows = groups.flatMap((group) => group.rows);
 
   const planTotals = plan ? salesPlanTotals(document, plan) : null;
@@ -728,46 +753,158 @@ export function rangeSummary(
     return monthSummary(document, range.from);
   }
 
+  const views = monthsInRange(range.from, range.to).map((month) =>
+    monthSummary(document, month),
+  );
+  const days = calendarDays(views);
+  return mergeMonthSummaries(views, days, days);
+}
+
+/**
+ * Фактическая сводка периода. Период расширяется, пока в нём нет текущего месяца.
+ * По каждому месяцу план урезается на долю прошедших дней, затем месяцы складываются.
+ * Прошедший месяц полный, будущий план нулевой. Факт не растягивается.
+ */
+export function actualRangeSummary(
+  document: PrototypeDocument,
+  from: string,
+  to: string,
+  today: Date,
+): SummaryView {
+  const current = monthKeyFromDate(today);
+  const range = ensureRangeIncludesMonth(from, to, current);
   const months = monthsInRange(range.from, range.to);
-  const views = months.map((month) => monthSummary(document, month));
-  const days = views.reduce((sum, view) => sum + view.days, 0);
+  const views = months.map((month) =>
+    applySummaryLens(monthSummary(document, month), 'current', today),
+  );
   const first = views[0];
-  if (!first) {
-    return monthSummary(document, range.from);
+  if (!first || views.length === 1) {
+    return first ?? monthSummary(document, range.from);
   }
 
-  const groups: SummaryGroup[] = first.groups.map((group) => {
+  const planDays = months.reduce(
+    (sum, month) => sum + elapsedDaysInMonth(month, today),
+    0,
+  );
+  return mergeMonthSummaries(views, planDays, calendarDays(views));
+}
+
+/**
+ * Прогноз: один месяц с линзой, интервал — сумма полных месяцев.
+ * Фактическая — `actualRangeSummary`.
+ */
+export function summaryForLens(
+  document: PrototypeDocument,
+  from: string,
+  to: string,
+  lens: SummaryLens,
+  today: Date,
+): SummaryView {
+  if (lens === 'current') {
+    return actualRangeSummary(document, from, to, today);
+  }
+
+  const range = normalizeMonthRange(from, to);
+  if (range.from === range.to) {
+    return applySummaryLens(
+      monthSummary(document, range.from),
+      'forecast',
+      today,
+    );
+  }
+
+  return rangeSummary(document, range.from, range.to);
+}
+
+function calendarDays(views: readonly SummaryView[]): number {
+  return views.reduce((sum, view) => sum + view.days, 0);
+}
+
+function mergeMonthSummaries(
+  views: readonly SummaryView[],
+  planDays: number,
+  factDays: number,
+): SummaryView {
+  const first = views[0];
+  const last = views[views.length - 1];
+  if (!first || !last) {
+    throw new Error('mergeMonthSummaries: пустой период');
+  }
+
+  const categoryById = new Map<string, SummaryGroup>();
+  const productIdsByCategory = new Map<string, Set<string>>();
+  const sampleRowByProduct = new Map<string, SummaryRow>();
+
+  for (const view of views) {
+    for (const group of view.groups) {
+      if (!categoryById.has(group.categoryId)) {
+        categoryById.set(group.categoryId, group);
+        productIdsByCategory.set(group.categoryId, new Set());
+      }
+      const productIds = productIdsByCategory.get(group.categoryId);
+      if (!productIds) {
+        continue;
+      }
+      for (const row of group.rows) {
+        productIds.add(row.productId);
+        if (!sampleRowByProduct.has(row.productId)) {
+          sampleRowByProduct.set(row.productId, row);
+        }
+      }
+    }
+  }
+
+  const categoryOrder = [
+    ...new Set(views.flatMap((view) => view.groups.map((g) => g.categoryId))),
+  ];
+
+  const groups: SummaryGroup[] = categoryOrder.flatMap((categoryId) => {
+    const sample = categoryById.get(categoryId);
+    const productIds = productIdsByCategory.get(categoryId);
+    if (!sample || !productIds) {
+      return [];
+    }
+
     const monthGroups = views.flatMap((view) => {
-      const match = view.groups.find(
-        (item) => item.categoryId === group.categoryId,
-      );
+      const match = view.groups.find((item) => item.categoryId === categoryId);
       return match ? [match] : [];
     });
-    const rows = group.rows.map((row) => {
+
+    const sortedProductIds = [...productIds].sort((left, right) => {
+      const leftName = sampleRowByProduct.get(left)?.name ?? left;
+      const rightName = sampleRowByProduct.get(right)?.name ?? right;
+      return leftName.localeCompare(rightName, 'ru');
+    });
+
+    const rows = sortedProductIds.flatMap((productId) => {
       const monthRows = monthGroups.flatMap((monthGroup) => {
         const monthRow = monthGroup.rows.find(
-          (item) => item.productId === row.productId,
+          (item) => item.productId === productId,
         );
         return monthRow ? [monthRow] : [];
       });
-      return mergeSummaryRows(monthRows, days);
+      return monthRows.length > 0
+        ? [mergeSummaryRows(monthRows, planDays, factDays)]
+        : [];
     });
-    const fact = factTotalsFromRows(rows, days);
-    const planMetrics = planTotalsFromRows(rows, days);
+    const fact = factTotalsFromRows(rows, factDays);
+    const planMetrics = planTotalsFromRows(rows, planDays);
 
-    return {
-      categoryId: group.categoryId,
-      name: group.name,
-      deleted: group.deleted,
-      rows,
-      plan: planMetrics,
-      fact,
-      variance: varianceOf(fact, planMetrics),
-    };
+    return [
+      {
+        categoryId: sample.categoryId,
+        name: sample.name,
+        deleted: sample.deleted,
+        rows,
+        plan: planMetrics,
+        fact,
+        variance: varianceOf(fact, planMetrics),
+      },
+    ];
   });
   const rows = groups.flatMap((group) => group.rows);
-  const planTotalsSide = planTotalsFromRows(rows, days);
-  const factTotals = factTotalsFromRows(rows, days);
+  const planTotalsSide = planTotalsFromRows(rows, planDays);
+  const factTotals = factTotalsFromRows(rows, factDays);
   let planOpex = 0;
   let factOpex = 0;
   for (const view of views) {
@@ -776,10 +913,10 @@ export function rangeSummary(
   }
 
   return {
-    from: range.from,
-    to: range.to,
-    month: range.from,
-    days,
+    from: first.from,
+    to: last.to,
+    month: first.from,
+    days: factDays,
     plan: null,
     groups,
     rows,
@@ -793,7 +930,8 @@ export function rangeSummary(
 
 function mergeSummaryRows(
   rows: readonly SummaryRow[],
-  days: number,
+  planDays: number,
+  factDays: number,
 ): SummaryRow {
   const sample = rows[0];
   if (!sample) {
@@ -806,8 +944,8 @@ function mergeSummaryRows(
   const planSides = rows.flatMap((row) => (row.plan ? [row.plan] : []));
   const factSides = rows.map((row) => row.fact);
   const plan =
-    planSides.length === 0 ? null : mergeProductSides(planSides, days);
-  const fact = mergeProductSides(factSides, days);
+    planSides.length === 0 ? null : mergeProductSides(planSides, planDays);
+  const fact = mergeProductSides(factSides, factDays);
 
   return {
     productId: sample.productId,

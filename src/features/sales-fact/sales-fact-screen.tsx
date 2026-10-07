@@ -13,6 +13,7 @@ import {
   salesFactMonthOpen,
 } from '@/domain/sales-fact';
 import { monthKeyFromDate, shiftMonth } from '@/domain/sales-plan';
+import { lastHorizonMonth } from '@/domain/summary';
 import {
   monthFieldClassName,
   primaryButtonClassName,
@@ -80,7 +81,7 @@ function Workspace({
   const sales = useSalesFact();
   const router = useRouter();
   const [fullscreen, setFullscreen] = useState(false);
-  const products = salesFactGridProducts(sales.document);
+  const products = salesFactGridProducts(sales.document, month);
   const days = useMemo(
     () => salesFactMonth(sales.document, month),
     [sales.document, month],
@@ -93,7 +94,8 @@ function Workspace({
       : days.filter((item) => item.occurredOn === selectedDay);
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
-  const nextDisabled = nextMonth > currentMonth;
+  const horizonEnd = lastHorizonMonth(today);
+  const nextDisabled = nextMonth > horizonEnd;
   const hasTable = products.length > 0;
   const tableExpanded = fullscreen && hasTable;
 
@@ -173,7 +175,7 @@ function Workspace({
                   type="month"
                   aria-label="Месяц"
                   min="2000-01"
-                  max={currentMonth}
+                  max={horizonEnd}
                   value={month}
                   onChange={(event) => {
                     const next = event.target.value;

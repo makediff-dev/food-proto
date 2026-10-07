@@ -288,7 +288,7 @@ function CategoryBlock({
               {group.name} ({productCount})
             </span>
             {group.deleted ? (
-              <span className="text-sm font-normal text-muted">удалена</span>
+              <span className="text-sm font-normal text-muted">(архив)</span>
             ) : null}
           </div>
         </th>
@@ -400,7 +400,7 @@ function ProductName({ row }: { row: SalesFactRow }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-sm text-ink">{row.name}</span>
-      {row.deleted ? <span className="text-sm text-muted">удалён</span> : null}
+      {row.deleted ? <span className="text-sm text-muted">(архив)</span> : null}
     </div>
   );
 }

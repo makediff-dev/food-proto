@@ -1,7 +1,7 @@
 import { fitsSafeMoneyProduct } from '@/domain/money';
 import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
-export const SCHEMA_VERSION = 32 as const;
+export const SCHEMA_VERSION = 33 as const;
 
 export const MAX_LABEL_LENGTH = 200;
 
@@ -32,8 +32,8 @@ export const MAX_VAT_PERCENT = 100;
 const DELETION_MARK = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 /**
- * Общие поля учёта. Удаление не вырезает запись: `deletedAt` — ISO-время,
- * `null` — запись в работе. Так же устроены все будущие сущности.
+ * Общие поля мягкого удаления. `deletedAt` — ISO-время, `null` — в работе.
+ * Так у категорий, товаров и планов. Продажа удаляется насовсем — без этого поля.
  */
 export interface DeletableRecord {
   id: string;
@@ -102,6 +102,7 @@ export interface SaleLine {
 /**
  * Продажа заказчику за календарный день.
  * Имя заказчика не уникально. Пустая продажа без строк не пишется.
+ * Удаление стирает запись из документа — без `deletedAt` и без возврата.
  */
 export interface Sale {
   id: string;
@@ -109,7 +110,6 @@ export interface Sale {
   /** Календарный день, `ГГГГ-ММ-ДД`. */
   occurredOn: string;
   lines: SaleLine[];
-  deletedAt: string | null;
 }
 
 /**
@@ -539,11 +539,9 @@ function parseSale(
   }
 
   const id = parseId(value.id);
-  const deletedAt = parseDeletedAt(value.deletedAt);
 
   if (
     !id ||
-    deletedAt === undefined ||
     typeof value.customerName !== 'string' ||
     value.customerName.length === 0 ||
     value.customerName.length > MAX_LABEL_LENGTH ||
@@ -578,7 +576,6 @@ function parseSale(
     customerName: value.customerName,
     occurredOn: value.occurredOn,
     lines,
-    deletedAt,
   };
 }
 

@@ -74,7 +74,3 @@ export function saleNewHref(day?: string): string {
 export function saleHref(id: string): string {
   return `/sales/${id}`;
 }
-
-export function deletedSalesHref(): string {
-  return '/sales/deleted';
-}

@@ -365,11 +365,11 @@ export function salesPlanTotals(
   let revenueExComplete = true;
   let productsWithVolume = 0;
 
-  const workingIds = new Set(activeProducts(document).map((item) => item.id));
+  const productIds = new Set(document.products.map((item) => item.id));
   let lineCount = 0;
 
   for (const line of plan.lines) {
-    if (!workingIds.has(line.productId)) {
+    if (!productIds.has(line.productId)) {
       continue;
     }
     lineCount += 1;
@@ -578,8 +578,8 @@ export function updateSalesPlanLineRejection(
   }
 
   const product = document.products.find((item) => item.id === line.productId);
-  if (!product || product.deletedAt !== null) {
-    return 'locked';
+  if (!product) {
+    return 'missing';
   }
 
   return lineNumbersRejection(priceWithVat, volumePieces);

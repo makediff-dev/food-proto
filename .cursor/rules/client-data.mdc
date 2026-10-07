@@ -14,7 +14,7 @@ alwaysApply: false
 - `localStorage` читает и пишет только `src/data/document-storage.ts`. Экраны ходят в `useDocumentStore()`.
 - `resetToMock()` стирает ключ и возвращает `createMockDocument()`.
 - Чужой или устаревший JSON отбрасывается. Не чини его молча и не заводи второй ключ хранилища.
-- Удаление не фильтрует массив. Ставь `deletedAt`. Список товаров бери из `activeProducts`, категорий — из `activeCategories`.
+- Удаление категорий, товаров и планов не фильтрует массив — ставь `deletedAt`. Продажу вырезай из `sales` через `deleteSale`. Рабочий справочник — `activeProducts` / `activeCategories`. Сетку месяца — `periodGridProducts` / `periodGridCategories` (рабочие плюс архивные с планом или продажей в периоде).
 - В комментарии к формуле укажи лист и ячейку из `docs/domain.md`. Формулы учёта добавляются вместе с продукцией.
 
 ```ts

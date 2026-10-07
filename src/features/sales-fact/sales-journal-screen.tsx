@@ -8,6 +8,7 @@ import type { PrototypeDocument, Sale } from '@/domain/document';
 import { saleTotals, workingSalesInMonth } from '@/domain/sales';
 import { salesFactMonthOpen } from '@/domain/sales-fact';
 import { monthKeyFromDate, shiftMonth } from '@/domain/sales-plan';
+import { lastHorizonMonth } from '@/domain/summary';
 import {
   monthFieldClassName,
   primaryButtonClassName,
@@ -57,7 +58,8 @@ function Workspace({
   const days = groupSalesByDay(items);
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
-  const nextDisabled = nextMonth > currentMonth;
+  const horizonEnd = lastHorizonMonth(today);
+  const nextDisabled = nextMonth > horizonEnd;
 
   function open(nextMonthKey: string) {
     router.push(salesJournalHref({ month: nextMonthKey, currentMonth }), {
@@ -98,7 +100,7 @@ function Workspace({
               type="month"
               aria-label="Месяц"
               min="2000-01"
-              max={currentMonth}
+              max={horizonEnd}
               value={month}
               onChange={(event) => {
                 const next = event.target.value;
@@ -211,8 +213,8 @@ function saleComposition(document: PrototypeDocument, sale: Sale): string {
         (item) => item.id === line.productId,
       );
       const name = product?.name ?? 'Товар';
-      const deleted = product?.deletedAt ? ' · удалён' : '';
-      return `${name}${deleted}, ${formatPieces(line.pieces)} шт`;
+      const archived = product?.deletedAt ? ' (архив)' : '';
+      return `${name}${archived}, ${formatPieces(line.pieces)} шт`;
     })
     .join('; ');
 }

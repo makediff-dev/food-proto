@@ -1,6 +1,4 @@
 import {
-  isDeletionMark,
-  isMonthKey,
   isOccurredOn,
   MAX_ID_LENGTH,
   MAX_LABEL_LENGTH,
@@ -16,7 +14,14 @@ import {
   multiplyAmount,
   toSafeNumber,
 } from '@/domain/money';
-import { monthKeyFromDate } from '@/domain/sales-plan';
+import { productAllowedInPeriodSale } from '@/domain/period-grid';
+import {
+  daysInMonth,
+  monthKeyFromDate,
+  PLAN_HORIZON_MONTHS,
+  planMonthOpen,
+  shiftMonth,
+} from '@/domain/sales-plan';
 
 const ZERO = BigInt(0);
 
@@ -38,10 +43,15 @@ export interface SaleTotals {
   revenueExVat: number | null;
 }
 
+/** С 2000-01 до горизонта плана — как планирование и сводка. */
 function saleMonthOpen(month: string, today: Date): boolean {
-  return (
-    isMonthKey(month) && month <= monthKeyFromDate(today) && month >= '2000-01'
-  );
+  return planMonthOpen(month, today);
+}
+
+/** Последний день горизонта плана — верхняя граница даты продажи. */
+export function maxSaleOccurredOn(today: Date): string {
+  const month = shiftMonth(monthKeyFromDate(today), PLAN_HORIZON_MONTHS - 1);
+  return `${month}-${String(daysInMonth(month)).padStart(2, '0')}`;
 }
 
 function isEntityId(value: string): boolean {
@@ -58,20 +68,9 @@ function saleById(document: PrototypeDocument, id: string): Sale | null {
   return document.sales.find((item) => item.id === id) ?? null;
 }
 
+/** Все продажи в документе. Удалённых в массиве нет. */
 export function workingSales(document: PrototypeDocument): Sale[] {
-  return document.sales.filter((item) => item.deletedAt === null);
-}
-
-export function deletedSales(document: PrototypeDocument): Sale[] {
-  return document.sales
-    .filter((item) => item.deletedAt !== null)
-    .sort((left, right) => {
-      const byDate = right.occurredOn.localeCompare(left.occurredOn);
-      if (byDate !== 0) {
-        return byDate;
-      }
-      return right.customerName.localeCompare(left.customerName, 'ru');
-    });
+  return document.sales;
 }
 
 export function workingSalesInMonth(
@@ -150,6 +149,7 @@ function lineRejection(
   document: PrototypeDocument,
   lines: readonly SaleLine[],
   previous: Sale | null,
+  month: string,
 ): SaleRejection | null {
   if (lines.length === 0) {
     return 'lines';
@@ -178,7 +178,11 @@ function lineRejection(
     if (!product) {
       return 'product';
     }
-    if (product.deletedAt !== null && !previousProducts.has(line.productId)) {
+    if (
+      product.deletedAt !== null &&
+      !previousProducts.has(line.productId) &&
+      !productAllowedInPeriodSale(document, line.productId, month)
+    ) {
       return 'locked';
     }
     if (
@@ -232,7 +236,7 @@ function writeRejection(
     return 'month';
   }
 
-  return lineRejection(document, lines, previous);
+  return lineRejection(document, lines, previous, month);
 }
 
 function replaceSales(
@@ -278,7 +282,6 @@ export function addSale(
     customerName: normalizeCustomer(customerName),
     occurredOn,
     lines: lines.map((line) => ({ ...line })),
-    deletedAt: null,
   };
 
   return replaceSales(document, [...document.sales, sale]);
@@ -293,7 +296,7 @@ export function updateSaleRejection(
   today: Date,
 ): SaleRejection | null {
   const current = saleById(document, id);
-  if (!current || current.deletedAt !== null) {
+  if (!current) {
     return 'missing';
   }
 
@@ -337,53 +340,19 @@ export function updateSale(
   );
 }
 
+/** Стирает продажу из документа. Вернуть нельзя. */
 export function deleteSale(
   document: PrototypeDocument,
   id: string,
-  deletedAt: string,
 ): PrototypeDocument {
-  if (!isDeletionMark(deletedAt)) {
-    return document;
-  }
-
   const current = saleById(document, id);
-  if (!current || current.deletedAt !== null) {
+  if (!current) {
     return document;
   }
 
   return replaceSales(
     document,
-    document.sales.map((item) =>
-      item.id === id ? { ...item, deletedAt } : item,
-    ),
-  );
-}
-
-export function restoreSaleRejection(
-  document: PrototypeDocument,
-  id: string,
-): SaleRejection | null {
-  const current = saleById(document, id);
-  if (!current || current.deletedAt === null) {
-    return 'missing';
-  }
-
-  return null;
-}
-
-export function restoreSale(
-  document: PrototypeDocument,
-  id: string,
-): PrototypeDocument {
-  if (restoreSaleRejection(document, id)) {
-    return document;
-  }
-
-  return replaceSales(
-    document,
-    document.sales.map((item) =>
-      item.id === id ? { ...item, deletedAt: null } : item,
-    ),
+    document.sales.filter((item) => item.id !== id),
   );
 }
 

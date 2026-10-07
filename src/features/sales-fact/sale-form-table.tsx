@@ -354,7 +354,7 @@ function CategoryBlock({
               {group.category.name} ({productCount})
             </span>
             {deleted ? (
-              <span className="text-sm font-normal text-muted">удалена</span>
+              <span className="text-sm font-normal text-muted">(архив)</span>
             ) : null}
           </div>
         </th>
@@ -394,7 +394,7 @@ function ProductRow({
         <div className="flex flex-col gap-1">
           <span className="text-sm text-ink">{row.product.name}</span>
           {row.product.deletedAt ? (
-            <span className="text-sm text-muted">удалён</span>
+            <span className="text-sm text-muted">(архив)</span>
           ) : null}
         </div>
       </th>

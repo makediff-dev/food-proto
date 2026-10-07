@@ -5,10 +5,7 @@ import type { PrototypeDocument, SaleLine } from '@/domain/document';
 import {
   addSale,
   addSaleRejection,
-  deletedSales,
   deleteSale,
-  restoreSale,
-  restoreSaleRejection,
   type SaleRejection,
   updateSale,
   updateSaleRejection,
@@ -38,7 +35,6 @@ export function useSalesJournal() {
   return {
     hydrated,
     document,
-    deleted: deletedSales(document),
     add(customerName: string, occurredOn: string, lines: readonly SaleLine[]) {
       const today = new Date();
       const id = `sale:${crypto.randomUUID()}`;
@@ -74,16 +70,7 @@ export function useSalesJournal() {
       );
     },
     remove(id: string) {
-      updateDocument((current) =>
-        deleteSale(current, id, new Date().toISOString()),
-      );
-    },
-    restore(id: string) {
-      return commit(
-        updateDocument,
-        (current) => restoreSale(current, id),
-        (current) => restoreSaleRejection(current, id),
-      );
+      updateDocument((current) => deleteSale(current, id));
     },
   };
 }

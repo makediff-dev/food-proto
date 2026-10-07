@@ -1,5 +1,7 @@
 export const PLANNING_SECTION_TITLE = 'Планирование';
 
+export const PLANNING_ARCHIVE_TITLE = 'Архив';
+
 export function parsePlanningQuery(params: { month?: string }): {
   month: string;
 } {
@@ -22,4 +24,8 @@ export function planningHref(
 
   const query = params.toString();
   return query ? `/planning?${query}` : '/planning';
+}
+
+export function planningArchiveHref(): string {
+  return '/planning/archive';
 }

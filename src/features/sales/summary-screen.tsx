@@ -2,18 +2,18 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 
 import { activeCategories } from '@/domain/categories';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import {
-  applySummaryLens,
   elapsedDaysInMonth,
-  isSingleMonthSummary,
+  ensureRangeIncludesMonth,
   lastHorizonMonth,
+  monthsInRange,
   normalizeMonthRange,
-  rangeSummary,
   type SummaryLens,
+  summaryForLens,
   summaryMonthOpen,
 } from '@/domain/summary';
 import { planningHref } from '@/features/planning/paths';
@@ -82,22 +82,16 @@ function Workspace({
   const toFieldId = useId();
   const [fullscreen, setFullscreen] = useState(false);
   const isActual = view === 'current';
-  const periodFrom = isActual ? currentMonth : from;
-  const periodTo = isActual ? currentMonth : to;
+  const period = isActual
+    ? ensureRangeIncludesMonth(from, to, currentMonth)
+    : { from, to };
+  const periodFrom = period.from;
+  const periodTo = period.to;
   const singleMonth = periodFrom === periodTo;
-  const activeView: SummaryLens =
-    isActual && singleMonth ? 'current' : 'forecast';
-  const lastForecastRange = useRef({ from: periodFrom, to: periodTo });
-  if (activeView === 'forecast') {
-    lastForecastRange.current = { from: periodFrom, to: periodTo };
-  }
-  const summary = useMemo(() => {
-    const base = rangeSummary(sales.document, periodFrom, periodTo);
-    if (!isSingleMonthSummary(base)) {
-      return base;
-    }
-    return applySummaryLens(base, activeView, today);
-  }, [sales.document, periodFrom, periodTo, today, activeView]);
+  const summary = useMemo(
+    () => summaryForLens(sales.document, periodFrom, periodTo, view, today),
+    [sales.document, periodFrom, periodTo, today, view],
+  );
   const categories = activeCategories(sales.document);
   const catalogEditable = sales.hydrated && singleMonth;
   const horizonEnd = lastHorizonMonth(today);
@@ -105,10 +99,9 @@ function Workspace({
   const tableExpanded = fullscreen && hasTable;
   const periodLabel = singleMonth ? periodFrom : `${periodFrom} — ${periodTo}`;
   const title = summaryPageTitle({
-    view: activeView,
+    view,
     from: periodFrom,
     to: periodTo,
-    currentMonth,
     today,
   });
 
@@ -116,19 +109,19 @@ function Workspace({
     if (!isActual) {
       return;
     }
-    if (from === currentMonth && to === currentMonth) {
+    if (from === periodFrom && to === periodTo) {
       return;
     }
     router.replace(
       summaryHref({
-        from: currentMonth,
-        to: currentMonth,
+        from: periodFrom,
+        to: periodTo,
         currentMonth,
         view: 'current',
       }),
       { scroll: false },
     );
-  }, [isActual, from, to, currentMonth, router]);
+  }, [isActual, from, to, periodFrom, periodTo, currentMonth, router]);
 
   useEffect(() => {
     if (!tableExpanded) {
@@ -153,23 +146,19 @@ function Workspace({
   function open(
     nextFrom: string,
     nextTo: string,
-    nextView: SummaryLens = activeView,
+    nextView: SummaryLens = view,
   ) {
     const range = normalizeMonthRange(nextFrom, nextTo);
-    const viewForHref =
-      nextView === 'current' && range.from === range.to
-        ? ('current' as const)
-        : ('forecast' as const);
     const hrefRange =
-      viewForHref === 'current'
-        ? { from: currentMonth, to: currentMonth }
+      nextView === 'current'
+        ? ensureRangeIncludesMonth(range.from, range.to, currentMonth)
         : range;
     router.push(
       summaryHref({
         from: hrefRange.from,
         to: hrefRange.to,
         currentMonth,
-        view: viewForHref,
+        view: nextView,
       }),
       {
         scroll: false,
@@ -183,17 +172,11 @@ function Workspace({
         title={title}
         full
         aside={
-          activeView === 'current' ? (
+          isActual ? (
             <button
               type="button"
               className={primaryButtonClassName}
-              onClick={() =>
-                open(
-                  lastForecastRange.current.from,
-                  lastForecastRange.current.to,
-                  'forecast',
-                )
-              }
+              onClick={() => open(periodFrom, periodTo, 'forecast')}
             >
               <IconPlan />
               Прогноз
@@ -202,7 +185,7 @@ function Workspace({
             <button
               type="button"
               className={primaryButtonClassName}
-              onClick={() => open(currentMonth, currentMonth, 'current')}
+              onClick={() => open(periodFrom, periodTo, 'current')}
             >
               <IconFact />
               Фактическая
@@ -211,64 +194,74 @@ function Workspace({
         }
         intro={
           <div className="flex flex-col gap-4">
-            {activeView === 'forecast' ? (
-              <div className="w-full border border-line bg-sheet p-4">
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <label htmlFor={fromFieldId} className="text-sm text-muted">
-                      С
-                    </label>
-                    <input
-                      id={fromFieldId}
-                      type="month"
-                      min="2000-01"
-                      max={horizonEnd}
-                      value={periodFrom}
-                      onChange={(event) => {
-                        const next = event.target.value;
-                        if (!summaryMonthOpen(next, today)) {
-                          return;
-                        }
-                        open(
-                          next,
-                          next > periodTo ? next : periodTo,
-                          'forecast',
-                        );
-                      }}
-                      className={monthFieldClassName}
-                    />
-                  </div>
-                  <div className="flex min-w-0 items-center gap-2">
-                    <label htmlFor={toFieldId} className="text-sm text-muted">
-                      По
-                    </label>
-                    <input
-                      id={toFieldId}
-                      type="month"
-                      min="2000-01"
-                      max={horizonEnd}
-                      value={periodTo}
-                      onChange={(event) => {
-                        const next = event.target.value;
-                        if (!summaryMonthOpen(next, today)) {
-                          return;
-                        }
-                        open(
-                          next < periodFrom ? next : periodFrom,
-                          next,
-                          'forecast',
-                        );
-                      }}
-                      className={monthFieldClassName}
-                    />
-                  </div>
+            <div className="w-full border border-line bg-sheet p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <label htmlFor={fromFieldId} className="text-sm text-muted">
+                    С
+                  </label>
+                  <input
+                    id={fromFieldId}
+                    type="month"
+                    min="2000-01"
+                    max={isActual ? currentMonth : horizonEnd}
+                    value={periodFrom}
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      if (!summaryMonthOpen(next, today)) {
+                        return;
+                      }
+                      if (isActual && next > currentMonth) {
+                        return;
+                      }
+                      const nextTo = next > periodTo ? next : periodTo;
+                      open(
+                        next,
+                        isActual && nextTo < currentMonth
+                          ? currentMonth
+                          : nextTo,
+                        view,
+                      );
+                    }}
+                    className={monthFieldClassName}
+                  />
+                </div>
+                <div className="flex min-w-0 items-center gap-2">
+                  <label htmlFor={toFieldId} className="text-sm text-muted">
+                    По
+                  </label>
+                  <input
+                    id={toFieldId}
+                    type="month"
+                    min={isActual ? currentMonth : '2000-01'}
+                    max={horizonEnd}
+                    value={periodTo}
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      if (!summaryMonthOpen(next, today)) {
+                        return;
+                      }
+                      if (isActual && next < currentMonth) {
+                        return;
+                      }
+                      const nextFrom = next < periodFrom ? next : periodFrom;
+                      open(
+                        isActual && nextFrom > currentMonth
+                          ? currentMonth
+                          : nextFrom,
+                        next,
+                        view,
+                      );
+                    }}
+                    className={monthFieldClassName}
+                  />
                 </div>
               </div>
-            ) : null}
+            </div>
             <SummaryHeadlineTable
               headline={summary.headline}
               periodLabel={periodLabel}
-              view={activeView}
+              view={view}
               planEditable={false}
               factEditable={catalogEditable}
               onOperatingExpense={(side, amountExVat) => {
@@ -298,7 +291,7 @@ function Workspace({
                 planTotals={summary.planTotalsSide}
                 factTotals={summary.factTotals}
                 variance={summary.variance}
-                view={activeView}
+                view={view}
                 editable={false}
                 vatEditable={false}
                 catalogEditable={false}
@@ -357,18 +350,23 @@ function summaryPageTitle({
   view,
   from,
   to,
-  currentMonth,
   today,
 }: {
   view: SummaryLens;
   from: string;
   to: string;
-  currentMonth: string;
   today: Date;
 }): string {
+  const currentMonth = monthKeyFromDate(today);
   if (view === 'current') {
-    const days = elapsedDaysInMonth(currentMonth, today);
-    return `Фактическая сводка за ${daysPhrase(days)} ${formatMonthNameGenitive(currentMonth)}`;
+    const elapsed = monthsInRange(from, to).reduce(
+      (sum, month) => sum + elapsedDaysInMonth(month, today),
+      0,
+    );
+    if (from === to) {
+      return `Фактическая сводка за ${daysPhrase(elapsed)} ${formatMonthNameGenitive(from)}`;
+    }
+    return `Фактическая сводка за ${daysPhrase(elapsed)} с ${formatMonth(from)} до ${formatMonth(to)}`;
   }
 
   const endIsPast = to < currentMonth;

@@ -13,15 +13,10 @@ export function parseSummaryQuery(params: {
   const legacyMonth = params.month ?? '';
   const from = params.from ?? legacyMonth;
   const to = params.to ?? params.from ?? legacyMonth;
-  const multiMonth = Boolean(from && to && from !== to);
   return {
     from,
     to,
-    view: multiMonth
-      ? 'forecast'
-      : params.view === 'current'
-        ? 'current'
-        : 'forecast',
+    view: params.view === 'current' ? 'current' : 'forecast',
   };
 }
 
@@ -50,7 +45,7 @@ export function summaryHref(
     }
   }
 
-  if (options.view === 'current' && from === to) {
+  if (options.view === 'current') {
     params.set('view', 'current');
   }
 

@@ -27,7 +27,7 @@ export function formatSignedPieces(value: number): string {
 
 export const SALE_ERROR: Record<SaleRejection, string> = {
   missing: 'Запись не найдена.',
-  month: 'Будущий месяц не создаётся.',
+  month: 'Этот месяц выбрать нельзя.',
   date: 'Укажите дату продажи.',
   customer: 'Укажите заказчика.',
   lines: 'Добавьте хотя бы один товар.',

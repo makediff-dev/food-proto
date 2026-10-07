@@ -2,9 +2,8 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 
-import { activeCategories } from '@/domain/categories';
 import {
   isOccurredOn,
   MAX_LABEL_LENGTH,
@@ -13,13 +12,13 @@ import {
   type PrototypeDocument,
   type SaleLine,
 } from '@/domain/document';
-import { activeProducts } from '@/domain/products';
+import { periodGridCategories, periodGridProducts } from '@/domain/period-grid';
 import {
   defaultSaleDay,
+  maxSaleOccurredOn,
   saleByIdOrNull,
   saleLineAmountWithVat,
   saleLinePriceWithVat,
-  saleTotals,
 } from '@/domain/sales';
 import { monthKeyFromDate, salesPlanForMonth } from '@/domain/sales-plan';
 import { planningHref } from '@/features/planning/paths';
@@ -27,13 +26,10 @@ import {
   fieldClassName,
   primaryButtonClassName,
 } from '@/features/sales/fields';
-import { formatMoney } from '@/features/sales/money';
 import { priceDraft } from '@/features/sales/text';
 import {
-  deletedSalesHref,
   NEW_SALE_TITLE,
   SALES_SECTION_TITLE,
-  saleHref,
   salesJournalHref,
 } from '@/features/sales-fact/paths';
 import {
@@ -43,7 +39,6 @@ import {
   type SaleLineField,
 } from '@/features/sales-fact/sale-form-table';
 import {
-  formatSaleDate,
   hasAmountWithoutPieces,
   parseSaleAmount,
   parseSalePieces,
@@ -51,12 +46,7 @@ import {
   SALE_ERROR,
 } from '@/features/sales-fact/text';
 import { useSalesJournal } from '@/features/sales-fact/use-sales-journal';
-import {
-  IconArrowLeft,
-  IconCheck,
-  IconTrash,
-  IconUndo,
-} from '@/features/shell/icons';
+import { IconArrowLeft, IconCheck, IconTrash } from '@/features/shell/icons';
 import { PageFrame } from '@/features/shell/page-frame';
 
 function lineDraftFromSale(line: SaleLine): SaleLineDraft {
@@ -115,26 +105,23 @@ function withPriceFromAmount(line: SaleLineDraft): SaleLineDraft {
 
 function saleFormProducts(
   document: PrototypeDocument,
+  month: string,
   lineProductIds: readonly string[],
 ): Product[] {
   const referenced = new Set(lineProductIds);
-  const active = activeProducts(document);
-  const deletedOnSale = document.products.filter(
-    (item) => item.deletedAt !== null && referenced.has(item.id),
+  const period = periodGridProducts(document, month);
+  const periodIds = new Set(period.map((item) => item.id));
+  const extras = document.products.filter(
+    (item) => referenced.has(item.id) && !periodIds.has(item.id),
   );
-  return [...active, ...deletedOnSale];
+  return [...period, ...extras];
 }
 
 function saleFormCategories(
   document: PrototypeDocument,
   products: readonly Product[],
 ): ProductCategory[] {
-  const productCategoryIds = new Set(products.map((item) => item.categoryId));
-  const active = activeCategories(document);
-  const deletedWithProducts = document.categories.filter(
-    (item) => item.deletedAt !== null && productCategoryIds.has(item.id),
-  );
-  return [...active, ...deletedWithProducts];
+  return periodGridCategories(document, products);
 }
 
 function initialDrafts(
@@ -147,6 +134,7 @@ function initialDrafts(
   );
   const products = saleFormProducts(
     document,
+    month,
     existingLines.map((line) => line.productId),
   );
   const drafts: Record<string, SaleLineDraft> = {};
@@ -195,16 +183,6 @@ export function SaleScreen({
     );
   }
 
-  if (existing && existing.deletedAt !== null) {
-    return (
-      <DeletedSale
-        id={existing.id}
-        customerName={existing.customerName}
-        occurredOn={existing.occurredOn}
-      />
-    );
-  }
-
   const initialDay =
     existing?.occurredOn ??
     (isOccurredOn(dayQuery) ? dayQuery : defaultSaleDay(currentMonth, today));
@@ -238,16 +216,48 @@ function SaleForm({
   const router = useRouter();
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
-  const maxDay = defaultSaleDay(currentMonth, today);
+  const maxDay = maxSaleOccurredOn(today);
   const customerId = useId();
   const dateId = useId();
   const [customer, setCustomer] = useState(initialCustomer);
   const [occurredOn, setOccurredOn] = useState(initialDay);
   const [drafts, setDrafts] = useState(initialDrafts);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const month = occurredOn.slice(0, 7);
 
-  const products = saleFormProducts(journal.document, Object.keys(drafts));
+  const filledProductIds = useMemo(
+    () =>
+      Object.entries(drafts)
+        .filter(([, line]) => {
+          const pieces = parseSalePieces(line.pieces);
+          const amount = parseSaleAmount(line.amount);
+          return (
+            (pieces !== null && pieces > 0) || (amount !== null && amount > 0)
+          );
+        })
+        .map(([productId]) => productId),
+    [drafts],
+  );
+
+  const products = saleFormProducts(journal.document, month, filledProductIds);
   const categories = saleFormCategories(journal.document, products);
+
+  useEffect(() => {
+    setDrafts((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const product of products) {
+        if (next[product.id]) {
+          continue;
+        }
+        next[product.id] = emptySaleLineDraft(
+          planPriceWithVat(journal.document, product.id, month),
+        );
+        changed = true;
+      }
+      return changed ? next : current;
+    });
+  }, [products, journal.document, month]);
 
   function setLine(productId: string, field: SaleLineField, raw: string) {
     setDrafts((current) => {
@@ -343,7 +353,6 @@ function SaleForm({
     );
   }
 
-  const month = occurredOn.slice(0, 7);
   const backHref = salesJournalHref({
     month: month || currentMonth,
     currentMonth,
@@ -441,7 +450,7 @@ function SaleForm({
                 aria-label="Удалить продажу"
                 onClick={() => {
                   const confirmed = window.confirm(
-                    'Удалить продажу? Она пропадёт из рабочего списка. Вернуть можно среди удалённых.',
+                    'Удалить продажу? Её нельзя будет вернуть.',
                   );
                   if (!confirmed) {
                     return;
@@ -467,75 +476,3 @@ function SaleForm({
     </PageFrame>
   );
 }
-
-function DeletedSale({
-  id,
-  customerName,
-  occurredOn,
-}: {
-  id: string;
-  customerName: string;
-  occurredOn: string;
-}) {
-  const journal = useSalesJournal();
-  const router = useRouter();
-  const today = useMemo(() => new Date(), []);
-  const currentMonth = monthKeyFromDate(today);
-  const [error, setError] = useState<string | null>(null);
-  const sale = saleByIdOrNull(journal.document, id);
-  const totals = sale ? saleTotals(journal.document, sale) : null;
-
-  return (
-    <PageFrame
-      title={SALES_SECTION_TITLE}
-      full
-      lede="Удалённую продажу можно открыть и вернуть."
-    >
-      <div className="flex flex-col gap-4">
-        <Link href={deletedSalesHref()} className={quietLinkClassName}>
-          <IconUndo />К удалённым продажам
-        </Link>
-        <div className="border border-line bg-sheet p-4">
-          <p className="text-sm text-ink">{customerName}</p>
-          <p className="mt-1 text-sm text-muted">
-            {formatSaleDate(occurredOn)}
-          </p>
-          {totals?.revenueWithVat !== null &&
-          totals?.revenueWithVat !== undefined &&
-          totals.revenueExVat !== null ? (
-            <p className="mt-2 text-sm text-ink">
-              {formatMoney(totals.revenueWithVat)} с НДС ·{' '}
-              {formatMoney(totals.revenueExVat)} без НДС
-            </p>
-          ) : null}
-        </div>
-        <button
-          type="button"
-          disabled={!journal.hydrated}
-          onClick={() => {
-            const rejection = journal.restore(id);
-            if (rejection) {
-              setError(SALE_ERROR[rejection]);
-              return;
-            }
-            router.push(saleHref(id));
-          }}
-          className={primaryButtonClassName}
-        >
-          <IconUndo />
-          Вернуть
-        </button>
-        {error ? <p className="text-sm text-ink">{error}</p> : null}
-        <Link
-          href={salesJournalHref({ month: currentMonth, currentMonth })}
-          className={quietLinkClassName}
-        >
-          <IconUndo />К журналу продаж
-        </Link>
-      </div>
-    </PageFrame>
-  );
-}
-
-const quietLinkClassName =
-  'inline-flex h-11 items-center justify-center gap-2 border border-line bg-sheet px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink';

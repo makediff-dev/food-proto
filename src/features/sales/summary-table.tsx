@@ -451,7 +451,7 @@ function CategoryBlock({
               </>
             )}
             {group.deleted ? (
-              <span className="text-sm text-muted">удалена</span>
+              <span className="text-sm text-muted">(архив)</span>
             ) : catalogEditable ? (
               <>
                 <button
@@ -598,18 +598,16 @@ function ProductRow({
             )}
           </div>
           {row.deleted ? (
-            <span className="text-sm text-muted">удалён</span>
+            <span className="text-sm text-muted">(архив)</span>
           ) : null}
         </div>
       </th>
       {SIDE_COLUMNS.map((column) => {
         const canEdit =
-          !row.deleted &&
-          ((editable &&
+          (editable &&
             row.planLineId !== null &&
             (column.key === 'price' || column.key === 'volume')) ||
-            (vatEditable &&
-              (column.key === 'vat' || column.key === 'unitCost')));
+          (vatEditable && (column.key === 'vat' || column.key === 'unitCost'));
         return (
           <td
             key={`plan:${column.key}`}
@@ -658,8 +656,8 @@ function ProductRow({
             <PlanCell
               column={column.key}
               row={row}
-              editable={editable && !row.deleted}
-              vatEditable={vatEditable && !row.deleted}
+              editable={editable}
+              vatEditable={vatEditable}
               onPlanLine={onPlanLineAction}
               onProductVat={onProductVatAction}
               onProductCost={onProductCostAction}
