@@ -15,6 +15,14 @@ const SECTIONS = [
   { href: '/sales', label: SALES_SECTION_TITLE },
 ] as const;
 
+const PRODUCTION_SECTION_TITLE = 'Производство';
+
+const PRODUCTION_NAV = [
+  { href: '/production/plan', label: 'Планируемое производство' },
+  { href: '/production/fact', label: 'Фактическое производство' },
+  { href: '/production/journal', label: 'Журнал производства' },
+] as const;
+
 const QUESTIONS_HREF = '/questions';
 const QUESTIONS_LABEL = 'Вопросы';
 
@@ -26,13 +34,23 @@ function sectionIsCurrent(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function currentNavLabel(pathname: string): string | undefined {
+  if (sectionIsCurrent(pathname, QUESTIONS_HREF)) {
+    return QUESTIONS_LABEL;
+  }
+
+  const productionItem = PRODUCTION_NAV.find((item) => sectionIsCurrent(pathname, item.href));
+  if (productionItem) {
+    return productionItem.label;
+  }
+
+  return SECTIONS.find((section) => sectionIsCurrent(pathname, section.href))?.label;
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const questionsCurrent = sectionIsCurrent(pathname, QUESTIONS_HREF);
-  const current = questionsCurrent
-    ? { href: QUESTIONS_HREF, label: QUESTIONS_LABEL }
-    : SECTIONS.find((section) => sectionIsCurrent(pathname, section.href));
+  const currentLabel = currentNavLabel(pathname);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -105,19 +123,50 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+
+          <div>
+            <p className="px-3 py-2 text-sm text-sidebar-muted">{PRODUCTION_SECTION_TITLE}</p>
+            <div className="flex flex-col">
+              {PRODUCTION_NAV.map((item) => {
+                const currentSection = sectionIsCurrent(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={currentSection ? 'page' : undefined}
+                    onClick={() => setMenuOpen(false)}
+                    className={`relative py-1 pr-3 pl-6 text-xs leading-5 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                      currentSection
+                        ? 'bg-sidebar-active text-white'
+                        : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    {currentSection ? (
+                      <span className="absolute inset-y-1 left-0 w-0.5 bg-mark" aria-hidden="true" />
+                    ) : null}
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
         </nav>
 
         <div className="border-t border-sidebar-line">
           <MockReset />
           <Link
             href={QUESTIONS_HREF}
-            aria-current={questionsCurrent ? 'page' : undefined}
+            aria-current={sectionIsCurrent(pathname, QUESTIONS_HREF) ? 'page' : undefined}
             onClick={() => setMenuOpen(false)}
             className={`relative mx-2 mb-3 block px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-              questionsCurrent ? 'bg-sidebar-active text-white' : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
+              sectionIsCurrent(pathname, QUESTIONS_HREF)
+                ? 'bg-sidebar-active text-white'
+                : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
             }`}
           >
-            {questionsCurrent ? <span className="absolute inset-y-2 left-0 w-0.5 bg-mark" aria-hidden="true" /> : null}
+            {sectionIsCurrent(pathname, QUESTIONS_HREF) ? (
+              <span className="absolute inset-y-2 left-0 w-0.5 bg-mark" aria-hidden="true" />
+            ) : null}
             {QUESTIONS_LABEL}
           </Link>
         </div>
@@ -135,7 +184,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="sr-only">Открыть меню</span>
             <IconMenu />
           </button>
-          <p className="text-sm text-ink">{current?.label}</p>
+          <p className="text-sm text-ink">{currentLabel}</p>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
       </div>
