@@ -28,7 +28,7 @@ import {
   SaleFormTable,
   type SaleLineDraft,
   type SaleLineField,
-} from '@/features/sales-fact/sale-form-table';
+} from '@/features/sales-fact/SaleFormTable';
 import {
   hasAmountWithoutPieces,
   parseSaleAmount,
@@ -37,8 +37,8 @@ import {
   SALE_ERROR,
 } from '@/features/sales-fact/text';
 import { useSalesJournal } from '@/features/sales-fact/use-sales-journal';
-import { IconArrowLeft, IconCheck, IconTrash } from '@/features/shell/icons';
-import { PageFrame } from '@/features/shell/page-frame';
+import { IconArrowLeft, IconCheck, IconTrash } from '@/features/shell/Icons';
+import { PageFrame } from '@/features/shell/PageFrame';
 import { formatMoneyDraft } from '@/features/table/format';
 
 function lineDraftFromSale(line: SaleLine): SaleLineDraft {

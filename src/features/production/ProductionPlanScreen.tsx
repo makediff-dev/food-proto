@@ -12,13 +12,13 @@ import {
 import { activeProducts } from '@/domain/products';
 import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { lastHorizonMonth } from '@/domain/summary';
+import { ProductionPlanTable } from '@/features/production/ProductionPlanTable';
 import { productionPlanHref } from '@/features/production/paths';
-import { ProductionPlanTable } from '@/features/production/production-plan-table';
 import { useProductionPlan } from '@/features/production/use-production-plan';
 import { FIELD_ERROR, monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
-import { IconFullscreen, IconFullscreenExit, IconPlus } from '@/features/shell/icons';
-import { MonthStep } from '@/features/shell/month-step';
-import { PageFrame } from '@/features/shell/page-frame';
+import { IconFullscreen, IconFullscreenExit, IconPlus } from '@/features/shell/Icons';
+import { MonthStep } from '@/features/shell/MonthStep';
+import { PageFrame } from '@/features/shell/PageFrame';
 
 export function ProductionPlanScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);

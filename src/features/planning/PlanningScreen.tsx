@@ -16,14 +16,14 @@ import {
 import { lastHorizonMonth, monthSummary } from '@/domain/summary';
 import { PLANNING_SECTION_TITLE, planningArchiveHref, planningHref } from '@/features/planning/paths';
 import { FIELD_ERROR, fieldClassName, monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
-import { PlanHeadlineTable } from '@/features/sales/summary-headline';
-import { SummaryTable } from '@/features/sales/summary-table';
+import { PlanHeadlineTable } from '@/features/sales/SummaryHeadlineTable';
+import { SummaryTable } from '@/features/sales/SummaryTable';
 import { OPERATING_EXPENSE_ERROR, SALES_PLAN_ERROR } from '@/features/sales/text';
 import { useSales } from '@/features/sales/use-sales';
-import { Dialog } from '@/features/shell/dialog';
-import { IconFullscreen, IconFullscreenExit, IconPlus, IconTrash } from '@/features/shell/icons';
-import { MonthStep } from '@/features/shell/month-step';
-import { PageFrame } from '@/features/shell/page-frame';
+import { Dialog } from '@/features/shell/Dialog';
+import { IconFullscreen, IconFullscreenExit, IconPlus, IconTrash } from '@/features/shell/Icons';
+import { MonthStep } from '@/features/shell/MonthStep';
+import { PageFrame } from '@/features/shell/PageFrame';
 
 export function PlanningScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);

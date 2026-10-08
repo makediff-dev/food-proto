@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { NEW_SALE_TITLE } from '@/features/sales-fact/paths';
-import { SaleScreen } from '@/features/sales-fact/sale-screen';
+import { SaleScreen } from '@/features/sales-fact/SaleScreen';
 
 export const metadata: Metadata = {
   title: NEW_SALE_TITLE,

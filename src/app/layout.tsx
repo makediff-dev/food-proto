@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { Onest, Unbounded } from 'next/font/google';
 
-import { DocumentProvider } from '@/data/document-store';
-import { AppShell } from '@/features/shell/app-shell';
+import { DocumentProvider } from '@/data/DocumentProvider';
+import { AppShell } from '@/features/shell/AppShell';
 
 import './globals.css';
 

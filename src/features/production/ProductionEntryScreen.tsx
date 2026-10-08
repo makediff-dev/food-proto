@@ -20,20 +20,20 @@ import {
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { planningHref } from '@/features/planning/paths';
 import {
+  emptyProductionEntryLineDraft,
+  ProductionEntryFormTable,
+  type ProductionEntryLineDraft,
+} from '@/features/production/ProductionEntryFormTable';
+import {
   NEW_PRODUCTION_ENTRY_TITLE,
   PRODUCTION_JOURNAL_TITLE,
   productionJournalHref,
 } from '@/features/production/paths';
-import {
-  emptyProductionEntryLineDraft,
-  ProductionEntryFormTable,
-  type ProductionEntryLineDraft,
-} from '@/features/production/production-entry-form-table';
 import { PRODUCTION_ENTRY_ERROR, parseProductionEntryPieces } from '@/features/production/text';
 import { useProductionJournal } from '@/features/production/use-production-journal';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
-import { IconArrowLeft, IconCheck, IconTrash } from '@/features/shell/icons';
-import { PageFrame } from '@/features/shell/page-frame';
+import { IconArrowLeft, IconCheck, IconTrash } from '@/features/shell/Icons';
+import { PageFrame } from '@/features/shell/PageFrame';
 
 function lineDraftFromEntry(line: ProductionEntryLine): ProductionEntryLineDraft {
   return {

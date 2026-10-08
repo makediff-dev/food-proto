@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { type ReactNode, useEffect, useState } from 'react';
 
-import { useDocumentStore } from '@/data/document-store';
+import { useDocumentStore } from '@/data/DocumentProvider';
 import { PLANNING_SECTION_TITLE } from '@/features/planning/paths';
 import { SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
-import { IconMenu, IconUndo } from '@/features/shell/icons';
+import { IconMenu, IconUndo } from '@/features/shell/Icons';
 
 const SECTIONS = [
   { href: '/planning', label: PLANNING_SECTION_TITLE },

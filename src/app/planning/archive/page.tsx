@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-
+import { PlanningArchiveScreen } from '@/features/planning/PlanningArchiveScreen';
 import { PLANNING_ARCHIVE_TITLE } from '@/features/planning/paths';
-import { PlanningArchiveScreen } from '@/features/planning/planning-archive-screen';
 
 export const metadata: Metadata = {
   title: PLANNING_ARCHIVE_TITLE,

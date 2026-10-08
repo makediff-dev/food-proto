@@ -18,12 +18,12 @@ import {
 import { planningHref } from '@/features/planning/paths';
 import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { summaryHref } from '@/features/sales/paths';
-import { SummaryHeadlineTable } from '@/features/sales/summary-headline';
-import { SummaryTable } from '@/features/sales/summary-table';
+import { SummaryHeadlineTable } from '@/features/sales/SummaryHeadlineTable';
+import { SummaryTable } from '@/features/sales/SummaryTable';
 import { daysPhrase, formatMonth, formatMonthNameGenitive, OPERATING_EXPENSE_ERROR } from '@/features/sales/text';
 import { useSales } from '@/features/sales/use-sales';
-import { IconFact, IconFullscreen, IconFullscreenExit, IconPlan } from '@/features/shell/icons';
-import { PageFrame } from '@/features/shell/page-frame';
+import { IconFact, IconFullscreen, IconFullscreenExit, IconPlan } from '@/features/shell/Icons';
+import { PageFrame } from '@/features/shell/PageFrame';
 
 export function SummaryScreen({ from, to, view }: { from: string; to: string; view: SummaryLens }) {
   const today = useMemo(() => new Date(), []);

@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-
+import { ProductionJournalFactScreen } from '@/features/production/ProductionJournalFactScreen';
 import { PRODUCTION_FACT_TITLE, parseProductionJournalFactQuery } from '@/features/production/paths';
-import { ProductionJournalFactScreen } from '@/features/production/production-journal-fact-screen';
 
 export const metadata: Metadata = {
   title: PRODUCTION_FACT_TITLE,

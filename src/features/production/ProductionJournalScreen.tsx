@@ -4,27 +4,25 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 
-import { useDocumentStore } from '@/data/document-store';
-import type { PrototypeDocument, Sale } from '@/domain/document';
-import { saleTotals, workingSalesInMonth } from '@/domain/sales';
+import { useDocumentStore } from '@/data/DocumentProvider';
+import type { ProductionEntry, PrototypeDocument } from '@/domain/document';
+import { productionEntryPieces, workingProductionEntriesInMonth } from '@/domain/production-journal';
 import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { lastHorizonMonth } from '@/domain/summary';
+import {
+  PRODUCTION_JOURNAL_TITLE,
+  productionEntryHref,
+  productionEntryNewHref,
+  productionJournalHref,
+} from '@/features/production/paths';
+import { formatProductionEntryDate } from '@/features/production/text';
 import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { formatPieces } from '@/features/sales/text';
-import {
-  SALES_JOURNAL_TITLE,
-  saleHref,
-  saleNewHref,
-  salesFactHref,
-  salesJournalHref,
-} from '@/features/sales-fact/paths';
-import { formatSaleDate } from '@/features/sales-fact/text';
-import { IconArrowLeft, IconPlus } from '@/features/shell/icons';
-import { MonthStep } from '@/features/shell/month-step';
-import { PageFrame } from '@/features/shell/page-frame';
-import { MoneyAmount } from '@/features/table';
+import { IconPlus } from '@/features/shell/Icons';
+import { MonthStep } from '@/features/shell/MonthStep';
+import { PageFrame } from '@/features/shell/PageFrame';
 
-export function SalesJournalScreen({ month }: { month: string }) {
+export function ProductionJournalScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = planMonthOpen(month, today) ? month : currentMonth;
@@ -35,36 +33,27 @@ export function SalesJournalScreen({ month }: { month: string }) {
 function Workspace({ month, currentMonth, today }: { month: string; currentMonth: string; today: Date }) {
   const store = useDocumentStore();
   const router = useRouter();
-  const items = workingSalesInMonth(store.document, month);
-  const days = groupSalesByDay(items);
+  const items = workingProductionEntriesInMonth(store.document, month);
+  const days = groupEntriesByDay(items);
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
   const horizonEnd = lastHorizonMonth(today);
   const nextDisabled = nextMonth > horizonEnd;
 
   function open(nextMonthKey: string) {
-    router.push(salesJournalHref({ month: nextMonthKey, currentMonth }), {
+    router.push(productionJournalHref({ month: nextMonthKey, currentMonth }), {
       scroll: false,
     });
   }
 
   return (
     <PageFrame
-      title={SALES_JOURNAL_TITLE}
+      title={PRODUCTION_JOURNAL_TITLE}
       full
-      back={
-        <Link
-          href={salesFactHref({ month, currentMonth })}
-          aria-label="Назад"
-          className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
-          <IconArrowLeft />
-        </Link>
-      }
       aside={
-        <Link href={saleNewHref()} className={primaryButtonClassName}>
+        <Link href={productionEntryNewHref()} className={primaryButtonClassName}>
           <IconPlus />
-          Добавить продажу
+          Добавить запись
         </Link>
       }
     >
@@ -102,41 +91,29 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
 
         {items.length === 0 ? (
           <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-            За этот месяц рабочих продаж нет. Добавьте продажу: заказчик, дата и товары. Она попадёт в таблицу факта за
-            этот день.
+            За этот месяц записей выпуска нет. Добавьте запись: дата и штуки по товарам. Пока она не попадает в сводку и
+            фактическое производство.
           </p>
         ) : (
           <div className="border border-line bg-sheet">
             {days.map((day) => (
               <section key={day.occurredOn}>
                 <h2 className="border-b border-line bg-paper px-4 py-2 text-sm text-ink">
-                  {formatSaleDate(day.occurredOn)}
+                  {formatProductionEntryDate(day.occurredOn)}
                 </h2>
                 <ul>
                   {day.items.map((item) => {
-                    const totals = saleTotals(store.document, item);
+                    const pieces = productionEntryPieces(item);
                     return (
                       <li key={item.id} className="border-b border-line last:border-b-0">
                         <Link
-                          href={saleHref(item.id)}
+                          href={productionEntryHref(item.id)}
                           className="flex flex-col gap-2 px-4 py-3 outline-none hover:bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:flex-row sm:items-start sm:justify-between sm:gap-6"
                         >
                           <div className="min-w-0">
-                            <p className="text-sm text-ink">{item.customerName}</p>
-                            <p className="mt-1 text-sm leading-6 text-muted">{saleComposition(store.document, item)}</p>
+                            <p className="text-sm leading-6 text-ink">{entryComposition(store.document, item)}</p>
                           </div>
-                          <p className="shrink-0 text-sm text-ink sm:text-right">
-                            {totals.revenueWithVat === null || totals.revenueExVat === null ? (
-                              '—'
-                            ) : (
-                              <>
-                                <MoneyAmount amount={totals.revenueWithVat} /> с НДС
-                                <span className="mt-1 block text-muted">
-                                  <MoneyAmount amount={totals.revenueExVat} /> без НДС
-                                </span>
-                              </>
-                            )}
-                          </p>
+                          <p className="shrink-0 text-sm text-ink sm:text-right">{formatPieces(pieces)} шт</p>
                         </Link>
                       </li>
                     );
@@ -151,11 +128,11 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
   );
 }
 
-function groupSalesByDay(items: readonly Sale[]): {
+function groupEntriesByDay(items: readonly ProductionEntry[]): {
   occurredOn: string;
-  items: Sale[];
+  items: ProductionEntry[];
 }[] {
-  const groups = new Map<string, Sale[]>();
+  const groups = new Map<string, ProductionEntry[]>();
   for (const item of items) {
     const bucket = groups.get(item.occurredOn);
     if (bucket) {
@@ -173,8 +150,8 @@ function groupSalesByDay(items: readonly Sale[]): {
     }));
 }
 
-function saleComposition(document: PrototypeDocument, sale: Sale): string {
-  return sale.lines
+function entryComposition(document: PrototypeDocument, entry: ProductionEntry): string {
+  return entry.lines
     .map((line) => {
       const product = document.products.find((item) => item.id === line.productId);
       const name = product?.name ?? 'Товар';

@@ -7,8 +7,9 @@ export {
   PercentCell,
   TableNumber,
   VatMoneyCell,
-} from '@/features/table/cells';
-export { MergedTwoStory, StackedPair } from '@/features/table/stack';
+} from '@/features/table/Cells';
+export { ColumnLabel, keepWithNext } from '@/features/table/ColumnLabel';
+export { MergedTwoStory, StackedPair } from '@/features/table/StackedPair';
 export {
   editableCellClassName,
   gridFieldClassName,
@@ -19,4 +20,3 @@ export {
   tableFrameClassName,
   tableFrameExpandedClassName,
 } from '@/features/table/styles';
-export { ColumnLabel, keepWithNext } from '@/features/table/text';

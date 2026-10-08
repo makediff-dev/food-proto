@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 import questions from '@/content/questions.json';
-import { PageFrame } from '@/features/shell/page-frame';
+import { PageFrame } from '@/features/shell/PageFrame';
 
 const TITLE = 'Вопросы';
 

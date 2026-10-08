@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-
+import { ProductionFactScreen } from '@/features/production/ProductionFactScreen';
 import { parseProductionFactQuery } from '@/features/production/paths';
-import { ProductionFactScreen } from '@/features/production/production-fact-screen';
 
 export const metadata: Metadata = {
   title: 'Производство',

@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import type { Product, ProductCategory } from '@/domain/document';
 import { parseProductionEntryPieces } from '@/features/production/text';
-import { IconChevronDown, IconChevronRight } from '@/features/shell/icons';
+import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   ColumnLabel,
   Empty,

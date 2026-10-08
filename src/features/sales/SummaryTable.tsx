@@ -8,7 +8,7 @@ import { priceWithVatFromExVat, type SalesPlanRejection } from '@/domain/sales-p
 import type { SummaryGroup, SummaryLens, SummaryRow, SummarySide, SummaryVariance } from '@/domain/summary';
 import { FIELD_ERROR, VAT_PARSE_ERROR } from '@/features/sales/fields';
 import { formatPerDay, formatPieces, formatPriceExVat, SALES_PLAN_ERROR } from '@/features/sales/text';
-import { IconChevronDown, IconChevronRight, IconPlus, IconTrash } from '@/features/shell/icons';
+import { IconChevronDown, IconChevronRight, IconPlus, IconTrash } from '@/features/shell/Icons';
 import {
   ColumnLabel,
   Empty,

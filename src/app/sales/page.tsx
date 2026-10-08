@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 import { parseSalesFactQuery, SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
-import { SalesFactScreen } from '@/features/sales-fact/sales-fact-screen';
+import { SalesFactScreen } from '@/features/sales-fact/SalesFactScreen';
 
 export const metadata: Metadata = {
   title: SALES_SECTION_TITLE,

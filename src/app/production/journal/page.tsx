@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-
+import { ProductionJournalScreen } from '@/features/production/ProductionJournalScreen';
 import { PRODUCTION_JOURNAL_TITLE, parseProductionJournalQuery } from '@/features/production/paths';
-import { ProductionJournalScreen } from '@/features/production/production-journal-screen';
 
 export const metadata: Metadata = {
   title: PRODUCTION_JOURNAL_TITLE,

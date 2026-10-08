@@ -1,4 +1,4 @@
-import { PageFrame } from '@/features/shell/page-frame';
+import { PageFrame } from '@/features/shell/PageFrame';
 
 export function ProductionPlaceholderScreen({
   title,

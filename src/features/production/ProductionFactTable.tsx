@@ -5,7 +5,7 @@ import { useState } from 'react';
 import type { ProductionFactGroup, ProductionFactRow } from '@/domain/production-fact';
 import type { SummaryLens } from '@/domain/summary';
 import { formatPieces } from '@/features/sales/text';
-import { IconChevronDown, IconChevronRight } from '@/features/shell/icons';
+import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   ColumnLabel,
   keepWithNext,

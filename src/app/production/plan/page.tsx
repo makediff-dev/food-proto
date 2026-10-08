@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-
+import { ProductionPlanScreen } from '@/features/production/ProductionPlanScreen';
 import { parseProductionPlanQuery } from '@/features/production/paths';
-import { ProductionPlanScreen } from '@/features/production/production-plan-screen';
 
 export const metadata: Metadata = {
   title: 'Планируемое производство',

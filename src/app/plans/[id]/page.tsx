@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { PlanRedirect } from '@/features/sales/plan-redirect';
+import { PlanRedirect } from '@/features/sales/PlanRedirect';
 
 export const metadata: Metadata = {
   title: 'Сводка',

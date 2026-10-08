@@ -8,8 +8,8 @@ import { deletedProducts } from '@/domain/products';
 import { PLANNING_ARCHIVE_TITLE, planningHref } from '@/features/planning/paths';
 import { FIELD_ERROR } from '@/features/sales/fields';
 import { useSales } from '@/features/sales/use-sales';
-import { IconArrowLeft, IconUndo } from '@/features/shell/icons';
-import { PageFrame } from '@/features/shell/page-frame';
+import { IconArrowLeft, IconUndo } from '@/features/shell/Icons';
+import { PageFrame } from '@/features/shell/PageFrame';
 
 export function PlanningArchiveScreen() {
   const sales = useSales();

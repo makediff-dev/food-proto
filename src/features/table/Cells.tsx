@@ -11,7 +11,7 @@ import {
   parsePercentWhole,
   sanitizeDraft,
 } from '@/features/table/format';
-import { StackedPair } from '@/features/table/stack';
+import { StackedPair } from '@/features/table/StackedPair';
 import { gridFieldClassName } from '@/features/table/styles';
 
 type CellCommit = (value: number) => string | null;

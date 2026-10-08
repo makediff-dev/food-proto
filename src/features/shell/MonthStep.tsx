@@ -1,4 +1,4 @@
-import { IconChevronLeft, IconChevronRight } from '@/features/shell/icons';
+import { IconChevronLeft, IconChevronRight } from '@/features/shell/Icons';
 
 export function MonthStep({
   label,

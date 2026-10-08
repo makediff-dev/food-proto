@@ -5,7 +5,7 @@ import { useState } from 'react';
 import type { Product, ProductCategory } from '@/domain/document';
 import { amountExVat, averageAmount } from '@/domain/money';
 import { hasAmountWithoutPieces, parseSaleAmount, parseSalePieces, parseSalePrice } from '@/features/sales-fact/text';
-import { IconChevronDown, IconChevronRight } from '@/features/shell/icons';
+import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   ColumnLabel,
   Empty,

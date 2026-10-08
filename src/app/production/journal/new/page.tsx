@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-
+import { ProductionEntryScreen } from '@/features/production/ProductionEntryScreen';
 import { NEW_PRODUCTION_ENTRY_TITLE } from '@/features/production/paths';
-import { ProductionEntryScreen } from '@/features/production/production-entry-screen';
 
 export const metadata: Metadata = {
   title: NEW_PRODUCTION_ENTRY_TITLE,

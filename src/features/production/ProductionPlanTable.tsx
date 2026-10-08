@@ -6,7 +6,7 @@ import { costWithVat } from '@/domain/cost';
 import type { ProductionPlanGroup, ProductionPlanRow, ProductionPlanTotals } from '@/domain/production-plan';
 import { FIELD_ERROR } from '@/features/sales/fields';
 import { formatPieces } from '@/features/sales/text';
-import { IconChevronDown, IconChevronRight } from '@/features/shell/icons';
+import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   ColumnLabel,
   Empty,

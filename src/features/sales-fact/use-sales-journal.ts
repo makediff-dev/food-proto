@@ -1,6 +1,6 @@
 'use client';
 
-import { commitDocumentUpdate, useDocumentStore } from '@/data/document-store';
+import { commitDocumentUpdate, useDocumentStore } from '@/data/DocumentProvider';
 import type { SaleLine } from '@/domain/document';
 import { addSale, addSaleRejection, deleteSale, updateSale, updateSaleRejection } from '@/domain/sales';
 

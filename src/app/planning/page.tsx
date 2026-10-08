@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
-
+import { PlanningScreen } from '@/features/planning/PlanningScreen';
 import { PLANNING_SECTION_TITLE, parsePlanningQuery } from '@/features/planning/paths';
-import { PlanningScreen } from '@/features/planning/planning-screen';
 
 export const metadata: Metadata = {
   title: PLANNING_SECTION_TITLE,

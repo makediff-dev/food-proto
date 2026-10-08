@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useId, useRef } from 'react';
 
-import { IconClose } from '@/features/shell/icons';
+import { IconClose } from '@/features/shell/Icons';
 
 export function Dialog({
   title,

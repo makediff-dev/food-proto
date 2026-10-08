@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 import { parseSummaryQuery } from '@/features/sales/paths';
-import { SummaryScreen } from '@/features/sales/summary-screen';
+import { SummaryScreen } from '@/features/sales/SummaryScreen';
 
 export const metadata: Metadata = {
   title: 'Сводка',

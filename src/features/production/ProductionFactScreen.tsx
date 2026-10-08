@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useId, useMemo, useState } from 'react';
 
-import { useDocumentStore } from '@/data/document-store';
+import { useDocumentStore } from '@/data/DocumentProvider';
 import { activeCategories } from '@/domain/categories';
 import { productionFactForLens } from '@/domain/production-fact';
 import { monthKeyFromDate, planMonthOpen } from '@/domain/sales-plan';
@@ -17,12 +17,12 @@ import {
   type SummaryLens,
 } from '@/domain/summary';
 import { planningHref } from '@/features/planning/paths';
+import { ProductionFactTable } from '@/features/production/ProductionFactTable';
 import { productionFactHref } from '@/features/production/paths';
-import { ProductionFactTable } from '@/features/production/production-fact-table';
 import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { daysPhrase, formatMonth, formatMonthNameGenitive } from '@/features/sales/text';
-import { IconFact, IconFullscreen, IconFullscreenExit, IconPlan } from '@/features/shell/icons';
-import { PageFrame } from '@/features/shell/page-frame';
+import { IconFact, IconFullscreen, IconFullscreenExit, IconPlan } from '@/features/shell/Icons';
+import { PageFrame } from '@/features/shell/PageFrame';
 
 export function ProductionFactScreen({ from, to, view }: { from: string; to: string; view: SummaryLens }) {
   const today = useMemo(() => new Date(), []);

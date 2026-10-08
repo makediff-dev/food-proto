@@ -1,6 +1,6 @@
 'use client';
 
-import { commitDocumentUpdate, useDocumentStore } from '@/data/document-store';
+import { commitDocumentUpdate, useDocumentStore } from '@/data/DocumentProvider';
 import type { ProductionEntryLine } from '@/domain/document';
 import {
   addProductionEntry,

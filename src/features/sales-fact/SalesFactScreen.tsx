@@ -4,42 +4,28 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { useDocumentStore } from '@/data/document-store';
+import { useDocumentStore } from '@/data/DocumentProvider';
 import { isOccurredOn } from '@/domain/document';
-import {
-  defaultProductionJournalFactDay,
-  monthDates,
-  productionJournalFactGridProducts,
-  productionJournalFactMonth,
-} from '@/domain/production-journal-fact';
+import { defaultSalesFactDay, monthDates, salesFactGridProducts, salesFactMonth } from '@/domain/sales-fact';
 import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { lastHorizonMonth } from '@/domain/summary';
-import { planningHref } from '@/features/planning/paths';
-import {
-  PRODUCTION_FACT_TITLE,
-  type ProductionJournalFactView,
-  productionEntryNewHref,
-  productionJournalFactHref,
-  productionJournalHref,
-} from '@/features/production/paths';
-import { ProductionJournalFactTable } from '@/features/production/production-journal-fact-table';
 import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
+import {
+  SALES_SECTION_TITLE,
+  type SalesFactView,
+  saleNewHref,
+  salesFactHref,
+  salesJournalHref,
+} from '@/features/sales-fact/paths';
+import { SalesFactTable } from '@/features/sales-fact/SalesFactTable';
 import { formatSalesFactDay } from '@/features/sales-fact/text';
-import { IconEye, IconFullscreen, IconFullscreenExit, IconList, IconPlan, IconPlus } from '@/features/shell/icons';
-import { MonthStep } from '@/features/shell/month-step';
-import { PageFrame } from '@/features/shell/page-frame';
+import { IconEye, IconFullscreen, IconFullscreenExit, IconList, IconPlan, IconPlus } from '@/features/shell/Icons';
+import { MonthStep } from '@/features/shell/MonthStep';
+import { PageFrame } from '@/features/shell/PageFrame';
 
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as const;
 
-export function ProductionJournalFactScreen({
-  month,
-  day,
-  view,
-}: {
-  month: string;
-  day: string;
-  view: ProductionJournalFactView;
-}) {
+export function SalesFactScreen({ month, day, view }: { month: string; day: string; view: SalesFactView }) {
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = resolveMonth(month, today);
@@ -56,16 +42,16 @@ function Workspace({
 }: {
   month: string;
   dayQuery: string;
-  view: ProductionJournalFactView;
+  view: SalesFactView;
   currentMonth: string;
   today: Date;
 }) {
   const store = useDocumentStore();
   const router = useRouter();
   const [fullscreen, setFullscreen] = useState(false);
-  const products = productionJournalFactGridProducts(store.document, month);
-  const days = useMemo(() => productionJournalFactMonth(store.document, month), [store.document, month]);
-  const fallbackDay = defaultProductionJournalFactDay(month, today);
+  const products = salesFactGridProducts(store.document, month);
+  const days = useMemo(() => salesFactMonth(store.document, month), [store.document, month]);
+  const fallbackDay = defaultSalesFactDay(month, today);
   const selectedDay = resolveDay(month, dayQuery, fallbackDay);
   const visible = view === 'all' ? days : days.filter((item) => item.occurredOn === selectedDay);
   const previousMonth = shiftMonth(month, -1);
@@ -95,12 +81,12 @@ function Workspace({
     };
   }, [tableExpanded]);
 
-  function open(next: { month?: string; day?: string; view?: ProductionJournalFactView }) {
+  function open(next: { month?: string; day?: string; view?: SalesFactView }) {
     const targetMonth = next.month ?? month;
-    const targetDefaultDay = defaultProductionJournalFactDay(targetMonth, today);
+    const targetDefaultDay = defaultSalesFactDay(targetMonth, today);
     const targetDay = resolveDay(targetMonth, next.day ?? selectedDay, targetDefaultDay);
     router.push(
-      productionJournalFactHref({
+      salesFactHref({
         month: targetMonth,
         currentMonth,
         day: targetDay,
@@ -114,18 +100,18 @@ function Workspace({
   return (
     <>
       <PageFrame
-        title={PRODUCTION_FACT_TITLE}
+        title={SALES_SECTION_TITLE}
         full
         fill
         aside={
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <Link href={productionJournalHref({ month, currentMonth })} className={quietLinkClassName}>
+            <Link href={salesJournalHref({ month, currentMonth })} className={quietLinkClassName}>
               <IconList />
-              Журнал производства
+              Журнал продаж
             </Link>
-            <Link href={productionEntryNewHref()} className={primaryButtonClassName}>
+            <Link href={saleNewHref()} className={primaryButtonClassName}>
               <IconPlus />
-              Добавить запись
+              Добавить продажу
             </Link>
           </div>
         }
@@ -170,7 +156,7 @@ function Workspace({
                   onPick={(next) => open({ day: next, view: 'day' })}
                 />
                 <Link
-                  href={productionJournalFactHref({
+                  href={salesFactHref({
                     month,
                     currentMonth,
                     day: selectedDay,
@@ -190,9 +176,9 @@ function Workspace({
           {hasTable ? (
             <section
               className={tableExpanded ? 'fixed inset-0 z-50 bg-paper' : 'min-h-0 flex-1'}
-              aria-label={tableExpanded ? 'Таблица на весь экран' : 'Таблица факта выпуска'}
+              aria-label={tableExpanded ? 'Таблица на весь экран' : 'Таблица факта'}
             >
-              <ProductionJournalFactTable
+              <SalesFactTable
                 days={visible}
                 showDayArrows={view === 'day'}
                 expanded={tableExpanded}
@@ -201,14 +187,14 @@ function Workspace({
             </section>
           ) : (
             <p className="shrink-0 border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-              Сначала добавьте товар в{' '}
+              Сначала добавьте товар на{' '}
               <Link
-                href={planningHref()}
+                href="/"
                 className="text-ink underline outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               >
-                Планировании
+                Сводке
               </Link>
-              . Факт выпуска строится по товарам.
+              . Факт продаж строится по товарам.
             </p>
           )}
         </div>
@@ -229,7 +215,7 @@ function FullscreenToggle({ active, onToggle }: { active: boolean; onToggle: () 
       aria-pressed={active}
       title={active ? 'Обычный режим' : 'На весь экран'}
       onClick={onToggle}
-      className="fixed right-5 bottom-5 z-60 inline-flex size-12 items-center justify-center rounded-full border border-line bg-sheet text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      className="fixed right-5 bottom-5 z-[60] inline-flex size-12 items-center justify-center rounded-full border border-line bg-sheet text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
       {active ? <IconFullscreenExit /> : <IconFullscreen />}
     </button>

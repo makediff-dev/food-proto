@@ -9,7 +9,7 @@ import {
   type ProductionJournalFactRow,
 } from '@/domain/production-journal-fact';
 import { formatSignedPieces } from '@/features/sales-fact/text';
-import { IconChevronDown, IconChevronRight, IconChevronUp } from '@/features/shell/icons';
+import { IconChevronDown, IconChevronRight, IconChevronUp } from '@/features/shell/Icons';
 import {
   ColumnLabel,
   Empty,
