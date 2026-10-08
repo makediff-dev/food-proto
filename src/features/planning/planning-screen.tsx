@@ -200,48 +200,46 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
                 variance={summary.variance}
                 view="forecast"
                 part="plan"
-                editable={planEditable}
-                vatEditable={catalogEditable}
-                catalogEditable={catalogEditable}
                 expanded={tableExpanded}
-                onPlanLineAction={(lineId, priceWithVat, volumePieces) => {
-                  return sales.updateMonthLine(month, lineId, priceWithVat, volumePieces);
-                }}
-                onProductVatAction={(productId, vatPercent) => {
-                  const rejection = sales.updateProductVat(productId, vatPercent);
-                  return rejection ? FIELD_ERROR[rejection] : null;
-                }}
-                onProductCostAction={(productId, unitCostWithVat) => {
-                  const rejection = sales.updateProductCost(productId, unitCostWithVat);
-                  return rejection ? FIELD_ERROR[rejection] : null;
-                }}
-                onRenameProduct={(productId, name) => {
-                  const rejection = sales.renameProduct(productId, name);
-                  return rejection ? FIELD_ERROR[rejection] : null;
-                }}
-                onRenameCategory={(categoryId, name) => {
-                  const rejection = sales.renameCategory(categoryId, name);
-                  return rejection ? FIELD_ERROR[rejection] : null;
-                }}
-                onDeleteCategory={(categoryId, name) => {
-                  const confirmed = window.confirm(
-                    `Удалить категорию «${name}»? Она и её товары пропадут из рабочего списка. Вернуть можно в архиве.`,
-                  );
-                  if (confirmed) {
-                    sales.deleteCategory(categoryId);
-                  }
-                }}
-                onDeleteProduct={(productId, name) => {
-                  const confirmed = window.confirm(
-                    `Удалить товар «${name}»? Он пропадёт из рабочего списка. Вернуть можно в архиве.`,
-                  );
-                  if (confirmed) {
-                    sales.deleteProduct(productId);
-                  }
-                }}
-                onAddProduct={(categoryId) => {
-                  setAddCategoryId(categoryId);
-                  setAddOpen(true);
+                edit={{
+                  plan: planEditable,
+                  vat: catalogEditable,
+                  catalog: catalogEditable,
+                  onPlanLine: (lineId, priceWithVat, volumePieces) => {
+                    return sales.updateMonthLine(month, lineId, priceWithVat, volumePieces);
+                  },
+                  onProductVat: (productId, vatPercent) => {
+                    const rejection = sales.updateProductVat(productId, vatPercent);
+                    return rejection ? FIELD_ERROR[rejection] : null;
+                  },
+                  onRenameProduct: (productId, name) => {
+                    const rejection = sales.renameProduct(productId, name);
+                    return rejection ? FIELD_ERROR[rejection] : null;
+                  },
+                  onRenameCategory: (categoryId, name) => {
+                    const rejection = sales.renameCategory(categoryId, name);
+                    return rejection ? FIELD_ERROR[rejection] : null;
+                  },
+                  onDeleteCategory: (categoryId, name) => {
+                    const confirmed = window.confirm(
+                      `Удалить категорию «${name}»? Она и её товары пропадут из рабочего списка. Вернуть можно в архиве.`,
+                    );
+                    if (confirmed) {
+                      sales.deleteCategory(categoryId);
+                    }
+                  },
+                  onDeleteProduct: (productId, name) => {
+                    const confirmed = window.confirm(
+                      `Удалить товар «${name}»? Он пропадёт из рабочего списка. Вернуть можно в архиве.`,
+                    );
+                    if (confirmed) {
+                      sales.deleteProduct(productId);
+                    }
+                  },
+                  onAddProduct: (categoryId) => {
+                    setAddCategoryId(categoryId);
+                    setAddOpen(true);
+                  },
                 }}
               />
             </section>

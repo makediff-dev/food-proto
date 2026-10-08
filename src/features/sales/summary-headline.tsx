@@ -32,21 +32,19 @@ export function SummaryHeadlineTable({
   periodLabel,
   view,
   periodClosed = false,
-  planEditable,
-  factEditable,
-  onOperatingExpense,
+  onFactOperatingExpense,
 }: {
   headline: Headline;
   periodLabel: string;
   view: SummaryLens;
   periodClosed?: boolean;
-  planEditable: boolean;
-  factEditable: boolean;
-  onOperatingExpense: (side: OperatingExpenseSide, amountExVat: number) => string | null;
+  /** Фактические операционные расходы при одном месяце. План здесь не правят. */
+  onFactOperatingExpense?: (amountExVat: number) => string | null;
 }) {
   const planLabel = view === 'current' ? 'План (корр.)' : 'План';
   const factIsForecast = view === 'forecast' && !periodClosed;
   const factLabel = factIsForecast ? 'Факт (прогноз)' : 'Факт';
+  const factOpexEditable = onFactOperatingExpense !== undefined;
 
   return (
     <div className="w-full overflow-x-auto border border-line bg-sheet">
@@ -82,18 +80,8 @@ export function SummaryHeadlineTable({
               {planLabel}
             </th>
             {ROWS.map((row) => (
-              <td
-                key={row.id}
-                className={`${valueCellClassName} min-w-28 ${row.id === 'opex' && planEditable ? editableCellClassName : ''}`}
-              >
-                <HeadlineValue
-                  row={row.id}
-                  side="plan"
-                  headline={headline}
-                  periodLabel={periodLabel}
-                  editable={row.id === 'opex' && planEditable}
-                  onOperatingExpense={onOperatingExpense}
-                />
+              <td key={row.id} className={`${valueCellClassName} min-w-28`}>
+                <HeadlineValue row={row.id} side="plan" headline={headline} periodLabel={periodLabel} />
               </td>
             ))}
           </tr>
@@ -104,15 +92,18 @@ export function SummaryHeadlineTable({
             {ROWS.map((row) => (
               <td
                 key={row.id}
-                className={`${valueCellClassName} min-w-28 ${row.id === 'opex' && factEditable ? editableCellClassName : ''}`}
+                className={`${valueCellClassName} min-w-28 ${row.id === 'opex' && factOpexEditable ? editableCellClassName : ''}`}
               >
                 <HeadlineValue
                   row={row.id}
                   side="fact"
                   headline={headline}
                   periodLabel={periodLabel}
-                  editable={row.id === 'opex' && factEditable}
-                  onOperatingExpense={onOperatingExpense}
+                  onOperatingExpense={
+                    row.id === 'opex' && onFactOperatingExpense
+                      ? (_side, amountExVat) => onFactOperatingExpense(amountExVat)
+                      : undefined
+                  }
                 />
               </td>
             ))}
@@ -138,15 +129,13 @@ function HeadlineValue({
   side,
   headline,
   periodLabel,
-  editable,
   onOperatingExpense,
 }: {
   row: HeadlineRowId;
   side: OperatingExpenseSide;
   headline: Headline;
   periodLabel: string;
-  editable: boolean;
-  onOperatingExpense: (side: OperatingExpenseSide, amountExVat: number) => string | null;
+  onOperatingExpense?: (side: OperatingExpenseSide, amountExVat: number) => string | null;
 }) {
   const values = side === 'plan' ? headline.plan : headline.fact;
 
@@ -161,7 +150,7 @@ function HeadlineValue({
         parse={parseOperatingExpense}
         inputClassName={headlineFieldClassName}
         unitClassName="whitespace-nowrap leading-tight"
-        onChange={editable ? (next) => onOperatingExpense(side, next) : undefined}
+        onChange={onOperatingExpense ? (next) => onOperatingExpense(side, next) : undefined}
       />
     );
   }
@@ -259,8 +248,9 @@ export function PlanHeadlineTable({
                   side="plan"
                   headline={headline}
                   periodLabel={periodLabel}
-                  editable={row.id === 'opex' && editable}
-                  onOperatingExpense={(_side, amountExVat) => onOperatingExpense(amountExVat)}
+                  onOperatingExpense={
+                    row.id === 'opex' && editable ? (_side, amountExVat) => onOperatingExpense(amountExVat) : undefined
+                  }
                 />
               </td>
             ))}

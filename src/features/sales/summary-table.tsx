@@ -2,7 +2,7 @@
 
 import { useId, useState } from 'react';
 
-import { costWithVat, type UnitCost } from '@/domain/cost';
+import type { UnitCost } from '@/domain/cost';
 import { amountExVat } from '@/domain/money';
 import { priceWithVatFromExVat, type SalesPlanRejection } from '@/domain/sales-plan';
 import type { SummaryGroup, SummaryLens, SummaryRow, SummarySide, SummaryVariance } from '@/domain/summary';
@@ -77,6 +77,19 @@ function sectionRightClass(kind: 'plan' | 'fact' | 'variance', key: string, part
   return tableBorder.rightThin;
 }
 
+export type SummaryTableEdit = {
+  plan: boolean;
+  vat: boolean;
+  catalog: boolean;
+  onPlanLine: (lineId: string, priceWithVat: number, volumePieces: number) => SalesPlanRejection | null;
+  onProductVat: (productId: string, vatPercent: number) => string | null;
+  onRenameProduct: (productId: string, name: string) => string | null;
+  onDeleteProduct: (productId: string, name: string) => void;
+  onRenameCategory: (categoryId: string, name: string) => string | null;
+  onDeleteCategory: (categoryId: string, name: string) => void;
+  onAddProduct: (categoryId: string) => void;
+};
+
 export function SummaryTable({
   groups,
   planTotals,
@@ -85,18 +98,8 @@ export function SummaryTable({
   view,
   periodClosed = false,
   part = 'full',
-  editable,
-  vatEditable,
-  catalogEditable,
   expanded = false,
-  onPlanLineAction,
-  onProductVatAction,
-  onProductCostAction,
-  onRenameProduct,
-  onDeleteProduct,
-  onRenameCategory,
-  onDeleteCategory,
-  onAddProduct,
+  edit,
 }: {
   groups: SummaryGroup[];
   planTotals: SummarySide | null;
@@ -105,18 +108,9 @@ export function SummaryTable({
   view: SummaryLens;
   periodClosed?: boolean;
   part?: 'full' | 'plan';
-  editable: boolean;
-  vatEditable: boolean;
-  catalogEditable: boolean;
   expanded?: boolean;
-  onPlanLineAction: (lineId: string, priceWithVat: number, volumePieces: number) => SalesPlanRejection | null;
-  onProductVatAction: (productId: string, vatPercent: number) => string | null;
-  onProductCostAction: (productId: string, unitCostWithVat: number) => string | null;
-  onRenameProduct: (productId: string, name: string) => string | null;
-  onDeleteProduct: (productId: string, name: string) => void;
-  onRenameCategory: (categoryId: string, name: string) => string | null;
-  onDeleteCategory: (categoryId: string, name: string) => void;
-  onAddProduct: (categoryId: string) => void;
+  /** Правка плана и справочника. Без него таблица только для просмотра. */
+  edit?: SummaryTableEdit;
 }) {
   const showFact = part === 'full';
   const factIsForecast = view === 'forecast' && !periodClosed;
@@ -212,22 +206,7 @@ export function SummaryTable({
         </thead>
         <tbody>
           {groups.map((group) => (
-            <CategoryBlock
-              key={group.categoryId}
-              group={group}
-              part={part}
-              editable={editable}
-              vatEditable={vatEditable}
-              catalogEditable={catalogEditable}
-              onPlanLineAction={onPlanLineAction}
-              onProductVatAction={onProductVatAction}
-              onProductCostAction={onProductCostAction}
-              onRenameProduct={onRenameProduct}
-              onDeleteProduct={onDeleteProduct}
-              onRenameCategory={onRenameCategory}
-              onDeleteCategory={onDeleteCategory}
-              onAddProduct={onAddProduct}
-            />
+            <CategoryBlock key={group.categoryId} group={group} part={part} edit={edit} />
           ))}
           <tr>
             <th
@@ -271,39 +250,12 @@ export function SummaryTable({
   );
 }
 
-function CategoryBlock({
-  group,
-  part,
-  editable,
-  vatEditable,
-  catalogEditable,
-  onPlanLineAction,
-  onProductVatAction,
-  onProductCostAction,
-  onRenameProduct,
-  onDeleteProduct,
-  onRenameCategory,
-  onDeleteCategory,
-  onAddProduct,
-}: {
-  group: SummaryGroup;
-  part: 'full' | 'plan';
-  editable: boolean;
-  vatEditable: boolean;
-  catalogEditable: boolean;
-  onPlanLineAction: (lineId: string, priceWithVat: number, volumePieces: number) => SalesPlanRejection | null;
-  onProductVatAction: (productId: string, vatPercent: number) => string | null;
-  onProductCostAction: (productId: string, unitCostWithVat: number) => string | null;
-  onRenameProduct: (productId: string, name: string) => string | null;
-  onDeleteProduct: (productId: string, name: string) => void;
-  onRenameCategory: (categoryId: string, name: string) => string | null;
-  onDeleteCategory: (categoryId: string, name: string) => void;
-  onAddProduct: (categoryId: string) => void;
-}) {
+function CategoryBlock({ group, part, edit }: { group: SummaryGroup; part: 'full' | 'plan'; edit?: SummaryTableEdit }) {
   const header = 'bg-paper';
   const [open, setOpen] = useState(false);
   const productCount = group.rows.length;
   const showFact = part === 'full';
+  const catalogEditable = edit?.catalog === true;
 
   return (
     <>
@@ -325,7 +277,7 @@ function CategoryBlock({
             >
               {open ? <IconChevronDown /> : <IconChevronRight />}
             </button>
-            {group.deleted || !catalogEditable ? (
+            {group.deleted || !catalogEditable || !edit ? (
               <span className="flex h-8 min-w-max flex-1 items-center text-sm font-semibold leading-none text-ink">
                 {group.name} ({productCount})
               </span>
@@ -335,14 +287,14 @@ function CategoryBlock({
                   label={`Категория, ${group.name}`}
                   value={group.name}
                   invalidMessage={FIELD_ERROR.empty}
-                  onCommit={(next) => onRenameCategory(group.categoryId, next)}
+                  onCommit={(next) => edit.onRenameCategory(group.categoryId, next)}
                 />
                 <span className="text-sm text-muted">({productCount})</span>
               </>
             )}
             {group.deleted ? (
               <span className="text-sm text-muted">(архив)</span>
-            ) : catalogEditable ? (
+            ) : catalogEditable && edit ? (
               <>
                 <button
                   type="button"
@@ -350,7 +302,7 @@ function CategoryBlock({
                   title="Добавить товар"
                   onClick={() => {
                     setOpen(true);
-                    onAddProduct(group.categoryId);
+                    edit.onAddProduct(group.categoryId);
                   }}
                   className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 >
@@ -360,7 +312,7 @@ function CategoryBlock({
                   type="button"
                   aria-label={`Удалить категорию ${group.name}`}
                   title="Удалить категорию"
-                  onClick={() => onDeleteCategory(group.categoryId, group.name)}
+                  onClick={() => edit.onDeleteCategory(group.categoryId, group.name)}
                   className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 >
                   <IconTrash />
@@ -398,51 +350,16 @@ function CategoryBlock({
             ))
           : null}
       </tr>
-      {open
-        ? group.rows.map((row) => (
-            <ProductRow
-              key={row.productId}
-              row={row}
-              part={part}
-              editable={editable}
-              vatEditable={vatEditable}
-              catalogEditable={catalogEditable}
-              onPlanLineAction={onPlanLineAction}
-              onProductVatAction={onProductVatAction}
-              onProductCostAction={onProductCostAction}
-              onRenameProduct={onRenameProduct}
-              onDeleteProduct={onDeleteProduct}
-            />
-          ))
-        : null}
+      {open ? group.rows.map((row) => <ProductRow key={row.productId} row={row} part={part} edit={edit} />) : null}
     </>
   );
 }
 
-function ProductRow({
-  row,
-  part,
-  editable,
-  vatEditable,
-  catalogEditable,
-  onPlanLineAction,
-  onProductVatAction,
-  onProductCostAction,
-  onRenameProduct,
-  onDeleteProduct,
-}: {
-  row: SummaryRow;
-  part: 'full' | 'plan';
-  editable: boolean;
-  vatEditable: boolean;
-  catalogEditable: boolean;
-  onPlanLineAction: (lineId: string, priceWithVat: number, volumePieces: number) => SalesPlanRejection | null;
-  onProductVatAction: (productId: string, vatPercent: number) => string | null;
-  onProductCostAction: (productId: string, unitCostWithVat: number) => string | null;
-  onRenameProduct: (productId: string, name: string) => string | null;
-  onDeleteProduct: (productId: string, name: string) => void;
-}) {
+function ProductRow({ row, part, edit }: { row: SummaryRow; part: 'full' | 'plan'; edit?: SummaryTableEdit }) {
   const showFact = part === 'full';
+  const catalogEditable = edit?.catalog === true;
+  const planEditable = edit?.plan === true;
+  const vatEditable = edit?.vat === true;
 
   return (
     <tr>
@@ -452,22 +369,22 @@ function ProductRow({
       >
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            {row.deleted || !catalogEditable ? (
+            {row.deleted || !catalogEditable || !edit ? (
               <span className="flex h-8 min-w-max flex-1 items-center text-sm leading-none text-ink">{row.name}</span>
             ) : (
               <GridText
                 label={`Название, ${row.name}`}
                 value={row.name}
                 invalidMessage={FIELD_ERROR.empty}
-                onCommit={(next) => onRenameProduct(row.productId, next)}
+                onCommit={(next) => edit.onRenameProduct(row.productId, next)}
               />
             )}
-            {row.deleted || !catalogEditable ? null : (
+            {row.deleted || !catalogEditable || !edit ? null : (
               <button
                 type="button"
                 aria-label={`Удалить ${row.name}`}
                 title="Удалить"
-                onClick={() => onDeleteProduct(row.productId, row.name)}
+                onClick={() => edit.onDeleteProduct(row.productId, row.name)}
                 className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               >
                 <IconTrash />
@@ -479,8 +396,8 @@ function ProductRow({
       </th>
       {SIDE_COLUMNS.map((column) => {
         const canEdit =
-          (editable && row.planLineId !== null && (column.key === 'price' || column.key === 'volume')) ||
-          (vatEditable && (column.key === 'vat' || column.key === 'unitCost'));
+          (planEditable && row.planLineId !== null && (column.key === 'price' || column.key === 'volume')) ||
+          (vatEditable && column.key === 'vat');
         return (
           <td
             key={`plan:${column.key}`}
@@ -515,15 +432,7 @@ function ProductRow({
               }
             }}
           >
-            <PlanCell
-              column={column.key}
-              row={row}
-              editable={editable}
-              vatEditable={vatEditable}
-              onPlanLine={onPlanLineAction}
-              onProductVat={onProductVatAction}
-              onProductCost={onProductCostAction}
-            />
+            <PlanCell column={column.key} row={row} edit={edit} />
           </td>
         );
       })}
@@ -551,25 +460,12 @@ function ProductRow({
   );
 }
 
-function PlanCell({
-  column,
-  row,
-  editable,
-  vatEditable,
-  onPlanLine,
-  onProductVat,
-  onProductCost,
-}: {
-  column: SideKey;
-  row: SummaryRow;
-  editable: boolean;
-  vatEditable: boolean;
-  onPlanLine: (lineId: string, priceWithVat: number, volumePieces: number) => SalesPlanRejection | null;
-  onProductVat: (productId: string, vatPercent: number) => string | null;
-  onProductCost: (productId: string, unitCostWithVat: number) => string | null;
-}) {
+function PlanCell({ column, row, edit }: { column: SideKey; row: SummaryRow; edit?: SummaryTableEdit }) {
+  const planEditable = edit?.plan === true;
+  const vatEditable = edit?.vat === true;
+
   if (column === 'vat') {
-    if (!vatEditable) {
+    if (!vatEditable || !edit) {
       const side = row.plan ?? row.fact;
       return <SideCell column={column} side={side} kind="row" />;
     }
@@ -579,43 +475,14 @@ function PlanCell({
         label={`НДС, ${row.name}`}
         value={row.plan?.vatPercent ?? row.fact.vatPercent}
         invalidMessage={VAT_PARSE_ERROR}
-        onChange={(next) => onProductVat(row.productId, next)}
+        onChange={(next) => edit.onProductVat(row.productId, next)}
       />
     );
   }
 
   if (column === 'unitCost') {
-    if (!vatEditable) {
-      const side = row.plan ?? row.fact;
-      return <SideCell column={column} side={side} kind="row" />;
-    }
-
-    const cost = row.plan?.unitCost ?? row.fact.unitCost;
-    if (!cost) {
-      return <UnitCostValue cost={null} />;
-    }
-
-    const vatPercent = row.plan?.vatPercent ?? row.fact.vatPercent;
-
-    return (
-      <VatMoneyCell
-        label={`Себестоимость, ${row.name}`}
-        withVat={cost.withVat}
-        exVat={cost.exVat}
-        invalidMessage={FIELD_ERROR.cost}
-        onChangeWithVat={(next) => onProductCost(row.productId, next)}
-        onChangeExVat={(next) => {
-          if (vatPercent === null) {
-            return VAT_PARSE_ERROR;
-          }
-          const withVat = costWithVat(next, vatPercent);
-          if (withVat === null) {
-            return FIELD_ERROR.cost;
-          }
-          return onProductCost(row.productId, withVat);
-        }}
-      />
-    );
+    const side = row.plan ?? row.fact;
+    return <SideCell column={column} side={side} kind="row" />;
   }
 
   if (!row.plan) {
@@ -629,7 +496,7 @@ function PlanCell({
   }
 
   if (column === 'price') {
-    if (!editable) {
+    if (!planEditable || !edit) {
       return <SideCell column={column} side={row.plan} kind="row" />;
     }
 
@@ -643,7 +510,7 @@ function PlanCell({
         exVat={priceExVatKopecks}
         invalidMessage={SALES_PLAN_ERROR.price}
         onChangeWithVat={(next) => {
-          const rejection = onPlanLine(row.planLineId ?? '', next, row.planVolumePieces ?? 0);
+          const rejection = edit.onPlanLine(row.planLineId ?? '', next, row.planVolumePieces ?? 0);
           return rejection ? SALES_PLAN_ERROR[rejection] : null;
         }}
         onChangeExVat={
@@ -657,7 +524,7 @@ function PlanCell({
                 if (withVat === null) {
                   return SALES_PLAN_ERROR.price;
                 }
-                const rejection = onPlanLine(row.planLineId ?? '', withVat, row.planVolumePieces ?? 0);
+                const rejection = edit.onPlanLine(row.planLineId ?? '', withVat, row.planVolumePieces ?? 0);
                 return rejection ? SALES_PLAN_ERROR[rejection] : null;
               }
         }
@@ -666,7 +533,7 @@ function PlanCell({
   }
 
   if (column === 'volume') {
-    if (!editable) {
+    if (!planEditable || !edit) {
       return <SideCell column={column} side={row.plan} kind="row" />;
     }
 
@@ -677,7 +544,7 @@ function PlanCell({
         unit="шт"
         invalidMessage={SALES_PLAN_ERROR.volume}
         onChange={(next) => {
-          const rejection = onPlanLine(row.planLineId ?? '', row.planPriceWithVat ?? 0, next);
+          const rejection = edit.onPlanLine(row.planLineId ?? '', row.planPriceWithVat ?? 0, next);
           return rejection ? SALES_PLAN_ERROR[rejection] : null;
         }}
       />

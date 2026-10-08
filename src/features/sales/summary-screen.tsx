@@ -61,7 +61,7 @@ function Workspace({
     [sales.document, periodFrom, periodTo, today, view],
   );
   const categories = activeCategories(sales.document);
-  const catalogEditable = sales.hydrated && singleMonth;
+  const factOpexEditable = sales.hydrated && singleMonth;
   const horizonEnd = lastHorizonMonth(today);
   const hasTable = summary.groups.length > 0;
   const tableExpanded = fullscreen && hasTable;
@@ -214,12 +214,14 @@ function Workspace({
               periodLabel={periodLabel}
               view={view}
               periodClosed={periodClosed}
-              planEditable={false}
-              factEditable={catalogEditable}
-              onOperatingExpense={(side, amountExVat) => {
-                const rejection = sales.updateOperatingExpense(periodFrom, side, amountExVat);
-                return rejection ? OPERATING_EXPENSE_ERROR[rejection] : null;
-              }}
+              onFactOperatingExpense={
+                factOpexEditable
+                  ? (amountExVat) => {
+                      const rejection = sales.updateOperatingExpense(periodFrom, 'fact', amountExVat);
+                      return rejection ? OPERATING_EXPENSE_ERROR[rejection] : null;
+                    }
+                  : undefined
+              }
             />
           </div>
         }
@@ -237,18 +239,7 @@ function Workspace({
                 variance={summary.variance}
                 view={view}
                 periodClosed={periodClosed}
-                editable={false}
-                vatEditable={false}
-                catalogEditable={false}
                 expanded={tableExpanded}
-                onPlanLineAction={() => null}
-                onProductVatAction={() => null}
-                onProductCostAction={() => null}
-                onRenameProduct={() => null}
-                onRenameCategory={() => null}
-                onDeleteCategory={() => undefined}
-                onDeleteProduct={() => undefined}
-                onAddProduct={() => undefined}
               />
             </section>
           ) : (

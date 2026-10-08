@@ -15,11 +15,9 @@ import {
   type FieldRejection,
   productCategoryRejection,
   productNameRejection,
-  productUnitCostRejection,
   productVatRejection,
   renameProduct,
   restoreProduct,
-  setProductUnitCost,
   setProductVat,
 } from '@/domain/products';
 import {
@@ -139,14 +137,6 @@ export function useSales() {
         return rejection;
       }
       updateDocument((current) => setProductVat(current, id, vatPercent));
-      return null;
-    },
-    updateProductCost(id: string, unitCostWithVat: number): FieldRejection | null {
-      const rejection = productUnitCostRejection(document, id, unitCostWithVat);
-      if (rejection) {
-        return rejection;
-      }
-      updateDocument((current) => setProductUnitCost(current, id, unitCostWithVat));
       return null;
     },
     deleteProduct(id: string) {
