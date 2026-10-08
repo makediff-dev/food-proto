@@ -10,15 +10,9 @@ export function parsePlanningQuery(params: { month?: string }): {
   };
 }
 
-export function planningHref(
-  options: { month?: string; currentMonth?: string } = {},
-): string {
+export function planningHref(options: { month?: string; currentMonth?: string } = {}): string {
   const params = new URLSearchParams();
-  if (
-    options.month &&
-    options.currentMonth &&
-    options.month !== options.currentMonth
-  ) {
+  if (options.month && options.currentMonth && options.month !== options.currentMonth) {
     params.set('month', options.month);
   }
 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useId, useMemo, useState } from 'react';
 
 import { activeCategories } from '@/domain/categories';
-import { monthKeyFromDate } from '@/domain/sales-plan';
+import { monthKeyFromDate, planMonthOpen } from '@/domain/sales-plan';
 import {
   elapsedDaysInMonth,
   ensureRangeIncludesMonth,
@@ -14,53 +14,23 @@ import {
   normalizeMonthRange,
   type SummaryLens,
   summaryForLens,
-  summaryMonthOpen,
 } from '@/domain/summary';
 import { planningHref } from '@/features/planning/paths';
-import {
-  monthFieldClassName,
-  primaryButtonClassName,
-} from '@/features/sales/fields';
+import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { summaryHref } from '@/features/sales/paths';
 import { SummaryHeadlineTable } from '@/features/sales/summary-headline';
 import { SummaryTable } from '@/features/sales/summary-table';
-import {
-  daysPhrase,
-  formatMonth,
-  formatMonthNameGenitive,
-  OPERATING_EXPENSE_ERROR,
-} from '@/features/sales/text';
+import { daysPhrase, formatMonth, formatMonthNameGenitive, OPERATING_EXPENSE_ERROR } from '@/features/sales/text';
 import { useSales } from '@/features/sales/use-sales';
-import {
-  IconFact,
-  IconFullscreen,
-  IconFullscreenExit,
-  IconPlan,
-} from '@/features/shell/icons';
+import { IconFact, IconFullscreen, IconFullscreenExit, IconPlan } from '@/features/shell/icons';
 import { PageFrame } from '@/features/shell/page-frame';
 
-export function SummaryScreen({
-  from,
-  to,
-  view,
-}: {
-  from: string;
-  to: string;
-  view: SummaryLens;
-}) {
+export function SummaryScreen({ from, to, view }: { from: string; to: string; view: SummaryLens }) {
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
   const range = resolveRange(from, to, today);
 
-  return (
-    <Workspace
-      from={range.from}
-      to={range.to}
-      currentMonth={currentMonth}
-      today={today}
-      view={view}
-    />
-  );
+  return <Workspace from={range.from} to={range.to} currentMonth={currentMonth} today={today} view={view} />;
 }
 
 function Workspace({
@@ -82,9 +52,7 @@ function Workspace({
   const toFieldId = useId();
   const [fullscreen, setFullscreen] = useState(false);
   const isActual = view === 'current';
-  const period = isActual
-    ? ensureRangeIncludesMonth(from, to, currentMonth)
-    : { from, to };
+  const period = isActual ? ensureRangeIncludesMonth(from, to, currentMonth) : { from, to };
   const periodFrom = period.from;
   const periodTo = period.to;
   const singleMonth = periodFrom === periodTo;
@@ -99,8 +67,7 @@ function Workspace({
   const tableExpanded = fullscreen && hasTable;
   const periodLabel = singleMonth ? periodFrom : `${periodFrom} — ${periodTo}`;
   const periodClosed = periodTo < currentMonth;
-  const actualAvailable =
-    periodFrom <= currentMonth && currentMonth <= periodTo;
+  const actualAvailable = periodFrom <= currentMonth && currentMonth <= periodTo;
   const title = summaryPageTitle({
     view,
     from: periodFrom,
@@ -146,16 +113,9 @@ function Workspace({
     };
   }, [tableExpanded]);
 
-  function open(
-    nextFrom: string,
-    nextTo: string,
-    nextView: SummaryLens = view,
-  ) {
+  function open(nextFrom: string, nextTo: string, nextView: SummaryLens = view) {
     const range = normalizeMonthRange(nextFrom, nextTo);
-    const hrefRange =
-      nextView === 'current'
-        ? ensureRangeIncludesMonth(range.from, range.to, currentMonth)
-        : range;
+    const hrefRange = nextView === 'current' ? ensureRangeIncludesMonth(range.from, range.to, currentMonth) : range;
     router.push(
       summaryHref({
         from: hrefRange.from,
@@ -211,20 +171,14 @@ function Workspace({
                     value={periodFrom}
                     onChange={(event) => {
                       const next = event.target.value;
-                      if (!summaryMonthOpen(next, today)) {
+                      if (!planMonthOpen(next, today)) {
                         return;
                       }
                       if (isActual && next > currentMonth) {
                         return;
                       }
                       const nextTo = next > periodTo ? next : periodTo;
-                      open(
-                        next,
-                        isActual && nextTo < currentMonth
-                          ? currentMonth
-                          : nextTo,
-                        view,
-                      );
+                      open(next, isActual && nextTo < currentMonth ? currentMonth : nextTo, view);
                     }}
                     className={monthFieldClassName}
                   />
@@ -241,20 +195,14 @@ function Workspace({
                     value={periodTo}
                     onChange={(event) => {
                       const next = event.target.value;
-                      if (!summaryMonthOpen(next, today)) {
+                      if (!planMonthOpen(next, today)) {
                         return;
                       }
                       if (isActual && next < currentMonth) {
                         return;
                       }
                       const nextFrom = next < periodFrom ? next : periodFrom;
-                      open(
-                        isActual && nextFrom > currentMonth
-                          ? currentMonth
-                          : nextFrom,
-                        next,
-                        view,
-                      );
+                      open(isActual && nextFrom > currentMonth ? currentMonth : nextFrom, next, view);
                     }}
                     className={monthFieldClassName}
                   />
@@ -269,11 +217,7 @@ function Workspace({
               planEditable={false}
               factEditable={catalogEditable}
               onOperatingExpense={(side, amountExVat) => {
-                const rejection = sales.updateOperatingExpense(
-                  periodFrom,
-                  side,
-                  amountExVat,
-                );
+                const rejection = sales.updateOperatingExpense(periodFrom, side, amountExVat);
                 return rejection ? OPERATING_EXPENSE_ERROR[rejection] : null;
               }}
             />
@@ -283,12 +227,8 @@ function Workspace({
         <div className="flex flex-col gap-4">
           {hasTable ? (
             <section
-              className={
-                tableExpanded ? 'fixed inset-0 z-50 bg-paper' : undefined
-              }
-              aria-label={
-                tableExpanded ? 'Таблица на весь экран' : 'Таблица сводки'
-              }
+              className={tableExpanded ? 'fixed inset-0 z-50 bg-paper' : undefined}
+              aria-label={tableExpanded ? 'Таблица на весь экран' : 'Таблица сводки'}
             >
               <SummaryTable
                 groups={summary.groups}
@@ -342,10 +282,7 @@ function Workspace({
       </PageFrame>
 
       {hasTable ? (
-        <FullscreenToggle
-          active={tableExpanded}
-          onToggle={() => setFullscreen((current) => !current)}
-        />
+        <FullscreenToggle active={tableExpanded} onToggle={() => setFullscreen((current) => !current)} />
       ) : null}
     </>
   );
@@ -364,10 +301,7 @@ function summaryPageTitle({
 }): string {
   const currentMonth = monthKeyFromDate(today);
   if (view === 'current') {
-    const elapsed = monthsInRange(from, to).reduce(
-      (sum, month) => sum + elapsedDaysInMonth(month, today),
-      0,
-    );
+    const elapsed = monthsInRange(from, to).reduce((sum, month) => sum + elapsedDaysInMonth(month, today), 0);
     if (from === to) {
       return `Фактическая сводка за ${daysPhrase(elapsed)} ${formatMonthNameGenitive(from)}`;
     }
@@ -376,9 +310,7 @@ function summaryPageTitle({
 
   const endIsPast = to < currentMonth;
   if (from === to) {
-    return endIsPast
-      ? `Сводка за ${formatMonth(from)}`
-      : `Прогноз на ${formatMonth(from)}`;
+    return endIsPast ? `Сводка за ${formatMonth(from)}` : `Прогноз на ${formatMonth(from)}`;
   }
 
   return endIsPast
@@ -386,24 +318,14 @@ function summaryPageTitle({
     : `Прогноз на период с ${formatMonth(from)} до ${formatMonth(to)}`;
 }
 
-function resolveRange(
-  from: string,
-  to: string,
-  today: Date,
-): { from: string; to: string } {
+function resolveRange(from: string, to: string, today: Date): { from: string; to: string } {
   const current = monthKeyFromDate(today);
-  const rawFrom = summaryMonthOpen(from, today) ? from : current;
-  const rawTo = summaryMonthOpen(to, today) ? to : rawFrom;
+  const rawFrom = planMonthOpen(from, today) ? from : current;
+  const rawTo = planMonthOpen(to, today) ? to : rawFrom;
   return normalizeMonthRange(rawFrom, rawTo);
 }
 
-function FullscreenToggle({
-  active,
-  onToggle,
-}: {
-  active: boolean;
-  onToggle: () => void;
-}) {
+function FullscreenToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
   return (
     <button
       type="button"

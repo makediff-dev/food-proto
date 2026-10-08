@@ -9,75 +9,22 @@ import {
   type SalesFactRow,
   type SalesFactTotals,
 } from '@/domain/sales-fact';
-import { formatMoney } from '@/features/sales/money';
-import { formatPercentHundredths } from '@/features/sales/text';
 import { formatSignedPieces } from '@/features/sales-fact/text';
+import { IconChevronDown, IconChevronRight, IconChevronUp } from '@/features/shell/icons';
 import {
-  IconChevronDown,
-  IconChevronRight,
-  IconChevronUp,
-} from '@/features/shell/icons';
-import { TableNumber } from '@/features/shell/table-number';
-
-/** Предлоги, союзы и частицы, которые не оставляют в конце строки. */
-const HANGING_WORDS = new Set([
-  'а',
-  'без',
-  'бы',
-  'в',
-  'во',
-  'для',
-  'до',
-  'же',
-  'за',
-  'и',
-  'из',
-  'к',
-  'ко',
-  'ли',
-  'на',
-  'не',
-  'ни',
-  'но',
-  'о',
-  'об',
-  'от',
-  'по',
-  'под',
-  'при',
-  'с',
-  'со',
-  'у',
-]);
-
-function keepWithNext(text: string): string {
-  const parts = text.split(' ');
-  let line = '';
-  for (let index = 0; index < parts.length; index += 1) {
-    line += parts[index] ?? '';
-    if (index === parts.length - 1) {
-      break;
-    }
-    const bare = (parts[index] ?? '')
-      .toLowerCase()
-      .replace(/^[^a-zа-яё]+|[^a-zа-яё]+$/gi, '');
-    line += HANGING_WORDS.has(bare) ? '\u00A0' : ' ';
-  }
-  return line;
-}
-
-function ColumnLabel({ label }: { label: string }) {
-  const chunks = keepWithNext(label).split(' ');
-  return (
-    <span className="mx-auto block w-min text-center">
-      {chunks.map((chunk) => (
-        <span key={chunk} className="block whitespace-nowrap">
-          {chunk}
-        </span>
-      ))}
-    </span>
-  );
-}
+  ColumnLabel,
+  Empty,
+  keepWithNext,
+  MoneyCell,
+  Muted,
+  PercentCell,
+  stickyHeadClassName,
+  TableNumber,
+  tableBorder,
+  tableClassName,
+  tableFrameExpandedClassName,
+  VatMoneyCell,
+} from '@/features/table';
 
 type ColumnKey =
   | 'salesUnitCost'
@@ -129,23 +76,23 @@ export function SalesFactTable({
     <div
       className={
         expanded
-          ? 'h-dvh contain-paint overflow-auto bg-sheet'
+          ? tableFrameExpandedClassName
           : 'h-full min-h-0 contain-paint overflow-auto border border-line bg-sheet'
       }
     >
       {/* contain-paint не даёт широкой таблице растянуть прокрутку страницы */}
-      <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
+      <table className={tableClassName}>
         <caption className="sr-only">Факт продаж по дням</caption>
-        <thead className="sticky top-0 z-30">
+        <thead className={stickyHeadClassName}>
           <tr>
             <th
               colSpan={2}
-              className="sticky left-0 z-40 border-b border-b-line border-r-[1.5px] border-r-muted bg-paper"
+              className={`sticky left-0 z-40 ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper`}
             />
             <th
               colSpan={COLUMNS.length}
               scope="colgroup"
-              className="border-b border-b-line bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
+              className={`${tableBorder.bottomThin} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink`}
             >
               {keepWithNext('Фактические показатели продаж за дату')}
             </th>
@@ -153,13 +100,13 @@ export function SalesFactTable({
           <tr>
             <th
               scope="col"
-              className="sticky left-0 z-40 w-10 max-w-10 border-r border-r-line border-b border-b-line bg-paper p-0"
+              className={`sticky left-0 z-40 w-10 max-w-10 ${tableBorder.rightThin} ${tableBorder.bottomThin} bg-paper p-0`}
             >
               <span className="sr-only">Дата</span>
             </th>
             <th
               scope="col"
-              className="sticky left-10 z-40 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-muted"
+              className={`sticky left-10 z-40 w-px max-w-max whitespace-nowrap ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-muted`}
             >
               Товар
             </th>
@@ -167,7 +114,7 @@ export function SalesFactTable({
               <th
                 key={column.key}
                 scope="col"
-                className="w-px whitespace-normal border-b border-b-line border-r border-r-line bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0"
+                className={`w-px whitespace-normal ${tableBorder.bottomThin} ${tableBorder.rightThin} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
               >
                 <ColumnLabel label={column.label} />
               </th>
@@ -181,16 +128,10 @@ export function SalesFactTable({
               scope="rowgroup"
               rowSpan={visibleDayRows(day.groups, openIds)}
               className={`sticky left-0 z-10 h-px w-10 max-w-10 border-r border-r-line bg-sheet p-0 align-middle font-normal ${
-                dayBreak
-                  ? 'border-b-[3px] border-b-muted'
-                  : 'border-b border-b-line'
+                dayBreak ? 'border-b-[3px] border-b-muted' : 'border-b border-b-line'
               }`}
             >
-              <DayLabel
-                occurredOn={day.occurredOn}
-                showArrows={showDayArrows}
-                onDay={onDay}
-              />
+              <DayLabel occurredOn={day.occurredOn} showArrows={showDayArrows} onDay={onDay} />
             </th>
           );
           return (
@@ -209,9 +150,7 @@ export function SalesFactTable({
                 <th
                   scope="row"
                   className={`sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-t-[1.5px] border-t-muted border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink ${
-                    dayBreak
-                      ? 'border-b-[3px] border-b-muted'
-                      : 'border-b border-b-line'
+                    dayBreak ? 'border-b-[3px] border-b-muted' : 'border-b border-b-line'
                   }`}
                 >
                   Всего
@@ -220,9 +159,7 @@ export function SalesFactTable({
                   <td
                     key={column.key}
                     className={`w-px border-t-[1.5px] border-t-muted border-r border-r-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0 ${
-                      dayBreak
-                        ? 'border-b-[3px] border-b-muted'
-                        : 'border-b border-b-line'
+                      dayBreak ? 'border-b-[3px] border-b-muted' : 'border-b border-b-line'
                     }`}
                   >
                     <TotalCell column={column.key} totals={day.totals} />
@@ -237,15 +174,8 @@ export function SalesFactTable({
   );
 }
 
-function visibleDayRows(
-  groups: readonly SalesFactGroup[],
-  openIds: ReadonlySet<string>,
-): number {
-  return groups.reduce(
-    (count, group) =>
-      count + 1 + (openIds.has(group.categoryId) ? group.rows.length : 0),
-    1,
-  );
+function visibleDayRows(groups: readonly SalesFactGroup[], openIds: ReadonlySet<string>): number {
+  return groups.reduce((count, group) => count + 1 + (openIds.has(group.categoryId) ? group.rows.length : 0), 1);
 }
 
 function CategoryBlock({
@@ -274,9 +204,7 @@ function CategoryBlock({
               type="button"
               aria-expanded={open}
               aria-label={
-                open
-                  ? `Свернуть товары категории ${group.name}`
-                  : `Развернуть товары категории ${group.name}`
+                open ? `Свернуть товары категории ${group.name}` : `Развернуть товары категории ${group.name}`
               }
               title={open ? 'Свернуть' : 'Развернуть'}
               onClick={onToggle}
@@ -287,9 +215,7 @@ function CategoryBlock({
             <span className="flex h-8 min-w-max flex-1 items-center text-sm font-semibold leading-none text-ink">
               {group.name} ({productCount})
             </span>
-            {group.deleted ? (
-              <span className="text-sm font-normal text-muted">(архив)</span>
-            ) : null}
+            {group.deleted ? <span className="text-sm font-normal text-muted">(архив)</span> : null}
           </div>
         </th>
         {COLUMNS.map((column) => (
@@ -301,9 +227,7 @@ function CategoryBlock({
           </td>
         ))}
       </tr>
-      {open
-        ? group.rows.map((row) => <ProductRow key={row.productId} row={row} />)
-        : null}
+      {open ? group.rows.map((row) => <ProductRow key={row.productId} row={row} />) : null}
     </>
   );
 }
@@ -407,9 +331,7 @@ function ProductName({ row }: { row: SalesFactRow }) {
 
 function RowCell({ column, row }: { column: ColumnKey; row: SalesFactRow }) {
   if (column === 'price') {
-    return (
-      <VatMoneyOrEmpty withVat={row.priceWithVat} exVat={row.priceExVat} />
-    );
+    return <VatMoneyCell withVat={row.priceWithVat} exVat={row.priceExVat} />;
   }
 
   if (column === 'salesPieces') {
@@ -419,83 +341,38 @@ function RowCell({ column, row }: { column: ColumnKey; row: SalesFactRow }) {
   switch (column) {
     case 'salesUnitCost':
       return row.unitCost ? (
-        <VatPair
-          withVat={<MoneyAmount amount={row.unitCost.withVat} />}
-          exVat={<MoneyAmount amount={row.unitCost.exVat} />}
-        />
+        <VatMoneyCell withVat={row.unitCost.withVat} exVat={row.unitCost.exVat} />
       ) : (
         <Muted>{keepWithNext('Себестоимость не считается')}</Muted>
       );
     case 'salesVolumeCost':
-      return (
-        <VatMoneyOrEmpty
-          withVat={row.salesVolumeCostWithVat}
-          exVat={row.salesVolumeCostExVat}
-        />
-      );
+      return <VatMoneyCell withVat={row.salesVolumeCostWithVat} exVat={row.salesVolumeCostExVat} />;
     case 'revenue':
-      return (
-        <VatMoneyOrEmpty
-          withVat={row.revenueWithVat}
-          exVat={row.revenueExVat}
-        />
-      );
+      return <VatMoneyCell withVat={row.revenueWithVat} exVat={row.revenueExVat} />;
     case 'contribution':
-      return row.contribution === null ? (
-        <Empty />
-      ) : (
-        <MoneyAmount amount={row.contribution} />
-      );
+      return <MoneyCell value={row.contribution} />;
     case 'profitability':
-      return row.profitabilityHundredths === null ? (
-        <Empty />
-      ) : (
-        <TableNumber value={row.profitabilityHundredths}>
-          {formatPercentHundredths(row.profitabilityHundredths)}
-        </TableNumber>
-      );
+      return <PercentCell value={row.profitabilityHundredths} scale="hundredths" />;
     case 'vat':
-      return row.vatPercent === null ? (
-        <Empty />
-      ) : (
-        <TableNumber value={row.vatPercent}>{row.vatPercent} %</TableNumber>
-      );
+      return <PercentCell value={row.vatPercent} />;
     default:
       return <Empty />;
   }
 }
 
-function TotalCell({
-  column,
-  totals,
-}: {
-  column: ColumnKey;
-  totals: SalesFactTotals;
-}) {
+function TotalCell({ column, totals }: { column: ColumnKey; totals: SalesFactTotals }) {
   switch (column) {
     case 'salesPieces':
       return <Pieces value={totals.salesPieces} />;
     case 'price':
-      return (
-        <VatMoneyOrEmpty
-          withVat={totals.priceWithVat}
-          exVat={totals.priceExVat}
-        />
-      );
+      return <VatMoneyCell withVat={totals.priceWithVat} exVat={totals.priceExVat} />;
     case 'revenue':
-      return (
-        <VatMoneyOrEmpty
-          withVat={totals.revenueWithVat}
-          exVat={totals.revenueExVat}
-        />
-      );
+      return <VatMoneyCell withVat={totals.revenueWithVat} exVat={totals.revenueExVat} />;
     case 'contribution':
       return !totals.salesCostComplete || !totals.revenueComplete ? (
         <Muted>{keepWithNext('не по всем товарам')}</Muted>
-      ) : totals.contribution === null ? (
-        <Empty />
       ) : (
-        <MoneyAmount amount={totals.contribution} />
+        <MoneyCell value={totals.contribution} />
       );
     case 'salesUnitCost':
       return (
@@ -514,22 +391,13 @@ function TotalCell({
         />
       );
     case 'profitability':
-      return !totals.salesCostComplete ||
-        totals.profitabilityHundredths === null ? (
+      return !totals.salesCostComplete ? (
         <Empty />
       ) : (
-        <TableNumber value={totals.profitabilityHundredths}>
-          {formatPercentHundredths(totals.profitabilityHundredths)}
-        </TableNumber>
+        <PercentCell value={totals.profitabilityHundredths} scale="hundredths" />
       );
     case 'vat':
-      return totals.vatPercentHundredths === null ? (
-        <Empty />
-      ) : (
-        <TableNumber value={totals.vatPercentHundredths}>
-          {formatPercentHundredths(totals.vatPercentHundredths)}
-        </TableNumber>
-      );
+      return <PercentCell value={totals.vatPercentHundredths} scale="hundredths" />;
     default:
       return <Empty />;
   }
@@ -548,7 +416,7 @@ function AverageCost({
     return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
   }
 
-  return <VatMoneyOrEmpty withVat={withVat} exVat={exVat} />;
+  return <VatMoneyCell withVat={withVat} exVat={exVat} />;
 }
 
 function VolumeTotal({
@@ -564,7 +432,7 @@ function VolumeTotal({
     return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
   }
 
-  return <VatMoneyOrEmpty withVat={withVat} exVat={exVat} />;
+  return <VatMoneyCell withVat={withVat} exVat={exVat} />;
 }
 
 function Pieces({ value }: { value: number | null }) {
@@ -572,78 +440,5 @@ function Pieces({ value }: { value: number | null }) {
     return <Empty />;
   }
 
-  return (
-    <TableNumber value={value}>{formatSignedPieces(value)} шт</TableNumber>
-  );
-}
-
-function MoneyAmount({ amount }: { amount: number }) {
-  return <TableNumber value={amount}>{formatMoney(amount)}</TableNumber>;
-}
-
-function VatMoneyOrEmpty({
-  withVat,
-  exVat,
-}: {
-  withVat: number | null;
-  exVat: number | null;
-}) {
-  if (withVat === null && exVat === null) {
-    return <Empty />;
-  }
-
-  return (
-    <VatPair
-      withVat={withVat === null ? <Empty /> : <MoneyAmount amount={withVat} />}
-      exVat={exVat === null ? <Empty /> : <MoneyAmount amount={exVat} />}
-    />
-  );
-}
-
-function VatPair({ withVat, exVat }: { withVat: ReactNode; exVat: ReactNode }) {
-  return (
-    <StackedPair
-      topLabel="с НДС"
-      bottomLabel="без НДС"
-      top={withVat}
-      bottom={exVat}
-    />
-  );
-}
-
-function StackedPair({
-  topLabel,
-  bottomLabel,
-  top,
-  bottom,
-}: {
-  topLabel: string;
-  bottomLabel: string;
-  top: ReactNode;
-  bottom: ReactNode;
-}) {
-  return (
-    <div className="-mx-1.5 -my-2 flex min-w-[4.5rem] flex-col">
-      <div className="flex flex-col items-end border-b border-line px-1.5 py-1">
-        <span className="text-[0.5rem] leading-none text-muted">
-          {topLabel}
-        </span>
-        {top}
-      </div>
-      <div className="flex flex-col items-end px-1.5 py-1">
-        <span className="text-[0.5rem] leading-none text-muted">
-          {bottomLabel}
-        </span>
-        {bottom}
-      </div>
-    </div>
-  );
-}
-
-function Empty() {
-  return <span className="text-muted">—</span>;
-}
-
-function Muted({ children }: { children: string }) {
-  return <span className="text-sm text-muted">{children}</span>;
+  return <TableNumber value={value}>{formatSignedPieces(value)} шт</TableNumber>;
 }

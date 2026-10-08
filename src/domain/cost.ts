@@ -26,12 +26,9 @@ export function costWithVat(exVat: number, vatPercent: number): number | null {
 
 /**
  * Себестоимость 1 шт. С НДС хранится у товара, без НДС считается.
- * Нулевая себестоимость допустима. Нет товара или переполнение — `null`.
+ * Нулевая себестоимость допустима. Нет товара — `null`.
  */
-export function unitCost(
-  document: PrototypeDocument,
-  productId: string,
-): UnitCost | null {
+export function unitCost(document: PrototypeDocument, productId: string): UnitCost | null {
   const product = document.products.find((item) => item.id === productId);
   if (!product) {
     return null;

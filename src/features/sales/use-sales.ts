@@ -1,6 +1,6 @@
 'use client';
 
-import { useDocumentStore } from '@/data/document-store';
+import { commitDocumentUpdate, useDocumentStore } from '@/data/document-store';
 import {
   addCategory,
   type CategoryRejection,
@@ -9,7 +9,6 @@ import {
   renameCategory,
   restoreCategory,
 } from '@/domain/categories';
-import type { PrototypeDocument } from '@/domain/document';
 import {
   addProduct,
   deleteProduct,
@@ -27,7 +26,6 @@ import {
   addMissingPlanLines,
   addMissingPlanLinesRejection,
   ensureSalesPlan,
-  type SalesPlanRejection,
   updateSalesPlanLine,
   updateSalesPlanLineRejection,
   workingSalesPlan,
@@ -39,71 +37,31 @@ import {
   setOperatingExpenseRejection,
 } from '@/domain/summary';
 
-function commit(
-  updateDocument: (
-    recipe: (current: PrototypeDocument) => PrototypeDocument,
-  ) => void,
-  recipe: (current: PrototypeDocument) => PrototypeDocument,
-  explain: (current: PrototypeDocument) => SalesPlanRejection | null,
-): SalesPlanRejection | null {
-  let rejection: SalesPlanRejection | null = null;
-  updateDocument((current) => {
-    const next = recipe(current);
-    if (next === current) {
-      rejection = explain(current);
-    }
-    return next;
-  });
-  return rejection;
-}
-
 export function useSales() {
   const { document, hydrated, updateDocument } = useDocumentStore();
 
   return {
     hydrated,
     document,
-    updateMonthLine(
-      month: string,
-      lineId: string,
-      priceWithVat: number,
-      volumePieces: number,
-    ) {
+    updateMonthLine(month: string, lineId: string, priceWithVat: number, volumePieces: number) {
       const today = new Date();
-      return commit(
+      return commitDocumentUpdate(
         updateDocument,
         (current) => {
           let next = current;
           if (!workingSalesPlan(next, month)) {
-            next = ensureSalesPlan(
-              next,
-              `sales-plan:${crypto.randomUUID()}`,
-              month,
-              today,
-            );
+            next = ensureSalesPlan(next, `sales-plan:${crypto.randomUUID()}`, month, today);
           }
           const plan = workingSalesPlan(next, month);
           if (!plan) {
             return current;
           }
-          return updateSalesPlanLine(
-            next,
-            plan.id,
-            lineId,
-            priceWithVat,
-            volumePieces,
-            today,
-          );
+          return updateSalesPlanLine(next, plan.id, lineId, priceWithVat, volumePieces, today);
         },
         (current) => {
           const plan = workingSalesPlan(current, month);
           if (!plan) {
-            const ensured = ensureSalesPlan(
-              current,
-              `sales-plan:${crypto.randomUUID()}`,
-              month,
-              today,
-            );
+            const ensured = ensureSalesPlan(current, `sales-plan:${crypto.randomUUID()}`, month, today);
             if (ensured === current) {
               return 'month';
             }
@@ -111,23 +69,9 @@ export function useSales() {
             if (!created) {
               return 'missing';
             }
-            return updateSalesPlanLineRejection(
-              ensured,
-              created.id,
-              lineId,
-              priceWithVat,
-              volumePieces,
-              today,
-            );
+            return updateSalesPlanLineRejection(ensured, created.id, lineId, priceWithVat, volumePieces, today);
           }
-          return updateSalesPlanLineRejection(
-            current,
-            plan.id,
-            lineId,
-            priceWithVat,
-            volumePieces,
-            today,
-          );
+          return updateSalesPlanLineRejection(current, plan.id, lineId, priceWithVat, volumePieces, today);
         },
       );
     },
@@ -137,9 +81,7 @@ export function useSales() {
       if (rejection) {
         return rejection;
       }
-      updateDocument((current) =>
-        addCategory(current, { id, name, deletedAt: null }),
-      );
+      updateDocument((current) => addCategory(current, { id, name, deletedAt: null }));
       return null;
     },
     renameCategory(id: string, name: string): CategoryRejection | null {
@@ -151,9 +93,7 @@ export function useSales() {
       return null;
     },
     deleteCategory(id: string) {
-      updateDocument((current) =>
-        deleteCategory(current, id, new Date().toISOString()),
-      );
+      updateDocument((current) => deleteCategory(current, id, new Date().toISOString()));
     },
     restoreCategory(id: string): CategoryRejection | null {
       const current = document.categories.find((item) => item.id === id);
@@ -169,9 +109,7 @@ export function useSales() {
     },
     addProduct(name: string, categoryId: string): FieldRejection | null {
       const id = `product:${crypto.randomUUID()}`;
-      const rejection =
-        productNameRejection(document, name) ??
-        productCategoryRejection(document, categoryId);
+      const rejection = productNameRejection(document, name) ?? productCategoryRejection(document, categoryId);
       if (rejection) {
         return rejection;
       }
@@ -196,30 +134,23 @@ export function useSales() {
       return null;
     },
     updateProductVat(id: string, vatPercent: number): FieldRejection | null {
-      const rejection = productVatRejection(document, id, vatPercent);
+      const rejection = productVatRejection(document, id);
       if (rejection) {
         return rejection;
       }
       updateDocument((current) => setProductVat(current, id, vatPercent));
       return null;
     },
-    updateProductCost(
-      id: string,
-      unitCostWithVat: number,
-    ): FieldRejection | null {
+    updateProductCost(id: string, unitCostWithVat: number): FieldRejection | null {
       const rejection = productUnitCostRejection(document, id, unitCostWithVat);
       if (rejection) {
         return rejection;
       }
-      updateDocument((current) =>
-        setProductUnitCost(current, id, unitCostWithVat),
-      );
+      updateDocument((current) => setProductUnitCost(current, id, unitCostWithVat));
       return null;
     },
     deleteProduct(id: string) {
-      updateDocument((current) =>
-        deleteProduct(current, id, new Date().toISOString()),
-      );
+      updateDocument((current) => deleteProduct(current, id, new Date().toISOString()));
     },
     restoreProduct(id: string): FieldRejection | null {
       const current = document.products.find((item) => item.id === id);
@@ -227,8 +158,7 @@ export function useSales() {
         return 'missing';
       }
       const rejection =
-        productNameRejection(document, current.name, id) ??
-        productCategoryRejection(document, current.categoryId);
+        productNameRejection(document, current.name, id) ?? productCategoryRejection(document, current.categoryId);
       if (rejection) {
         return rejection;
       }
@@ -240,30 +170,19 @@ export function useSales() {
       side: OperatingExpenseSide,
       amountExVat: number,
     ): OperatingExpenseRejection | null {
-      const rejection = setOperatingExpenseRejection(
-        document,
-        month,
-        side,
-        amountExVat,
-      );
+      const rejection = setOperatingExpenseRejection(document, month, side, amountExVat);
       if (rejection) {
         return rejection;
       }
-      updateDocument((current) =>
-        setOperatingExpense(current, month, side, amountExVat),
-      );
+      updateDocument((current) => setOperatingExpense(current, month, side, amountExVat));
       return null;
     },
-    addMissing(
-      planId: string,
-      lines: readonly { id: string; productId: string }[],
-    ) {
+    addMissing(planId: string, lines: readonly { id: string; productId: string }[]) {
       const today = new Date();
-      return commit(
+      return commitDocumentUpdate(
         updateDocument,
         (current) => addMissingPlanLines(current, planId, lines, today),
-        (current) =>
-          addMissingPlanLinesRejection(current, planId, lines, today),
+        (current) => addMissingPlanLinesRejection(current, planId, lines, today),
       );
     },
   };

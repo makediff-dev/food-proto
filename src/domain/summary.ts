@@ -1,28 +1,19 @@
 import { type UnitCost, unitCost } from '@/domain/cost';
 import {
   isMonthKey,
-  MAX_OPERATING_EXPENSE,
   PROFIT_TAX_PERCENT,
   type Product,
   type ProductCategory,
   type PrototypeDocument,
   type SalesPlan,
 } from '@/domain/document';
-import {
-  averageAmount,
-  multiplyAmount,
-  percentHundredths,
-  ratioRound,
-  toSafeNumber,
-  vatPercentHundredths,
-} from '@/domain/money';
+import { averageAmount, percentHundredths, ratioRound, vatPercentHundredths } from '@/domain/money';
 import { periodGridCategories, periodGridProducts } from '@/domain/period-grid';
 import { type SalesFactRow, salesFactMonth } from '@/domain/sales-fact';
 import {
   daysInMonth,
   monthKeyFromDate,
   PLAN_HORIZON_MONTHS,
-  planMonthOpen,
   planPhase,
   revenueExVat,
   revenueWithVat,
@@ -32,9 +23,6 @@ import {
   salesPlanTotals,
   shiftMonth,
 } from '@/domain/sales-plan';
-
-const HUNDRED = BigInt(100);
-const ZERO = BigInt(0);
 
 export interface SummarySide {
   volumePieces: number | null;
@@ -147,10 +135,7 @@ export type OperatingExpenseSide = 'plan' | 'fact';
 /** Фактическая сводка урезает план; прогноз растягивает факт. */
 export type SummaryLens = 'current' | 'forecast';
 
-type VolumeScale =
-  | { kind: 'identity' }
-  | { kind: 'zero' }
-  | { kind: 'ratio'; numerator: number; denominator: number };
+type VolumeScale = { kind: 'identity' } | { kind: 'zero' } | { kind: 'ratio'; numerator: number; denominator: number };
 
 export type OperatingExpenseRejection = 'month' | 'amount';
 
@@ -164,10 +149,7 @@ function minus(left: number | null, right: number | null): number | null {
 
 function varianceOf(
   fact: Pick<SummarySide, 'revenueWithVat' | 'revenueExVat' | 'contribution'>,
-  plan: Pick<
-    SummarySide,
-    'revenueWithVat' | 'revenueExVat' | 'contribution'
-  > | null,
+  plan: Pick<SummarySide, 'revenueWithVat' | 'revenueExVat' | 'contribution'> | null,
 ): SummaryVariance {
   if (!plan) {
     return {
@@ -189,16 +171,8 @@ export function lastHorizonMonth(today: Date): string {
   return shiftMonth(monthKeyFromDate(today), PLAN_HORIZON_MONTHS - 1);
 }
 
-/** Сводка: с 2000-01 до горизонта плана. Прошедший и будущий открыты. */
-export function summaryMonthOpen(month: string, today: Date): boolean {
-  return planMonthOpen(month, today);
-}
-
 /** Меняет местами концы, если `from` позже `to`. */
-export function normalizeMonthRange(
-  from: string,
-  to: string,
-): { from: string; to: string } {
+export function normalizeMonthRange(from: string, to: string): { from: string; to: string } {
   return from <= to ? { from, to } : { from: to, to: from };
 }
 
@@ -218,11 +192,7 @@ export function monthsInRange(from: string, to: string): string[] {
  * Расширяет интервал так, чтобы в него входил `month`.
  * Фактическая сводка смотрит только такой период.
  */
-export function ensureRangeIncludesMonth(
-  from: string,
-  to: string,
-  month: string,
-): { from: string; to: string } {
+export function ensureRangeIncludesMonth(from: string, to: string, month: string): { from: string; to: string } {
   const range = normalizeMonthRange(from, to);
   return {
     from: range.from > month ? month : range.from,
@@ -238,17 +208,11 @@ export function isSingleMonthSummary(view: SummaryView): boolean {
 /**
  * Товары сетки месяца: рабочие и архивные с планом или продажей в этом месяце.
  */
-export function summaryGridProducts(
-  document: PrototypeDocument,
-  month: string,
-): Product[] {
+export function summaryGridProducts(document: PrototypeDocument, month: string): Product[] {
   return periodGridProducts(document, month);
 }
 
-function summaryCategories(
-  document: PrototypeDocument,
-  products: readonly Product[],
-): ProductCategory[] {
+function summaryCategories(document: PrototypeDocument, products: readonly Product[]): ProductCategory[] {
   return periodGridCategories(document, products);
 }
 
@@ -269,8 +233,7 @@ function planSide(
 
   const metrics = salesPlanLineMetrics(document, plan, line);
   const costMissing = line.volumePieces > 0 && metrics.volumeCostExVat === null;
-  const revenueMissing =
-    metrics.revenueWithVat === null || metrics.revenueExVat === null;
+  const revenueMissing = metrics.revenueWithVat === null || metrics.revenueExVat === null;
 
   return {
     lineId: line.id,
@@ -305,57 +268,49 @@ function factFromRows(
   rows: readonly SalesFactRow[],
   days: number,
 ): SummarySide {
-  let volume = ZERO;
-  let revenueWith = ZERO;
-  let revenueEx = ZERO;
-  let costWith = ZERO;
-  let costEx = ZERO;
-  let contributionSum = ZERO;
+  let volume = 0;
+  let revenueWith = 0;
+  let revenueEx = 0;
+  let costWith = 0;
+  let costEx = 0;
+  let contributionSum = 0;
   let costComplete = true;
   let revenueComplete = true;
   const cost = unitCost(document, product.id);
 
   for (const row of rows) {
-    volume += BigInt(row.salesPieces);
+    volume += row.salesPieces;
 
     if (row.revenueWithVat === null || row.revenueExVat === null) {
       if (row.salesPieces > 0) {
         revenueComplete = false;
       }
     } else {
-      revenueWith += BigInt(row.revenueWithVat);
-      revenueEx += BigInt(row.revenueExVat);
+      revenueWith += row.revenueWithVat;
+      revenueEx += row.revenueExVat;
     }
 
     if (
       row.salesPieces > 0 &&
-      (row.salesVolumeCostWithVat === null ||
-        row.salesVolumeCostExVat === null ||
-        row.contribution === null)
+      (row.salesVolumeCostWithVat === null || row.salesVolumeCostExVat === null || row.contribution === null)
     ) {
       costComplete = false;
-    } else if (
-      row.salesVolumeCostWithVat !== null &&
-      row.salesVolumeCostExVat !== null &&
-      row.contribution !== null
-    ) {
-      costWith += BigInt(row.salesVolumeCostWithVat);
-      costEx += BigInt(row.salesVolumeCostExVat);
-      contributionSum += BigInt(row.contribution);
+    } else if (row.salesVolumeCostWithVat !== null && row.salesVolumeCostExVat !== null && row.contribution !== null) {
+      costWith += row.salesVolumeCostWithVat;
+      costEx += row.salesVolumeCostExVat;
+      contributionSum += row.contribution;
     }
   }
 
-  const volumePieces = toSafeNumber(volume) ?? 0;
-  const revenueWithVat = revenueComplete ? toSafeNumber(revenueWith) : null;
-  const revenueExVat = revenueComplete ? toSafeNumber(revenueEx) : null;
-  const volumeCostWithVat = costComplete ? toSafeNumber(costWith) : null;
-  const volumeCostExVat = costComplete ? toSafeNumber(costEx) : null;
-  const contribution =
-    costComplete && revenueComplete ? toSafeNumber(contributionSum) : null;
+  const volumePieces = volume;
+  const revenueWithVat = revenueComplete ? revenueWith : null;
+  const revenueExVat = revenueComplete ? revenueEx : null;
+  const volumeCostWithVat = costComplete ? costWith : null;
+  const volumeCostExVat = costComplete ? costEx : null;
+  const contribution = costComplete && revenueComplete ? contributionSum : null;
   const priceWithVat = averageAmount(revenueWithVat, volumePieces);
   const priceExVat = averageAmount(revenueExVat, volumePieces);
-  const volumeAndEmptyCost =
-    volumePieces > 0 && (cost === null || !costComplete);
+  const volumeAndEmptyCost = volumePieces > 0 && (cost === null || !costComplete);
 
   return {
     volumePieces,
@@ -371,9 +326,7 @@ function factFromRows(
     revenueWithVat,
     revenueExVat,
     contribution: volumeAndEmptyCost ? null : contribution,
-    profitabilityHundredths: volumeAndEmptyCost
-      ? null
-      : percentHundredths(contribution, volumeCostExVat),
+    profitabilityHundredths: volumeAndEmptyCost ? null : percentHundredths(contribution, volumeCostExVat),
     vatPercent: product.vatPercent,
     vatPercentHundredths: null,
     costComplete: !volumeAndEmptyCost,
@@ -381,59 +334,47 @@ function factFromRows(
   };
 }
 
-function emptyFactSide(
-  document: PrototypeDocument,
-  product: Product,
-  days: number,
-): SummarySide {
+function emptyFactSide(document: PrototypeDocument, product: Product, days: number): SummarySide {
   return factFromRows(document, product, [], days);
 }
 
-function totalsFromSides(
-  sides: readonly SummarySide[],
-  days: number,
-): SummarySide {
-  let volume = ZERO;
-  let revenueWith = ZERO;
-  let revenueEx = ZERO;
-  let costWith = ZERO;
-  let costEx = ZERO;
-  let contributionSum = ZERO;
+function totalsFromSides(sides: readonly SummarySide[], days: number): SummarySide {
+  let volume = 0;
+  let revenueWith = 0;
+  let revenueEx = 0;
+  let costWith = 0;
+  let costEx = 0;
+  let contributionSum = 0;
   let costComplete = true;
   let revenueComplete = true;
 
   for (const fact of sides) {
-    volume += BigInt(fact.volumePieces ?? 0);
+    volume += fact.volumePieces ?? 0;
 
     if (fact.revenueWithVat === null || fact.revenueExVat === null) {
       if ((fact.volumePieces ?? 0) > 0) {
         revenueComplete = false;
       }
     } else {
-      revenueWith += BigInt(fact.revenueWithVat);
-      revenueEx += BigInt(fact.revenueExVat);
+      revenueWith += fact.revenueWithVat;
+      revenueEx += fact.revenueExVat;
     }
 
     if ((fact.volumePieces ?? 0) > 0 && !fact.costComplete) {
       costComplete = false;
-    } else if (
-      fact.volumeCostWithVat !== null &&
-      fact.volumeCostExVat !== null &&
-      fact.contribution !== null
-    ) {
-      costWith += BigInt(fact.volumeCostWithVat);
-      costEx += BigInt(fact.volumeCostExVat);
-      contributionSum += BigInt(fact.contribution);
+    } else if (fact.volumeCostWithVat !== null && fact.volumeCostExVat !== null && fact.contribution !== null) {
+      costWith += fact.volumeCostWithVat;
+      costEx += fact.volumeCostExVat;
+      contributionSum += fact.contribution;
     }
   }
 
-  const volumePieces = toSafeNumber(volume);
-  const revenueWithVat = revenueComplete ? toSafeNumber(revenueWith) : null;
-  const revenueExVat = revenueComplete ? toSafeNumber(revenueEx) : null;
-  const volumeCostWithVat = costComplete ? toSafeNumber(costWith) : null;
-  const volumeCostExVat = costComplete ? toSafeNumber(costEx) : null;
-  const contribution =
-    costComplete && revenueComplete ? toSafeNumber(contributionSum) : null;
+  const volumePieces = volume;
+  const revenueWithVat = revenueComplete ? revenueWith : null;
+  const revenueExVat = revenueComplete ? revenueEx : null;
+  const volumeCostWithVat = costComplete ? costWith : null;
+  const volumeCostExVat = costComplete ? costEx : null;
+  const contribution = costComplete && revenueComplete ? contributionSum : null;
   const priceWithVat = averageAmount(revenueWithVat, volumePieces);
   const priceExVat = averageAmount(revenueExVat, volumePieces);
 
@@ -451,10 +392,7 @@ function totalsFromSides(
     revenueWithVat,
     revenueExVat,
     contribution,
-    profitabilityHundredths:
-      costComplete && revenueComplete
-        ? percentHundredths(contribution, volumeCostExVat)
-        : null,
+    profitabilityHundredths: costComplete && revenueComplete ? percentHundredths(contribution, volumeCostExVat) : null,
     vatPercent: null,
     vatPercentHundredths: vatPercentHundredths(revenueWithVat, revenueExVat),
     costComplete,
@@ -462,20 +400,14 @@ function totalsFromSides(
   };
 }
 
-function factTotalsFromRows(
-  rows: readonly SummaryRow[],
-  days: number,
-): SummarySide {
+function factTotalsFromRows(rows: readonly SummaryRow[], days: number): SummarySide {
   return totalsFromSides(
     rows.map((row) => row.fact),
     days,
   );
 }
 
-function planTotalsFromRows(
-  rows: readonly SummaryRow[],
-  days: number,
-): SummarySide | null {
+function planTotalsFromRows(rows: readonly SummaryRow[], days: number): SummarySide | null {
   const sides = rows.flatMap((row) => (row.plan ? [row.plan] : []));
   if (sides.length === 0) {
     return rows.length === 0 ? totalsFromSides([], days) : null;
@@ -501,10 +433,7 @@ function planTotalsAsSide(totals: SalesPlanTotals): SummarySide {
     contribution: totals.contribution,
     profitabilityHundredths: totals.profitabilityHundredths,
     vatPercent: null,
-    vatPercentHundredths: vatPercentHundredths(
-      totals.revenueWithVat,
-      totals.revenueExVat,
-    ),
+    vatPercentHundredths: vatPercentHundredths(totals.revenueWithVat, totals.revenueExVat),
     costComplete: totals.costComplete,
     revenueComplete: totals.revenueComplete,
   };
@@ -522,21 +451,13 @@ export function monthOperatingExpenseAmounts(
   };
 }
 
-function headlineSide(
-  totals: SummarySide | null,
-  operatingExpenseExVat: number,
-): SummaryHeadlineSide {
+function headlineSide(totals: SummarySide | null, operatingExpenseExVat: number): SummaryHeadlineSide {
   const revenueWithVat = totals?.revenueWithVat ?? null;
   const revenueExVat = totals?.revenueExVat ?? null;
   const contribution = totals?.contribution ?? null;
-  const profit =
-    contribution === null ? null : contribution - operatingExpenseExVat;
-  const profitTax =
-    profit === null
-      ? null
-      : ratioRound(BigInt(profit) * BigInt(PROFIT_TAX_PERCENT), HUNDRED);
-  const netProfit =
-    profit === null || profitTax === null ? null : profit - profitTax;
+  const profit = contribution === null ? null : contribution - operatingExpenseExVat;
+  const profitTax = profit === null ? null : ratioRound(profit * PROFIT_TAX_PERCENT, 100);
+  const netProfit = profit === null || profitTax === null ? null : profit - profitTax;
   const netProfitabilityHundredths = percentHundredths(netProfit, revenueExVat);
 
   return {
@@ -570,15 +491,11 @@ export function summaryHeadline(
     variance: {
       revenueWithVat: minus(fact.revenueWithVat, plan.revenueWithVat),
       contribution: minus(fact.contribution, plan.contribution),
-      operatingExpenseExVat:
-        fact.operatingExpenseExVat - plan.operatingExpenseExVat,
+      operatingExpenseExVat: fact.operatingExpenseExVat - plan.operatingExpenseExVat,
       profit: minus(fact.profit, plan.profit),
       profitTax: minus(fact.profitTax, plan.profitTax),
       netProfit: minus(fact.netProfit, plan.netProfit),
-      netProfitabilityHundredths: minus(
-        fact.netProfitabilityHundredths,
-        plan.netProfitabilityHundredths,
-      ),
+      netProfitabilityHundredths: minus(fact.netProfitabilityHundredths, plan.netProfitabilityHundredths),
     },
     taxPercent: PROFIT_TAX_PERCENT,
   };
@@ -597,11 +514,7 @@ export function setOperatingExpenseRejection(
     return 'month';
   }
 
-  if (
-    !Number.isInteger(amountExVat) ||
-    amountExVat < 0 ||
-    amountExVat > MAX_OPERATING_EXPENSE
-  ) {
+  if (!Number.isInteger(amountExVat) || amountExVat < 0) {
     return 'amount';
   }
 
@@ -625,9 +538,7 @@ export function setOperatingExpense(
   const current = monthOperatingExpenseAmounts(document, month);
   const nextPlan = side === 'plan' ? amountExVat : current.planExVat;
   const nextFact = side === 'fact' ? amountExVat : current.factExVat;
-  const withoutMonth = document.operatingExpenses.filter(
-    (item) => item.month !== month,
-  );
+  const withoutMonth = document.operatingExpenses.filter((item) => item.month !== month);
 
   if (nextPlan === 0 && nextFact === 0) {
     if (withoutMonth.length === document.operatingExpenses.length) {
@@ -666,13 +577,9 @@ export function monthSummary(
 
   for (const product of products) {
     const planned = plan ? planSide(document, plan, product) : null;
-    const dayRows = factDays.flatMap((day) =>
-      day.rows.filter((row) => row.productId === product.id),
-    );
+    const dayRows = factDays.flatMap((day) => day.rows.filter((row) => row.productId === product.id));
     const factSide =
-      dayRows.length > 0
-        ? factFromRows(document, product, dayRows, days)
-        : emptyFactSide(document, product, days);
+      dayRows.length > 0 ? factFromRows(document, product, dayRows, days) : emptyFactSide(document, product, days);
     const planMetrics = planned?.side ?? null;
 
     rowByProduct.set(product.id, {
@@ -688,29 +595,27 @@ export function monthSummary(
     });
   }
 
-  const groups: SummaryGroup[] = summaryCategories(document, products).map(
-    (category) => {
-      const rows = products
-        .filter((item) => item.categoryId === category.id)
-        .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
-        .flatMap((item) => {
-          const row = rowByProduct.get(item.id);
-          return row ? [row] : [];
-        });
-      const factSide = factTotalsFromRows(rows, days);
-      const planMetrics = planTotalsFromRows(rows, days);
+  const groups: SummaryGroup[] = summaryCategories(document, products).map((category) => {
+    const rows = products
+      .filter((item) => item.categoryId === category.id)
+      .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+      .flatMap((item) => {
+        const row = rowByProduct.get(item.id);
+        return row ? [row] : [];
+      });
+    const factSide = factTotalsFromRows(rows, days);
+    const planMetrics = planTotalsFromRows(rows, days);
 
-      return {
-        categoryId: category.id,
-        name: category.name,
-        deleted: category.deletedAt !== null,
-        rows,
-        plan: planMetrics,
-        fact: factSide,
-        variance: varianceOf(factSide, planMetrics),
-      };
-    },
-  );
+    return {
+      categoryId: category.id,
+      name: category.name,
+      deleted: category.deletedAt !== null,
+      rows,
+      plan: planMetrics,
+      fact: factSide,
+      variance: varianceOf(factSide, planMetrics),
+    };
+  });
   const rows = groups.flatMap((group) => group.rows);
 
   const planTotals = plan ? salesPlanTotals(document, plan) : null;
@@ -730,12 +635,7 @@ export function monthSummary(
     planTotalsSide,
     factTotals,
     variance: varianceOf(factTotals, planTotalsSide),
-    headline: summaryHeadline(
-      planTotalsSide,
-      factTotals,
-      opex.planExVat,
-      opex.factExVat,
-    ),
+    headline: summaryHeadline(planTotalsSide, factTotals, opex.planExVat, opex.factExVat),
   };
 }
 
@@ -743,19 +643,13 @@ export function monthSummary(
  * Сводка за интервал месяцев: сумма полных месяцев без линзы.
  * Один месяц — то же, что `monthSummary`.
  */
-export function rangeSummary(
-  document: PrototypeDocument,
-  from: string,
-  to: string,
-): SummaryView {
+export function rangeSummary(document: PrototypeDocument, from: string, to: string): SummaryView {
   const range = normalizeMonthRange(from, to);
   if (range.from === range.to) {
     return monthSummary(document, range.from);
   }
 
-  const views = monthsInRange(range.from, range.to).map((month) =>
-    monthSummary(document, month),
-  );
+  const views = monthsInRange(range.from, range.to).map((month) => monthSummary(document, month));
   const days = calendarDays(views);
   return mergeMonthSummaries(views, days, days);
 }
@@ -765,27 +659,17 @@ export function rangeSummary(
  * По каждому месяцу план урезается на долю прошедших дней, затем месяцы складываются.
  * Прошедший месяц полный, будущий план нулевой. Факт не растягивается.
  */
-export function actualRangeSummary(
-  document: PrototypeDocument,
-  from: string,
-  to: string,
-  today: Date,
-): SummaryView {
+export function actualRangeSummary(document: PrototypeDocument, from: string, to: string, today: Date): SummaryView {
   const current = monthKeyFromDate(today);
   const range = ensureRangeIncludesMonth(from, to, current);
   const months = monthsInRange(range.from, range.to);
-  const views = months.map((month) =>
-    applySummaryLens(monthSummary(document, month), 'current', today),
-  );
+  const views = months.map((month) => applySummaryLens(monthSummary(document, month), 'current', today));
   const first = views[0];
   if (!first || views.length === 1) {
     return first ?? monthSummary(document, range.from);
   }
 
-  const planDays = months.reduce(
-    (sum, month) => sum + elapsedDaysInMonth(month, today),
-    0,
-  );
+  const planDays = months.reduce((sum, month) => sum + elapsedDaysInMonth(month, today), 0);
   return mergeMonthSummaries(views, planDays, calendarDays(views));
 }
 
@@ -806,11 +690,7 @@ export function summaryForLens(
 
   const range = normalizeMonthRange(from, to);
   if (range.from === range.to) {
-    return applySummaryLens(
-      monthSummary(document, range.from),
-      'forecast',
-      today,
-    );
+    return applySummaryLens(monthSummary(document, range.from), 'forecast', today);
   }
 
   return rangeSummary(document, range.from, range.to);
@@ -820,11 +700,7 @@ function calendarDays(views: readonly SummaryView[]): number {
   return views.reduce((sum, view) => sum + view.days, 0);
 }
 
-function mergeMonthSummaries(
-  views: readonly SummaryView[],
-  planDays: number,
-  factDays: number,
-): SummaryView {
+function mergeMonthSummaries(views: readonly SummaryView[], planDays: number, factDays: number): SummaryView {
   const first = views[0];
   const last = views[views.length - 1];
   if (!first || !last) {
@@ -854,9 +730,7 @@ function mergeMonthSummaries(
     }
   }
 
-  const categoryOrder = [
-    ...new Set(views.flatMap((view) => view.groups.map((g) => g.categoryId))),
-  ];
+  const categoryOrder = [...new Set(views.flatMap((view) => view.groups.map((g) => g.categoryId)))];
 
   const groups: SummaryGroup[] = categoryOrder.flatMap((categoryId) => {
     const sample = categoryById.get(categoryId);
@@ -878,14 +752,10 @@ function mergeMonthSummaries(
 
     const rows = sortedProductIds.flatMap((productId) => {
       const monthRows = monthGroups.flatMap((monthGroup) => {
-        const monthRow = monthGroup.rows.find(
-          (item) => item.productId === productId,
-        );
+        const monthRow = monthGroup.rows.find((item) => item.productId === productId);
         return monthRow ? [monthRow] : [];
       });
-      return monthRows.length > 0
-        ? [mergeSummaryRows(monthRows, planDays, factDays)]
-        : [];
+      return monthRows.length > 0 ? [mergeSummaryRows(monthRows, planDays, factDays)] : [];
     });
     const fact = factTotalsFromRows(rows, factDays);
     const planMetrics = planTotalsFromRows(rows, planDays);
@@ -928,11 +798,7 @@ function mergeMonthSummaries(
   };
 }
 
-function mergeSummaryRows(
-  rows: readonly SummaryRow[],
-  planDays: number,
-  factDays: number,
-): SummaryRow {
+function mergeSummaryRows(rows: readonly SummaryRow[], planDays: number, factDays: number): SummaryRow {
   const sample = rows[0];
   if (!sample) {
     throw new Error('mergeSummaryRows: пустой список строк');
@@ -943,8 +809,7 @@ function mergeSummaryRows(
 
   const planSides = rows.flatMap((row) => (row.plan ? [row.plan] : []));
   const factSides = rows.map((row) => row.fact);
-  const plan =
-    planSides.length === 0 ? null : mergeProductSides(planSides, planDays);
+  const plan = planSides.length === 0 ? null : mergeProductSides(planSides, planDays);
   const fact = mergeProductSides(factSides, factDays);
 
   return {
@@ -961,10 +826,7 @@ function mergeSummaryRows(
 }
 
 /** Сумма сторон товара: аддитивные поля складываются, цена — из сумм. */
-function mergeProductSides(
-  sides: readonly SummarySide[],
-  days: number,
-): SummarySide {
+function mergeProductSides(sides: readonly SummarySide[], days: number): SummarySide {
   const merged = totalsFromSides(sides, days);
   const sample = sides[0];
   if (!sample) {
@@ -984,12 +846,8 @@ function mergeProductSides(
   return {
     ...merged,
     unitCost: unitCostValue,
-    averageCostWithVat:
-      unitCostValue !== null
-        ? unitCostValue.withVat
-        : merged.averageCostWithVat,
-    averageCostExVat:
-      unitCostValue !== null ? unitCostValue.exVat : merged.averageCostExVat,
+    averageCostWithVat: unitCostValue !== null ? unitCostValue.withVat : merged.averageCostWithVat,
+    averageCostExVat: unitCostValue !== null ? unitCostValue.exVat : merged.averageCostExVat,
     vatPercent: sample.vatPercent,
     vatPercentHundredths: null,
     priceExVatTenThousandths: null,
@@ -1009,11 +867,7 @@ export function elapsedDaysInMonth(month: string, today: Date): number {
   return today.getDate();
 }
 
-function planVolumeScale(
-  month: string,
-  today: Date,
-  lens: SummaryLens,
-): VolumeScale {
+function planVolumeScale(month: string, today: Date, lens: SummaryLens): VolumeScale {
   const days = daysInMonth(month);
   const elapsed = elapsedDaysInMonth(month, today);
   if (lens !== 'current') {
@@ -1029,11 +883,7 @@ function planVolumeScale(
   return { kind: 'ratio', numerator: elapsed, denominator: days };
 }
 
-function factVolumeScale(
-  month: string,
-  today: Date,
-  lens: SummaryLens,
-): VolumeScale {
+function factVolumeScale(month: string, today: Date, lens: SummaryLens): VolumeScale {
   const days = daysInMonth(month);
   const elapsed = elapsedDaysInMonth(month, today);
   if (lens !== 'forecast') {
@@ -1049,12 +899,8 @@ function factVolumeScale(
   return { kind: 'ratio', numerator: days, denominator: elapsed };
 }
 
-function scaleInteger(
-  value: number,
-  numerator: number,
-  denominator: number,
-): number | null {
-  return ratioRound(BigInt(value) * BigInt(numerator), BigInt(denominator));
+function scaleInteger(value: number, numerator: number, denominator: number): number | null {
+  return ratioRound(value * numerator, denominator);
 }
 
 function scaleAmount(value: number | null, scale: VolumeScale): number | null {
@@ -1071,32 +917,16 @@ function scaleAmount(value: number | null, scale: VolumeScale): number | null {
   return scaleInteger(value, scale.numerator, scale.denominator);
 }
 
-function planSideAtVolume(
-  side: SummarySide,
-  volumePieces: number,
-  perDayDays: number,
-): SummarySide {
+function planSideAtVolume(side: SummarySide, volumePieces: number, perDayDays: number): SummarySide {
   const vat = side.vatPercent;
   const price = side.priceWithVat;
-  const revenueWith =
-    price === null ? null : revenueWithVat(price, volumePieces);
+  const revenueWith = price === null ? null : revenueWithVat(price, volumePieces);
   const revenueEx =
-    vat === null
-      ? volumePieces === 0
-        ? 0
-        : null
-      : price === null
-        ? null
-        : revenueExVat(price, vat, volumePieces);
+    vat === null ? (volumePieces === 0 ? 0 : null) : price === null ? null : revenueExVat(price, vat, volumePieces);
   const cost = side.unitCost;
-  const volumeCostWith =
-    cost === null ? null : multiplyAmount(cost.withVat, volumePieces);
-  const volumeCostEx =
-    cost === null ? null : multiplyAmount(cost.exVat, volumePieces);
-  const contribution =
-    revenueEx === null || volumeCostEx === null
-      ? null
-      : revenueEx - volumeCostEx;
+  const volumeCostWith = cost === null ? null : cost.withVat * volumePieces;
+  const volumeCostEx = cost === null ? null : cost.exVat * volumePieces;
+  const contribution = revenueEx === null || volumeCostEx === null ? null : revenueEx - volumeCostEx;
   const costMissing = volumePieces > 0 && volumeCostEx === null;
   const revenueMissing = revenueWith === null || revenueEx === null;
 
@@ -1114,11 +944,7 @@ function planSideAtVolume(
   };
 }
 
-function applyPlanScale(
-  side: SummarySide | null,
-  scale: VolumeScale,
-  perDayDays: number,
-): SummarySide | null {
+function applyPlanScale(side: SummarySide | null, scale: VolumeScale, perDayDays: number): SummarySide | null {
   if (!side) {
     return null;
   }
@@ -1129,11 +955,7 @@ function applyPlanScale(
     return planSideAtVolume(side, 0, perDayDays);
   }
 
-  const volume = scaleInteger(
-    side.volumePieces ?? 0,
-    scale.numerator,
-    scale.denominator,
-  );
+  const volume = scaleInteger(side.volumePieces ?? 0, scale.numerator, scale.denominator);
   if (volume === null) {
     return {
       ...side,
@@ -1152,11 +974,7 @@ function applyPlanScale(
   return planSideAtVolume(side, volume, perDayDays);
 }
 
-function applyFactScale(
-  side: SummarySide,
-  scale: VolumeScale,
-  monthDays: number,
-): SummarySide {
+function applyFactScale(side: SummarySide, scale: VolumeScale, monthDays: number): SummarySide {
   if (scale.kind === 'identity') {
     return side;
   }
@@ -1167,32 +985,22 @@ function applyFactScale(
   const volumeCostWithVat = scaleAmount(side.volumeCostWithVat, scale);
   const volumeCostExVat = scaleAmount(side.volumeCostExVat, scale);
   const contribution = scaleAmount(side.contribution, scale);
-  const volumeAndEmptyCost =
-    (volumePieces ?? 0) > 0 && (side.unitCost === null || !side.costComplete);
+  const volumeAndEmptyCost = (volumePieces ?? 0) > 0 && (side.unitCost === null || !side.costComplete);
 
   return {
     ...side,
     volumePieces,
-    perDay:
-      volumePieces === null || monthDays === 0
-        ? null
-        : volumePieces / monthDays,
+    perDay: volumePieces === null || monthDays === 0 ? null : volumePieces / monthDays,
     priceWithVat: averageAmount(nextRevenueWithVat, volumePieces),
     priceExVat: averageAmount(nextRevenueExVat, volumePieces),
-    averageCostWithVat: volumeAndEmptyCost
-      ? null
-      : averageAmount(volumeCostWithVat, volumePieces),
-    averageCostExVat: volumeAndEmptyCost
-      ? null
-      : averageAmount(volumeCostExVat, volumePieces),
+    averageCostWithVat: volumeAndEmptyCost ? null : averageAmount(volumeCostWithVat, volumePieces),
+    averageCostExVat: volumeAndEmptyCost ? null : averageAmount(volumeCostExVat, volumePieces),
     volumeCostWithVat: volumeAndEmptyCost ? null : volumeCostWithVat,
     volumeCostExVat: volumeAndEmptyCost ? null : volumeCostExVat,
     revenueWithVat: nextRevenueWithVat,
     revenueExVat: nextRevenueExVat,
     contribution: volumeAndEmptyCost ? null : contribution,
-    profitabilityHundredths: volumeAndEmptyCost
-      ? null
-      : percentHundredths(contribution, volumeCostExVat),
+    profitabilityHundredths: volumeAndEmptyCost ? null : percentHundredths(contribution, volumeCostExVat),
     costComplete: !volumeAndEmptyCost,
     revenueComplete: side.revenueComplete,
   };
@@ -1203,11 +1011,7 @@ function applyFactScale(
  * Прогнозируемая: факт × дни месяца / прошедшие дни.
  * Операционные расходы не трогает. В документ не пишет.
  */
-export function applySummaryLens(
-  view: SummaryView,
-  lens: SummaryLens,
-  today: Date,
-): SummaryView {
+export function applySummaryLens(view: SummaryView, lens: SummaryLens, today: Date): SummaryView {
   const planScale = planVolumeScale(view.month, today, lens);
   const factScale = factVolumeScale(view.month, today, lens);
   if (planScale.kind === 'identity' && factScale.kind === 'identity') {
@@ -1216,8 +1020,7 @@ export function applySummaryLens(
 
   const elapsed = elapsedDaysInMonth(view.month, today);
   const monthDays = view.days;
-  const planPerDayDays =
-    lens === 'current' && elapsed > 0 ? elapsed : monthDays;
+  const planPerDayDays = lens === 'current' && elapsed > 0 ? elapsed : monthDays;
 
   const groups: SummaryGroup[] = view.groups.map((group) => {
     const rows = group.rows.map((row) => {

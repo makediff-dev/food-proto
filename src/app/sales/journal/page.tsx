@@ -1,9 +1,6 @@
 import type { Metadata } from 'next';
 
-import {
-  parseSalesJournalQuery,
-  SALES_SECTION_TITLE,
-} from '@/features/sales-fact/paths';
+import { parseSalesJournalQuery, SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
 import { SalesJournalScreen } from '@/features/sales-fact/sales-journal-screen';
 
 export const metadata: Metadata = {

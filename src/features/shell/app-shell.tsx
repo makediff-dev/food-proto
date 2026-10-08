@@ -83,10 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
         </div>
 
-        <nav
-          aria-label="Разделы"
-          className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2"
-        >
+        <nav aria-label="Разделы" className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2">
           {SECTIONS.map((section) => {
             const currentSection = sectionIsCurrent(pathname, section.href);
             return (
@@ -102,10 +99,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 }`}
               >
                 {currentSection ? (
-                  <span
-                    className="absolute inset-y-2 left-0 w-0.5 bg-mark"
-                    aria-hidden="true"
-                  />
+                  <span className="absolute inset-y-2 left-0 w-0.5 bg-mark" aria-hidden="true" />
                 ) : null}
                 {section.label}
               </Link>
@@ -120,17 +114,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-current={questionsCurrent ? 'page' : undefined}
             onClick={() => setMenuOpen(false)}
             className={`relative mx-2 mb-3 block px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-              questionsCurrent
-                ? 'bg-sidebar-active text-white'
-                : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
+              questionsCurrent ? 'bg-sidebar-active text-white' : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
             }`}
           >
-            {questionsCurrent ? (
-              <span
-                className="absolute inset-y-2 left-0 w-0.5 bg-mark"
-                aria-hidden="true"
-              />
-            ) : null}
+            {questionsCurrent ? <span className="absolute inset-y-2 left-0 w-0.5 bg-mark" aria-hidden="true" /> : null}
             {QUESTIONS_LABEL}
           </Link>
         </div>
@@ -173,14 +160,8 @@ function MockReset() {
 
   return (
     <div className="px-4 py-3">
-      <p
-        className="text-xs leading-5 text-sidebar-muted"
-        role={storageError ? 'alert' : undefined}
-      >
-        {storageError ??
-          (usingLocalData
-            ? 'Сохранено в этом браузере.'
-            : 'Показаны мок-данные.')}
+      <p className="text-xs leading-5 text-sidebar-muted" role={storageError ? 'alert' : undefined}>
+        {storageError ?? (usingLocalData ? 'Сохранено в этом браузере.' : 'Показаны мок-данные.')}
       </p>
       <button
         type="button"

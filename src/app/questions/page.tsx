@@ -16,8 +16,7 @@ export default function QuestionsPage() {
         <div className="border border-line bg-sheet px-4 py-4">
           <p className="text-sm text-ink">Пока вопросов нет.</p>
           <p className="mt-2 text-sm leading-6 text-muted">
-            Добавьте строки в массив{' '}
-            <code className="text-ink">src/content/questions.json</code>.
+            Добавьте строки в массив <code className="text-ink">src/content/questions.json</code>.
           </p>
         </div>
       ) : (

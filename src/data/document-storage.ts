@@ -1,8 +1,4 @@
-import {
-  type PrototypeDocument,
-  parsePrototypeDocument,
-  SCHEMA_VERSION,
-} from '@/domain/document';
+import { type PrototypeDocument, SCHEMA_VERSION } from '@/domain/document';
 
 export const DOCUMENT_STORAGE_KEY = `food-proto:document:v${SCHEMA_VERSION}`;
 
@@ -24,7 +20,8 @@ export function readDocument(): PrototypeDocument | null {
       return null;
     }
 
-    return parsePrototypeDocument(JSON.parse(raw) as unknown);
+    // Документ пишет только это приложение. Форму не проверяем.
+    return JSON.parse(raw) as PrototypeDocument;
   } catch {
     return null;
   }
@@ -34,12 +31,9 @@ export function writeDocument(document: PrototypeDocument): void {
   try {
     window.localStorage.setItem(DOCUMENT_STORAGE_KEY, JSON.stringify(document));
   } catch (cause) {
-    throw new DocumentStorageError(
-      'Не удалось записать документ в localStorage',
-      {
-        cause,
-      },
-    );
+    throw new DocumentStorageError('Не удалось записать документ в localStorage', {
+      cause,
+    });
   }
 }
 
@@ -47,11 +41,8 @@ export function clearDocument(): void {
   try {
     window.localStorage.removeItem(DOCUMENT_STORAGE_KEY);
   } catch (cause) {
-    throw new DocumentStorageError(
-      'Не удалось стереть документ из localStorage',
-      {
-        cause,
-      },
-    );
+    throw new DocumentStorageError('Не удалось стереть документ из localStorage', {
+      cause,
+    });
   }
 }

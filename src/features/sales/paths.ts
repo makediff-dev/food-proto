@@ -1,11 +1,6 @@
 import type { SummaryLens } from '@/domain/summary';
 
-export function parseSummaryQuery(params: {
-  from?: string;
-  to?: string;
-  month?: string;
-  view?: string;
-}): {
+export function parseSummaryQuery(params: { from?: string; to?: string; month?: string; view?: string }): {
   from: string;
   to: string;
   view: SummaryLens;
@@ -21,13 +16,7 @@ export function parseSummaryQuery(params: {
 }
 
 export function summaryHref(
-  options: {
-    from?: string;
-    to?: string;
-    month?: string;
-    currentMonth?: string;
-    view?: SummaryLens;
-  } = {},
+  options: { from?: string; to?: string; month?: string; currentMonth?: string; view?: SummaryLens } = {},
 ): string {
   const from = options.from ?? options.month ?? '';
   const to = options.to ?? options.from ?? options.month ?? '';

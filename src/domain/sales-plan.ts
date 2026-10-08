@@ -1,45 +1,21 @@
 import { type UnitCost, unitCost } from '@/domain/cost';
 import {
   isMonthKey,
-  MAX_ID_LENGTH,
-  MAX_VOLUME_PIECES,
   type Product,
   type PrototypeDocument,
   type SalesPlan,
   type SalesPlanLine,
 } from '@/domain/document';
-import {
-  amountWithVat,
-  averageAmount,
-  fitsSafeMoneyProduct,
-  multiplyAmount,
-  percentHundredths,
-  ratioRound,
-  toSafeNumber,
-} from '@/domain/money';
+import { amountWithVat, averageAmount, percentHundredths, ratioRound } from '@/domain/money';
 import { activeProducts } from '@/domain/products';
 import { MAX_PRICE_KOPECKS } from '@/domain/units';
-
-const HUNDRED = BigInt(100);
-const TEN_THOUSAND = BigInt(10_000);
-const ZERO = BigInt(0);
 
 /** Текущий месяц и 23 следующих. Вместе 24. */
 export const PLAN_HORIZON_MONTHS = 24;
 
 export type PlanPhase = 'current' | 'future' | 'past';
 
-export type SalesPlanRejection =
-  | 'missing'
-  | 'month'
-  | 'taken'
-  | 'products'
-  | 'price'
-  | 'volume'
-  | 'overflow'
-  | 'duplicate-line'
-  | 'locked'
-  | 'closed';
+export type SalesPlanRejection = 'missing' | 'month' | 'taken' | 'products' | 'price' | 'volume' | 'locked' | 'closed';
 
 export interface SalesPlanLineMetrics {
   /** Десятитысячные доли рубля: 901273 = 90,1273 ₽. `Svod!G31`, без округления до копейки. */
@@ -89,18 +65,12 @@ export interface SalesPlanTotals {
   lineCount: number;
 }
 
-function isEntityId(value: string): boolean {
-  return (
-    value.length > 0 && value.length <= MAX_ID_LENGTH && value === value.trim()
-  );
-}
-
 function isPrice(value: number): boolean {
   return Number.isInteger(value) && value >= 0 && value <= MAX_PRICE_KOPECKS;
 }
 
 function isVolume(value: number): boolean {
-  return Number.isInteger(value) && value >= 0 && value <= MAX_VOLUME_PIECES;
+  return Number.isInteger(value) && value >= 0;
 }
 
 /** `ГГГГ-ММ` по локальному календарю. */
@@ -144,20 +114,12 @@ export function activeSalesPlans(document: PrototypeDocument): SalesPlan[] {
   return document.salesPlans.filter((item) => item.deletedAt === null);
 }
 
-export function workingSalesPlan(
-  document: PrototypeDocument,
-  month: string,
-): SalesPlan | null {
-  return (
-    activeSalesPlans(document).find((item) => item.month === month) ?? null
-  );
+export function workingSalesPlan(document: PrototypeDocument, month: string): SalesPlan | null {
+  return activeSalesPlans(document).find((item) => item.month === month) ?? null;
 }
 
 /** Строки нулевого плана: все рабочие товары, цена из прошлого или 0. */
-export function defaultSalesPlanLines(
-  document: PrototypeDocument,
-  month: string,
-): SalesPlanLine[] {
+export function defaultSalesPlanLines(document: PrototypeDocument, month: string): SalesPlanLine[] {
   return activeProducts(document).map((product) => ({
     id: `sales-plan-line:${month}:${product.id}`,
     productId: product.id,
@@ -170,10 +132,7 @@ export function defaultSalesPlanLines(
  * Рабочий план месяца или виртуальный нулевой.
  * Виртуальный в документ не пишется, пока его не материализуют через `ensureSalesPlan`.
  */
-export function salesPlanForMonth(
-  document: PrototypeDocument,
-  month: string,
-): SalesPlan {
+export function salesPlanForMonth(document: PrototypeDocument, month: string): SalesPlan {
   return (
     workingSalesPlan(document, month) ?? {
       id: `sales-plan:${month}`,
@@ -204,11 +163,7 @@ export function ensureSalesPlan(
 }
 
 /** Цена с НДС из последнего более раннего рабочего плана, где товар уже был. Иначе 0. */
-export function suggestedPriceWithVat(
-  document: PrototypeDocument,
-  productId: string,
-  month: string,
-): number {
+export function suggestedPriceWithVat(document: PrototypeDocument, productId: string, month: string): number {
   const earlier = activeSalesPlans(document)
     .filter((item) => item.month < month)
     .sort((left, right) => (left.month < right.month ? 1 : -1));
@@ -223,10 +178,7 @@ export function suggestedPriceWithVat(
   return 0;
 }
 
-export function missingPlanProducts(
-  document: PrototypeDocument,
-  plan: SalesPlan,
-): Product[] {
+export function missingPlanProducts(document: PrototypeDocument, plan: SalesPlan): Product[] {
   const present = new Set(plan.lines.map((line) => line.productId));
   return activeProducts(document).filter((item) => !present.has(item.id));
 }
@@ -236,52 +188,33 @@ export function missingPlanProducts(
  * На экране — до копеек. `Svod!G31 = F31 / (100 + N31) * 100`.
  * 99,14 ₽ и НДС 10% → 90,1273 ₽ внутри, на экране 90,13 ₽.
  */
-export function priceExVatTenThousandths(
-  priceWithVat: number,
-  vatPercent: number,
-): number | null {
-  return ratioRound(
-    BigInt(priceWithVat) * TEN_THOUSAND,
-    BigInt(100 + vatPercent),
-  );
+export function priceExVatTenThousandths(priceWithVat: number, vatPercent: number): number | null {
+  return ratioRound(priceWithVat * 10_000, 100 + vatPercent);
 }
 
 /**
  * Цена с НДС, копейки, из цены без НДС (копейки).
  * Обратно к округлённой до копейки цене без НДС на сводке.
  */
-export function priceWithVatFromExVat(
-  priceExVat: number,
-  vatPercent: number,
-): number | null {
+export function priceWithVatFromExVat(priceExVat: number, vatPercent: number): number | null {
   return amountWithVat(priceExVat, vatPercent);
 }
 
 /** Выручка с НДС, копейки. `Svod!I31 = F31 * H31`. */
-export function revenueWithVat(
-  priceWithVat: number,
-  volumePieces: number,
-): number | null {
-  return multiplyAmount(priceWithVat, volumePieces);
+export function revenueWithVat(priceWithVat: number, volumePieces: number): number {
+  return priceWithVat * volumePieces;
 }
 
 /**
  * Выручка без НДС, копейки, половина вверх на результате.
  * `Svod!J31`. 99,14 ₽, НДС 10%, 6000 шт → 54 076 364 коп. = 540 763,64 ₽.
  */
-export function revenueExVat(
-  priceWithVat: number,
-  vatPercent: number,
-  volumePieces: number,
-): number | null {
+export function revenueExVat(priceWithVat: number, vatPercent: number, volumePieces: number): number | null {
   if (volumePieces === 0) {
     return 0;
   }
 
-  return ratioRound(
-    BigInt(priceWithVat) * HUNDRED * BigInt(volumePieces),
-    BigInt(100 + vatPercent),
-  );
+  return ratioRound(priceWithVat * 100 * volumePieces, 100 + vatPercent);
 }
 
 /**
@@ -297,11 +230,9 @@ export function profitabilityHundredths(
     return 0;
   }
 
-  const vat = BigInt(100 + vatPercent);
-  const numerator =
-    (BigInt(priceWithVat) * HUNDRED - BigInt(unitCostExVat) * vat) *
-    TEN_THOUSAND;
-  const denominator = vat * BigInt(unitCostExVat);
+  const vat = 100 + vatPercent;
+  const numerator = (priceWithVat * 100 - unitCostExVat * vat) * 10_000;
+  const denominator = vat * unitCostExVat;
   return ratioRound(numerator, denominator);
 }
 
@@ -317,23 +248,13 @@ export function salesPlanLineMetrics(
   const cost = product ? unitCost(document, product.id) : null;
   const revenueWith = revenueWithVat(line.priceWithVat, line.volumePieces);
   const revenueEx =
-    vat === null
-      ? line.volumePieces === 0
-        ? 0
-        : null
-      : revenueExVat(line.priceWithVat, vat, line.volumePieces);
-  const volumeCostWith =
-    cost === null ? null : multiplyAmount(cost.withVat, line.volumePieces);
-  const volumeCostEx =
-    cost === null ? null : multiplyAmount(cost.exVat, line.volumePieces);
-  const contribution =
-    revenueEx === null || volumeCostEx === null
-      ? null
-      : revenueEx - volumeCostEx;
+    vat === null ? (line.volumePieces === 0 ? 0 : null) : revenueExVat(line.priceWithVat, vat, line.volumePieces);
+  const volumeCostWith = cost === null ? null : cost.withVat * line.volumePieces;
+  const volumeCostEx = cost === null ? null : cost.exVat * line.volumePieces;
+  const contribution = revenueEx === null || volumeCostEx === null ? null : revenueEx - volumeCostEx;
 
   return {
-    priceExVatTenThousandths:
-      vat === null ? null : priceExVatTenThousandths(line.priceWithVat, vat),
+    priceExVatTenThousandths: vat === null ? null : priceExVatTenThousandths(line.priceWithVat, vat),
     revenueWithVat: revenueWith,
     revenueExVat: revenueEx,
     unitCost: cost,
@@ -341,25 +262,18 @@ export function salesPlanLineMetrics(
     volumeCostExVat: volumeCostEx,
     contribution: contribution,
     profitabilityHundredths:
-      cost === null
-        ? null
-        : vat === null
-          ? null
-          : profitabilityHundredths(line.priceWithVat, vat, cost.exVat),
+      cost === null ? null : vat === null ? null : profitabilityHundredths(line.priceWithVat, vat, cost.exVat),
     perDay,
   };
 }
 
-export function salesPlanTotals(
-  document: PrototypeDocument,
-  plan: SalesPlan,
-): SalesPlanTotals {
+export function salesPlanTotals(document: PrototypeDocument, plan: SalesPlan): SalesPlanTotals {
   const days = daysInMonth(plan.month);
-  let volume = ZERO;
-  let revenueWith = ZERO;
-  let revenueEx = ZERO;
-  let costWith = ZERO;
-  let costEx = ZERO;
+  let volume = 0;
+  let revenueWith = 0;
+  let revenueEx = 0;
+  let costWith = 0;
+  let costEx = 0;
   let costComplete = true;
   let revenueWithComplete = true;
   let revenueExComplete = true;
@@ -374,7 +288,7 @@ export function salesPlanTotals(
     }
     lineCount += 1;
     const metrics = salesPlanLineMetrics(document, plan, line);
-    volume += BigInt(line.volumePieces);
+    volume += line.volumePieces;
     if (line.volumePieces > 0) {
       productsWithVolume += 1;
     }
@@ -382,13 +296,13 @@ export function salesPlanTotals(
     if (metrics.revenueWithVat === null) {
       revenueWithComplete = false;
     } else {
-      revenueWith += BigInt(metrics.revenueWithVat);
+      revenueWith += metrics.revenueWithVat;
     }
 
     if (metrics.revenueExVat === null) {
       revenueExComplete = false;
     } else {
-      revenueEx += BigInt(metrics.revenueExVat);
+      revenueEx += metrics.revenueExVat;
     }
 
     if (line.volumePieces > 0 && metrics.volumeCostExVat === null) {
@@ -396,35 +310,28 @@ export function salesPlanTotals(
     }
 
     if (metrics.volumeCostWithVat !== null) {
-      costWith += BigInt(metrics.volumeCostWithVat);
+      costWith += metrics.volumeCostWithVat;
     }
     if (metrics.volumeCostExVat !== null) {
-      costEx += BigInt(metrics.volumeCostExVat);
+      costEx += metrics.volumeCostExVat;
     }
   }
 
-  const volumePieces = toSafeNumber(volume);
+  const volumePieces = volume;
   const revenueComplete = revenueWithComplete && revenueExComplete;
-  const revenueWithVat = revenueWithComplete ? toSafeNumber(revenueWith) : null;
-  const revenueExVat = revenueExComplete ? toSafeNumber(revenueEx) : null;
-  const volumeCostWithVat = toSafeNumber(costWith);
-  const volumeCostExVat = toSafeNumber(costEx);
+  const revenueWithVat = revenueWithComplete ? revenueWith : null;
+  const revenueExVat = revenueExComplete ? revenueEx : null;
+  const volumeCostWithVat = costWith;
+  const volumeCostExVat = costEx;
   const contribution =
-    costComplete &&
-    revenueComplete &&
-    revenueExVat !== null &&
-    volumeCostExVat !== null
+    costComplete && revenueComplete && revenueExVat !== null && volumeCostExVat !== null
       ? revenueExVat - volumeCostExVat
       : null;
 
   const averagePriceWithVat = averageAmount(revenueWithVat, volumePieces);
   const averagePriceExVat = averageAmount(revenueExVat, volumePieces);
-  const averageCostWithVat = costComplete
-    ? averageAmount(volumeCostWithVat, volumePieces)
-    : null;
-  const averageCostExVat = costComplete
-    ? averageAmount(volumeCostExVat, volumePieces)
-    : null;
+  const averageCostWithVat = costComplete ? averageAmount(volumeCostWithVat, volumePieces) : null;
+  const averageCostExVat = costComplete ? averageAmount(volumeCostExVat, volumePieces) : null;
 
   return {
     volumePieces,
@@ -446,32 +353,20 @@ export function salesPlanTotals(
   };
 }
 
-function monthIsTaken(
-  document: PrototypeDocument,
-  month: string,
-  exceptId?: string,
-): boolean {
-  return activeSalesPlans(document).some(
-    (item) => item.month === month && item.id !== exceptId,
-  );
+function monthIsTaken(document: PrototypeDocument, month: string, exceptId?: string): boolean {
+  return activeSalesPlans(document).some((item) => item.month === month && item.id !== exceptId);
 }
 
 function planIsOpen(plan: SalesPlan, today: Date): boolean {
   return plan.deletedAt === null && planMonthOpen(plan.month, today);
 }
 
-function lineNumbersRejection(
-  priceWithVat: number,
-  volumePieces: number,
-): SalesPlanRejection | null {
+function lineNumbersRejection(priceWithVat: number, volumePieces: number): SalesPlanRejection | null {
   if (!isPrice(priceWithVat)) {
     return 'price';
   }
   if (!isVolume(volumePieces)) {
     return 'volume';
-  }
-  if (!fitsSafeMoneyProduct(priceWithVat, volumePieces)) {
-    return 'overflow';
   }
 
   return null;
@@ -479,14 +374,10 @@ function lineNumbersRejection(
 
 function createRejection(
   document: PrototypeDocument,
-  id: string,
   month: string,
   lines: readonly SalesPlanLine[],
   today: Date,
 ): SalesPlanRejection | null {
-  if (!isEntityId(id) || document.salesPlans.some((item) => item.id === id)) {
-    return 'missing';
-  }
   if (!planMonthOpen(month, today)) {
     return 'month';
   }
@@ -499,15 +390,8 @@ function createRejection(
     return 'products';
   }
 
-  const seenLines = new Set<string>();
   const seenProducts = new Set<string>();
   for (const line of lines) {
-    if (!isEntityId(line.id)) {
-      return 'missing';
-    }
-    if (seenLines.has(line.id)) {
-      return 'duplicate-line';
-    }
     if (!expected.has(line.productId) || seenProducts.has(line.productId)) {
       return 'products';
     }
@@ -517,7 +401,6 @@ function createRejection(
       return numbers;
     }
 
-    seenLines.add(line.id);
     seenProducts.add(line.productId);
   }
 
@@ -531,7 +414,7 @@ export function addSalesPlan(
   lines: readonly SalesPlanLine[],
   today: Date,
 ): PrototypeDocument {
-  if (createRejection(document, id, month, lines, today)) {
+  if (createRejection(document, month, lines, today)) {
     return document;
   }
 
@@ -545,15 +428,8 @@ export function addSalesPlan(
   return { ...document, salesPlans: [...document.salesPlans, plan] };
 }
 
-function openPlan(
-  document: PrototypeDocument,
-  planId: string,
-): SalesPlan | null {
-  return (
-    document.salesPlans.find(
-      (item) => item.id === planId && item.deletedAt === null,
-    ) ?? null
-  );
+function openPlan(document: PrototypeDocument, planId: string): SalesPlan | null {
+  return document.salesPlans.find((item) => item.id === planId && item.deletedAt === null) ?? null;
 }
 
 export function updateSalesPlanLineRejection(
@@ -593,16 +469,7 @@ export function updateSalesPlanLine(
   volumePieces: number,
   today: Date,
 ): PrototypeDocument {
-  if (
-    updateSalesPlanLineRejection(
-      document,
-      planId,
-      lineId,
-      priceWithVat,
-      volumePieces,
-      today,
-    )
-  ) {
+  if (updateSalesPlanLineRejection(document, planId, lineId, priceWithVat, volumePieces, today)) {
     return document;
   }
 
@@ -611,10 +478,7 @@ export function updateSalesPlanLine(
   if (!plan || !line) {
     return document;
   }
-  if (
-    line.priceWithVat === priceWithVat &&
-    line.volumePieces === volumePieces
-  ) {
+  if (line.priceWithVat === priceWithVat && line.volumePieces === volumePieces) {
     return document;
   }
 
@@ -624,11 +488,7 @@ export function updateSalesPlanLine(
       item.id === planId
         ? {
             ...item,
-            lines: item.lines.map((entry) =>
-              entry.id === lineId
-                ? { ...entry, priceWithVat, volumePieces }
-                : entry,
-            ),
+            lines: item.lines.map((entry) => (entry.id === lineId ? { ...entry, priceWithVat, volumePieces } : entry)),
           }
         : item,
     ),
@@ -649,9 +509,7 @@ export function addMissingPlanLinesRejection(
     return 'closed';
   }
 
-  const missing = new Set(
-    missingPlanProducts(document, plan).map((item) => item.id),
-  );
+  const missing = new Set(missingPlanProducts(document, plan).map((item) => item.id));
   if (missing.size === 0) {
     return lines.length === 0 ? null : 'products';
   }
@@ -659,16 +517,11 @@ export function addMissingPlanLinesRejection(
     return 'products';
   }
 
-  const seenLines = new Set(plan.lines.map((line) => line.id));
   const seenProducts = new Set<string>();
   for (const line of lines) {
-    if (!isEntityId(line.id) || seenLines.has(line.id)) {
-      return 'duplicate-line';
-    }
     if (!missing.has(line.productId) || seenProducts.has(line.productId)) {
       return 'products';
     }
-    seenLines.add(line.id);
     seenProducts.add(line.productId);
   }
 
@@ -703,9 +556,7 @@ export function addMissingPlanLines(
   return {
     ...document,
     salesPlans: document.salesPlans.map((item) =>
-      item.id === planId
-        ? { ...item, lines: [...item.lines, ...nextLines] }
-        : item,
+      item.id === planId ? { ...item, lines: [...item.lines, ...nextLines] } : item,
     ),
   };
 }

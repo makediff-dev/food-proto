@@ -11,11 +11,7 @@ import {
   useState,
 } from 'react';
 
-import {
-  clearDocument,
-  readDocument,
-  writeDocument,
-} from '@/data/document-storage';
+import { clearDocument, readDocument, writeDocument } from '@/data/document-storage';
 import { createMockDocument } from '@/data/mock-document';
 import type { PrototypeDocument } from '@/domain/document';
 
@@ -29,16 +25,13 @@ interface DocumentState {
 }
 
 interface DocumentStoreValue extends DocumentState {
-  updateDocument: (
-    recipe: (current: PrototypeDocument) => PrototypeDocument,
-  ) => void;
+  updateDocument: (recipe: (current: PrototypeDocument) => PrototypeDocument) => void;
   resetToMock: () => void;
 }
 
 const DocumentStoreContext = createContext<DocumentStoreValue | null>(null);
 
-const STORAGE_ERROR_MESSAGE =
-  'Браузер не сохранил числа. Они пропадут после обновления страницы.';
+const STORAGE_ERROR_MESSAGE = 'Браузер не сохранил числа. Они пропадут после обновления страницы.';
 
 function createInitialState(): DocumentState {
   return {
@@ -69,32 +62,29 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const updateDocument = useCallback(
-    (recipe: (current: PrototypeDocument) => PrototypeDocument) => {
-      const next = recipe(documentRef.current);
-      // Неудачная правка возвращает тот же документ и не должна затирать хранилище.
-      if (next === documentRef.current) {
-        return;
-      }
+  const updateDocument = useCallback((recipe: (current: PrototypeDocument) => PrototypeDocument) => {
+    const next = recipe(documentRef.current);
+    // Неудачная правка возвращает тот же документ и не должна затирать хранилище.
+    if (next === documentRef.current) {
+      return;
+    }
 
-      documentRef.current = next;
+    documentRef.current = next;
 
-      let storageError: string | null = null;
-      try {
-        writeDocument(next);
-      } catch {
-        storageError = STORAGE_ERROR_MESSAGE;
-      }
+    let storageError: string | null = null;
+    try {
+      writeDocument(next);
+    } catch {
+      storageError = STORAGE_ERROR_MESSAGE;
+    }
 
-      setState((current) => ({
-        ...current,
-        document: next,
-        source: 'local',
-        storageError,
-      }));
-    },
-    [],
-  );
+    setState((current) => ({
+      ...current,
+      document: next,
+      source: 'local',
+      storageError,
+    }));
+  }, []);
 
   const resetToMock = useCallback(() => {
     try {
@@ -126,11 +116,7 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
     [state, updateDocument, resetToMock],
   );
 
-  return (
-    <DocumentStoreContext.Provider value={value}>
-      {children}
-    </DocumentStoreContext.Provider>
-  );
+  return <DocumentStoreContext.Provider value={value}>{children}</DocumentStoreContext.Provider>;
 }
 
 export function useDocumentStore(): DocumentStoreValue {
@@ -140,4 +126,21 @@ export function useDocumentStore(): DocumentStoreValue {
   }
 
   return store;
+}
+
+/** Applies a recipe; if the document did not change, returns the rejection explanation. */
+export function commitDocumentUpdate<TRejection>(
+  updateDocument: DocumentStoreValue['updateDocument'],
+  recipe: (current: PrototypeDocument) => PrototypeDocument,
+  explain: (current: PrototypeDocument) => TRejection | null,
+): TRejection | null {
+  let rejection: TRejection | null = null;
+  updateDocument((current) => {
+    const next = recipe(current);
+    if (next === current) {
+      rejection = explain(current);
+    }
+    return next;
+  });
+  return rejection;
 }

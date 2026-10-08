@@ -6,11 +6,7 @@ export const NEW_SALE_TITLE = 'Новая продажа';
 
 export type SalesFactView = 'day' | 'all';
 
-export function parseSalesFactQuery(params: {
-  month?: string;
-  day?: string;
-  view?: string;
-}): {
+export function parseSalesFactQuery(params: { month?: string; day?: string; view?: string }): {
   month: string;
   day: string;
   view: SalesFactView;
@@ -52,10 +48,7 @@ export function parseSalesJournalQuery(params: { month?: string }): {
   };
 }
 
-export function salesJournalHref(options: {
-  month: string;
-  currentMonth: string;
-}): string {
+export function salesJournalHref(options: { month: string; currentMonth: string }): string {
   if (options.month && options.month !== options.currentMonth) {
     return `/sales/journal?month=${encodeURIComponent(options.month)}`;
   }

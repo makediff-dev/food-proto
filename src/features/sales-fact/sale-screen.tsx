@@ -6,7 +6,6 @@ import { useEffect, useId, useMemo, useState } from 'react';
 
 import {
   isOccurredOn,
-  MAX_LABEL_LENGTH,
   type Product,
   type ProductCategory,
   type PrototypeDocument,
@@ -22,16 +21,8 @@ import {
 } from '@/domain/sales';
 import { monthKeyFromDate, salesPlanForMonth } from '@/domain/sales-plan';
 import { planningHref } from '@/features/planning/paths';
-import {
-  fieldClassName,
-  primaryButtonClassName,
-} from '@/features/sales/fields';
-import { priceDraft } from '@/features/sales/text';
-import {
-  NEW_SALE_TITLE,
-  SALES_SECTION_TITLE,
-  salesJournalHref,
-} from '@/features/sales-fact/paths';
+import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
+import { NEW_SALE_TITLE, SALES_SECTION_TITLE, salesJournalHref } from '@/features/sales-fact/paths';
 import {
   emptySaleLineDraft,
   SaleFormTable,
@@ -48,22 +39,19 @@ import {
 import { useSalesJournal } from '@/features/sales-fact/use-sales-journal';
 import { IconArrowLeft, IconCheck, IconTrash } from '@/features/shell/icons';
 import { PageFrame } from '@/features/shell/page-frame';
+import { formatMoneyDraft } from '@/features/table/format';
 
 function lineDraftFromSale(line: SaleLine): SaleLineDraft {
   const price = saleLinePriceWithVat(line.amountWithVat, line.pieces);
   return {
     id: line.id,
     pieces: String(line.pieces),
-    price: price === null ? '' : priceDraft(price),
-    amount: priceDraft(line.amountWithVat),
+    price: price === null ? '' : formatMoneyDraft(price),
+    amount: formatMoneyDraft(line.amountWithVat),
   };
 }
 
-function planPriceWithVat(
-  document: PrototypeDocument,
-  productId: string,
-  month: string,
-): number {
+function planPriceWithVat(document: PrototypeDocument, productId: string, month: string): number {
   if (!productId || !month) {
     return 0;
   }
@@ -80,12 +68,7 @@ function withAmountFromPrice(line: SaleLineDraft): SaleLineDraft {
     return line;
   }
 
-  const amount = saleLineAmountWithVat(price, pieces);
-  if (amount === null) {
-    return line;
-  }
-
-  return { ...line, amount: priceDraft(amount) };
+  return { ...line, amount: formatMoneyDraft(saleLineAmountWithVat(price, pieces)) };
 }
 
 function withPriceFromAmount(line: SaleLineDraft): SaleLineDraft {
@@ -100,27 +83,18 @@ function withPriceFromAmount(line: SaleLineDraft): SaleLineDraft {
     return line;
   }
 
-  return { ...line, price: priceDraft(price) };
+  return { ...line, price: formatMoneyDraft(price) };
 }
 
-function saleFormProducts(
-  document: PrototypeDocument,
-  month: string,
-  lineProductIds: readonly string[],
-): Product[] {
+function saleFormProducts(document: PrototypeDocument, month: string, lineProductIds: readonly string[]): Product[] {
   const referenced = new Set(lineProductIds);
   const period = periodGridProducts(document, month);
   const periodIds = new Set(period.map((item) => item.id));
-  const extras = document.products.filter(
-    (item) => referenced.has(item.id) && !periodIds.has(item.id),
-  );
+  const extras = document.products.filter((item) => referenced.has(item.id) && !periodIds.has(item.id));
   return [...period, ...extras];
 }
 
-function saleFormCategories(
-  document: PrototypeDocument,
-  products: readonly Product[],
-): ProductCategory[] {
+function saleFormCategories(document: PrototypeDocument, products: readonly Product[]): ProductCategory[] {
   return periodGridCategories(document, products);
 }
 
@@ -129,9 +103,7 @@ function initialDrafts(
   existingLines: readonly SaleLine[],
   month: string,
 ): Record<string, SaleLineDraft> {
-  const byProduct = new Map(
-    existingLines.map((line) => [line.productId, lineDraftFromSale(line)]),
-  );
+  const byProduct = new Map(existingLines.map((line) => [line.productId, lineDraftFromSale(line)]));
   const products = saleFormProducts(
     document,
     month,
@@ -140,21 +112,13 @@ function initialDrafts(
   const drafts: Record<string, SaleLineDraft> = {};
 
   for (const product of products) {
-    drafts[product.id] =
-      byProduct.get(product.id) ??
-      emptySaleLineDraft(planPriceWithVat(document, product.id, month));
+    drafts[product.id] = byProduct.get(product.id) ?? emptySaleLineDraft(planPriceWithVat(document, product.id, month));
   }
 
   return drafts;
 }
 
-export function SaleScreen({
-  saleId,
-  dayQuery,
-}: {
-  saleId: string | null;
-  dayQuery: string;
-}) {
+export function SaleScreen({ saleId, dayQuery }: { saleId: string | null; dayQuery: string }) {
   const journal = useSalesJournal();
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
@@ -176,27 +140,19 @@ export function SaleScreen({
           </Link>
         }
       >
-        <p className="border border-line bg-sheet px-4 py-4 text-sm text-ink">
-          Запись не найдена.
-        </p>
+        <p className="border border-line bg-sheet px-4 py-4 text-sm text-ink">Запись не найдена.</p>
       </PageFrame>
     );
   }
 
-  const initialDay =
-    existing?.occurredOn ??
-    (isOccurredOn(dayQuery) ? dayQuery : defaultSaleDay(currentMonth, today));
+  const initialDay = existing?.occurredOn ?? (isOccurredOn(dayQuery) ? dayQuery : defaultSaleDay(currentMonth, today));
 
   return (
     <SaleForm
       saleId={existing?.id ?? null}
       initialCustomer={existing?.customerName ?? ''}
       initialDay={initialDay}
-      initialDrafts={initialDrafts(
-        journal.document,
-        existing?.lines ?? [],
-        initialDay.slice(0, 7),
-      )}
+      initialDrafts={initialDrafts(journal.document, existing?.lines ?? [], initialDay.slice(0, 7))}
     />
   );
 }
@@ -231,9 +187,7 @@ function SaleForm({
         .filter(([, line]) => {
           const pieces = parseSalePieces(line.pieces);
           const amount = parseSaleAmount(line.amount);
-          return (
-            (pieces !== null && pieces > 0) || (amount !== null && amount > 0)
-          );
+          return (pieces !== null && pieces > 0) || (amount !== null && amount > 0);
         })
         .map(([productId]) => productId),
     [drafts],
@@ -250,9 +204,7 @@ function SaleForm({
         if (next[product.id]) {
           continue;
         }
-        next[product.id] = emptySaleLineDraft(
-          planPriceWithVat(journal.document, product.id, month),
-        );
+        next[product.id] = emptySaleLineDraft(planPriceWithVat(journal.document, product.id, month));
         changed = true;
       }
       return changed ? next : current;
@@ -268,10 +220,7 @@ function SaleForm({
 
       if (field === 'pieces') {
         const next = { ...line, pieces: raw };
-        const updated =
-          parseSalePrice(line.price) !== null
-            ? withAmountFromPrice(next)
-            : withPriceFromAmount(next);
+        const updated = parseSalePrice(line.price) !== null ? withAmountFromPrice(next) : withPriceFromAmount(next);
         return { ...current, [productId]: updated };
       }
 
@@ -362,9 +311,7 @@ function SaleForm({
     <PageFrame
       title={saleId ? SALES_SECTION_TITLE : NEW_SALE_TITLE}
       full
-      lede={
-        saleId ? 'Продажа заказчику: дата, товары, цена и сумма.' : undefined
-      }
+      lede={saleId ? 'Продажа заказчику: дата, товары, цена и сумма.' : undefined}
       back={
         saleId ? (
           <Link
@@ -400,12 +347,7 @@ function SaleForm({
               .
             </p>
           ) : (
-            <SaleFormTable
-              categories={categories}
-              products={products}
-              drafts={drafts}
-              onChange={setLine}
-            />
+            <SaleFormTable categories={categories} products={products} drafts={drafts} onChange={setLine} />
           )}
 
           <div className="sticky top-16 z-20 flex w-72 shrink-0 flex-col gap-4 self-start border border-line bg-sheet p-4 lg:top-4">
@@ -430,7 +372,6 @@ function SaleForm({
               <input
                 id={customerId}
                 value={customer}
-                maxLength={MAX_LABEL_LENGTH}
                 onChange={(event) => setCustomer(event.target.value)}
                 className={`mt-2 ${fieldClassName}`}
               />
@@ -449,9 +390,7 @@ function SaleForm({
                 type="button"
                 aria-label="Удалить продажу"
                 onClick={() => {
-                  const confirmed = window.confirm(
-                    'Удалить продажу? Её нельзя будет вернуть.',
-                  );
+                  const confirmed = window.confirm('Удалить продажу? Её нельзя будет вернуть.');
                   if (!confirmed) {
                     return;
                   }

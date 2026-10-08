@@ -1,8 +1,6 @@
-import { MAX_OPERATING_EXPENSE, MAX_VOLUME_PIECES } from '@/domain/document';
 import type { SalesPlanRejection } from '@/domain/sales-plan';
 import type { OperatingExpenseRejection } from '@/domain/summary';
 import { parseDecimal } from '@/domain/units';
-import { parseMoney } from '@/features/sales/fields';
 
 export const SALES_PLAN_ERROR: Record<SalesPlanRejection, string> = {
   missing: 'Запись не найдена.',
@@ -11,16 +9,11 @@ export const SALES_PLAN_ERROR: Record<SalesPlanRejection, string> = {
   products: 'В плане должны быть все рабочие товары.',
   price: 'Укажите цену.',
   volume: 'Укажите объём целым числом штук.',
-  overflow: 'Такие цена и объём не помещаются в расчёт.',
-  'duplicate-line': 'Этот товар уже есть в плане.',
   locked: 'Удалённый товар в плане не меняется.',
   closed: 'Этот план сейчас нельзя править.',
 };
 
-export const OPERATING_EXPENSE_ERROR: Record<
-  OperatingExpenseRejection,
-  string
-> = {
+export const OPERATING_EXPENSE_ERROR: Record<OperatingExpenseRejection, string> = {
   month: 'Этот месяц выбрать нельзя.',
   amount: 'Укажите сумму операционных расходов без НДС.',
 };
@@ -92,18 +85,12 @@ export function daysPhrase(count: number): string {
   const mod10 = count % 10;
   const mod100 = count % 100;
   const word =
-    mod10 === 1 && mod100 !== 11
-      ? 'день'
-      : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
-        ? 'дня'
-        : 'дней';
+    mod10 === 1 && mod100 !== 11 ? 'день' : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? 'дня' : 'дней';
   return `${count} ${word}`;
 }
 
 export function formatPieces(value: number): string {
-  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(
-    value,
-  );
+  return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(value);
 }
 
 export function formatPerDay(value: number): string {
@@ -122,43 +109,6 @@ export function formatPriceExVat(tenThousandths: number): string {
   }).format(tenThousandths / 10_000);
 }
 
-export function formatPercentHundredths(hundredths: number): string {
-  return `${new Intl.NumberFormat('ru-RU', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(hundredths / 100)} %`;
-}
-
-// Не вызывается: сводка рисует пару с НДС / без НДС в двух строках клетки.
-// export function formatMoneyPair(
-//   withVat: number,
-//   exVat: number,
-// ): string {
-//   return `${formatMoney(withVat)} с НДС · ${formatMoney(exVat)} без НДС`;
-// }
-//
-// export function formatContribution(amount: number): string {
-//   return formatMoney(amount);
-// }
-
-export function parseVolumePieces(raw: string): number | null {
-  const value = parseDecimal(raw);
-  if (
-    value === null ||
-    !Number.isInteger(value) ||
-    value < 0 ||
-    value > MAX_VOLUME_PIECES
-  ) {
-    return null;
-  }
-
-  return value;
-}
-
-export function parsePlanPrice(raw: string): number | null {
-  return parseMoney(raw);
-}
-
 /** Операционные расходы свода: рубли → копейки, ноль допустим. */
 export function parseOperatingExpense(raw: string): number | null {
   const rubles = parseDecimal(raw);
@@ -167,29 +117,9 @@ export function parseOperatingExpense(raw: string): number | null {
   }
 
   const amount = Math.round(rubles * 100);
-  if (
-    !Number.isInteger(amount) ||
-    amount < 0 ||
-    amount > MAX_OPERATING_EXPENSE
-  ) {
+  if (!Number.isInteger(amount) || amount < 0) {
     return null;
   }
 
   return amount;
 }
-
-export function priceDraft(amount: number): string {
-  return new Intl.NumberFormat('ru-RU', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount / 100);
-}
-
-export function volumeDraft(pieces: number): string {
-  return String(pieces);
-}
-
-// Не вызывается: счётчик товаров с объёмом на сводке больше не показывают.
-// export function productCountPhrase(withVolume: number, total: number): string {
-//   return `${formatPieces(withVolume)} из ${formatPieces(total)} с объёмом`;
-// }

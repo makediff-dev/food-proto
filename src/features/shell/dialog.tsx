@@ -22,9 +22,7 @@ export function Dialog({
     const previousFocus = document.activeElement;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    panelRef.current
-      ?.querySelector<HTMLElement>('input, select, textarea')
-      ?.focus();
+    panelRef.current?.querySelector<HTMLElement>('input, select, textarea')?.focus();
 
     return () => {
       document.body.style.overflow = previousOverflow;
@@ -47,12 +45,7 @@ export function Dialog({
 
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center sm:p-4">
-      <button
-        type="button"
-        aria-label="Закрыть"
-        className="absolute inset-0 bg-ink/40"
-        onClick={onClose}
-      />
+      <button type="button" aria-label="Закрыть" className="absolute inset-0 bg-ink/40" onClick={onClose} />
       <div
         ref={panelRef}
         role="dialog"

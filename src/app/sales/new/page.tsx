@@ -6,11 +6,7 @@ export const metadata: Metadata = {
   title: NEW_SALE_TITLE,
 };
 
-export default async function NewSalePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ day?: string }>;
-}) {
+export default async function NewSalePage({ searchParams }: { searchParams: Promise<{ day?: string }> }) {
   const params = await searchParams;
   return <SaleScreen saleId={null} dayQuery={params.day ?? ''} />;
 }

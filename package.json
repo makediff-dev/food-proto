@@ -23,6 +23,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "portless": "^0.15.7",
     "tailwindcss": "^4",
     "typescript": "^7.0.2"
   }

@@ -5,45 +5,23 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useId, useMemo, useState } from 'react';
 
 import { activeCategories, deletedCategories } from '@/domain/categories';
-import { normalizeName } from '@/domain/directory';
-import { MAX_LABEL_LENGTH } from '@/domain/document';
 import { activeProducts, deletedProducts } from '@/domain/products';
 import {
   missingPlanProducts,
   monthKeyFromDate,
+  planMonthOpen,
   shiftMonth,
   workingSalesPlan,
 } from '@/domain/sales-plan';
-import {
-  lastHorizonMonth,
-  monthSummary,
-  summaryMonthOpen,
-} from '@/domain/summary';
-import {
-  PLANNING_SECTION_TITLE,
-  planningArchiveHref,
-  planningHref,
-} from '@/features/planning/paths';
-import {
-  FIELD_ERROR,
-  fieldClassName,
-  monthFieldClassName,
-  primaryButtonClassName,
-} from '@/features/sales/fields';
+import { lastHorizonMonth, monthSummary } from '@/domain/summary';
+import { PLANNING_SECTION_TITLE, planningArchiveHref, planningHref } from '@/features/planning/paths';
+import { FIELD_ERROR, fieldClassName, monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { PlanHeadlineTable } from '@/features/sales/summary-headline';
 import { SummaryTable } from '@/features/sales/summary-table';
-import {
-  OPERATING_EXPENSE_ERROR,
-  SALES_PLAN_ERROR,
-} from '@/features/sales/text';
+import { OPERATING_EXPENSE_ERROR, SALES_PLAN_ERROR } from '@/features/sales/text';
 import { useSales } from '@/features/sales/use-sales';
 import { Dialog } from '@/features/shell/dialog';
-import {
-  IconFullscreen,
-  IconFullscreenExit,
-  IconPlus,
-  IconTrash,
-} from '@/features/shell/icons';
+import { IconFullscreen, IconFullscreenExit, IconPlus, IconTrash } from '@/features/shell/icons';
 import { MonthStep } from '@/features/shell/month-step';
 import { PageFrame } from '@/features/shell/page-frame';
 
@@ -52,24 +30,10 @@ export function PlanningScreen({ month }: { month: string }) {
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = resolveMonth(month, today);
 
-  return (
-    <Workspace
-      month={selectedMonth}
-      currentMonth={currentMonth}
-      today={today}
-    />
-  );
+  return <Workspace month={selectedMonth} currentMonth={currentMonth} today={today} />;
 }
 
-function Workspace({
-  month,
-  currentMonth,
-  today,
-}: {
-  month: string;
-  currentMonth: string;
-  today: Date;
-}) {
+function Workspace({ month, currentMonth, today }: { month: string; currentMonth: string; today: Date }) {
   const sales = useSales();
   const router = useRouter();
   const [fullscreen, setFullscreen] = useState(false);
@@ -78,21 +42,13 @@ function Workspace({
   const [addCategoryId, setAddCategoryId] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const storedPlan = workingSalesPlan(sales.document, month);
-  const summary = useMemo(
-    () => monthSummary(sales.document, month),
-    [sales.document, month],
-  );
+  const summary = useMemo(() => monthSummary(sales.document, month), [sales.document, month]);
   const products = activeProducts(sales.document);
   const categories = activeCategories(sales.document);
-  const hasArchive =
-    deletedProducts(sales.document).length > 0 ||
-    deletedCategories(sales.document).length > 0;
+  const hasArchive = deletedProducts(sales.document).length > 0 || deletedCategories(sales.document).length > 0;
   const catalogEditable = sales.hydrated;
   const planEditable = sales.hydrated && products.length > 0;
-  const missing =
-    planEditable && storedPlan
-      ? missingPlanProducts(sales.document, storedPlan)
-      : [];
+  const missing = planEditable && storedPlan ? missingPlanProducts(sales.document, storedPlan) : [];
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
   const horizonEnd = lastHorizonMonth(today);
@@ -150,7 +106,7 @@ function Workspace({
                 <MonthStep
                   label="Предыдущий месяц"
                   direction="previous"
-                  disabled={!summaryMonthOpen(previousMonth, today)}
+                  disabled={!planMonthOpen(previousMonth, today)}
                   onClick={() => open(previousMonth)}
                 />
                 <input
@@ -161,7 +117,7 @@ function Workspace({
                   value={month}
                   onChange={(event) => {
                     const next = event.target.value;
-                    if (summaryMonthOpen(next, today)) {
+                    if (planMonthOpen(next, today)) {
                       open(next);
                     }
                   }}
@@ -180,11 +136,7 @@ function Workspace({
               periodLabel={month}
               editable={sales.hydrated}
               onOperatingExpense={(amountExVat) => {
-                const rejection = sales.updateOperatingExpense(
-                  month,
-                  'plan',
-                  amountExVat,
-                );
+                const rejection = sales.updateOperatingExpense(month, 'plan', amountExVat);
                 return rejection ? OPERATING_EXPENSE_ERROR[rejection] : null;
               }}
             />
@@ -199,11 +151,7 @@ function Workspace({
                 setAddCategoryId(null);
                 setAddOpen(true);
               }}
-              className={
-                categories.length === 0
-                  ? quietButtonClassName
-                  : primaryButtonClassName
-              }
+              className={categories.length === 0 ? quietButtonClassName : primaryButtonClassName}
             >
               <IconPlus />
               Добавить товар
@@ -212,20 +160,13 @@ function Workspace({
               type="button"
               disabled={!sales.hydrated}
               onClick={() => setAddCategoryOpen(true)}
-              className={
-                categories.length === 0
-                  ? primaryButtonClassName
-                  : quietButtonClassName
-              }
+              className={categories.length === 0 ? primaryButtonClassName : quietButtonClassName}
             >
               <IconPlus />
               Добавить категорию
             </button>
             {hasArchive ? (
-              <Link
-                href={planningArchiveHref()}
-                className={quietButtonClassName}
-              >
+              <Link href={planningArchiveHref()} className={quietButtonClassName}>
                 <IconTrash />
                 Архив
               </Link>
@@ -236,33 +177,21 @@ function Workspace({
         <div className="flex flex-col gap-4">
           {missing.length > 0 ? (
             <div className="flex flex-col gap-3 border border-line bg-sheet p-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm leading-6 text-ink">
-                В справочнике есть товары, которых нет в этом плане.
-              </p>
+              <p className="text-sm leading-6 text-ink">В справочнике есть товары, которых нет в этом плане.</p>
               <div className="flex flex-col gap-2 sm:items-end">
-                <button
-                  type="button"
-                  onClick={addMissing}
-                  className={`w-full sm:w-auto ${primaryButtonClassName}`}
-                >
+                <button type="button" onClick={addMissing} className={`w-full sm:w-auto ${primaryButtonClassName}`}>
                   <IconPlus />
                   Добавить новые товары
                 </button>
-                {addError ? (
-                  <p className="text-sm text-ink">{addError}</p>
-                ) : null}
+                {addError ? <p className="text-sm text-ink">{addError}</p> : null}
               </div>
             </div>
           ) : null}
 
           {hasTable ? (
             <section
-              className={
-                tableExpanded ? 'fixed inset-0 z-50 bg-paper' : undefined
-              }
-              aria-label={
-                tableExpanded ? 'Таблица на весь экран' : 'Таблица планирования'
-              }
+              className={tableExpanded ? 'fixed inset-0 z-50 bg-paper' : undefined}
+              aria-label={tableExpanded ? 'Таблица на весь экран' : 'Таблица планирования'}
             >
               <SummaryTable
                 groups={summary.groups}
@@ -276,25 +205,14 @@ function Workspace({
                 catalogEditable={catalogEditable}
                 expanded={tableExpanded}
                 onPlanLineAction={(lineId, priceWithVat, volumePieces) => {
-                  return sales.updateMonthLine(
-                    month,
-                    lineId,
-                    priceWithVat,
-                    volumePieces,
-                  );
+                  return sales.updateMonthLine(month, lineId, priceWithVat, volumePieces);
                 }}
                 onProductVatAction={(productId, vatPercent) => {
-                  const rejection = sales.updateProductVat(
-                    productId,
-                    vatPercent,
-                  );
+                  const rejection = sales.updateProductVat(productId, vatPercent);
                   return rejection ? FIELD_ERROR[rejection] : null;
                 }}
                 onProductCostAction={(productId, unitCostWithVat) => {
-                  const rejection = sales.updateProductCost(
-                    productId,
-                    unitCostWithVat,
-                  );
+                  const rejection = sales.updateProductCost(productId, unitCostWithVat);
                   return rejection ? FIELD_ERROR[rejection] : null;
                 }}
                 onRenameProduct={(productId, name) => {
@@ -368,10 +286,7 @@ function Workspace({
       ) : null}
 
       {hasTable ? (
-        <FullscreenToggle
-          active={tableExpanded}
-          onToggle={() => setFullscreen((current) => !current)}
-        />
+        <FullscreenToggle active={tableExpanded} onToggle={() => setFullscreen((current) => !current)} />
       ) : null}
     </>
   );
@@ -392,21 +307,13 @@ function AddProductDialog({
   const categoryFieldId = useId();
   const errorId = useId();
   const [name, setName] = useState('');
-  const lockedCategory = categories.find(
-    (item) => item.id === initialCategoryId,
-  );
-  const [categoryId, setCategoryId] = useState(
-    lockedCategory?.id ?? categories[0]?.id ?? '',
-  );
+  const lockedCategory = categories.find((item) => item.id === initialCategoryId);
+  const [categoryId, setCategoryId] = useState(lockedCategory?.id ?? categories[0]?.id ?? '');
   const [error, setError] = useState<string | null>(null);
 
   function submit() {
-    if (normalizeName(name).length === 0) {
+    if (name.trim().length === 0) {
       setError(FIELD_ERROR.empty);
-      return;
-    }
-    if (normalizeName(name).length > MAX_LABEL_LENGTH) {
-      setError(FIELD_ERROR['too-long']);
       return;
     }
     if (!categoryId) {
@@ -489,25 +396,15 @@ function AddProductDialog({
   );
 }
 
-function AddCategoryDialog({
-  onClose,
-  onSubmit,
-}: {
-  onClose: () => void;
-  onSubmit: (name: string) => string | null;
-}) {
+function AddCategoryDialog({ onClose, onSubmit }: { onClose: () => void; onSubmit: (name: string) => string | null }) {
   const nameId = useId();
   const errorId = useId();
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   function submit() {
-    if (normalizeName(name).length === 0) {
+    if (name.trim().length === 0) {
       setError(FIELD_ERROR.empty);
-      return;
-    }
-    if (normalizeName(name).length > MAX_LABEL_LENGTH) {
-      setError(FIELD_ERROR['too-long']);
       return;
     }
 
@@ -561,20 +458,14 @@ const quietButtonClassName =
   'inline-flex h-11 items-center justify-center gap-2 border border-line bg-sheet px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:cursor-not-allowed disabled:opacity-60';
 
 function resolveMonth(month: string, today: Date): string {
-  if (summaryMonthOpen(month, today)) {
+  if (planMonthOpen(month, today)) {
     return month;
   }
 
   return monthKeyFromDate(today);
 }
 
-function FullscreenToggle({
-  active,
-  onToggle,
-}: {
-  active: boolean;
-  onToggle: () => void;
-}) {
+function FullscreenToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
   return (
     <button
       type="button"

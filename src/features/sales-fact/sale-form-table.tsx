@@ -1,19 +1,25 @@
 'use client';
 
-import { type ReactNode, useState } from 'react';
+import { useState } from 'react';
 
 import type { Product, ProductCategory } from '@/domain/document';
-import { amountExVat, averageAmount, toSafeNumber } from '@/domain/money';
-import { formatMoney } from '@/features/sales/money';
-import { priceDraft } from '@/features/sales/text';
-import {
-  hasAmountWithoutPieces,
-  parseSaleAmount,
-  parseSalePieces,
-  parseSalePrice,
-} from '@/features/sales-fact/text';
+import { amountExVat, averageAmount } from '@/domain/money';
+import { hasAmountWithoutPieces, parseSaleAmount, parseSalePieces, parseSalePrice } from '@/features/sales-fact/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/icons';
-import { TableNumber } from '@/features/shell/table-number';
+import {
+  ColumnLabel,
+  Empty,
+  gridFieldClassName,
+  keepWithNext,
+  MergedTwoStory,
+  MoneyAmount,
+  StackedPair,
+  stickyHeadClassName,
+  TableNumber,
+  tableBorder,
+  VatMoneyCell,
+} from '@/features/table';
+import { formatMoneyDraft, sanitizeDraft } from '@/features/table/format';
 
 export interface SaleLineDraft {
   id: string;
@@ -57,71 +63,6 @@ const COLUMNS = [
 
 type ColumnKey = (typeof COLUMNS)[number]['key'];
 
-const gridFieldClassName =
-  'w-full min-w-0 cursor-text appearance-none border-0 bg-transparent p-0 text-right text-sm shadow-none outline-none';
-
-const editableCellClassName = 'bg-[#e4e4e0]';
-
-/** Предлоги, союзы и частицы, которые не оставляют в конце строки. */
-const HANGING_WORDS = new Set([
-  'а',
-  'без',
-  'бы',
-  'в',
-  'во',
-  'для',
-  'до',
-  'же',
-  'за',
-  'и',
-  'из',
-  'к',
-  'ко',
-  'ли',
-  'на',
-  'не',
-  'ни',
-  'но',
-  'о',
-  'об',
-  'от',
-  'по',
-  'под',
-  'при',
-  'с',
-  'со',
-  'у',
-]);
-
-function keepWithNext(text: string): string {
-  const parts = text.split(' ');
-  let line = '';
-  for (let index = 0; index < parts.length; index += 1) {
-    line += parts[index] ?? '';
-    if (index === parts.length - 1) {
-      break;
-    }
-    const bare = (parts[index] ?? '')
-      .toLowerCase()
-      .replace(/^[^a-zа-яё]+|[^a-zа-яё]+$/gi, '');
-    line += HANGING_WORDS.has(bare) ? '\u00A0' : ' ';
-  }
-  return line;
-}
-
-function ColumnLabel({ label }: { label: string }) {
-  const chunks = keepWithNext(label).split(' ');
-  return (
-    <span className="mx-auto block w-min text-center">
-      {chunks.map((chunk) => (
-        <span key={chunk} className="block whitespace-nowrap">
-          {chunk}
-        </span>
-      ))}
-    </span>
-  );
-}
-
 function rowMetrics(product: Product, draft: SaleLineDraft): SaleFormRow {
   const priceWithVat = parseSalePrice(draft.price);
   const pieces = parseSalePieces(draft.pieces);
@@ -132,24 +73,18 @@ function rowMetrics(product: Product, draft: SaleLineDraft): SaleFormRow {
     product,
     draft,
     priceWithVat,
-    priceExVat:
-      priceWithVat === null
-        ? null
-        : amountExVat(priceWithVat, product.vatPercent),
+    priceExVat: priceWithVat === null ? null : amountExVat(priceWithVat, product.vatPercent),
     pieces,
     amountWithVat,
-    amountExVat:
-      amountWithVat === null
-        ? null
-        : amountExVat(amountWithVat, product.vatPercent),
+    amountExVat: amountWithVat === null ? null : amountExVat(amountWithVat, product.vatPercent),
     filled,
   };
 }
 
 function groupTotals(rows: readonly SaleFormRow[]): SaleFormTotals {
-  let pieces = BigInt(0);
-  let amountWith = BigInt(0);
-  let amountEx = BigInt(0);
+  let pieces = 0;
+  let amountWith = 0;
+  let amountEx = 0;
   let amountExComplete = true;
   let filledCount = 0;
 
@@ -158,12 +93,12 @@ function groupTotals(rows: readonly SaleFormRow[]): SaleFormTotals {
       continue;
     }
     filledCount += 1;
-    pieces += BigInt(row.pieces);
-    amountWith += BigInt(row.amountWithVat);
+    pieces += row.pieces;
+    amountWith += row.amountWithVat;
     if (row.amountExVat === null) {
       amountExComplete = false;
     } else {
-      amountEx += BigInt(row.amountExVat);
+      amountEx += row.amountExVat;
     }
   }
 
@@ -177,9 +112,9 @@ function groupTotals(rows: readonly SaleFormRow[]): SaleFormTotals {
     };
   }
 
-  const piecesValue = toSafeNumber(pieces);
-  const amountWithVat = toSafeNumber(amountWith);
-  const amountExVatValue = amountExComplete ? toSafeNumber(amountEx) : null;
+  const piecesValue = pieces;
+  const amountWithVat = amountWith;
+  const amountExVatValue = amountExComplete ? amountEx : null;
 
   return {
     pieces: piecesValue,
@@ -203,9 +138,7 @@ export function SaleFormTable({
 }) {
   const groups = buildGroups(categories, products, drafts);
   const totals = groupTotals(groups.flatMap((group) => group.rows));
-  const [openIds, setOpenIds] = useState<ReadonlySet<string>>(
-    () => new Set(groups.map((group) => group.category.id)),
-  );
+  const [openIds, setOpenIds] = useState<ReadonlySet<string>>(() => new Set(groups.map((group) => group.category.id)));
 
   function toggleGroup(categoryId: string) {
     setOpenIds((current) => {
@@ -223,13 +156,13 @@ export function SaleFormTable({
     <div className="w-max max-w-full border border-line bg-sheet">
       <table className="w-max border-separate border-spacing-0 text-sm">
         <caption className="sr-only">Товары продажи</caption>
-        <thead className="sticky top-0 z-30">
+        <thead className={stickyHeadClassName}>
           <tr>
-            <th className="sticky left-0 z-40 border-b border-b-line border-r-[1.5px] border-r-muted bg-paper" />
+            <th className={`sticky left-0 z-40 ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper`} />
             <th
               colSpan={COLUMNS.length}
               scope="colgroup"
-              className="border-b border-b-line bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink"
+              className={`${tableBorder.bottomThin} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink`}
             >
               {keepWithNext('Показатели продажи')}
             </th>
@@ -237,7 +170,7 @@ export function SaleFormTable({
           <tr>
             <th
               scope="col"
-              className="sticky left-0 z-40 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-muted"
+              className={`sticky left-0 z-40 w-px max-w-max whitespace-nowrap ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-muted`}
             >
               Товар
             </th>
@@ -245,7 +178,7 @@ export function SaleFormTable({
               <th
                 key={column.key}
                 scope="col"
-                className="w-px whitespace-normal border-r border-r-line border-b border-b-line bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0"
+                className={`w-px whitespace-normal ${tableBorder.rightThin} ${tableBorder.bottomThin} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
               >
                 <ColumnLabel label={column.label} />
               </th>
@@ -353,9 +286,7 @@ function CategoryBlock({
             <span className="flex h-8 min-w-max flex-1 items-center text-sm font-semibold leading-none text-ink">
               {group.category.name} ({productCount})
             </span>
-            {deleted ? (
-              <span className="text-sm font-normal text-muted">(архив)</span>
-            ) : null}
+            {deleted ? <span className="text-sm font-normal text-muted">(архив)</span> : null}
           </div>
         </th>
         {COLUMNS.map((column) => (
@@ -369,11 +300,7 @@ function CategoryBlock({
           </td>
         ))}
       </tr>
-      {open
-        ? group.rows.map((row) => (
-            <ProductRow key={row.product.id} row={row} onChange={onChange} />
-          ))
-        : null}
+      {open ? group.rows.map((row) => <ProductRow key={row.product.id} row={row} onChange={onChange} />) : null}
     </>
   );
 }
@@ -393,9 +320,7 @@ function ProductRow({
       >
         <div className="flex flex-col gap-1">
           <span className="text-sm text-ink">{row.product.name}</span>
-          {row.product.deletedAt ? (
-            <span className="text-sm text-muted">(архив)</span>
-          ) : null}
+          {row.product.deletedAt ? <span className="text-sm text-muted">(архив)</span> : null}
         </div>
       </th>
       {COLUMNS.map((column) => (
@@ -405,11 +330,7 @@ function ProductRow({
             column.key === 'pieces' ? 'h-px p-0' : 'px-1.5 py-2'
           }`}
         >
-          <RowCell
-            column={column.key}
-            row={row}
-            onChange={(field, raw) => onChange(row.product.id, field, raw)}
-          />
+          <RowCell column={column.key} row={row} onChange={(field, raw) => onChange(row.product.id, field, raw)} />
         </td>
       ))}
     </tr>
@@ -441,13 +362,7 @@ function RowCell({
             onChange={(raw) => onChange('price', raw)}
           />
         }
-        bottom={
-          row.priceExVat === null ? (
-            <Empty />
-          ) : (
-            <MoneyAmount amount={row.priceExVat} />
-          )
-        }
+        bottom={row.priceExVat === null ? <Empty /> : <MoneyAmount amount={row.priceExVat} />}
       />
     );
   }
@@ -482,31 +397,14 @@ function RowCell({
           onChange={(raw) => onChange('amount', raw)}
         />
       }
-      bottom={
-        row.amountExVat === null ? (
-          <Empty />
-        ) : (
-          <MoneyAmount amount={row.amountExVat} />
-        )
-      }
+      bottom={row.amountExVat === null ? <Empty /> : <MoneyAmount amount={row.amountExVat} />}
     />
   );
 }
 
-function TotalCell({
-  column,
-  totals,
-}: {
-  column: ColumnKey;
-  totals: SaleFormTotals;
-}) {
+function TotalCell({ column, totals }: { column: ColumnKey; totals: SaleFormTotals }) {
   if (column === 'price') {
-    return (
-      <VatMoneyOrEmpty
-        withVat={totals.priceWithVat}
-        exVat={totals.priceExVat}
-      />
-    );
+    return <VatMoneyCell withVat={totals.priceWithVat} exVat={totals.priceExVat} />;
   }
 
   if (column === 'pieces') {
@@ -526,20 +424,13 @@ function TotalCell({
     );
   }
 
-  return (
-    <VatMoneyOrEmpty
-      withVat={totals.amountWithVat}
-      exVat={totals.amountExVat}
-    />
-  );
+  return <VatMoneyCell withVat={totals.amountWithVat} exVat={totals.amountExVat} />;
 }
 
-function formatKopecks(
-  parse: (raw: string) => number | null,
-): (raw: string) => string | null {
+function formatKopecks(parse: (raw: string) => number | null): (raw: string) => string | null {
   return (raw) => {
     const amount = parse(raw);
-    return amount === null ? null : priceDraft(amount);
+    return amount === null ? null : formatMoneyDraft(amount);
   };
 }
 
@@ -581,120 +472,14 @@ function GridInput({
               onChange(formatted);
             }
           }}
-          onChange={(event) =>
-            onChange(sanitizeDraft(event.target.value, inputMode))
-          }
+          onChange={(event) => onChange(sanitizeDraft(event.target.value, inputMode))}
           className={`${gridFieldClassName} ${tone}`}
           placeholder={value ? undefined : '—'}
         />
-        {unit ? (
-          <span className={`shrink-0 text-sm ${tone}`}>{unit}</span>
-        ) : null}
+        {unit ? <span className={`shrink-0 text-sm ${tone}`}>{unit}</span> : null}
       </div>
     </div>
   );
-}
-
-function sanitizeDraft(raw: string, mode: 'decimal' | 'numeric'): string {
-  let result = '';
-  let hasComma = false;
-
-  for (const char of raw) {
-    if (char >= '0' && char <= '9') {
-      result += char;
-      continue;
-    }
-
-    if (mode === 'decimal' && (char === ',' || char === '.') && !hasComma) {
-      result += ',';
-      hasComma = true;
-    }
-  }
-
-  return result;
-}
-
-function MoneyAmount({ amount }: { amount: number }) {
-  return <TableNumber value={amount}>{formatMoney(amount)}</TableNumber>;
-}
-
-function VatMoneyOrEmpty({
-  withVat,
-  exVat,
-}: {
-  withVat: number | null;
-  exVat: number | null;
-}) {
-  if (withVat === null && exVat === null) {
-    return <Empty />;
-  }
-
-  return (
-    <StackedPair
-      topLabel="с НДС"
-      bottomLabel="без НДС"
-      top={withVat === null ? <Empty /> : <MoneyAmount amount={withVat} />}
-      bottom={exVat === null ? <Empty /> : <MoneyAmount amount={exVat} />}
-    />
-  );
-}
-
-function MergedTwoStory({
-  highlighted = false,
-  children,
-}: {
-  highlighted?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <div
-      className={`flex h-full min-w-18 flex-col items-end justify-center px-1.5 py-1 ${
-        highlighted ? editableCellClassName : ''
-      }`}
-    >
-      {children}
-    </div>
-  );
-}
-
-function StackedPair({
-  topLabel,
-  bottomLabel,
-  top,
-  bottom,
-  topHighlighted = false,
-}: {
-  topLabel: string;
-  bottomLabel: string;
-  top: ReactNode;
-  bottom: ReactNode;
-  topHighlighted?: boolean;
-}) {
-  return (
-    <div className="-mx-1.5 -my-2 flex min-w-18 flex-col">
-      <div
-        data-editable-field=""
-        className={`flex flex-col items-end border-b border-line px-1.5 py-1 ${
-          topHighlighted ? editableCellClassName : ''
-        }`}
-      >
-        <span className="text-[0.5rem] leading-none text-muted">
-          {topLabel}
-        </span>
-        {top}
-      </div>
-      <div className="flex flex-col items-end px-1.5 py-1">
-        <span className="text-[0.5rem] leading-none text-muted">
-          {bottomLabel}
-        </span>
-        {bottom}
-      </div>
-    </div>
-  );
-}
-
-function Empty() {
-  return <span className="text-muted">—</span>;
 }
 
 /** Черновик строки из плановой цены, если она есть. */
@@ -702,7 +487,7 @@ export function emptySaleLineDraft(planPriceWithVat = 0): SaleLineDraft {
   return {
     id: `sale-line:${crypto.randomUUID()}`,
     pieces: '0',
-    price: planPriceWithVat > 0 ? priceDraft(planPriceWithVat) : '',
-    amount: priceDraft(0),
+    price: planPriceWithVat > 0 ? formatMoneyDraft(planPriceWithVat) : '',
+    amount: formatMoneyDraft(0),
   };
 }

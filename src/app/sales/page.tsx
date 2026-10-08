@@ -1,9 +1,6 @@
 import type { Metadata } from 'next';
 
-import {
-  parseSalesFactQuery,
-  SALES_SECTION_TITLE,
-} from '@/features/sales-fact/paths';
+import { parseSalesFactQuery, SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
 import { SalesFactScreen } from '@/features/sales-fact/sales-fact-screen';
 
 export const metadata: Metadata = {
@@ -22,7 +19,5 @@ export default async function SalesFactPage({
   const params = await searchParams;
   const query = parseSalesFactQuery(params);
 
-  return (
-    <SalesFactScreen month={query.month} day={query.day} view={query.view} />
-  );
+  return <SalesFactScreen month={query.month} day={query.day} view={query.view} />;
 }

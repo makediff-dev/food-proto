@@ -4,16 +4,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 
+import { useDocumentStore } from '@/data/document-store';
 import type { PrototypeDocument, Sale } from '@/domain/document';
 import { saleTotals, workingSalesInMonth } from '@/domain/sales';
-import { salesFactMonthOpen } from '@/domain/sales-fact';
-import { monthKeyFromDate, shiftMonth } from '@/domain/sales-plan';
+import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { lastHorizonMonth } from '@/domain/summary';
-import {
-  monthFieldClassName,
-  primaryButtonClassName,
-} from '@/features/sales/fields';
-import { formatMoney } from '@/features/sales/money';
+import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { formatPieces } from '@/features/sales/text';
 import {
   SALES_JOURNAL_TITLE,
@@ -23,38 +19,23 @@ import {
   salesJournalHref,
 } from '@/features/sales-fact/paths';
 import { formatSaleDate } from '@/features/sales-fact/text';
-import { useSalesFact } from '@/features/sales-fact/use-sales-fact';
 import { IconArrowLeft, IconPlus } from '@/features/shell/icons';
 import { MonthStep } from '@/features/shell/month-step';
 import { PageFrame } from '@/features/shell/page-frame';
-import { TableNumber } from '@/features/shell/table-number';
+import { MoneyAmount } from '@/features/table';
 
 export function SalesJournalScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
-  const selectedMonth = salesFactMonthOpen(month, today) ? month : currentMonth;
+  const selectedMonth = planMonthOpen(month, today) ? month : currentMonth;
 
-  return (
-    <Workspace
-      month={selectedMonth}
-      currentMonth={currentMonth}
-      today={today}
-    />
-  );
+  return <Workspace month={selectedMonth} currentMonth={currentMonth} today={today} />;
 }
 
-function Workspace({
-  month,
-  currentMonth,
-  today,
-}: {
-  month: string;
-  currentMonth: string;
-  today: Date;
-}) {
-  const sales = useSalesFact();
+function Workspace({ month, currentMonth, today }: { month: string; currentMonth: string; today: Date }) {
+  const store = useDocumentStore();
   const router = useRouter();
-  const items = workingSalesInMonth(sales.document, month);
+  const items = workingSalesInMonth(store.document, month);
   const days = groupSalesByDay(items);
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
@@ -93,7 +74,7 @@ function Workspace({
             <MonthStep
               label="Предыдущий месяц"
               direction="previous"
-              disabled={!salesFactMonthOpen(previousMonth, today)}
+              disabled={!planMonthOpen(previousMonth, today)}
               onClick={() => open(previousMonth)}
             />
             <input
@@ -104,7 +85,7 @@ function Workspace({
               value={month}
               onChange={(event) => {
                 const next = event.target.value;
-                if (salesFactMonthOpen(next, today)) {
+                if (planMonthOpen(next, today)) {
                   open(next);
                 }
               }}
@@ -121,8 +102,8 @@ function Workspace({
 
         {items.length === 0 ? (
           <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-            За этот месяц рабочих продаж нет. Добавьте продажу: заказчик, дата и
-            товары. Она попадёт в таблицу факта за этот день.
+            За этот месяц рабочих продаж нет. Добавьте продажу: заказчик, дата и товары. Она попадёт в таблицу факта за
+            этот день.
           </p>
         ) : (
           <div className="border border-line bg-sheet">
@@ -133,39 +114,25 @@ function Workspace({
                 </h2>
                 <ul>
                   {day.items.map((item) => {
-                    const totals = saleTotals(sales.document, item);
+                    const totals = saleTotals(store.document, item);
                     return (
-                      <li
-                        key={item.id}
-                        className="border-b border-line last:border-b-0"
-                      >
+                      <li key={item.id} className="border-b border-line last:border-b-0">
                         <Link
                           href={saleHref(item.id)}
                           className="flex flex-col gap-2 px-4 py-3 outline-none hover:bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink sm:flex-row sm:items-start sm:justify-between sm:gap-6"
                         >
                           <div className="min-w-0">
-                            <p className="text-sm text-ink">
-                              {item.customerName}
-                            </p>
-                            <p className="mt-1 text-sm leading-6 text-muted">
-                              {saleComposition(sales.document, item)}
-                            </p>
+                            <p className="text-sm text-ink">{item.customerName}</p>
+                            <p className="mt-1 text-sm leading-6 text-muted">{saleComposition(store.document, item)}</p>
                           </div>
                           <p className="shrink-0 text-sm text-ink sm:text-right">
-                            {totals.revenueWithVat === null ||
-                            totals.revenueExVat === null ? (
+                            {totals.revenueWithVat === null || totals.revenueExVat === null ? (
                               '—'
                             ) : (
                               <>
-                                <TableNumber value={totals.revenueWithVat}>
-                                  {formatMoney(totals.revenueWithVat)}
-                                </TableNumber>{' '}
-                                с НДС
+                                <MoneyAmount amount={totals.revenueWithVat} /> с НДС
                                 <span className="mt-1 block text-muted">
-                                  <TableNumber value={totals.revenueExVat}>
-                                    {formatMoney(totals.revenueExVat)}
-                                  </TableNumber>{' '}
-                                  без НДС
+                                  <MoneyAmount amount={totals.revenueExVat} /> без НДС
                                 </span>
                               </>
                             )}
@@ -209,9 +176,7 @@ function groupSalesByDay(items: readonly Sale[]): {
 function saleComposition(document: PrototypeDocument, sale: Sale): string {
   return sale.lines
     .map((line) => {
-      const product = document.products.find(
-        (item) => item.id === line.productId,
-      );
+      const product = document.products.find((item) => item.id === line.productId);
       const name = product?.name ?? 'Товар';
       const archived = product?.deletedAt ? ' (архив)' : '';
       return `${name}${archived}, ${formatPieces(line.pieces)} шт`;

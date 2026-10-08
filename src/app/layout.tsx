@@ -27,10 +27,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html
-      lang="ru"
-      className={`${onest.variable} ${unbounded.variable} h-full antialiased`}
-    >
+    <html lang="ru" className={`${onest.variable} ${unbounded.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
         <DocumentProvider>
           <AppShell>{children}</AppShell>

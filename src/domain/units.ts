@@ -1,4 +1,4 @@
-/** Потолок цены и себестоимости, копейки. Произведение с объёмом остаётся безопасным целым. */
+/** Потолок цены и себестоимости, копейки. */
 export const MAX_PRICE_KOPECKS = 100_000_000;
 
 const DECIMAL_PATTERN = /^\d+(\.\d+)?$/;
@@ -25,10 +25,7 @@ export function fromRubles(rubles: number): number | null {
   return fromRublesUpTo(rubles, MAX_PRICE_KOPECKS);
 }
 
-export function fromRublesUpTo(
-  rubles: number,
-  maxKopecks: number,
-): number | null {
+export function fromRublesUpTo(rubles: number, maxKopecks: number): number | null {
   const amount = Math.round(rubles * 100);
   if (!Number.isInteger(amount) || amount < 0 || amount > maxKopecks) {
     return null;

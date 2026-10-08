@@ -5,10 +5,7 @@ import { useState } from 'react';
 
 import { deletedCategories } from '@/domain/categories';
 import { deletedProducts } from '@/domain/products';
-import {
-  PLANNING_ARCHIVE_TITLE,
-  planningHref,
-} from '@/features/planning/paths';
+import { PLANNING_ARCHIVE_TITLE, planningHref } from '@/features/planning/paths';
 import { FIELD_ERROR } from '@/features/sales/fields';
 import { useSales } from '@/features/sales/use-sales';
 import { IconArrowLeft, IconUndo } from '@/features/shell/icons';
@@ -49,10 +46,7 @@ export function PlanningArchiveScreen() {
                 <h2 className="text-sm font-semibold text-ink">Категории</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {categories.map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-                    >
+                    <li key={item.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm text-ink">{item.name}</p>
                       <button
                         type="button"
@@ -76,10 +70,7 @@ export function PlanningArchiveScreen() {
                 <h2 className="text-sm font-semibold text-ink">Товары</h2>
                 <ul className="mt-3 flex flex-col gap-2">
                   {products.map((item) => (
-                    <li
-                      key={item.id}
-                      className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-                    >
+                    <li key={item.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm text-ink">{item.name}</p>
                       <button
                         type="button"

@@ -1,26 +1,9 @@
 import { type UnitCost, unitCost } from '@/domain/cost';
-import {
-  isOccurredOn,
-  type Product,
-  type PrototypeDocument,
-} from '@/domain/document';
-import {
-  amountExVat,
-  averageAmount,
-  multiplyAmount,
-  percentHundredths,
-  toSafeNumber,
-  vatPercentHundredths,
-} from '@/domain/money';
+import { isOccurredOn, type Product, type PrototypeDocument } from '@/domain/document';
+import { amountExVat, averageAmount, percentHundredths, vatPercentHundredths } from '@/domain/money';
 import { periodGridCategories, periodGridProducts } from '@/domain/period-grid';
 import { workingSales } from '@/domain/sales';
-import {
-  daysInMonth,
-  monthKeyFromDate,
-  planMonthOpen,
-} from '@/domain/sales-plan';
-
-const ZERO = BigInt(0);
+import { daysInMonth, monthKeyFromDate } from '@/domain/sales-plan';
 
 export interface SaleDayProduct {
   pieces: number;
@@ -88,11 +71,6 @@ export interface SalesFactDayView {
   totals: SalesFactTotals;
 }
 
-/** С 2000-01 до горизонта плана — как планирование и сводка. */
-export function salesFactMonthOpen(month: string, today: Date): boolean {
-  return planMonthOpen(month, today);
-}
-
 export function monthDates(month: string): string[] {
   return Array.from({ length: daysInMonth(month) }, (_, index) => {
     const day = String(index + 1).padStart(2, '0');
@@ -128,21 +106,14 @@ export function adjacentDay(date: string, offset: -1 | 1): string | null {
   return iso;
 }
 
-function productById(
-  document: PrototypeDocument,
-  productId: string,
-): Product | null {
+function productById(document: PrototypeDocument, productId: string): Product | null {
   return document.products.find((item) => item.id === productId) ?? null;
 }
 
-export function saleDayProduct(
-  document: PrototypeDocument,
-  occurredOn: string,
-  productId: string,
-): SaleDayProduct {
-  let pieces = ZERO;
-  let revenueWith = ZERO;
-  let revenueEx = ZERO;
+export function saleDayProduct(document: PrototypeDocument, occurredOn: string, productId: string): SaleDayProduct {
+  let pieces = 0;
+  let revenueWith = 0;
+  let revenueEx = 0;
   let revenueComplete = true;
   const product = productById(document, productId);
 
@@ -154,56 +125,40 @@ export function saleDayProduct(
       if (line.productId !== productId) {
         continue;
       }
-      pieces += BigInt(line.pieces);
-      revenueWith += BigInt(line.amountWithVat);
-      const ex =
-        product === null
-          ? null
-          : amountExVat(line.amountWithVat, product.vatPercent);
+      pieces += line.pieces;
+      revenueWith += line.amountWithVat;
+      const ex = product === null ? null : amountExVat(line.amountWithVat, product.vatPercent);
       if (ex === null) {
         revenueComplete = false;
       } else {
-        revenueEx += BigInt(ex);
+        revenueEx += ex;
       }
     }
   }
 
-  const salesPieces = toSafeNumber(pieces) ?? 0;
   return {
-    pieces: salesPieces,
-    revenueWithVat: toSafeNumber(revenueWith),
-    revenueExVat: revenueComplete ? toSafeNumber(revenueEx) : null,
+    pieces,
+    revenueWithVat: revenueWith,
+    revenueExVat: revenueComplete ? revenueEx : null,
   };
 }
 
 /**
  * Товары сетки месяца: рабочие и архивные с планом или продажей в этом месяце.
  */
-export function salesFactGridProducts(
-  document: PrototypeDocument,
-  month: string,
-): Product[] {
+export function salesFactGridProducts(document: PrototypeDocument, month: string): Product[] {
   return periodGridProducts(document, month);
 }
 
-function rowMetrics(
-  document: PrototypeDocument,
-  product: Product,
-  sold: SaleDayProduct,
-): SalesFactRow {
+function rowMetrics(document: PrototypeDocument, product: Product, sold: SaleDayProduct): SalesFactRow {
   const vat = product.vatPercent;
   const cost = unitCost(document, product.id);
   const salesPieces = sold.pieces;
   const revenueWith = sold.revenueWithVat;
   const revenueEx = sold.revenueExVat;
-  const salesVolumeWith =
-    cost === null ? null : multiplyAmount(cost.withVat, salesPieces);
-  const salesVolumeEx =
-    cost === null ? null : multiplyAmount(cost.exVat, salesPieces);
-  const contribution =
-    revenueEx === null || salesVolumeEx === null
-      ? null
-      : revenueEx - salesVolumeEx;
+  const salesVolumeWith = cost === null ? null : cost.withVat * salesPieces;
+  const salesVolumeEx = cost === null ? null : cost.exVat * salesPieces;
+  const contribution = revenueEx === null || salesVolumeEx === null ? null : revenueEx - salesVolumeEx;
 
   return {
     productId: product.id,
@@ -220,70 +175,54 @@ function rowMetrics(
     salesVolumeCostExVat: salesVolumeEx,
     contribution: contribution,
     profitabilityHundredths:
-      contribution === null || salesVolumeEx === null
-        ? null
-        : percentHundredths(contribution, salesVolumeEx),
+      contribution === null || salesVolumeEx === null ? null : percentHundredths(contribution, salesVolumeEx),
   };
 }
 
 function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
-  let salesPieces = ZERO;
-  let revenueWith = ZERO;
-  let revenueEx = ZERO;
-  let salesCostWith = ZERO;
-  let salesCostEx = ZERO;
-  let contributionSum = ZERO;
+  let salesPieces = 0;
+  let revenueWith = 0;
+  let revenueEx = 0;
+  let salesCostWith = 0;
+  let salesCostEx = 0;
+  let contributionSum = 0;
   let salesCostComplete = true;
   let revenueComplete = true;
 
   for (const row of rows) {
-    salesPieces += BigInt(row.salesPieces);
+    salesPieces += row.salesPieces;
 
     if (row.revenueWithVat === null || row.revenueExVat === null) {
       if (row.salesPieces > 0) {
         revenueComplete = false;
       }
     } else {
-      revenueWith += BigInt(row.revenueWithVat);
-      revenueEx += BigInt(row.revenueExVat);
+      revenueWith += row.revenueWithVat;
+      revenueEx += row.revenueExVat;
     }
 
     if (
       row.salesPieces > 0 &&
-      (row.salesVolumeCostWithVat === null ||
-        row.salesVolumeCostExVat === null ||
-        row.contribution === null)
+      (row.salesVolumeCostWithVat === null || row.salesVolumeCostExVat === null || row.contribution === null)
     ) {
       salesCostComplete = false;
-    } else if (
-      row.salesVolumeCostWithVat !== null &&
-      row.salesVolumeCostExVat !== null &&
-      row.contribution !== null
-    ) {
-      salesCostWith += BigInt(row.salesVolumeCostWithVat);
-      salesCostEx += BigInt(row.salesVolumeCostExVat);
-      contributionSum += BigInt(row.contribution);
+    } else if (row.salesVolumeCostWithVat !== null && row.salesVolumeCostExVat !== null && row.contribution !== null) {
+      salesCostWith += row.salesVolumeCostWithVat;
+      salesCostEx += row.salesVolumeCostExVat;
+      contributionSum += row.contribution;
     }
   }
 
-  const salesVolume = toSafeNumber(salesPieces);
-  const revenueWithVat = revenueComplete ? toSafeNumber(revenueWith) : null;
-  const revenueExVat = revenueComplete ? toSafeNumber(revenueEx) : null;
-  const salesVolumeCostWithVat = salesCostComplete
-    ? toSafeNumber(salesCostWith)
-    : null;
-  const salesVolumeCostExVat = salesCostComplete
-    ? toSafeNumber(salesCostEx)
-    : null;
+  const salesVolume = salesPieces;
+  const revenueWithVat = revenueComplete ? revenueWith : null;
+  const revenueExVat = revenueComplete ? revenueEx : null;
+  const salesVolumeCostWithVat = salesCostComplete ? salesCostWith : null;
+  const salesVolumeCostExVat = salesCostComplete ? salesCostEx : null;
   const priceWithVat = averageAmount(revenueWithVat, salesVolume);
   const priceExVat = averageAmount(revenueExVat, salesVolume);
-  const salesUnitCostWithVat = averageAmount(
-    salesVolumeCostWithVat,
-    salesVolume,
-  );
+  const salesUnitCostWithVat = averageAmount(salesVolumeCostWithVat, salesVolume);
   const salesUnitCostExVat = averageAmount(salesVolumeCostExVat, salesVolume);
-  const contribution =
-    salesCostComplete && revenueComplete ? toSafeNumber(contributionSum) : null;
+  const contribution = salesCostComplete && revenueComplete ? contributionSum : null;
 
   return {
     salesPieces: salesVolume,
@@ -300,9 +239,7 @@ function dayTotals(rows: readonly SalesFactRow[]): SalesFactTotals {
     salesUnitCostWithVat,
     salesUnitCostExVat,
     profitabilityHundredths:
-      salesCostComplete && revenueComplete
-        ? percentHundredths(contribution, salesVolumeCostExVat)
-        : null,
+      salesCostComplete && revenueComplete ? percentHundredths(contribution, salesVolumeCostExVat) : null,
   };
 }
 
@@ -333,19 +270,12 @@ function salesFactGroups(
 }
 
 /** Дни месяца сверху вниз. Факт дня считается из журнала продаж. */
-export function salesFactMonth(
-  document: PrototypeDocument,
-  month: string,
-): SalesFactDayView[] {
+export function salesFactMonth(document: PrototypeDocument, month: string): SalesFactDayView[] {
   const products = salesFactGridProducts(document, month);
 
   return monthDates(month).map((occurredOn) => {
     const rows = products.map((product) =>
-      rowMetrics(
-        document,
-        product,
-        saleDayProduct(document, occurredOn, product.id),
-      ),
+      rowMetrics(document, product, saleDayProduct(document, occurredOn, product.id)),
     );
     const groups = salesFactGroups(document, products, rows);
     const groupedRows = groups.flatMap((group) => group.rows);

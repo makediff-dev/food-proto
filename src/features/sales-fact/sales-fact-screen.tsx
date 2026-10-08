@@ -4,20 +4,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { useDocumentStore } from '@/data/document-store';
 import { isOccurredOn } from '@/domain/document';
-import {
-  defaultSalesFactDay,
-  monthDates,
-  salesFactGridProducts,
-  salesFactMonth,
-  salesFactMonthOpen,
-} from '@/domain/sales-fact';
-import { monthKeyFromDate, shiftMonth } from '@/domain/sales-plan';
+import { defaultSalesFactDay, monthDates, salesFactGridProducts, salesFactMonth } from '@/domain/sales-fact';
+import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { lastHorizonMonth } from '@/domain/summary';
-import {
-  monthFieldClassName,
-  primaryButtonClassName,
-} from '@/features/sales/fields';
+import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import {
   SALES_SECTION_TITLE,
   type SalesFactView,
@@ -27,42 +19,18 @@ import {
 } from '@/features/sales-fact/paths';
 import { SalesFactTable } from '@/features/sales-fact/sales-fact-table';
 import { formatSalesFactDay } from '@/features/sales-fact/text';
-import { useSalesFact } from '@/features/sales-fact/use-sales-fact';
-import {
-  IconEye,
-  IconFullscreen,
-  IconFullscreenExit,
-  IconList,
-  IconPlan,
-  IconPlus,
-} from '@/features/shell/icons';
+import { IconEye, IconFullscreen, IconFullscreenExit, IconList, IconPlan, IconPlus } from '@/features/shell/icons';
 import { MonthStep } from '@/features/shell/month-step';
 import { PageFrame } from '@/features/shell/page-frame';
 
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as const;
 
-export function SalesFactScreen({
-  month,
-  day,
-  view,
-}: {
-  month: string;
-  day: string;
-  view: SalesFactView;
-}) {
+export function SalesFactScreen({ month, day, view }: { month: string; day: string; view: SalesFactView }) {
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = resolveMonth(month, today);
 
-  return (
-    <Workspace
-      month={selectedMonth}
-      dayQuery={day}
-      view={view}
-      currentMonth={currentMonth}
-      today={today}
-    />
-  );
+  return <Workspace month={selectedMonth} dayQuery={day} view={view} currentMonth={currentMonth} today={today} />;
 }
 
 function Workspace({
@@ -78,20 +46,14 @@ function Workspace({
   currentMonth: string;
   today: Date;
 }) {
-  const sales = useSalesFact();
+  const store = useDocumentStore();
   const router = useRouter();
   const [fullscreen, setFullscreen] = useState(false);
-  const products = salesFactGridProducts(sales.document, month);
-  const days = useMemo(
-    () => salesFactMonth(sales.document, month),
-    [sales.document, month],
-  );
+  const products = salesFactGridProducts(store.document, month);
+  const days = useMemo(() => salesFactMonth(store.document, month), [store.document, month]);
   const fallbackDay = defaultSalesFactDay(month, today);
   const selectedDay = resolveDay(month, dayQuery, fallbackDay);
-  const visible =
-    view === 'all'
-      ? days
-      : days.filter((item) => item.occurredOn === selectedDay);
+  const visible = view === 'all' ? days : days.filter((item) => item.occurredOn === selectedDay);
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
   const horizonEnd = lastHorizonMonth(today);
@@ -122,11 +84,7 @@ function Workspace({
   function open(next: { month?: string; day?: string; view?: SalesFactView }) {
     const targetMonth = next.month ?? month;
     const targetDefaultDay = defaultSalesFactDay(targetMonth, today);
-    const targetDay = resolveDay(
-      targetMonth,
-      next.day ?? selectedDay,
-      targetDefaultDay,
-    );
+    const targetDay = resolveDay(targetMonth, next.day ?? selectedDay, targetDefaultDay);
     router.push(
       salesFactHref({
         month: targetMonth,
@@ -147,10 +105,7 @@ function Workspace({
         fill
         aside={
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <Link
-              href={salesJournalHref({ month, currentMonth })}
-              className={quietLinkClassName}
-            >
+            <Link href={salesJournalHref({ month, currentMonth })} className={quietLinkClassName}>
               <IconList />
               Журнал продаж
             </Link>
@@ -168,7 +123,7 @@ function Workspace({
                 <MonthStep
                   label="Предыдущий месяц"
                   direction="previous"
-                  disabled={!salesFactMonthOpen(previousMonth, today)}
+                  disabled={!planMonthOpen(previousMonth, today)}
                   onClick={() => open({ month: previousMonth })}
                 />
                 <input
@@ -179,7 +134,7 @@ function Workspace({
                   value={month}
                   onChange={(event) => {
                     const next = event.target.value;
-                    if (salesFactMonthOpen(next, today)) {
+                    if (planMonthOpen(next, today)) {
                       open({ month: next });
                     }
                   }}
@@ -220,12 +175,8 @@ function Workspace({
 
           {hasTable ? (
             <section
-              className={
-                tableExpanded ? 'fixed inset-0 z-50 bg-paper' : 'min-h-0 flex-1'
-              }
-              aria-label={
-                tableExpanded ? 'Таблица на весь экран' : 'Таблица факта'
-              }
+              className={tableExpanded ? 'fixed inset-0 z-50 bg-paper' : 'min-h-0 flex-1'}
+              aria-label={tableExpanded ? 'Таблица на весь экран' : 'Таблица факта'}
             >
               <SalesFactTable
                 days={visible}
@@ -250,22 +201,13 @@ function Workspace({
       </PageFrame>
 
       {hasTable ? (
-        <FullscreenToggle
-          active={tableExpanded}
-          onToggle={() => setFullscreen((current) => !current)}
-        />
+        <FullscreenToggle active={tableExpanded} onToggle={() => setFullscreen((current) => !current)} />
       ) : null}
     </>
   );
 }
 
-function FullscreenToggle({
-  active,
-  onToggle,
-}: {
-  active: boolean;
-  onToggle: () => void;
-}) {
+function FullscreenToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
   return (
     <button
       type="button"
@@ -281,7 +223,7 @@ function FullscreenToggle({
 }
 
 function resolveMonth(month: string, today: Date): string {
-  if (salesFactMonthOpen(month, today)) {
+  if (planMonthOpen(month, today)) {
     return month;
   }
 
@@ -289,11 +231,7 @@ function resolveMonth(month: string, today: Date): string {
 }
 
 function resolveDay(month: string, day: string, fallback: string): string {
-  if (
-    isOccurredOn(day) &&
-    day.startsWith(`${month}-`) &&
-    monthDates(month).includes(day)
-  ) {
+  if (isOccurredOn(day) && day.startsWith(`${month}-`) && monthDates(month).includes(day)) {
     return day;
   }
 
@@ -372,10 +310,7 @@ function DayDateControl({
         >
           <div className="grid grid-cols-7 gap-1">
             {WEEKDAY_LABELS.map((label) => (
-              <span
-                key={label}
-                className="flex size-8 items-center justify-center text-xs text-muted"
-              >
+              <span key={label} className="flex size-8 items-center justify-center text-xs text-muted">
                 {label}
               </span>
             ))}
@@ -401,9 +336,7 @@ function DayDateControl({
                     onPick(occurredOn);
                   }}
                   className={`flex size-8 items-center justify-center text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
-                    selected
-                      ? 'bg-ink text-white'
-                      : 'text-ink hover:border hover:border-ink'
+                    selected ? 'bg-ink text-white' : 'text-ink hover:border hover:border-ink'
                   }`}
                 >
                   {dayNumber}
@@ -431,9 +364,7 @@ function mondayLeadForMonth(month: string): number {
 
 function viewLinkClass(selected: boolean): string {
   return `inline-flex h-11 items-center justify-center gap-2 border px-3 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
-    selected
-      ? 'border-ink bg-ink text-white'
-      : 'border-line bg-sheet text-ink hover:border-ink'
+    selected ? 'border-ink bg-ink text-white' : 'border-line bg-sheet text-ink hover:border-ink'
   }`;
 }
 

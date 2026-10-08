@@ -1,8 +1,7 @@
-import { MAX_SALE_LINE_AMOUNT, MAX_VOLUME_PIECES } from '@/domain/document';
 import type { SaleRejection } from '@/domain/sales';
 import { fromRublesUpTo, parseDecimal } from '@/domain/units';
-import { parseMoney } from '@/features/sales/fields';
 import { formatPieces } from '@/features/sales/text';
+import { parseMoneyInput } from '@/features/table/format';
 
 export function formatSalesFactDay(iso: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
@@ -10,11 +9,7 @@ export function formatSalesFactDay(iso: string): string {
     return iso;
   }
 
-  const date = new Date(
-    Number(match[1]),
-    Number(match[2]) - 1,
-    Number(match[3]),
-  );
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
   return new Intl.DateTimeFormat('ru-RU', {
     day: 'numeric',
     month: 'long',
@@ -44,11 +39,7 @@ export function formatSaleDate(iso: string): string {
     return iso;
   }
 
-  const date = new Date(
-    Number(match[1]),
-    Number(match[2]) - 1,
-    Number(match[3]),
-  );
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
   return new Intl.DateTimeFormat('ru-RU', {
     day: 'numeric',
     month: 'long',
@@ -63,7 +54,7 @@ export function parseSalePieces(raw: string): number | null {
   }
 
   const value = Number(normalized);
-  if (!Number.isInteger(value) || value < 1 || value > MAX_VOLUME_PIECES) {
+  if (!Number.isInteger(value) || value < 1) {
     return null;
   }
 
@@ -76,14 +67,11 @@ export function parseSaleAmount(raw: string): number | null {
     return null;
   }
 
-  return fromRublesUpTo(rubles, MAX_SALE_LINE_AMOUNT);
+  return fromRublesUpTo(rubles, 100_000_000_000);
 }
 
 /** Сумма введена, штук нет: в продажу такую строку нельзя. */
-export function hasAmountWithoutPieces(
-  pieces: string,
-  amount: string,
-): boolean {
+export function hasAmountWithoutPieces(pieces: string, amount: string): boolean {
   const parsedAmount = parseSaleAmount(amount);
   if (parsedAmount === null || parsedAmount <= 0) {
     return false;
@@ -94,5 +82,5 @@ export function hasAmountWithoutPieces(
 
 /** Цена штуки с НДС, копейки. Потолок как у плановой цены. */
 export function parseSalePrice(raw: string): number | null {
-  return parseMoney(raw);
+  return parseMoneyInput(raw);
 }
