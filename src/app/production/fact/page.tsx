@@ -1,16 +1,23 @@
 import type { Metadata } from 'next';
-import { ProductionPlaceholderScreen } from '@/features/production/production-placeholder-screen';
+
+import { PRODUCTION_FACT_TITLE, parseProductionJournalFactQuery } from '@/features/production/paths';
+import { ProductionJournalFactScreen } from '@/features/production/production-journal-fact-screen';
 
 export const metadata: Metadata = {
-  title: 'Фактическое производство',
+  title: PRODUCTION_FACT_TITLE,
 };
 
-export default function ProductionFactPage() {
-  return (
-    <ProductionPlaceholderScreen
-      title="Фактическое производство"
-      lede="Фактический выпуск готовой продукции."
-      upcoming="Здесь появится факт производства по товарам и дням."
-    />
-  );
+export default async function ProductionFactPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    month?: string;
+    day?: string;
+    view?: string;
+  }>;
+}) {
+  const params = await searchParams;
+  const query = parseProductionJournalFactQuery(params);
+
+  return <ProductionJournalFactScreen month={query.month} day={query.day} view={query.view} />;
 }

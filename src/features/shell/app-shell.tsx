@@ -16,6 +16,7 @@ const SECTIONS = [
 ] as const;
 
 const PRODUCTION_SECTION_TITLE = 'Производство';
+const PRODUCTION_SECTION_HREF = '/production';
 
 const PRODUCTION_NAV = [
   { href: '/production/plan', label: 'Планируемое производство' },
@@ -34,6 +35,10 @@ function sectionIsCurrent(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function productionSectionIsCurrent(pathname: string): boolean {
+  return pathname === PRODUCTION_SECTION_HREF;
+}
+
 function currentNavLabel(pathname: string): string | undefined {
   if (sectionIsCurrent(pathname, QUESTIONS_HREF)) {
     return QUESTIONS_LABEL;
@@ -44,6 +49,10 @@ function currentNavLabel(pathname: string): string | undefined {
     return productionItem.label;
   }
 
+  if (productionSectionIsCurrent(pathname)) {
+    return PRODUCTION_SECTION_TITLE;
+  }
+
   return SECTIONS.find((section) => sectionIsCurrent(pathname, section.href))?.label;
 }
 
@@ -51,6 +60,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const currentLabel = currentNavLabel(pathname);
+  const currentProduction = productionSectionIsCurrent(pathname);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -125,7 +135,21 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
 
           <div>
-            <p className="px-3 py-2 text-sm text-sidebar-muted">{PRODUCTION_SECTION_TITLE}</p>
+            <Link
+              href={PRODUCTION_SECTION_HREF}
+              aria-current={currentProduction ? 'page' : undefined}
+              onClick={() => setMenuOpen(false)}
+              className={`relative block px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                currentProduction
+                  ? 'bg-sidebar-active text-white'
+                  : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              {currentProduction ? (
+                <span className="absolute inset-y-2 left-0 w-0.5 bg-mark" aria-hidden="true" />
+              ) : null}
+              {PRODUCTION_SECTION_TITLE}
+            </Link>
             <div className="flex flex-col">
               {PRODUCTION_NAV.map((item) => {
                 const currentSection = sectionIsCurrent(pathname, item.href);

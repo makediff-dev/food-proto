@@ -1,6 +1,46 @@
+import type { SummaryLens } from '@/domain/summary';
+
+export const PRODUCTION_FACT_TITLE = 'Фактическое производство';
+
 export const PRODUCTION_JOURNAL_TITLE = 'Журнал производства';
 
 export const NEW_PRODUCTION_ENTRY_TITLE = 'Новая запись';
+
+export type ProductionJournalFactView = 'day' | 'all';
+
+export function parseProductionJournalFactQuery(params: { month?: string; day?: string; view?: string }): {
+  month: string;
+  day: string;
+  view: ProductionJournalFactView;
+} {
+  return {
+    month: params.month ?? '',
+    day: params.day ?? '',
+    view: params.view === 'day' ? 'day' : 'all',
+  };
+}
+
+export function productionJournalFactHref(options: {
+  month: string;
+  currentMonth: string;
+  day?: string;
+  defaultDay?: string;
+  view?: ProductionJournalFactView;
+}): string {
+  const params = new URLSearchParams();
+  if (options.month && options.month !== options.currentMonth) {
+    params.set('month', options.month);
+  }
+  if (options.day && options.day !== options.defaultDay) {
+    params.set('day', options.day);
+  }
+  if (options.view === 'day') {
+    params.set('view', 'day');
+  }
+
+  const query = params.toString();
+  return query ? `/production/fact?${query}` : '/production/fact';
+}
 
 export function parseProductionPlanQuery(params: { month?: string }): {
   month: string;
@@ -8,6 +48,48 @@ export function parseProductionPlanQuery(params: { month?: string }): {
   return {
     month: params.month ?? '',
   };
+}
+
+export function parseProductionFactQuery(params: { from?: string; to?: string; month?: string; view?: string }): {
+  from: string;
+  to: string;
+  view: SummaryLens;
+} {
+  const legacyMonth = params.month ?? '';
+  const from = params.from ?? legacyMonth;
+  const to = params.to ?? params.from ?? legacyMonth;
+  return {
+    from,
+    to,
+    view: params.view === 'current' ? 'current' : 'forecast',
+  };
+}
+
+export function productionFactHref(
+  options: { from?: string; to?: string; month?: string; currentMonth?: string; view?: SummaryLens } = {},
+): string {
+  const from = options.from ?? options.month ?? '';
+  const to = options.to ?? options.from ?? options.month ?? '';
+  const params = new URLSearchParams();
+  const current = options.currentMonth ?? '';
+
+  if (from && to && current) {
+    if (from === to) {
+      if (from !== current) {
+        params.set('from', from);
+      }
+    } else {
+      params.set('from', from);
+      params.set('to', to);
+    }
+  }
+
+  if (options.view === 'current') {
+    params.set('view', 'current');
+  }
+
+  const query = params.toString();
+  return query ? `/production?${query}` : '/production';
 }
 
 export function productionPlanHref(options: { month?: string; currentMonth?: string } = {}): string {
