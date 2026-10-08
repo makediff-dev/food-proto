@@ -8,7 +8,8 @@ import {
 } from '@/domain/document';
 
 /**
- * Мок: два салата, одно горячее и гамбургер. План сентября. Факт продаж и операционные расходы пустые.
+ * Мок: два салата, одно горячее и гамбургер. План сентября. Факт продаж, журнал выпуска
+ * и операционные расходы пустые.
  * В книге строки салатов пустые (`Svod!C15:C29`), имена и цены салатов — для мока.
  * НДС у всех товаров 20%. В книге у горячих `Svod!N31` 10%, у роллов `Svod!N63` 20%.
  * Себестоимость 1 шт с НДС — мок: у гуляша в книге `Svod!D31` 0, у салатов кэша нет.
@@ -131,6 +132,7 @@ export const mockDocument: PrototypeDocument = {
   salesPlans,
   productionPlans,
   sales: [],
+  productionEntries: [],
   operatingExpenses: [],
 };
 
@@ -148,6 +150,10 @@ export function createMockDocument(): PrototypeDocument {
       lines: item.lines.map((entry) => ({ ...entry })),
     })),
     sales: mockDocument.sales.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    productionEntries: mockDocument.productionEntries.map((item) => ({
       ...item,
       lines: item.lines.map((line) => ({ ...line })),
     })),

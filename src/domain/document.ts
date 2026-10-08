@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 34 as const;
+export const SCHEMA_VERSION = 36 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -7,7 +7,7 @@ const DELETION_MARK = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 /**
  * Общие поля мягкого удаления. `deletedAt` — ISO-время, `null` — в работе.
- * Так у категорий, товаров и планов. Продажа удаляется насовсем — без этого поля.
+ * Так у категорий, товаров и планов. Продажа и запись выпуска удаляются насовсем — без этого поля.
  */
 export interface DeletableRecord {
   id: string;
@@ -104,6 +104,28 @@ export interface Sale {
   lines: SaleLine[];
 }
 
+/** Строка записи выпуска. Только объём; цены и суммы нет. */
+export interface ProductionEntryLine {
+  id: string;
+  /** Конечный товар. Ссылка живёт и после удаления товара. */
+  productId: string;
+  /** Объём выпуска, шт. От 1. */
+  pieces: number;
+}
+
+/**
+ * Запись выпуска готовой продукции за календарный день.
+ * Пустая запись без строк не пишется.
+ * Удаление стирает запись из документа — без `deletedAt` и без возврата.
+ * В сводку, факт продаж и план выпуска не суммируется.
+ */
+export interface ProductionEntry {
+  id: string;
+  /** Календарный день, `ГГГГ-ММ-ДД`. */
+  occurredOn: string;
+  lines: ProductionEntryLine[];
+}
+
 /**
  * Операционные расходы месяца одной суммой.
  * В книге это итог `Operation Expense!E62` / `F62` на своде `Svod!G4` / `I4`.
@@ -129,6 +151,7 @@ export interface PrototypeDocument {
   salesPlans: SalesPlan[];
   productionPlans: ProductionPlan[];
   sales: Sale[];
+  productionEntries: ProductionEntry[];
   operatingExpenses: MonthOperatingExpense[];
 }
 
