@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 33 as const;
+export const SCHEMA_VERSION = 34 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -62,6 +62,24 @@ export interface SalesPlan {
   deletedAt: string | null;
 }
 
+/** Строка плана производства. Себестоимость объёма в документ не пишется. */
+export interface ProductionPlanLine {
+  id: string;
+  /** Конечный товар. Ссылка живёт и после удаления товара. */
+  productId: string;
+  /** Объём выпуска, шт. */
+  volumePieces: number;
+}
+
+/** План производства на календарный месяц. На один месяц — один рабочий план. */
+export interface ProductionPlan {
+  id: string;
+  /** `ГГГГ-ММ`. */
+  month: string;
+  lines: ProductionPlanLine[];
+  deletedAt: string | null;
+}
+
 /** Строка продажи. Цена штуки в документ не пишется. */
 export interface SaleLine {
   id: string;
@@ -109,6 +127,7 @@ export interface PrototypeDocument {
   categories: ProductCategory[];
   products: Product[];
   salesPlans: SalesPlan[];
+  productionPlans: ProductionPlan[];
   sales: Sale[];
   operatingExpenses: MonthOperatingExpense[];
 }

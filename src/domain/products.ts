@@ -1,5 +1,11 @@
 import { type NameRejection, rejectName } from '@/domain/directory';
-import { isDeletionMark, type Product, type PrototypeDocument, type SalesPlanLine } from '@/domain/document';
+import {
+  isDeletionMark,
+  type Product,
+  type ProductionPlanLine,
+  type PrototypeDocument,
+  type SalesPlanLine,
+} from '@/domain/document';
 import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
 export type FieldRejection = NameRejection | 'cost' | 'missing' | 'category';
@@ -31,7 +37,7 @@ function suggestedPriceWithVat(document: PrototypeDocument, productId: string, m
   return 0;
 }
 
-function appendPlanLines(document: PrototypeDocument, productId: string) {
+function appendSalesPlanLines(document: PrototypeDocument, productId: string) {
   return document.salesPlans.map((plan) => {
     if (plan.deletedAt !== null || plan.lines.some((line) => line.productId === productId)) {
       return plan;
@@ -41,6 +47,22 @@ function appendPlanLines(document: PrototypeDocument, productId: string) {
       id: `sales-plan-line:${plan.month}:${productId}`,
       productId,
       priceWithVat: suggestedPriceWithVat(document, productId, plan.month),
+      volumePieces: 0,
+    };
+
+    return { ...plan, lines: [...plan.lines, line] };
+  });
+}
+
+function appendProductionPlanLines(document: PrototypeDocument, productId: string) {
+  return document.productionPlans.map((plan) => {
+    if (plan.deletedAt !== null || plan.lines.some((line) => line.productId === productId)) {
+      return plan;
+    }
+
+    const line: ProductionPlanLine = {
+      id: `production-plan-line:${plan.month}:${productId}`,
+      productId,
       volumePieces: 0,
     };
 
@@ -110,7 +132,8 @@ export function addProduct(document: PrototypeDocument, product: Product): Proto
 
   return {
     ...withProduct,
-    salesPlans: appendPlanLines(withProduct, next.id),
+    salesPlans: appendSalesPlanLines(withProduct, next.id),
+    productionPlans: appendProductionPlanLines(withProduct, next.id),
   };
 }
 

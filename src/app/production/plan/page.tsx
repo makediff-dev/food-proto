@@ -1,17 +1,14 @@
 import type { Metadata } from 'next';
 
-import { ProductionPlaceholderScreen } from '@/features/production/production-placeholder-screen';
+import { parseProductionPlanQuery } from '@/features/production/paths';
+import { ProductionPlanScreen } from '@/features/production/production-plan-screen';
 
 export const metadata: Metadata = {
   title: 'Планируемое производство',
 };
 
-export default function ProductionPlanPage() {
-  return (
-    <ProductionPlaceholderScreen
-      title="Планируемое производство"
-      lede="План выпуска готовой продукции."
-      upcoming="Здесь появится план производства по товарам и месяцам."
-    />
-  );
+export default async function ProductionPlanPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
+  const params = await searchParams;
+  const query = parseProductionPlanQuery(params);
+  return <ProductionPlanScreen month={query.month} />;
 }

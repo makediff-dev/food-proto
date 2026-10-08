@@ -1,6 +1,7 @@
 import {
   catalogCategories,
   type Product,
+  type ProductionPlan,
   type PrototypeDocument,
   type SalesPlan,
   SCHEMA_VERSION,
@@ -13,6 +14,7 @@ import {
  * Себестоимость 1 шт с НДС — мок: у гуляша в книге `Svod!D31` 0, у салатов кэша нет.
  * У гамбургера 39,30 ₽ — прежний итог рецепта. Без НДС 32,75 ₽
  * (3930 × 100 / 120, половина вверх), а не смешанные ставки рецепта (34,84 ₽).
+ * План производства сентября — те же четыре товара, объёмы выпуска заданы здесь.
  */
 const caesar: Product = {
   id: 'product-caesar',
@@ -92,11 +94,42 @@ const salesPlans: SalesPlan[] = [
   },
 ];
 
+const productionPlans: ProductionPlan[] = [
+  {
+    id: 'production-plan-2026-09',
+    month: '2026-09',
+    deletedAt: null,
+    lines: [
+      {
+        id: 'production-plan-2026-09-caesar',
+        productId: 'product-caesar',
+        volumePieces: 4_200,
+      },
+      {
+        id: 'production-plan-2026-09-olivier',
+        productId: 'product-olivier',
+        volumePieces: 5_200,
+      },
+      {
+        id: 'production-plan-2026-09-goulash',
+        productId: 'product-goulash',
+        volumePieces: 6_500,
+      },
+      {
+        id: 'production-plan-2026-09-burger',
+        productId: 'product-burger',
+        volumePieces: 22_000,
+      },
+    ],
+  },
+];
+
 export const mockDocument: PrototypeDocument = {
   schemaVersion: SCHEMA_VERSION,
   categories: catalogCategories(),
   products: [caesar, olivier, goulash, burger],
   salesPlans,
+  productionPlans,
   sales: [],
   operatingExpenses: [],
 };
@@ -107,6 +140,10 @@ export function createMockDocument(): PrototypeDocument {
     categories: mockDocument.categories.map((item) => ({ ...item })),
     products: mockDocument.products.map((item) => ({ ...item })),
     salesPlans: mockDocument.salesPlans.map((item) => ({
+      ...item,
+      lines: item.lines.map((entry) => ({ ...entry })),
+    })),
+    productionPlans: mockDocument.productionPlans.map((item) => ({
       ...item,
       lines: item.lines.map((entry) => ({ ...entry })),
     })),

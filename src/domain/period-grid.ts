@@ -3,13 +3,22 @@ import { type Product, type ProductCategory, type PrototypeDocument } from '@/do
 import { activeProducts } from '@/domain/products';
 
 /**
- * Id товаров, на которые в месяце есть строка рабочего плана
- * или хотя бы одна продажа.
+ * Id товаров, на которые в месяце есть строка рабочего плана продаж,
+ * плана производства или хотя бы одна продажа.
  */
 export function periodReferencedProductIds(document: PrototypeDocument, month: string): Set<string> {
   const ids = new Set<string>();
 
   for (const plan of document.salesPlans) {
+    if (plan.deletedAt !== null || plan.month !== month) {
+      continue;
+    }
+    for (const line of plan.lines) {
+      ids.add(line.productId);
+    }
+  }
+
+  for (const plan of document.productionPlans) {
     if (plan.deletedAt !== null || plan.month !== month) {
       continue;
     }
@@ -32,7 +41,8 @@ export function periodReferencedProductIds(document: PrototypeDocument, month: s
 }
 
 /**
- * Рабочие товары плюс удалённые, у которых в этом месяце есть план или продажа.
+ * Рабочие товары плюс удалённые, у которых в этом месяце есть план продаж,
+ * план производства или продажа.
  * Виртуальный нулевой план месяца в документ не пишется — архивные из него не берутся.
  */
 export function periodGridProducts(document: PrototypeDocument, month: string): Product[] {
