@@ -201,7 +201,9 @@ function VolumeCell({
     <td
       className={`w-px ${top} border-b border-b-line ${sectionRightClass(kind)} ${bg} px-1.5 py-2 text-right align-middle last:border-r-0`}
     >
-      <TableNumber>{formatPieces(value)}</TableNumber>
+      <TableNumber value={value} signed={kind === 'variance'}>
+        {formatPieces(value)}
+      </TableNumber>
     </td>
   );
 }
