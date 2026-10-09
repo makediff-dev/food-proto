@@ -214,9 +214,9 @@ function Workspace({
             >
               <ProductionFactTable
                 groups={summary.groups}
-                planVolumePieces={summary.planVolumePieces}
-                factVolumePieces={summary.factVolumePieces}
-                varianceVolumePieces={summary.varianceVolumePieces}
+                plan={summary.plan}
+                fact={summary.fact}
+                variance={summary.variance}
                 view={view}
                 periodClosed={periodClosed}
                 expanded={tableExpanded}

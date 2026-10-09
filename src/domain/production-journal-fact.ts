@@ -1,4 +1,6 @@
+import { type UnitCost, unitCost } from '@/domain/cost';
 import { type Product, type PrototypeDocument } from '@/domain/document';
+import { averageAmount } from '@/domain/money';
 import { periodGridCategories } from '@/domain/period-grid';
 import { productionFactGridProducts } from '@/domain/production-fact';
 import { workingProductionEntries } from '@/domain/production-journal';
@@ -16,10 +18,24 @@ export interface ProductionJournalFactRow {
   name: string;
   deleted: boolean;
   pieces: number;
+  /** Себестоимость 1 шт с товара. Та же, что в плане выпуска. */
+  unitCost: UnitCost | null;
+  /** Копейки. Себестоимость единицы с НДС × штуки дня. */
+  volumeCostWithVat: number | null;
+  /** Копейки. Себестоимость единицы без НДС × штуки дня. */
+  volumeCostExVat: number | null;
 }
 
 export interface ProductionJournalFactTotals {
   pieces: number;
+  /** Копейки. Сумма себестоимостей объёма, если себестоимость полная. */
+  volumeCostWithVat: number | null;
+  volumeCostExVat: number | null;
+  /** Есть строка со штуками, у которой себестоимость не считается. */
+  costComplete: boolean;
+  /** Себестоимость объёма / объём, копейки. Только если себестоимость полная. */
+  averageCostWithVat: number | null;
+  averageCostExVat: number | null;
 }
 
 /** Строка группы как на «Продажах». Пустая рабочая категория тоже входит. */
@@ -59,21 +75,46 @@ export function productionEntryDayPieces(document: PrototypeDocument, occurredOn
   return pieces;
 }
 
-function rowMetrics(product: Product, pieces: number): ProductionJournalFactRow {
+function rowMetrics(document: PrototypeDocument, product: Product, pieces: number): ProductionJournalFactRow {
+  const cost = unitCost(document, product.id);
   return {
     productId: product.id,
     name: product.name,
     deleted: product.deletedAt !== null,
     pieces,
+    unitCost: cost,
+    volumeCostWithVat: cost === null ? null : cost.withVat * pieces,
+    volumeCostExVat: cost === null ? null : cost.exVat * pieces,
   };
 }
 
 function dayTotals(rows: readonly ProductionJournalFactRow[]): ProductionJournalFactTotals {
   let pieces = 0;
+  let costWith = 0;
+  let costEx = 0;
+  let costComplete = true;
+
   for (const row of rows) {
     pieces += row.pieces;
+    if (row.pieces > 0 && (row.volumeCostWithVat === null || row.volumeCostExVat === null)) {
+      costComplete = false;
+    }
+    if (row.volumeCostWithVat !== null) {
+      costWith += row.volumeCostWithVat;
+    }
+    if (row.volumeCostExVat !== null) {
+      costEx += row.volumeCostExVat;
+    }
   }
-  return { pieces };
+
+  return {
+    pieces,
+    volumeCostWithVat: costComplete ? costWith : null,
+    volumeCostExVat: costComplete ? costEx : null,
+    costComplete,
+    averageCostWithVat: costComplete ? averageAmount(costWith, pieces) : null,
+    averageCostExVat: costComplete ? averageAmount(costEx, pieces) : null,
+  };
 }
 
 function productionJournalFactGroups(
@@ -108,7 +149,7 @@ export function productionJournalFactMonth(document: PrototypeDocument, month: s
 
   return monthDates(month).map((occurredOn) => {
     const rows = products.map((product) =>
-      rowMetrics(product, productionEntryDayPieces(document, occurredOn, product.id)),
+      rowMetrics(document, product, productionEntryDayPieces(document, occurredOn, product.id)),
     );
     const groups = productionJournalFactGroups(document, products, rows);
     const groupedRows = groups.flatMap((group) => group.rows);

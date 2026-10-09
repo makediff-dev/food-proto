@@ -7,6 +7,7 @@ import {
   type ProductionJournalFactDayView,
   type ProductionJournalFactGroup,
   type ProductionJournalFactRow,
+  type ProductionJournalFactTotals,
 } from '@/domain/production-journal-fact';
 import { formatSignedPieces } from '@/features/sales-fact/text';
 import { IconChevronDown, IconChevronRight, IconChevronUp } from '@/features/shell/Icons';
@@ -14,12 +15,22 @@ import {
   ColumnLabel,
   Empty,
   keepWithNext,
+  Muted,
   stickyHeadClassName,
   TableNumber,
   tableBorder,
   tableClassName,
   tableFrameExpandedClassName,
+  VatMoneyCell,
 } from '@/features/table';
+
+type ColumnKey = 'unitCost' | 'volume' | 'volumeCost';
+
+const COLUMNS: { key: ColumnKey; label: string }[] = [
+  { key: 'unitCost', label: 'Себест' },
+  { key: 'volume', label: 'Объём' },
+  { key: 'volumeCost', label: 'Себест объёма' },
+];
 
 export function ProductionJournalFactTable({
   days,
@@ -63,6 +74,7 @@ export function ProductionJournalFactTable({
               className={`sticky left-0 z-40 ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper`}
             />
             <th
+              colSpan={COLUMNS.length}
               scope="colgroup"
               className={`${tableBorder.bottomThin} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink`}
             >
@@ -82,12 +94,15 @@ export function ProductionJournalFactTable({
             >
               Товар
             </th>
-            <th
-              scope="col"
-              className={`w-px whitespace-normal ${tableBorder.bottomThin} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted`}
-            >
-              <ColumnLabel label="Объём" />
-            </th>
+            {COLUMNS.map((column) => (
+              <th
+                key={column.key}
+                scope="col"
+                className={`w-px whitespace-normal ${tableBorder.bottomThin} ${tableBorder.rightThin} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
+              >
+                <ColumnLabel label={column.label} />
+              </th>
+            ))}
           </tr>
         </thead>
         {days.map((day, dayIndex) => {
@@ -124,13 +139,16 @@ export function ProductionJournalFactTable({
                 >
                   Всего
                 </th>
-                <td
-                  className={`w-px border-t-[1.5px] border-t-muted bg-paper px-1.5 py-2 text-right align-middle ${
-                    dayBreak ? 'border-b-[3px] border-b-muted' : 'border-b border-b-line'
-                  }`}
-                >
-                  <Pieces value={day.totals.pieces} />
-                </td>
+                {COLUMNS.map((column) => (
+                  <td
+                    key={column.key}
+                    className={`w-px border-t-[1.5px] border-t-muted ${tableBorder.rightThin} bg-paper px-1.5 py-2 text-right align-middle last:border-r-0 ${
+                      dayBreak ? 'border-b-[3px] border-b-muted' : 'border-b border-b-line'
+                    }`}
+                  >
+                    <TotalCell column={column.key} totals={day.totals} />
+                  </td>
+                ))}
               </tr>
             </tbody>
           );
@@ -184,9 +202,14 @@ function CategoryBlock({
             {group.deleted ? <span className="text-sm font-normal text-muted">(архив)</span> : null}
           </div>
         </th>
-        <td className="w-px border-b border-b-line bg-paper px-1.5 py-2 text-right align-middle">
-          <Pieces value={group.totals.pieces} />
-        </td>
+        {COLUMNS.map((column) => (
+          <td
+            key={column.key}
+            className={`w-px border-b border-b-line ${tableBorder.rightThin} bg-paper px-1.5 py-2 text-right align-middle last:border-r-0`}
+          >
+            <TotalCell column={column.key} totals={group.totals} />
+          </td>
+        ))}
       </tr>
       {open ? group.rows.map((row) => <ProductRow key={row.productId} row={row} />) : null}
     </>
@@ -205,9 +228,14 @@ function ProductRow({ row }: { row: ProductionJournalFactRow }) {
           {row.deleted ? <span className="text-sm text-muted">(архив)</span> : null}
         </div>
       </th>
-      <td className="w-px border-b border-b-line px-1.5 py-2 text-right align-middle">
-        <Pieces value={row.pieces} />
-      </td>
+      {COLUMNS.map((column) => (
+        <td
+          key={column.key}
+          className={`w-px border-b border-b-line ${tableBorder.rightThin} px-1.5 py-2 text-right align-middle last:border-r-0`}
+        >
+          <RowCell column={column.key} row={row} />
+        </td>
+      ))}
     </tr>
   );
 }
@@ -277,6 +305,38 @@ function ArrowButton({
       {direction === 'up' ? <IconChevronUp /> : <IconChevronDown />}
     </button>
   );
+}
+
+function RowCell({ column, row }: { column: ColumnKey; row: ProductionJournalFactRow }) {
+  if (column === 'unitCost') {
+    return row.unitCost ? (
+      <VatMoneyCell withVat={row.unitCost.withVat} exVat={row.unitCost.exVat} />
+    ) : (
+      <Muted>{keepWithNext('Себестоимость не считается')}</Muted>
+    );
+  }
+
+  if (column === 'volume') {
+    return <Pieces value={row.pieces} />;
+  }
+
+  return <VatMoneyCell withVat={row.volumeCostWithVat} exVat={row.volumeCostExVat} />;
+}
+
+function TotalCell({ column, totals }: { column: ColumnKey; totals: ProductionJournalFactTotals }) {
+  if (column === 'volume') {
+    return <Pieces value={totals.pieces} />;
+  }
+
+  if (!totals.costComplete) {
+    return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+  }
+
+  if (column === 'unitCost') {
+    return <VatMoneyCell withVat={totals.averageCostWithVat} exVat={totals.averageCostExVat} />;
+  }
+
+  return <VatMoneyCell withVat={totals.volumeCostWithVat} exVat={totals.volumeCostExVat} />;
 }
 
 function Pieces({ value }: { value: number | null }) {
