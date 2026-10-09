@@ -11,15 +11,9 @@ import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan
 import { lastHorizonMonth } from '@/domain/summary';
 import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { formatPieces } from '@/features/sales/text';
-import {
-  SALES_JOURNAL_TITLE,
-  saleHref,
-  saleNewHref,
-  salesFactHref,
-  salesJournalHref,
-} from '@/features/sales-fact/paths';
+import { SALES_JOURNAL_TITLE, saleHref, saleNewHref, salesJournalHref } from '@/features/sales-fact/paths';
 import { formatSaleDate } from '@/features/sales-fact/text';
-import { IconArrowLeft, IconPlus } from '@/features/shell/Icons';
+import { IconPlus } from '@/features/shell/Icons';
 import { MonthStep } from '@/features/shell/MonthStep';
 import { PageFrame } from '@/features/shell/PageFrame';
 import { MoneyAmount } from '@/features/table';
@@ -52,15 +46,6 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
     <PageFrame
       title={SALES_JOURNAL_TITLE}
       full
-      back={
-        <Link
-          href={salesFactHref({ month, currentMonth })}
-          aria-label="Назад"
-          className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
-          <IconArrowLeft />
-        </Link>
-      }
       aside={
         <Link href={saleNewHref()} className={primaryButtonClassName}>
           <IconPlus />

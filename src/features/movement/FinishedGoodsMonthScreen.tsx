@@ -9,7 +9,7 @@ import { activeProducts } from '@/domain/products';
 import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { lastHorizonMonth } from '@/domain/summary';
 import { FinishedGoodsMonthTable } from '@/features/movement/FinishedGoodsMonthTable';
-import { finishedGoodsMonthHref, MOVEMENT_SECTION_TITLE } from '@/features/movement/paths';
+import { finishedGoodsMonthHref, MOVEMENT_SUMMARY_TITLE } from '@/features/movement/paths';
 import { useFinishedGoods } from '@/features/movement/use-finished-goods';
 import { monthFieldClassName } from '@/features/sales/fields';
 import { IconFullscreen, IconFullscreenExit } from '@/features/shell/Icons';
@@ -67,7 +67,7 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
   return (
     <>
       <PageFrame
-        title={MOVEMENT_SECTION_TITLE}
+        title={MOVEMENT_SUMMARY_TITLE}
         lede="Остатки на производстве, продажи и выпуск за месяц."
         full
         intro={
@@ -138,8 +138,8 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
           ) : (
             <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
               {categories.length === 0
-                ? 'Добавьте категорию и товар в «Планировании». Движение строится по товарам.'
-                : 'Добавьте товар в «Планировании». Движение строится по товарам.'}
+                ? 'Добавьте категорию и товар во «Вводе плана». Движение строится по товарам.'
+                : 'Добавьте товар во «Вводе плана». Движение строится по товарам.'}
             </p>
           )}
         </div>

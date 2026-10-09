@@ -1,4 +1,4 @@
-export const PLANNING_SECTION_TITLE = 'Планирование';
+export const PLANNING_SECTION_TITLE = 'Ввод плана';
 
 export const PLANNING_ARCHIVE_TITLE = 'Архив';
 

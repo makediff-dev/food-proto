@@ -22,7 +22,7 @@ import {
 import { monthKeyFromDate, salesPlanForMonth } from '@/domain/sales-plan';
 import { planningHref } from '@/features/planning/paths';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
-import { NEW_SALE_TITLE, SALES_SECTION_TITLE, salesJournalHref } from '@/features/sales-fact/paths';
+import { NEW_SALE_TITLE, SALES_JOURNAL_TITLE, salesJournalHref } from '@/features/sales-fact/paths';
 import {
   emptySaleLineDraft,
   SaleFormTable,
@@ -127,7 +127,7 @@ export function SaleScreen({ saleId, dayQuery }: { saleId: string | null; dayQue
   if (saleId && !existing) {
     return (
       <PageFrame
-        title={SALES_SECTION_TITLE}
+        title={SALES_JOURNAL_TITLE}
         full
         lede="Продажа заказчику: дата, товары, цена и сумма."
         back={
@@ -309,7 +309,7 @@ function SaleForm({
 
   return (
     <PageFrame
-      title={saleId ? SALES_SECTION_TITLE : NEW_SALE_TITLE}
+      title={saleId ? SALES_JOURNAL_TITLE : NEW_SALE_TITLE}
       full
       lede={saleId ? 'Продажа заказчику: дата, товары, цена и сумма.' : undefined}
       back={

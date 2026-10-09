@@ -9,17 +9,11 @@ import { isOccurredOn } from '@/domain/document';
 import { defaultSalesFactDay, monthDates, salesFactGridProducts, salesFactMonth } from '@/domain/sales-fact';
 import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { lastHorizonMonth } from '@/domain/summary';
-import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
-import {
-  SALES_SECTION_TITLE,
-  type SalesFactView,
-  saleNewHref,
-  salesFactHref,
-  salesJournalHref,
-} from '@/features/sales-fact/paths';
+import { monthFieldClassName } from '@/features/sales/fields';
+import { SALES_FACT_TITLE, type SalesFactView, salesFactHref } from '@/features/sales-fact/paths';
 import { SalesFactTable } from '@/features/sales-fact/SalesFactTable';
 import { formatSalesFactDay } from '@/features/sales-fact/text';
-import { IconEye, IconFullscreen, IconFullscreenExit, IconList, IconPlan, IconPlus } from '@/features/shell/Icons';
+import { IconEye, IconFullscreen, IconFullscreenExit, IconPlan } from '@/features/shell/Icons';
 import { MonthStep } from '@/features/shell/MonthStep';
 import { PageFrame } from '@/features/shell/PageFrame';
 
@@ -99,23 +93,7 @@ function Workspace({
 
   return (
     <>
-      <PageFrame
-        title={SALES_SECTION_TITLE}
-        full
-        fill
-        aside={
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <Link href={salesJournalHref({ month, currentMonth })} className={quietLinkClassName}>
-              <IconList />
-              Журнал продаж
-            </Link>
-            <Link href={saleNewHref()} className={primaryButtonClassName}>
-              <IconPlus />
-              Добавить продажу
-            </Link>
-          </div>
-        }
-      >
+      <PageFrame title={SALES_FACT_TITLE} full fill>
         <div className="flex min-h-0 flex-1 flex-col gap-4">
           <div className="shrink-0 border border-line bg-sheet">
             <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-end lg:justify-between">
@@ -367,6 +345,3 @@ function viewLinkClass(selected: boolean): string {
     selected ? 'border-ink bg-ink text-white' : 'border-line bg-sheet text-ink hover:border-ink'
   }`;
 }
-
-const quietLinkClassName =
-  'inline-flex h-11 items-center justify-center gap-2 border border-line bg-sheet px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink';

@@ -5,32 +5,51 @@ import { usePathname } from 'next/navigation';
 import { type ReactNode, useEffect, useState } from 'react';
 
 import { useDocumentStore } from '@/data/DocumentProvider';
-import { MOVEMENT_FACT_TITLE, MOVEMENT_PLAN_TITLE, MOVEMENT_SECTION_TITLE } from '@/features/movement/paths';
+import {
+  MOVEMENT_FACT_TITLE,
+  MOVEMENT_PLAN_TITLE,
+  MOVEMENT_SECTION_TITLE,
+  MOVEMENT_SUMMARY_TITLE,
+} from '@/features/movement/paths';
 import { PLANNING_SECTION_TITLE } from '@/features/planning/paths';
-import { SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
+import {
+  PRODUCTION_FACT_TITLE,
+  PRODUCTION_JOURNAL_TITLE,
+  PRODUCTION_PLAN_TITLE,
+  PRODUCTION_SECTION_TITLE,
+  PRODUCTION_SUMMARY_TITLE,
+} from '@/features/production/paths';
+import { SUMMARY_SECTION_TITLE } from '@/features/sales/paths';
+import { SALES_FACT_TITLE, SALES_JOURNAL_TITLE, SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
 import { IconMenu, IconUndo } from '@/features/shell/Icons';
 
-const SECTIONS = [
+type NavItem = {
+  href: string;
+  label: string;
+  /** Exact pathname only — for section roots that share a prefix with nested routes. */
+  exact?: boolean;
+  salesJournal?: boolean;
+};
+
+const SALES_NAV: readonly NavItem[] = [
+  { href: '/', label: SUMMARY_SECTION_TITLE, exact: true },
+  { href: '/sales', label: SALES_FACT_TITLE, exact: true },
   { href: '/planning', label: PLANNING_SECTION_TITLE },
-  { href: '/', label: 'Сводка' },
-  { href: '/sales', label: SALES_SECTION_TITLE },
-] as const;
+  { href: '/sales/journal', label: SALES_JOURNAL_TITLE, salesJournal: true },
+];
 
-const PRODUCTION_SECTION_TITLE = 'Производство';
-const PRODUCTION_SECTION_HREF = '/production';
+const PRODUCTION_NAV: readonly NavItem[] = [
+  { href: '/production', label: PRODUCTION_SUMMARY_TITLE, exact: true },
+  { href: '/production/fact', label: PRODUCTION_FACT_TITLE },
+  { href: '/production/plan', label: PRODUCTION_PLAN_TITLE },
+  { href: '/production/journal', label: PRODUCTION_JOURNAL_TITLE },
+];
 
-const PRODUCTION_NAV = [
-  { href: '/production/plan', label: 'Планируемое производство' },
-  { href: '/production/fact', label: 'Фактическое производство' },
-  { href: '/production/journal', label: 'Журнал производства' },
-] as const;
-
-const MOVEMENT_SECTION_HREF = '/movement';
-
-const MOVEMENT_NAV = [
-  { href: '/movement/plan', label: MOVEMENT_PLAN_TITLE },
+const MOVEMENT_NAV: readonly NavItem[] = [
+  { href: '/movement', label: MOVEMENT_SUMMARY_TITLE, exact: true },
   { href: '/movement/fact', label: MOVEMENT_FACT_TITLE },
-] as const;
+  { href: '/movement/plan', label: MOVEMENT_PLAN_TITLE },
+];
 
 const QUESTIONS_HREF = '/questions';
 const QUESTIONS_LABEL = 'Вопросы';
@@ -43,12 +62,29 @@ function sectionIsCurrent(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function productionSectionIsCurrent(pathname: string): boolean {
-  return pathname === PRODUCTION_SECTION_HREF;
+function salesJournalIsCurrent(pathname: string): boolean {
+  if (pathname === '/sales/journal' || pathname.startsWith('/sales/journal/')) {
+    return true;
+  }
+
+  if (pathname === '/sales/new' || pathname.startsWith('/sales/new/')) {
+    return true;
+  }
+
+  const match = pathname.match(/^\/sales\/([^/]+)$/);
+  return match !== null;
 }
 
-function movementSectionIsCurrent(pathname: string): boolean {
-  return pathname === MOVEMENT_SECTION_HREF;
+function navItemIsCurrent(pathname: string, item: NavItem): boolean {
+  if (item.salesJournal) {
+    return salesJournalIsCurrent(pathname);
+  }
+
+  if (item.exact || item.href === '/') {
+    return pathname === item.href;
+  }
+
+  return sectionIsCurrent(pathname, item.href);
 }
 
 function currentNavLabel(pathname: string): string | undefined {
@@ -56,33 +92,68 @@ function currentNavLabel(pathname: string): string | undefined {
     return QUESTIONS_LABEL;
   }
 
-  const productionItem = PRODUCTION_NAV.find((item) => sectionIsCurrent(pathname, item.href));
-  if (productionItem) {
-    return productionItem.label;
+  for (const item of SALES_NAV) {
+    if (navItemIsCurrent(pathname, item)) {
+      return item.label;
+    }
   }
 
-  if (productionSectionIsCurrent(pathname)) {
-    return PRODUCTION_SECTION_TITLE;
+  for (const item of PRODUCTION_NAV) {
+    if (navItemIsCurrent(pathname, item)) {
+      return item.label;
+    }
   }
 
-  const movementItem = MOVEMENT_NAV.find((item) => sectionIsCurrent(pathname, item.href));
-  if (movementItem) {
-    return movementItem.label;
+  for (const item of MOVEMENT_NAV) {
+    if (navItemIsCurrent(pathname, item)) {
+      return item.label;
+    }
   }
 
-  if (movementSectionIsCurrent(pathname)) {
-    return MOVEMENT_SECTION_TITLE;
-  }
+  return undefined;
+}
 
-  return SECTIONS.find((section) => sectionIsCurrent(pathname, section.href))?.label;
+function NavGroup({
+  title,
+  items,
+  pathname,
+  onNavigate,
+}: {
+  title: string;
+  items: readonly NavItem[];
+  pathname: string;
+  onNavigate: () => void;
+}) {
+  return (
+    <div>
+      <p className="px-3 py-2 text-sm text-white">{title}</p>
+      <div className="flex flex-col">
+        {items.map((item) => {
+          const current = navItemIsCurrent(pathname, item);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={current ? 'page' : undefined}
+              onClick={onNavigate}
+              className={`relative py-1 pr-3 pl-6 text-xs leading-5 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                current ? 'bg-sidebar-active text-white' : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              {current ? <span className="absolute inset-y-1 left-0 w-0.5 bg-mark" aria-hidden="true" /> : null}
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const currentLabel = currentNavLabel(pathname);
-  const currentProduction = productionSectionIsCurrent(pathname);
-  const currentMovement = movementSectionIsCurrent(pathname);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -104,6 +175,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, [menuOpen]);
 
+  function closeMenu() {
+    setMenuOpen(false);
+  }
+
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-paper">
       {menuOpen ? (
@@ -111,7 +186,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           type="button"
           aria-label="Закрыть меню"
           className="fixed inset-0 z-20 bg-ink/40 lg:hidden"
-          onClick={() => setMenuOpen(false)}
+          onClick={closeMenu}
         />
       ) : null}
 
@@ -124,7 +199,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="px-4 pt-5 pb-4">
           <Link
             href="/"
-            onClick={() => setMenuOpen(false)}
+            onClick={closeMenu}
             className="font-figure text-lg leading-tight tracking-tight text-white outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
           >
             Мясное
@@ -134,107 +209,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         <nav aria-label="Разделы" className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2">
-          {SECTIONS.map((section) => {
-            const currentSection = sectionIsCurrent(pathname, section.href);
-            return (
-              <Link
-                key={section.href}
-                href={section.href}
-                aria-current={currentSection ? 'page' : undefined}
-                onClick={() => setMenuOpen(false)}
-                className={`relative px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-                  currentSection
-                    ? 'bg-sidebar-active text-white'
-                    : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                {currentSection ? (
-                  <span className="absolute inset-y-2 left-0 w-0.5 bg-mark" aria-hidden="true" />
-                ) : null}
-                {section.label}
-              </Link>
-            );
-          })}
-
-          <div>
-            <Link
-              href={PRODUCTION_SECTION_HREF}
-              aria-current={currentProduction ? 'page' : undefined}
-              onClick={() => setMenuOpen(false)}
-              className={`relative block px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-                currentProduction
-                  ? 'bg-sidebar-active text-white'
-                  : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              {currentProduction ? (
-                <span className="absolute inset-y-2 left-0 w-0.5 bg-mark" aria-hidden="true" />
-              ) : null}
-              {PRODUCTION_SECTION_TITLE}
-            </Link>
-            <div className="flex flex-col">
-              {PRODUCTION_NAV.map((item) => {
-                const currentSection = sectionIsCurrent(pathname, item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={currentSection ? 'page' : undefined}
-                    onClick={() => setMenuOpen(false)}
-                    className={`relative py-1 pr-3 pl-6 text-xs leading-5 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-                      currentSection
-                        ? 'bg-sidebar-active text-white'
-                        : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
-                    }`}
-                  >
-                    {currentSection ? (
-                      <span className="absolute inset-y-1 left-0 w-0.5 bg-mark" aria-hidden="true" />
-                    ) : null}
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <Link
-              href={MOVEMENT_SECTION_HREF}
-              aria-current={currentMovement ? 'page' : undefined}
-              onClick={() => setMenuOpen(false)}
-              className={`relative block px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-                currentMovement
-                  ? 'bg-sidebar-active text-white'
-                  : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              {currentMovement ? <span className="absolute inset-y-2 left-0 w-0.5 bg-mark" aria-hidden="true" /> : null}
-              {MOVEMENT_SECTION_TITLE}
-            </Link>
-            <div className="flex flex-col">
-              {MOVEMENT_NAV.map((item) => {
-                const currentSection = sectionIsCurrent(pathname, item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={currentSection ? 'page' : undefined}
-                    onClick={() => setMenuOpen(false)}
-                    className={`relative py-1 pr-3 pl-6 text-xs leading-5 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-                      currentSection
-                        ? 'bg-sidebar-active text-white'
-                        : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
-                    }`}
-                  >
-                    {currentSection ? (
-                      <span className="absolute inset-y-1 left-0 w-0.5 bg-mark" aria-hidden="true" />
-                    ) : null}
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
+          <NavGroup title={SALES_SECTION_TITLE} items={SALES_NAV} pathname={pathname} onNavigate={closeMenu} />
+          <NavGroup
+            title={PRODUCTION_SECTION_TITLE}
+            items={PRODUCTION_NAV}
+            pathname={pathname}
+            onNavigate={closeMenu}
+          />
+          <NavGroup title={MOVEMENT_SECTION_TITLE} items={MOVEMENT_NAV} pathname={pathname} onNavigate={closeMenu} />
         </nav>
 
         <div className="border-t border-sidebar-line">
@@ -242,7 +224,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link
             href={QUESTIONS_HREF}
             aria-current={sectionIsCurrent(pathname, QUESTIONS_HREF) ? 'page' : undefined}
-            onClick={() => setMenuOpen(false)}
+            onClick={closeMenu}
             className={`relative mx-2 mb-3 block px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
               sectionIsCurrent(pathname, QUESTIONS_HREF)
                 ? 'bg-sidebar-active text-white'

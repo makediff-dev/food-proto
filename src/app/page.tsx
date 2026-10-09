@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 
-import { parseSummaryQuery } from '@/features/sales/paths';
+import { parseSummaryQuery, SUMMARY_SECTION_TITLE } from '@/features/sales/paths';
 import { SummaryScreen } from '@/features/sales/SummaryScreen';
 
 export const metadata: Metadata = {
-  title: 'Сводка',
+  title: SUMMARY_SECTION_TITLE,
 };
 
 export default async function Home({

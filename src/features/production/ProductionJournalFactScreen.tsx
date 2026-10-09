@@ -18,6 +18,7 @@ import { planningHref } from '@/features/planning/paths';
 import { ProductionJournalFactTable } from '@/features/production/ProductionJournalFactTable';
 import {
   PRODUCTION_FACT_TITLE,
+  PRODUCTION_JOURNAL_TITLE,
   type ProductionJournalFactView,
   productionEntryNewHref,
   productionJournalFactHref,
@@ -121,7 +122,7 @@ function Workspace({
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             <Link href={productionJournalHref({ month, currentMonth })} className={quietLinkClassName}>
               <IconList />
-              Журнал производства
+              {PRODUCTION_JOURNAL_TITLE}
             </Link>
             <Link href={productionEntryNewHref()} className={primaryButtonClassName}>
               <IconPlus />

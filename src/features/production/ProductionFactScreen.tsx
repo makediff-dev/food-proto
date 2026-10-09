@@ -231,7 +231,7 @@ function Workspace({
                     href={planningHref({ month: periodFrom, currentMonth })}
                     className="text-ink underline underline-offset-4 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                   >
-                    Добавьте категорию и товар в «Планировании»
+                    Добавьте категорию и товар во «Вводе плана»
                   </Link>
                   . План и факт строятся по товарам.
                 </>
@@ -242,7 +242,7 @@ function Workspace({
                     href={planningHref({ month: periodFrom, currentMonth })}
                     className="text-ink underline underline-offset-4 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                   >
-                    Добавьте товар в «Планировании»
+                    Добавьте товар во «Вводе плана»
                   </Link>
                   . План и факт строятся по товарам.
                 </>

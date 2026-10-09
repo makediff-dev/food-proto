@@ -1,5 +1,7 @@
 import type { SummaryLens } from '@/domain/summary';
 
+export const SUMMARY_SECTION_TITLE = 'Отчет общий';
+
 export function parseSummaryQuery(params: { from?: string; to?: string; month?: string; view?: string }): {
   from: string;
   to: string;

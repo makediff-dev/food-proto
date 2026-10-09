@@ -55,7 +55,7 @@ export function MovementPlanTable({
   return (
     <div className={expanded ? tableFrameExpandedClassName : tableFrameClassName}>
       <table className={tableClassName}>
-        <caption className="sr-only">Планирование движения готовой продукции</caption>
+        <caption className="sr-only">Ввод плана: движение готовой продукции</caption>
         <thead className={stickyHeadClassName}>
           <tr>
             <th

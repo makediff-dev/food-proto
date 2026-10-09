@@ -14,7 +14,7 @@ import { activeProducts } from '@/domain/products';
 import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { lastHorizonMonth } from '@/domain/summary';
 import { ProductionPlanTable } from '@/features/production/ProductionPlanTable';
-import { productionPlanHref } from '@/features/production/paths';
+import { PRODUCTION_PLAN_TITLE, productionPlanHref } from '@/features/production/paths';
 import { useProductionPlan } from '@/features/production/use-production-plan';
 import { FIELD_ERROR, monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { IconFullscreen, IconFullscreenExit, IconPlus } from '@/features/shell/Icons';
@@ -109,7 +109,7 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
   return (
     <>
       <PageFrame
-        title="Планируемое производство"
+        title={PRODUCTION_PLAN_TITLE}
         lede="План выпуска готовой продукции."
         full
         intro={
@@ -197,8 +197,8 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
           ) : (
             <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
               {categories.length === 0
-                ? 'Добавьте категорию и товар в «Планировании». План производства строится по товарам.'
-                : 'Добавьте товар в «Планировании». План производства строится по товарам.'}
+                ? 'Добавьте категорию и товар во «Вводе плана». План производства строится по товарам.'
+                : 'Добавьте товар во «Вводе плана». План производства строится по товарам.'}
             </p>
           )}
         </div>

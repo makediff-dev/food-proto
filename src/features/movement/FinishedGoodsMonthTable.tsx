@@ -61,7 +61,7 @@ export function FinishedGoodsMonthTable({
   return (
     <div className={expanded ? tableFrameExpandedClassName : tableFrameClassName}>
       <table className={tableClassName}>
-        <caption className="sr-only">Движение готовой продукции за месяц</caption>
+        <caption className="sr-only">Отчет общий: движение готовой продукции за месяц</caption>
         <thead className={stickyHeadClassName}>
           <tr>
             <th

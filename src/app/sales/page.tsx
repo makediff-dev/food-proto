@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 
-import { parseSalesFactQuery, SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
+import { parseSalesFactQuery, SALES_FACT_TITLE } from '@/features/sales-fact/paths';
 import { SalesFactScreen } from '@/features/sales-fact/SalesFactScreen';
 
 export const metadata: Metadata = {
-  title: SALES_SECTION_TITLE,
+  title: SALES_FACT_TITLE,
 };
 
 export default async function SalesFactPage({

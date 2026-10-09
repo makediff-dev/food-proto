@@ -1,8 +1,11 @@
+/** Block header in the sidebar; not a page link. */
 export const MOVEMENT_SECTION_TITLE = 'Движение готовой продукции';
 
-export const MOVEMENT_PLAN_TITLE = 'Планирование движения';
+export const MOVEMENT_SUMMARY_TITLE = 'Отчет общий';
 
-export const MOVEMENT_FACT_TITLE = 'Фактическое движение';
+export const MOVEMENT_FACT_TITLE = 'Отчет подневный';
+
+export const MOVEMENT_PLAN_TITLE = 'Ввод плана';
 
 export type FinishedGoodsFactView = 'day' | 'all';
 

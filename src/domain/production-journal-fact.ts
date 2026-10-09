@@ -38,7 +38,7 @@ export interface ProductionJournalFactTotals {
   averageCostExVat: number | null;
 }
 
-/** Строка группы как на «Продажах». Пустая рабочая категория тоже входит. */
+/** Строка группы как в «Отчете подневном». Пустая рабочая категория тоже входит. */
 export interface ProductionJournalFactGroup {
   categoryId: string;
   name: string;
@@ -54,7 +54,7 @@ export interface ProductionJournalFactDayView {
   totals: ProductionJournalFactTotals;
 }
 
-/** Товары сетки месяца: как на «Производстве». */
+/** Товары сетки месяца: как в «Отчете общем» производства. */
 export function productionJournalFactGridProducts(document: PrototypeDocument, month: string): Product[] {
   return productionFactGridProducts(document, month);
 }

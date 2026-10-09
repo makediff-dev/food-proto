@@ -1,8 +1,15 @@
 import type { SummaryLens } from '@/domain/summary';
 
-export const PRODUCTION_FACT_TITLE = 'Фактическое производство';
+/** Block header in the sidebar; not a page link. */
+export const PRODUCTION_SECTION_TITLE = 'Производство';
 
-export const PRODUCTION_JOURNAL_TITLE = 'Журнал производства';
+export const PRODUCTION_SUMMARY_TITLE = 'Отчет общий';
+
+export const PRODUCTION_FACT_TITLE = 'Отчет подневный';
+
+export const PRODUCTION_PLAN_TITLE = 'Ввод плана';
+
+export const PRODUCTION_JOURNAL_TITLE = 'Ввод производства';
 
 export const NEW_PRODUCTION_ENTRY_TITLE = 'Новая запись';
 

@@ -474,7 +474,7 @@ function headlineSide(totals: SummarySide | null, operatingExpenseExVat: number)
 /**
  * Верхний блок свода `Svod!D2:L8`.
  * Выручка и Т-проток — суммы по товарам, без вычета Factoring.
- * Операционные расходы — план в «Планировании», факт на сводке; без листа Operation Expense.
+ * Операционные расходы — план во «Вводе плана», факт в отчете общем; без листа Operation Expense.
  */
 export function summaryHeadline(
   planTotals: SummarySide | null,

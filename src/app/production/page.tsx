@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { ProductionFactScreen } from '@/features/production/ProductionFactScreen';
-import { parseProductionFactQuery } from '@/features/production/paths';
+import { PRODUCTION_SUMMARY_TITLE, parseProductionFactQuery } from '@/features/production/paths';
 
 export const metadata: Metadata = {
-  title: 'Производство',
+  title: PRODUCTION_SUMMARY_TITLE,
 };
 
 export default async function ProductionPage({

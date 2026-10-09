@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
+import { SALES_JOURNAL_TITLE } from '@/features/sales-fact/paths';
 import { SaleScreen } from '@/features/sales-fact/SaleScreen';
 
 export const metadata: Metadata = {
-  title: SALES_SECTION_TITLE,
+  title: SALES_JOURNAL_TITLE,
 };
 
 export default async function SalePage({ params }: { params: Promise<{ id: string }> }) {

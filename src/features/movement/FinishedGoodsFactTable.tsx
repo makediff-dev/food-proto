@@ -82,7 +82,7 @@ export function FinishedGoodsFactTable({
       }
     >
       <table className={tableClassName}>
-        <caption className="sr-only">Фактическое движение готовой продукции по дням</caption>
+        <caption className="sr-only">Отчет подневный: движение готовой продукции по дням</caption>
         <thead className={stickyHeadClassName}>
           <tr>
             <th
