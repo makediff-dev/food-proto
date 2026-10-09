@@ -68,9 +68,6 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
     if (rejection === 'pieces') {
       return 'Укажите значение целым числом штук.';
     }
-    if (rejection === 'coefficient') {
-      return 'Укажите коэффициент числом с двумя знаками после запятой.';
-    }
     if (rejection === 'month') {
       return 'Этот месяц выбрать нельзя.';
     }

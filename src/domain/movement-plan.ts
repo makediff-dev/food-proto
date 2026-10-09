@@ -6,16 +6,14 @@ import {
   type PrototypeDocument,
 } from '@/domain/document';
 import { closingStockPieces, finishedGoodsGridProducts, openingPiecesForProduct } from '@/domain/finished-goods';
-import { ratioRound } from '@/domain/money';
 import { periodGridCategories } from '@/domain/period-grid';
 import { productionEntryDayPieces } from '@/domain/production-journal-fact';
-import { productionPlanForMonth } from '@/domain/production-plan';
 import { monthDates, saleDayProduct } from '@/domain/sales-fact';
 import { planMonthOpen } from '@/domain/sales-plan';
 
-export type FinishedGoodsNormField = 'minPieces' | 'maxPieces' | 'coefficientHundredths';
+export type FinishedGoodsNormField = 'minPieces' | 'maxPieces';
 
-export type FinishedGoodsNormRejection = 'month' | 'closed' | 'product' | 'locked' | 'pieces' | 'coefficient';
+export type FinishedGoodsNormRejection = 'month' | 'closed' | 'product' | 'locked' | 'pieces';
 
 /** Показатели строки / итога планирования движения. */
 export interface MovementPlanTotals {
@@ -26,9 +24,6 @@ export interface MovementPlanTotals {
   belowMinPieces: number;
   aboveMaxPieces: number;
   recommendedPieces: number;
-  operativePlanPieces: number;
-  /** У группы и «Всего» пусто: коэффициент не суммируют. */
-  coefficientHundredths: number | null;
 }
 
 export interface MovementPlanRow extends MovementPlanTotals {
@@ -61,11 +56,10 @@ export function workingFinishedGoodsNorm(document: PrototypeDocument, month: str
   return finishedGoodsNormsList(document).find((item) => item.month === month) ?? null;
 }
 
-function emptyNormLine(): Pick<FinishedGoodsNormLine, 'minPieces' | 'maxPieces' | 'coefficientHundredths'> {
+function emptyNormLine(): Pick<FinishedGoodsNormLine, 'minPieces' | 'maxPieces'> {
   return {
     minPieces: 0,
     maxPieces: 0,
-    coefficientHundredths: 0,
   };
 }
 
@@ -74,7 +68,7 @@ export function normForProduct(
   document: PrototypeDocument,
   month: string,
   productId: string,
-): Pick<FinishedGoodsNormLine, 'minPieces' | 'maxPieces' | 'coefficientHundredths'> {
+): Pick<FinishedGoodsNormLine, 'minPieces' | 'maxPieces'> {
   const norm = workingFinishedGoodsNorm(document, month);
   const line = norm?.lines.find((item) => item.productId === productId);
   if (!line) {
@@ -83,7 +77,6 @@ export function normForProduct(
   return {
     minPieces: line.minPieces,
     maxPieces: line.maxPieces,
-    coefficientHundredths: line.coefficientHundredths,
   };
 }
 
@@ -127,25 +120,18 @@ export function stockPiecesForProduct(document: PrototypeDocument, month: string
   return closingStockPieces(opening, productionPieces, salesPieces);
 }
 
-export function operativePlanPiecesForProduct(document: PrototypeDocument, month: string, productId: string): number {
-  const plan = productionPlanForMonth(document, month);
-  return plan.lines.find((line) => line.productId === productId)?.volumePieces ?? 0;
-}
-
 /**
- * Отклонения и рекомендуемый объём как на `DGP!AH`–`AJ`.
- * Рекомендация = 0, если ниже минимума нет; иначе (макс − запас) × коэффициент.
+ * Отклонения и рекомендуемый объём.
+ * Рекомендация = 0, если ниже минимума нет; иначе максимум − запас.
  */
 export function movementPlanMetrics(
   stockPieces: number,
   minPieces: number,
   maxPieces: number,
-  coefficientHundredths: number,
 ): Pick<MovementPlanTotals, 'belowMinPieces' | 'aboveMaxPieces' | 'recommendedPieces'> {
   const belowMinPieces = stockPieces < minPieces ? stockPieces - minPieces : 0;
   const aboveMaxPieces = stockPieces > maxPieces ? stockPieces - maxPieces : 0;
-  const recommendedPieces =
-    belowMinPieces === 0 ? 0 : (ratioRound((maxPieces - stockPieces) * coefficientHundredths, 100) ?? 0);
+  const recommendedPieces = belowMinPieces === 0 ? 0 : maxPieces - stockPieces;
   return { belowMinPieces, aboveMaxPieces, recommendedPieces };
 }
 
@@ -153,7 +139,7 @@ export function movementPlanMetrics(
 export function recommendedVolumePieces(document: PrototypeDocument, month: string, productId: string): number {
   const norm = normForProduct(document, month, productId);
   const stock = stockPiecesForProduct(document, month, productId);
-  return movementPlanMetrics(stock, norm.minPieces, norm.maxPieces, norm.coefficientHundredths).recommendedPieces;
+  return movementPlanMetrics(stock, norm.minPieces, norm.maxPieces).recommendedPieces;
 }
 
 function emptyTotals(): MovementPlanTotals {
@@ -164,8 +150,6 @@ function emptyTotals(): MovementPlanTotals {
     belowMinPieces: 0,
     aboveMaxPieces: 0,
     recommendedPieces: 0,
-    operativePlanPieces: 0,
-    coefficientHundredths: null,
   };
 }
 
@@ -176,7 +160,6 @@ function sumRows(rows: readonly MovementPlanRow[]): MovementPlanTotals {
   let belowMinPieces = 0;
   let aboveMaxPieces = 0;
   let recommendedPieces = 0;
-  let operativePlanPieces = 0;
 
   for (const row of rows) {
     stockPieces += row.stockPieces;
@@ -185,7 +168,6 @@ function sumRows(rows: readonly MovementPlanRow[]): MovementPlanTotals {
     belowMinPieces += row.belowMinPieces;
     aboveMaxPieces += row.aboveMaxPieces;
     recommendedPieces += row.recommendedPieces;
-    operativePlanPieces += row.operativePlanPieces;
   }
 
   return {
@@ -195,15 +177,13 @@ function sumRows(rows: readonly MovementPlanRow[]): MovementPlanTotals {
     belowMinPieces,
     aboveMaxPieces,
     recommendedPieces,
-    operativePlanPieces,
-    coefficientHundredths: null,
   };
 }
 
 function buildRow(document: PrototypeDocument, month: string, product: Product): MovementPlanRow {
   const norm = normForProduct(document, month, product.id);
   const stockPieces = stockPiecesForProduct(document, month, product.id);
-  const metrics = movementPlanMetrics(stockPieces, norm.minPieces, norm.maxPieces, norm.coefficientHundredths);
+  const metrics = movementPlanMetrics(stockPieces, norm.minPieces, norm.maxPieces);
   return {
     productId: product.id,
     name: product.name,
@@ -214,8 +194,6 @@ function buildRow(document: PrototypeDocument, month: string, product: Product):
     belowMinPieces: metrics.belowMinPieces,
     aboveMaxPieces: metrics.aboveMaxPieces,
     recommendedPieces: metrics.recommendedPieces,
-    operativePlanPieces: operativePlanPiecesForProduct(document, month, product.id),
-    coefficientHundredths: norm.coefficientHundredths,
   };
 }
 
@@ -254,26 +232,18 @@ function isNormPieces(value: number): boolean {
   return Number.isSafeInteger(value);
 }
 
-function isCoefficientHundredths(value: number): boolean {
-  return Number.isSafeInteger(value);
-}
-
 export function setFinishedGoodsNormRejection(
   document: PrototypeDocument,
   month: string,
   productId: string,
-  field: FinishedGoodsNormField,
+  _field: FinishedGoodsNormField,
   value: number,
   today: Date,
 ): FinishedGoodsNormRejection | null {
   if (!isMonthKey(month) || !planMonthOpen(month, today)) {
     return month < '2000-01' || !isMonthKey(month) ? 'month' : 'closed';
   }
-  if (field === 'coefficientHundredths') {
-    if (!isCoefficientHundredths(value)) {
-      return 'coefficient';
-    }
-  } else if (!isNormPieces(value)) {
+  if (!isNormPieces(value)) {
     return 'pieces';
   }
   const product = document.products.find((item) => item.id === productId);

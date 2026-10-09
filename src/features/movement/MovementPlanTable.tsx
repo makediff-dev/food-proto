@@ -12,9 +12,7 @@ import { formatPieces } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   ColumnLabel,
-  Empty,
   editableCellClassName,
-  HundredthsCell,
   IntegerCell,
   stickyHeadClassName,
   TableNumber,
@@ -24,7 +22,7 @@ import {
   tableFrameExpandedClassName,
 } from '@/features/table';
 
-type ColumnKey = 'stock' | 'min' | 'max' | 'belowMin' | 'aboveMax' | 'recommended' | 'operativePlan' | 'coefficient';
+type ColumnKey = 'stock' | 'min' | 'max' | 'belowMin' | 'aboveMax' | 'recommended';
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: 'stock', label: 'Остаток на конец' },
@@ -33,11 +31,9 @@ const COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: 'belowMin', label: 'Ниже минимума' },
   { key: 'aboveMax', label: 'Выше максимума' },
   { key: 'recommended', label: 'Рекомендуемый объём' },
-  { key: 'operativePlan', label: 'Оперативный план' },
-  { key: 'coefficient', label: 'Поправочный коэффициент' },
 ];
 
-const EDITABLE_COLUMNS = new Set<ColumnKey>(['min', 'max', 'coefficient']);
+const EDITABLE_COLUMNS = new Set<ColumnKey>(['min', 'max']);
 
 export function MovementPlanTable({
   groups,
@@ -271,20 +267,6 @@ function RowCell({
       return <IntegerCell value={row.aboveMaxPieces} unit="шт" signed />;
     case 'recommended':
       return <TableNumber value={row.recommendedPieces}>{formatPieces(row.recommendedPieces)} шт</TableNumber>;
-    case 'operativePlan':
-      return <TableNumber value={row.operativePlanPieces}>{formatPieces(row.operativePlanPieces)} шт</TableNumber>;
-    case 'coefficient':
-      if (!editable) {
-        return <HundredthsCell value={row.coefficientHundredths} />;
-      }
-      return (
-        <HundredthsCell
-          label={`Поправочный коэффициент, ${row.name}`}
-          value={row.coefficientHundredths}
-          invalidMessage="Укажите коэффициент числом с двумя знаками после запятой."
-          onChange={(next) => onNormAction(row.productId, 'coefficientHundredths', next)}
-        />
-      );
   }
 }
 
@@ -302,12 +284,6 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: MovementPla
       return <IntegerCell value={totals.aboveMaxPieces} unit="шт" signed />;
     case 'recommended':
       return <TableNumber value={totals.recommendedPieces}>{formatPieces(totals.recommendedPieces)} шт</TableNumber>;
-    case 'operativePlan':
-      return (
-        <TableNumber value={totals.operativePlanPieces}>{formatPieces(totals.operativePlanPieces)} шт</TableNumber>
-      );
-    case 'coefficient':
-      return <Empty />;
   }
 }
 

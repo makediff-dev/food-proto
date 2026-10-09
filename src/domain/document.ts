@@ -162,7 +162,7 @@ export interface FinishedGoodsOpening {
   lines: FinishedGoodsOpeningLine[];
 }
 
-/** Строка норматива остатков готовой продукции. `DGP!AF`–`AL`. */
+/** Строка норматива остатков готовой продукции. `DGP!AF`–`AH`. */
 export interface FinishedGoodsNormLine {
   id: string;
   /** Конечный товар. Ссылка живёт и после удаления товара. */
@@ -171,11 +171,6 @@ export interface FinishedGoodsNormLine {
   minPieces: number;
   /** Нормативный максимум, шт. Может быть отрицательным. */
   maxPieces: number;
-  /**
-   * Поправочный коэффициент в сотых: 1,25 → 125.
-   * Может быть отрицательным.
-   */
-  coefficientHundredths: number;
 }
 
 /**
