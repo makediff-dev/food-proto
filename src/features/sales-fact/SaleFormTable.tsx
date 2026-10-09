@@ -482,12 +482,12 @@ function GridInput({
   );
 }
 
-/** Черновик строки из плановой цены, если она есть. */
-export function emptySaleLineDraft(planPriceWithVat = 0): SaleLineDraft {
+/** Пустой черновик строки продажи. */
+export function emptySaleLineDraft(): SaleLineDraft {
   return {
     id: `sale-line:${crypto.randomUUID()}`,
     pieces: '0',
-    price: planPriceWithVat > 0 ? formatMoneyDraft(planPriceWithVat) : '',
+    price: '',
     amount: formatMoneyDraft(0),
   };
 }

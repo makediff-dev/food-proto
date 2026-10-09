@@ -19,7 +19,7 @@ import {
   saleLineAmountWithVat,
   saleLinePriceWithVat,
 } from '@/domain/sales';
-import { monthKeyFromDate, salesPlanForMonth } from '@/domain/sales-plan';
+import { monthKeyFromDate } from '@/domain/sales-plan';
 import { planningHref } from '@/features/planning/paths';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { NEW_SALE_TITLE, SALES_JOURNAL_TITLE, salesJournalHref } from '@/features/sales-fact/paths';
@@ -49,16 +49,6 @@ function lineDraftFromSale(line: SaleLine): SaleLineDraft {
     price: price === null ? '' : formatMoneyDraft(price),
     amount: formatMoneyDraft(line.amountWithVat),
   };
-}
-
-function planPriceWithVat(document: PrototypeDocument, productId: string, month: string): number {
-  if (!productId || !month) {
-    return 0;
-  }
-
-  const plan = salesPlanForMonth(document, month);
-  const line = plan.lines.find((item) => item.productId === productId);
-  return line?.priceWithVat ?? 0;
 }
 
 function withAmountFromPrice(line: SaleLineDraft): SaleLineDraft {
@@ -112,7 +102,7 @@ function initialDrafts(
   const drafts: Record<string, SaleLineDraft> = {};
 
   for (const product of products) {
-    drafts[product.id] = byProduct.get(product.id) ?? emptySaleLineDraft(planPriceWithVat(document, product.id, month));
+    drafts[product.id] = byProduct.get(product.id) ?? emptySaleLineDraft();
   }
 
   return drafts;
@@ -204,12 +194,12 @@ function SaleForm({
         if (next[product.id]) {
           continue;
         }
-        next[product.id] = emptySaleLineDraft(planPriceWithVat(journal.document, product.id, month));
+        next[product.id] = emptySaleLineDraft();
         changed = true;
       }
       return changed ? next : current;
     });
-  }, [products, journal.document, month]);
+  }, [products]);
 
   function setLine(productId: string, field: SaleLineField, raw: string) {
     setDrafts((current) => {
