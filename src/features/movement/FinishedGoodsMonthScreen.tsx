@@ -4,24 +4,19 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 import { activeCategories } from '@/domain/categories';
-import { recommendedVolumePieces } from '@/domain/movement-plan';
-import {
-  missingProductionPlanProducts,
-  productionPlanMonthView,
-  workingProductionPlan,
-} from '@/domain/production-plan';
+import { finishedGoodsMonthView } from '@/domain/finished-goods';
 import { activeProducts } from '@/domain/products';
 import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { lastHorizonMonth } from '@/domain/summary';
-import { ProductionPlanTable } from '@/features/production/ProductionPlanTable';
-import { productionPlanHref } from '@/features/production/paths';
-import { useProductionPlan } from '@/features/production/use-production-plan';
-import { FIELD_ERROR, monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
-import { IconFullscreen, IconFullscreenExit, IconPlus } from '@/features/shell/Icons';
+import { FinishedGoodsMonthTable } from '@/features/movement/FinishedGoodsMonthTable';
+import { finishedGoodsMonthHref, MOVEMENT_SECTION_TITLE } from '@/features/movement/paths';
+import { useFinishedGoods } from '@/features/movement/use-finished-goods';
+import { monthFieldClassName } from '@/features/sales/fields';
+import { IconFullscreen, IconFullscreenExit } from '@/features/shell/Icons';
 import { MonthStep } from '@/features/shell/MonthStep';
 import { PageFrame } from '@/features/shell/PageFrame';
 
-export function ProductionPlanScreen({ month }: { month: string }) {
+export function FinishedGoodsMonthScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = resolveMonth(month, today);
@@ -30,29 +25,13 @@ export function ProductionPlanScreen({ month }: { month: string }) {
 }
 
 function Workspace({ month, currentMonth, today }: { month: string; currentMonth: string; today: Date }) {
-  const production = useProductionPlan();
+  const movement = useFinishedGoods();
   const router = useRouter();
   const [fullscreen, setFullscreen] = useState(false);
-  const [addError, setAddError] = useState<string | null>(null);
-  const storedPlan = workingProductionPlan(production.document, month);
-  const view = useMemo(() => productionPlanMonthView(production.document, month), [production.document, month]);
-  const planRows = useMemo(() => view.groups.flatMap((group) => group.rows), [view.groups]);
-  const recommendedByProduct = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const row of planRows) {
-      map.set(row.productId, recommendedVolumePieces(production.document, month, row.productId));
-    }
-    return map;
-  }, [production.document, month, planRows]);
-  const recommendedTotal = useMemo(
-    () => planRows.reduce((sum, row) => sum + (recommendedByProduct.get(row.productId) ?? 0), 0),
-    [planRows, recommendedByProduct],
-  );
-  const products = activeProducts(production.document);
-  const categories = activeCategories(production.document);
-  const planEditable = production.hydrated && products.length > 0;
-  const costEditable = production.hydrated;
-  const missing = planEditable && storedPlan ? missingProductionPlanProducts(production.document, storedPlan) : [];
+  const view = useMemo(() => finishedGoodsMonthView(movement.document, month), [movement.document, month]);
+  const products = activeProducts(movement.document);
+  const categories = activeCategories(movement.document);
+  const openingEditable = movement.hydrated && products.length > 0;
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
   const horizonEnd = lastHorizonMonth(today);
@@ -80,37 +59,16 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
   }, [tableExpanded]);
 
   function open(nextMonthKey: string) {
-    router.push(productionPlanHref({ month: nextMonthKey, currentMonth }), {
+    router.push(finishedGoodsMonthHref({ month: nextMonthKey, currentMonth }), {
       scroll: false,
     });
-  }
-
-  function addMissing() {
-    if (!storedPlan) {
-      return;
-    }
-
-    const lines = missing.map((product) => ({
-      id: `production-plan-line:${crypto.randomUUID()}`,
-      productId: product.id,
-    }));
-    const rejection = production.addMissingProduction(storedPlan.id, lines);
-    if (rejection === 'products') {
-      setAddError('В плане должны быть все рабочие товары.');
-    } else if (rejection === 'closed') {
-      setAddError('Этот план сейчас нельзя править.');
-    } else if (rejection) {
-      setAddError('Запись не найдена.');
-    } else {
-      setAddError(null);
-    }
   }
 
   return (
     <>
       <PageFrame
-        title="Планируемое производство"
-        lede="План выпуска готовой продукции."
+        title={MOVEMENT_SECTION_TITLE}
+        lede="Остатки на производстве, продажи и выпуск за месяц."
         full
         intro={
           <div className="w-full border border-line bg-sheet p-4">
@@ -146,59 +104,42 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
         }
       >
         <div className="flex flex-col gap-4">
-          {missing.length > 0 ? (
-            <div className="flex flex-col gap-3 border border-line bg-sheet p-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm leading-6 text-ink">В справочнике есть товары, которых нет в этом плане.</p>
-              <div className="flex flex-col gap-2 sm:items-end">
-                <button type="button" onClick={addMissing} className={`w-full sm:w-auto ${primaryButtonClassName}`}>
-                  <IconPlus />
-                  Добавить новые товары
-                </button>
-                {addError ? <p className="text-sm text-ink">{addError}</p> : null}
-              </div>
-            </div>
-          ) : null}
-
           {hasTable ? (
             <section
               className={tableExpanded ? 'fixed inset-0 z-50 bg-paper' : undefined}
-              aria-label={tableExpanded ? 'Таблица на весь экран' : 'Таблица плана производства'}
+              aria-label={tableExpanded ? 'Таблица на весь экран' : 'Таблица движения готовой продукции'}
             >
-              <ProductionPlanTable
+              <FinishedGoodsMonthTable
                 groups={view.groups}
                 totals={view.totals}
-                recommendedByProduct={recommendedByProduct}
-                recommendedTotal={recommendedTotal}
-                editable={planEditable}
-                costEditable={costEditable}
+                editable={openingEditable}
                 expanded={tableExpanded}
-                onVolumeAction={(lineId, volumePieces) => {
-                  const rejection = production.updateProductionVolume(month, lineId, volumePieces);
-                  if (rejection === 'volume') {
-                    return 'Укажите объём целым числом штук.';
+                onOpeningAction={(productId, pieces) => {
+                  const rejection = movement.setOpening(month, productId, pieces);
+                  if (rejection === 'pieces') {
+                    return 'Укажите остаток целым числом штук.';
                   }
                   if (rejection === 'month') {
                     return 'Этот месяц выбрать нельзя.';
                   }
                   if (rejection === 'closed') {
-                    return 'Этот план сейчас нельзя править.';
+                    return 'Этот месяц сейчас нельзя править.';
+                  }
+                  if (rejection === 'locked') {
+                    return 'Удалённый товар не меняется.';
                   }
                   if (rejection) {
                     return 'Запись не найдена.';
                   }
                   return null;
                 }}
-                onProductCostAction={(productId, unitCostWithVat) => {
-                  const rejection = production.updateProductCost(productId, unitCostWithVat);
-                  return rejection ? FIELD_ERROR[rejection] : null;
-                }}
               />
             </section>
           ) : (
             <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
               {categories.length === 0
-                ? 'Добавьте категорию и товар в «Планировании». План производства строится по товарам.'
-                : 'Добавьте товар в «Планировании». План производства строится по товарам.'}
+                ? 'Добавьте категорию и товар в «Планировании». Движение строится по товарам.'
+                : 'Добавьте товар в «Планировании». Движение строится по товарам.'}
             </p>
           )}
         </div>

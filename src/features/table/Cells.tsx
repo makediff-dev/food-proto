@@ -9,6 +9,8 @@ import {
   parseMoneyInput,
   parseNonNegativeInteger,
   parsePercentWhole,
+  parseSignedHundredths,
+  parseSignedInteger,
   sanitizeDraft,
 } from '@/features/table/format';
 import { StackedPair } from '@/features/table/StackedPair';
@@ -156,17 +158,67 @@ export function PercentCell({
   );
 }
 
+/** Число с двумя знаками после запятой, хранится в сотых (коэффициент). */
+export function HundredthsCell({
+  label = 'Число',
+  value,
+  signed = false,
+  sense = 'income',
+  invalidMessage = 'Укажите число с двумя знаками после запятой.',
+  onChange,
+}: {
+  label?: string;
+  value: number | null;
+  signed?: boolean;
+  sense?: VarianceSense;
+  invalidMessage?: string;
+  onChange?: CellCommit;
+}) {
+  if (value === null && !onChange) {
+    return <Empty />;
+  }
+
+  if (!onChange) {
+    if (value === null) {
+      return <Empty />;
+    }
+    return (
+      <TableNumber value={value} signed={signed} sense={sense}>
+        {formatMoneyDraft(value)}
+      </TableNumber>
+    );
+  }
+
+  return (
+    <EditableNumber
+      label={label}
+      value={value === null ? '' : formatMoneyDraft(value)}
+      inputMode="decimal"
+      invalidMessage={invalidMessage}
+      parse={parseSignedHundredths}
+      onChange={onChange}
+    />
+  );
+}
+
 /** Целое неотрицательное (объём, штуки). */
 export function IntegerCell({
   label = 'Число',
   value,
   unit,
+  signed = false,
+  sense = 'income',
+  allowNegative = false,
   invalidMessage = DEFAULT_INTEGER_ERROR,
   onChange,
 }: {
   label?: string;
   value: number | null;
   unit?: string;
+  signed?: boolean;
+  sense?: VarianceSense;
+  /** Разрешить отрицательный ввод (остаток на производстве). */
+  allowNegative?: boolean;
   invalidMessage?: string;
   onChange?: CellCommit;
 }) {
@@ -179,7 +231,11 @@ export function IntegerCell({
       return <Empty />;
     }
     const text = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(value);
-    return <TableNumber value={value}>{unit ? `${text} ${unit}` : text}</TableNumber>;
+    return (
+      <TableNumber value={value} signed={signed} sense={sense}>
+        {unit ? `${text} ${unit}` : text}
+      </TableNumber>
+    );
   }
 
   return (
@@ -189,7 +245,7 @@ export function IntegerCell({
       inputMode="numeric"
       unit={unit}
       invalidMessage={invalidMessage}
-      parse={parseNonNegativeInteger}
+      parse={allowNegative ? parseSignedInteger : parseNonNegativeInteger}
       onChange={onChange}
     />
   );

@@ -141,6 +141,55 @@ export interface MonthOperatingExpense {
   factExVat: number;
 }
 
+/** Строка остатка на начало месяца на производстве. `DGP!D`. */
+export interface FinishedGoodsOpeningLine {
+  id: string;
+  /** Конечный товар. Ссылка живёт и после удаления товара. */
+  productId: string;
+  /** Остаток на начало периода на произв-ве, шт. Может быть отрицательным. */
+  pieces: number;
+}
+
+/**
+ * Остатки на начало месяца на производстве.
+ * На один месяц — одна запись. Мягкого удаления нет: это не план.
+ * Стоимости и конец периода в документ не пишутся.
+ */
+export interface FinishedGoodsOpening {
+  id: string;
+  /** `ГГГГ-ММ`. */
+  month: string;
+  lines: FinishedGoodsOpeningLine[];
+}
+
+/** Строка норматива остатков готовой продукции. `DGP!AF`–`AL`. */
+export interface FinishedGoodsNormLine {
+  id: string;
+  /** Конечный товар. Ссылка живёт и после удаления товара. */
+  productId: string;
+  /** Нормативный минимум, шт. Может быть отрицательным. */
+  minPieces: number;
+  /** Нормативный максимум, шт. Может быть отрицательным. */
+  maxPieces: number;
+  /**
+   * Поправочный коэффициент в сотых: 1,25 → 125.
+   * Может быть отрицательным.
+   */
+  coefficientHundredths: number;
+}
+
+/**
+ * Нормативы остатков месяца для планирования движения.
+ * На один месяц — одна запись. Мягкого удаления нет.
+ * Отклонения и рекомендуемый объём в документ не пишутся.
+ */
+export interface FinishedGoodsNorm {
+  id: string;
+  /** `ГГГГ-ММ`. */
+  month: string;
+  lines: FinishedGoodsNormLine[];
+}
+
 /**
  * Единственный сохраняемый документ прототипа.
  * Предметные разделы добавляются полями сюда. Производные суммы сюда не писать.
@@ -154,6 +203,16 @@ export interface PrototypeDocument {
   sales: Sale[];
   productionEntries: ProductionEntry[];
   operatingExpenses: MonthOperatingExpense[];
+  /**
+   * Остатки на начало месяца на производстве.
+   * Старый документ без поля читается как пустой массив.
+   */
+  finishedGoodsOpenings: FinishedGoodsOpening[];
+  /**
+   * Нормативы остатков месяца.
+   * Старый документ без поля читается как пустой массив.
+   */
+  finishedGoodsNorms: FinishedGoodsNorm[];
 }
 
 /** Метка мягкого удаления, которую пишет экран через `Date.toISOString()`. */

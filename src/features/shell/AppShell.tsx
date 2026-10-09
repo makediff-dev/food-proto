@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { type ReactNode, useEffect, useState } from 'react';
 
 import { useDocumentStore } from '@/data/DocumentProvider';
+import { MOVEMENT_FACT_TITLE, MOVEMENT_PLAN_TITLE, MOVEMENT_SECTION_TITLE } from '@/features/movement/paths';
 import { PLANNING_SECTION_TITLE } from '@/features/planning/paths';
 import { SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
 import { IconMenu, IconUndo } from '@/features/shell/Icons';
@@ -24,6 +25,13 @@ const PRODUCTION_NAV = [
   { href: '/production/journal', label: 'Журнал производства' },
 ] as const;
 
+const MOVEMENT_SECTION_HREF = '/movement';
+
+const MOVEMENT_NAV = [
+  { href: '/movement/plan', label: MOVEMENT_PLAN_TITLE },
+  { href: '/movement/fact', label: MOVEMENT_FACT_TITLE },
+] as const;
+
 const QUESTIONS_HREF = '/questions';
 const QUESTIONS_LABEL = 'Вопросы';
 
@@ -37,6 +45,10 @@ function sectionIsCurrent(pathname: string, href: string): boolean {
 
 function productionSectionIsCurrent(pathname: string): boolean {
   return pathname === PRODUCTION_SECTION_HREF;
+}
+
+function movementSectionIsCurrent(pathname: string): boolean {
+  return pathname === MOVEMENT_SECTION_HREF;
 }
 
 function currentNavLabel(pathname: string): string | undefined {
@@ -53,6 +65,15 @@ function currentNavLabel(pathname: string): string | undefined {
     return PRODUCTION_SECTION_TITLE;
   }
 
+  const movementItem = MOVEMENT_NAV.find((item) => sectionIsCurrent(pathname, item.href));
+  if (movementItem) {
+    return movementItem.label;
+  }
+
+  if (movementSectionIsCurrent(pathname)) {
+    return MOVEMENT_SECTION_TITLE;
+  }
+
   return SECTIONS.find((section) => sectionIsCurrent(pathname, section.href))?.label;
 }
 
@@ -61,6 +82,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const currentLabel = currentNavLabel(pathname);
   const currentProduction = productionSectionIsCurrent(pathname);
+  const currentMovement = movementSectionIsCurrent(pathname);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -152,6 +174,45 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
             <div className="flex flex-col">
               {PRODUCTION_NAV.map((item) => {
+                const currentSection = sectionIsCurrent(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-current={currentSection ? 'page' : undefined}
+                    onClick={() => setMenuOpen(false)}
+                    className={`relative py-1 pr-3 pl-6 text-xs leading-5 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                      currentSection
+                        ? 'bg-sidebar-active text-white'
+                        : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    {currentSection ? (
+                      <span className="absolute inset-y-1 left-0 w-0.5 bg-mark" aria-hidden="true" />
+                    ) : null}
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <Link
+              href={MOVEMENT_SECTION_HREF}
+              aria-current={currentMovement ? 'page' : undefined}
+              onClick={() => setMenuOpen(false)}
+              className={`relative block px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                currentMovement
+                  ? 'bg-sidebar-active text-white'
+                  : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
+              }`}
+            >
+              {currentMovement ? <span className="absolute inset-y-2 left-0 w-0.5 bg-mark" aria-hidden="true" /> : null}
+              {MOVEMENT_SECTION_TITLE}
+            </Link>
+            <div className="flex flex-col">
+              {MOVEMENT_NAV.map((item) => {
                 const currentSection = sectionIsCurrent(pathname, item.href);
                 return (
                   <Link

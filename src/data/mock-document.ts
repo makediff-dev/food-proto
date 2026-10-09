@@ -134,6 +134,8 @@ export const mockDocument: PrototypeDocument = {
   sales: [],
   productionEntries: [],
   operatingExpenses: [],
+  finishedGoodsOpenings: [],
+  finishedGoodsNorms: [],
 };
 
 export function createMockDocument(): PrototypeDocument {
@@ -159,6 +161,14 @@ export function createMockDocument(): PrototypeDocument {
     })),
     operatingExpenses: mockDocument.operatingExpenses.map((item) => ({
       ...item,
+    })),
+    finishedGoodsOpenings: mockDocument.finishedGoodsOpenings.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    finishedGoodsNorms: mockDocument.finishedGoodsNorms.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
     })),
   };
 }

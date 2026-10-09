@@ -44,13 +44,55 @@ export function parseNonNegativeInteger(raw: string): number | null {
   return value;
 }
 
+/** Целое со знаком: остаток на производстве может быть отрицательным. */
+export function parseSignedInteger(raw: string): number | null {
+  const normalized = raw.trim().replace(/\s/g, '');
+  if (!/^-?\d+$/.test(normalized)) {
+    return null;
+  }
+
+  const value = Number(normalized);
+  if (!Number.isSafeInteger(value)) {
+    return null;
+  }
+
+  return value;
+}
+
+/** Число с двумя знаками после запятой в сотых: 1,25 → 125. Знак допускается. */
+export function parseSignedHundredths(raw: string): number | null {
+  const normalized = raw.trim().replace(/\s/g, '').replace(',', '.');
+  if (!/^-?\d+(\.\d+)?$/.test(normalized)) {
+    return null;
+  }
+
+  const value = Number(normalized);
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+
+  const hundredths = Math.round(value * 100);
+  if (!Number.isSafeInteger(hundredths)) {
+    return null;
+  }
+
+  return hundredths;
+}
+
 export function sanitizeDraft(raw: string, mode: 'decimal' | 'numeric' = 'decimal'): string {
   let result = '';
   let hasComma = false;
+  let hasSign = false;
 
   for (const char of raw) {
     if (char >= '0' && char <= '9') {
       result += char;
+      continue;
+    }
+
+    if (char === '-' && !hasSign && result === '') {
+      result += '-';
+      hasSign = true;
       continue;
     }
 

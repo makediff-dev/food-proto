@@ -2,14 +2,11 @@
 
 import { useState } from 'react';
 
-import { costWithVat } from '@/domain/cost';
-import type { ProductionPlanGroup, ProductionPlanRow, ProductionPlanTotals } from '@/domain/production-plan';
-import { FIELD_ERROR } from '@/features/sales/fields';
+import type { FinishedGoodsGroup, FinishedGoodsRow, FinishedGoodsTotals } from '@/domain/finished-goods';
 import { formatPieces } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   ColumnLabel,
-  Empty,
   editableCellClassName,
   IntegerCell,
   keepWithNext,
@@ -23,40 +20,48 @@ import {
   VatMoneyCell,
 } from '@/features/table';
 
-type ColumnKey = 'unitCost' | 'recommended' | 'volume' | 'volumeCost';
+type ColumnKey =
+  | 'opening'
+  | 'planPrice'
+  | 'openingValue'
+  | 'salesPieces'
+  | 'salesRevenue'
+  | 'productionPieces'
+  | 'productionValue'
+  | 'closing'
+  | 'factPrice'
+  | 'closingValue';
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: 'unitCost', label: 'Себест' },
-  { key: 'recommended', label: 'Рекомендуемый объём' },
-  { key: 'volume', label: 'Объём' },
-  { key: 'volumeCost', label: 'Себест объёма' },
+  { key: 'opening', label: 'Остаток на начало' },
+  { key: 'planPrice', label: 'Цена план' },
+  { key: 'openingValue', label: 'Стоимость остатка на начало' },
+  { key: 'salesPieces', label: 'Объём продаж' },
+  { key: 'salesRevenue', label: 'Стоимость продаж' },
+  { key: 'productionPieces', label: 'Объём произв-ва' },
+  { key: 'productionValue', label: 'Стоимость произв-ва' },
+  { key: 'closing', label: 'Остаток на конец' },
+  { key: 'factPrice', label: 'Цена факт' },
+  { key: 'closingValue', label: 'Стоимость остатка на конец' },
 ];
 
-export function ProductionPlanTable({
+export function FinishedGoodsMonthTable({
   groups,
   totals,
-  recommendedByProduct,
-  recommendedTotal,
   editable,
-  costEditable,
   expanded = false,
-  onVolumeAction,
-  onProductCostAction,
+  onOpeningAction,
 }: {
-  groups: ProductionPlanGroup[];
-  totals: ProductionPlanTotals;
-  recommendedByProduct: ReadonlyMap<string, number>;
-  recommendedTotal: number;
+  groups: FinishedGoodsGroup[];
+  totals: FinishedGoodsTotals;
   editable: boolean;
-  costEditable: boolean;
   expanded?: boolean;
-  onVolumeAction: (lineId: string, volumePieces: number) => string | null;
-  onProductCostAction: (productId: string, unitCostWithVat: number) => string | null;
+  onOpeningAction: (productId: string, pieces: number) => string | null;
 }) {
   return (
     <div className={expanded ? tableFrameExpandedClassName : tableFrameClassName}>
       <table className={tableClassName}>
-        <caption className="sr-only">План производства по товарам</caption>
+        <caption className="sr-only">Движение готовой продукции за месяц</caption>
         <thead className={stickyHeadClassName}>
           <tr>
             <th
@@ -78,15 +83,7 @@ export function ProductionPlanTable({
         </thead>
         <tbody>
           {groups.map((group) => (
-            <CategoryBlock
-              key={group.categoryId}
-              group={group}
-              recommendedByProduct={recommendedByProduct}
-              editable={editable}
-              costEditable={costEditable}
-              onVolumeAction={onVolumeAction}
-              onProductCostAction={onProductCostAction}
-            />
+            <CategoryBlock key={group.categoryId} group={group} editable={editable} onOpeningAction={onOpeningAction} />
           ))}
           <tr>
             <th
@@ -100,7 +97,7 @@ export function ProductionPlanTable({
                 key={`total:${column.key}`}
                 className={`w-px border-t-[1.5px] border-t-muted border-b border-b-line ${tableBorder.rightThin} bg-paper px-1.5 py-2 text-right align-middle last:border-r-0`}
               >
-                <TotalsCell column={column.key} totals={totals} recommendedPieces={recommendedTotal} />
+                <TotalsCell column={column.key} totals={totals} />
               </td>
             ))}
           </tr>
@@ -112,22 +109,15 @@ export function ProductionPlanTable({
 
 function CategoryBlock({
   group,
-  recommendedByProduct,
   editable,
-  costEditable,
-  onVolumeAction,
-  onProductCostAction,
+  onOpeningAction,
 }: {
-  group: ProductionPlanGroup;
-  recommendedByProduct: ReadonlyMap<string, number>;
+  group: FinishedGoodsGroup;
   editable: boolean;
-  costEditable: boolean;
-  onVolumeAction: (lineId: string, volumePieces: number) => string | null;
-  onProductCostAction: (productId: string, unitCostWithVat: number) => string | null;
+  onOpeningAction: (productId: string, pieces: number) => string | null;
 }) {
   const [open, setOpen] = useState(false);
   const productCount = group.rows.length;
-  const recommendedGroup = group.rows.reduce((sum, row) => sum + (recommendedByProduct.get(row.productId) ?? 0), 0);
 
   return (
     <>
@@ -160,21 +150,13 @@ function CategoryBlock({
             key={`group:${column.key}`}
             className={`w-px border-b border-b-line ${tableBorder.rightThin} bg-paper px-1.5 py-2 text-right align-middle last:border-r-0`}
           >
-            <TotalsCell column={column.key} totals={group.totals} recommendedPieces={recommendedGroup} />
+            <TotalsCell column={column.key} totals={group.totals} />
           </td>
         ))}
       </tr>
       {open
         ? group.rows.map((row) => (
-            <ProductRow
-              key={row.productId}
-              row={row}
-              recommendedPieces={recommendedByProduct.get(row.productId) ?? 0}
-              editable={editable}
-              costEditable={costEditable}
-              onVolumeAction={onVolumeAction}
-              onProductCostAction={onProductCostAction}
-            />
+            <ProductRow key={row.productId} row={row} editable={editable} onOpeningAction={onOpeningAction} />
           ))
         : null}
     </>
@@ -183,19 +165,15 @@ function CategoryBlock({
 
 function ProductRow({
   row,
-  recommendedPieces,
   editable,
-  costEditable,
-  onVolumeAction,
-  onProductCostAction,
+  onOpeningAction,
 }: {
-  row: ProductionPlanRow;
-  recommendedPieces: number;
+  row: FinishedGoodsRow;
   editable: boolean;
-  costEditable: boolean;
-  onVolumeAction: (lineId: string, volumePieces: number) => string | null;
-  onProductCostAction: (productId: string, unitCostWithVat: number) => string | null;
+  onOpeningAction: (productId: string, pieces: number) => string | null;
 }) {
+  const canEditOpening = editable && !row.deleted;
+
   return (
     <tr>
       <th
@@ -208,14 +186,12 @@ function ProductRow({
         </div>
       </th>
       {COLUMNS.map((column) => {
-        const canEdit =
-          (editable && row.planLineId !== null && column.key === 'volume') ||
-          (costEditable && column.key === 'unitCost');
+        const canEdit = canEditOpening && column.key === 'opening';
         return (
           <td
             key={`row:${column.key}`}
             className={`w-px border-b border-b-line ${tableBorder.rightThin} px-1.5 py-2 text-right align-middle last:border-r-0 ${
-              canEdit && column.key === 'volume' ? editableCellClassName : ''
+              canEdit ? editableCellClassName : ''
             }`}
             onClick={(event) => {
               if (!canEdit) {
@@ -245,15 +221,7 @@ function ProductRow({
               }
             }}
           >
-            <RowCell
-              column={column.key}
-              row={row}
-              recommendedPieces={recommendedPieces}
-              editable={editable}
-              costEditable={costEditable}
-              onVolumeAction={onVolumeAction}
-              onProductCostAction={onProductCostAction}
-            />
+            <RowCell column={column.key} row={row} editable={canEditOpening} onOpeningAction={onOpeningAction} />
           </td>
         );
       })}
@@ -264,99 +232,78 @@ function ProductRow({
 function RowCell({
   column,
   row,
-  recommendedPieces,
   editable,
-  costEditable,
-  onVolumeAction,
-  onProductCostAction,
+  onOpeningAction,
 }: {
   column: ColumnKey;
-  row: ProductionPlanRow;
-  recommendedPieces: number;
+  row: FinishedGoodsRow;
   editable: boolean;
-  costEditable: boolean;
-  onVolumeAction: (lineId: string, volumePieces: number) => string | null;
-  onProductCostAction: (productId: string, unitCostWithVat: number) => string | null;
-}) {
-  if (column === 'unitCost') {
-    const cost = row.metrics.unitCost;
-    if (!costEditable || !cost) {
-      return cost ? <VatMoneyCell withVat={cost.withVat} exVat={cost.exVat} /> : <Empty />;
-    }
-
-    return (
-      <VatMoneyCell
-        label={`Себестоимость, ${row.name}`}
-        withVat={cost.withVat}
-        exVat={cost.exVat}
-        invalidMessage={FIELD_ERROR.cost}
-        onChangeWithVat={(next) => onProductCostAction(row.productId, next)}
-        onChangeExVat={(next) => {
-          const withVat = costWithVat(next, row.vatPercent);
-          if (withVat === null) {
-            return FIELD_ERROR.cost;
-          }
-          return onProductCostAction(row.productId, withVat);
-        }}
-      />
-    );
-  }
-
-  if (column === 'recommended') {
-    return <TableNumber value={recommendedPieces}>{formatPieces(recommendedPieces)} шт</TableNumber>;
-  }
-
-  if (column === 'volume') {
-    if (!editable || row.planLineId === null || row.volumePieces === null) {
-      return row.volumePieces === null ? (
-        <Empty />
-      ) : (
-        <TableNumber value={row.volumePieces}>{formatPieces(row.volumePieces)} шт</TableNumber>
-      );
-    }
-
-    return (
-      <IntegerCell
-        label={`Объём выпуска, ${row.name}`}
-        value={row.volumePieces}
-        unit="шт"
-        invalidMessage="Укажите объём целым числом штук."
-        onChange={(next) => onVolumeAction(row.planLineId ?? '', next)}
-      />
-    );
-  }
-
-  if (row.metrics.volumeCostWithVat === null || row.metrics.volumeCostExVat === null) {
-    return <Empty />;
-  }
-
-  return <VatMoneyCell withVat={row.metrics.volumeCostWithVat} exVat={row.metrics.volumeCostExVat} />;
-}
-
-function TotalsCell({
-  column,
-  totals,
-  recommendedPieces,
-}: {
-  column: ColumnKey;
-  totals: ProductionPlanTotals;
-  recommendedPieces: number;
+  onOpeningAction: (productId: string, pieces: number) => string | null;
 }) {
   switch (column) {
-    case 'unitCost':
-      if (!totals.costComplete) {
+    case 'opening':
+      if (!editable) {
+        return <TableNumber value={row.openingPieces}>{formatPieces(row.openingPieces)} шт</TableNumber>;
+      }
+      return (
+        <IntegerCell
+          label={`Остаток на начало, ${row.name}`}
+          value={row.openingPieces}
+          unit="шт"
+          allowNegative
+          invalidMessage="Укажите остаток целым числом штук."
+          onChange={(next) => onOpeningAction(row.productId, next)}
+        />
+      );
+    case 'planPrice':
+      return <VatMoneyCell withVat={row.planPriceWithVat} exVat={row.planPriceExVat} />;
+    case 'openingValue':
+      return <VatMoneyCell withVat={row.openingValueWithVat} exVat={row.openingValueExVat} />;
+    case 'salesPieces':
+      return <TableNumber value={row.salesPieces}>{formatPieces(row.salesPieces)} шт</TableNumber>;
+    case 'salesRevenue':
+      if (!row.revenueComplete) {
         return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
       }
-      return <VatMoneyCell withVat={totals.averageCostWithVat} exVat={totals.averageCostExVat} />;
-    case 'recommended':
-      return <TableNumber value={recommendedPieces}>{formatPieces(recommendedPieces)} шт</TableNumber>;
-    case 'volume':
-      return <TableNumber value={totals.volumePieces}>{formatPieces(totals.volumePieces)} шт</TableNumber>;
-    case 'volumeCost':
-      if (!totals.costComplete) {
+      return <VatMoneyCell withVat={row.salesRevenueWithVat} exVat={row.salesRevenueExVat} />;
+    case 'productionPieces':
+      return <TableNumber value={row.productionPieces}>{formatPieces(row.productionPieces)} шт</TableNumber>;
+    case 'productionValue':
+      return <VatMoneyCell withVat={row.productionValueWithVat} exVat={row.productionValueExVat} />;
+    case 'closing':
+      return <IntegerCell value={row.closingPieces} unit="шт" signed />;
+    case 'factPrice':
+      return <VatMoneyCell withVat={row.factPriceWithVat} exVat={row.factPriceExVat} />;
+    case 'closingValue':
+      return <VatMoneyCell withVat={row.closingValueWithVat} exVat={row.closingValueExVat} signed />;
+  }
+}
+
+function TotalsCell({ column, totals }: { column: ColumnKey; totals: FinishedGoodsTotals }) {
+  switch (column) {
+    case 'opening':
+      return <TableNumber value={totals.openingPieces}>{formatPieces(totals.openingPieces)} шт</TableNumber>;
+    case 'planPrice':
+      return <VatMoneyCell withVat={totals.planPriceWithVat} exVat={totals.planPriceExVat} />;
+    case 'openingValue':
+      return <VatMoneyCell withVat={totals.openingValueWithVat} exVat={totals.openingValueExVat} />;
+    case 'salesPieces':
+      return <TableNumber value={totals.salesPieces}>{formatPieces(totals.salesPieces)} шт</TableNumber>;
+    case 'salesRevenue':
+      if (!totals.revenueComplete) {
         return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
       }
-      return <VatMoneyCell withVat={totals.volumeCostWithVat} exVat={totals.volumeCostExVat} />;
+      return <VatMoneyCell withVat={totals.salesRevenueWithVat} exVat={totals.salesRevenueExVat} />;
+    case 'productionPieces':
+      return <TableNumber value={totals.productionPieces}>{formatPieces(totals.productionPieces)} шт</TableNumber>;
+    case 'productionValue':
+      return <VatMoneyCell withVat={totals.productionValueWithVat} exVat={totals.productionValueExVat} />;
+    case 'closing':
+      return <IntegerCell value={totals.closingPieces} unit="шт" signed />;
+    case 'factPrice':
+      return <VatMoneyCell withVat={totals.factPriceWithVat} exVat={totals.factPriceExVat} />;
+    case 'closingValue':
+      return <VatMoneyCell withVat={totals.closingValueWithVat} exVat={totals.closingValueExVat} signed />;
   }
 }
 

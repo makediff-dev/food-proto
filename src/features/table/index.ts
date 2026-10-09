@@ -1,5 +1,6 @@
 export {
   Empty,
+  HundredthsCell,
   IntegerCell,
   MoneyAmount,
   MoneyCell,
