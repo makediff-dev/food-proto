@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 36 as const;
+export const SCHEMA_VERSION = 39 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -18,14 +18,11 @@ export interface DeletableRecord {
 /** Категория ассортимента. Строка группы на `Svod`. */
 export type ProductCategory = DeletableRecord;
 
-/** Шесть категорий ритейла из `docs/domain.md`. Мок; на экране их правят. */
+/** Категории мока, в которых есть товары. На экране их правят. */
 export const PRODUCT_CATEGORIES: ProductCategory[] = [
   { id: 'category-salads', name: 'Салаты', deletedAt: null },
   { id: 'category-hot', name: 'Горячие блюда', deletedAt: null },
   { id: 'category-rolls', name: 'Роллы и сэндвичи', deletedAt: null },
-  { id: 'category-breakfast', name: 'Завтраки', deletedAt: null },
-  { id: 'category-desserts', name: 'Десерты и выпечка', deletedAt: null },
-  { id: 'category-semifinished', name: 'Полуфабрикаты', deletedAt: null },
 ];
 
 export function catalogCategories(): ProductCategory[] {
