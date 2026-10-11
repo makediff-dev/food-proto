@@ -12,15 +12,24 @@ import type { SummaryLens } from '@/domain/summary';
 import { formatPieces } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
+  blockCornerClassName,
+  blockHeadingClassName,
   ColumnLabel,
+  categoryBandClassName,
+  categoryNameClassName,
+  columnHeadingClassName,
   keepWithNext,
   Muted,
+  nameHeadingClassName,
+  ProductIndex,
   stickyHeadClassName,
   TableNumber,
   tableBorder,
   tableClassName,
   tableFrameClassName,
   tableFrameExpandedClassName,
+  totalNameClassName,
+  totalValueClassName,
   VatMoneyCell,
 } from '@/features/table';
 
@@ -75,16 +84,13 @@ export function ProductionFactTable({
         <caption className="sr-only">{caption}</caption>
         <thead className={stickyHeadClassName}>
           <tr>
-            <th className={`sticky left-0 z-40 ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper`} />
+            <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             <SectionHeading label={planHeader} />
             <SectionHeading label={factIsForecast ? 'Фактические показатели (прогноз)' : 'Фактические показатели'} />
             <SectionHeading label="Отклонение" last />
           </tr>
           <tr>
-            <th
-              scope="col"
-              className={`sticky left-0 z-40 w-px max-w-max whitespace-nowrap ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-muted`}
-            >
+            <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               Товар
             </th>
             <ColumnHeadings kind="plan" />
@@ -97,10 +103,7 @@ export function ProductionFactTable({
             <CategoryBlock key={group.categoryId} group={group} />
           ))}
           <tr>
-            <th
-              scope="row"
-              className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-t-[1.5px] border-t-muted border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink"
-            >
+            <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
               Всего
             </th>
             <SideCells kind="plan" side={plan} total />
@@ -114,7 +117,7 @@ export function ProductionFactTable({
 }
 
 function CategoryBlock({ group }: { group: ProductionFactGroup }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const productCount = group.rows.length;
 
   return (
@@ -122,7 +125,7 @@ function CategoryBlock({ group }: { group: ProductionFactGroup }) {
       <tr>
         <th
           scope="row"
-          className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink"
+          className={`sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted px-3 py-2 text-left align-middle font-normal text-ink ${categoryBandClassName}`}
         >
           <div className="flex items-center gap-2">
             <button
@@ -137,7 +140,7 @@ function CategoryBlock({ group }: { group: ProductionFactGroup }) {
             >
               {open ? <IconChevronDown /> : <IconChevronRight />}
             </button>
-            <span className="flex h-8 min-w-max flex-1 items-center text-sm font-semibold leading-none text-ink">
+            <span className={categoryNameClassName}>
               {group.name} ({productCount})
             </span>
             {group.deleted ? <span className="text-sm text-muted">(архив)</span> : null}
@@ -147,19 +150,20 @@ function CategoryBlock({ group }: { group: ProductionFactGroup }) {
         <SideCells kind="fact" side={group.fact} />
         <VarianceCells variance={group.variance} />
       </tr>
-      {open ? group.rows.map((row) => <ProductRow key={row.productId} row={row} />) : null}
+      {open ? group.rows.map((row, index) => <ProductRow key={row.productId} row={row} index={index + 1} />) : null}
     </>
   );
 }
 
-function ProductRow({ row }: { row: ProductionFactRow }) {
+function ProductRow({ row, index }: { row: ProductionFactRow; index: number }) {
   return (
     <tr>
       <th
         scope="row"
-        className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 pl-8 text-left align-middle font-normal"
+        className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle font-normal"
       >
         <div className="flex items-center gap-2">
+          <ProductIndex index={index} />
           <span className="flex h-8 min-w-max flex-1 items-center text-sm leading-none text-ink">{row.name}</span>
           {row.deleted ? <span className="text-sm text-muted">(архив)</span> : null}
         </div>
@@ -176,7 +180,7 @@ function SectionHeading({ label, last = false }: { label: string; last?: boolean
     <th
       colSpan={COLUMNS.length}
       scope="colgroup"
-      className={`${tableBorder.bottomThin} ${last ? '' : tableBorder.rightThick} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink`}
+      className={`${blockHeadingClassName} ${last ? '' : tableBorder.rightThick}`}
     >
       {keepWithNext(label)}
     </th>
@@ -188,7 +192,7 @@ function ColumnHeadings({ kind }: { kind: SectionKind }) {
     <th
       key={`${kind}:${column.key}`}
       scope="col"
-      className={`w-px whitespace-normal border-b border-b-line ${sectionRightClass(kind, column.key)} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
+      className={`${columnHeadingClassName} last:border-r-0 ${sectionRightClass(kind, column.key)}`}
     >
       <ColumnLabel label={column.label} />
     </th>
@@ -249,6 +253,7 @@ function ProductVarianceCells({ row }: { row: ProductionFactRow }) {
         <Muted>{keepWithNext('не по всем товарам')}</Muted>
       ) : (
         <VatMoneyCell
+          whole
           signed
           sense="cost"
           withVat={row.variance.volumeCostWithVat}
@@ -272,7 +277,7 @@ function SideValue({ column, side }: { column: ColumnKey; side: ProductionFactSi
     return <VatMoneyCell withVat={side.averageCostWithVat} exVat={side.averageCostExVat} />;
   }
 
-  return <VatMoneyCell withVat={side.volumeCostWithVat} exVat={side.volumeCostExVat} />;
+  return <VatMoneyCell whole withVat={side.volumeCostWithVat} exVat={side.volumeCostExVat} />;
 }
 
 function VarianceValue({ column, variance }: { column: ColumnKey; variance: ProductionFactVariance }) {
@@ -292,7 +297,9 @@ function VarianceValue({ column, variance }: { column: ColumnKey; variance: Prod
     return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
   }
 
-  return <VatMoneyCell signed sense="cost" withVat={variance.volumeCostWithVat} exVat={variance.volumeCostExVat} />;
+  return (
+    <VatMoneyCell whole signed sense="cost" withVat={variance.volumeCostWithVat} exVat={variance.volumeCostExVat} />
+  );
 }
 
 function Pieces({ value, signed = false }: { value: number; signed?: boolean }) {
@@ -316,12 +323,15 @@ function MetricCell({
   sheet?: boolean;
   children: ReactNode;
 }) {
-  const bg = sheet ? 'bg-sheet' : 'bg-paper';
-  const top = total ? 'border-t-[1.5px] border-t-muted' : '';
+  const tone = total
+    ? totalValueClassName
+    : sheet
+      ? 'border-b border-b-line bg-sheet'
+      : `border-b border-b-line ${categoryBandClassName}`;
 
   return (
     <td
-      className={`w-px ${top} border-b border-b-line ${sectionRightClass(kind, column)} ${bg} px-1.5 py-2 text-right align-middle last:border-r-0`}
+      className={`w-px px-1.5 py-2 text-right align-middle last:border-r-0 ${tone} ${sectionRightClass(kind, column)}`}
     >
       {children}
     </td>

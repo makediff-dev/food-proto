@@ -56,14 +56,17 @@ export function MoneyAmount({
   amount,
   signed = false,
   sense = 'income',
+  whole = false,
 }: {
   amount: number;
   signed?: boolean;
   sense?: VarianceSense;
+  /** Выручка, Т-проток и себестоимость объёма — целые рубли. */
+  whole?: boolean;
 }) {
   return (
     <TableNumber value={amount} signed={signed} sense={sense}>
-      {formatRubles(amount, true)}
+      {formatRubles(amount, true, whole ? 0 : 2)}
     </TableNumber>
   );
 }
@@ -78,6 +81,7 @@ export function MoneyCell({
   parse = parseMoneyInput,
   inputClassName = `${gridFieldClassName} text-ink`,
   unitClassName = 'shrink-0 text-sm text-ink',
+  whole = false,
   onChange,
 }: {
   label?: string;
@@ -88,6 +92,8 @@ export function MoneyCell({
   parse?: (raw: string) => number | null;
   inputClassName?: string;
   unitClassName?: string;
+  /** Выручка, Т-проток и себестоимость объёма — целые рубли. */
+  whole?: boolean;
   onChange?: CellCommit;
 }) {
   if (value === null && !onChange) {
@@ -95,7 +101,7 @@ export function MoneyCell({
   }
 
   if (!onChange) {
-    return <MoneyAmount amount={value ?? 0} signed={signed} sense={sense} />;
+    return <MoneyAmount amount={value ?? 0} signed={signed} sense={sense} whole={whole} />;
   }
 
   return (
@@ -119,6 +125,7 @@ export function PercentCell({
   value,
   scale = 'whole',
   signed = false,
+  fractionDigits = 2,
   invalidMessage = DEFAULT_PERCENT_ERROR,
   onChange,
 }: {
@@ -126,6 +133,8 @@ export function PercentCell({
   value: number | null;
   scale?: 'whole' | 'hundredths';
   signed?: boolean;
+  /** Знаков после запятой, когда `scale` — сотые. Рентабельность — один. */
+  fractionDigits?: 1 | 2;
   invalidMessage?: string;
   onChange?: CellCommit;
 }) {
@@ -137,7 +146,7 @@ export function PercentCell({
     if (value === null) {
       return <Empty />;
     }
-    const text = scale === 'hundredths' ? formatPercentHundredths(value) : `${value} %`;
+    const text = scale === 'hundredths' ? formatPercentHundredths(value, fractionDigits) : `${value} %`;
     return (
       <TableNumber value={value} signed={signed}>
         {text}
@@ -262,6 +271,7 @@ export function VatMoneyCell({
   signed = false,
   sense = 'income',
   invalidMessage = DEFAULT_MONEY_ERROR,
+  whole = false,
   onChangeWithVat,
   onChangeExVat,
 }: {
@@ -271,6 +281,8 @@ export function VatMoneyCell({
   signed?: boolean;
   sense?: VarianceSense;
   invalidMessage?: string;
+  /** Выручка и себестоимость объёма — целые рубли. */
+  whole?: boolean;
   onChangeWithVat?: CellCommit;
   onChangeExVat?: CellCommit;
 }) {
@@ -291,6 +303,7 @@ export function VatMoneyCell({
           signed={signed}
           sense={sense}
           invalidMessage={invalidMessage}
+          whole={whole}
           onChange={onChangeWithVat}
         />
       }
@@ -301,6 +314,7 @@ export function VatMoneyCell({
           signed={signed}
           sense={sense}
           invalidMessage={invalidMessage}
+          whole={whole}
           onChange={onChangeExVat}
         />
       }

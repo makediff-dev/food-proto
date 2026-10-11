@@ -2,18 +2,25 @@
 
 import type { SummaryHeadline as Headline, OperatingExpenseSide, SummaryLens } from '@/domain/summary';
 import { OPERATING_EXPENSE_ERROR, parseOperatingExpense } from '@/features/sales/text';
-import { editableCellClassName, MoneyAmount, MoneyCell, PercentCell, tableBorder } from '@/features/table';
+import {
+  ColumnLabel,
+  columnDividerClassName,
+  columnHeadingClassName,
+  editableCellClassName,
+  MoneyAmount,
+  MoneyCell,
+  nameHeadingClassName,
+  PercentCell,
+  tableClassName,
+  tableFrameClassName,
+} from '@/features/table';
 
-const labelHeadClassName = `${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper px-2 py-1.5 text-center align-middle font-normal text-muted`;
+const valueHeadClassName = `${columnHeadingClassName} ${columnDividerClassName}`;
 
-const valueHeadClassName = `${tableBorder.bottomThin} ${tableBorder.rightThin} bg-paper px-1.5 py-1.5 text-center align-middle font-normal text-muted last:border-r-0`;
+const labelCellClassName =
+  'sticky left-0 z-10 whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle text-sm font-normal text-ink';
 
-const labelCellClassName = `${tableBorder.bottomThin} ${tableBorder.rightThick} px-2 py-1.5 text-left align-middle font-normal`;
-
-const valueCellClassName = `${tableBorder.bottomThin} ${tableBorder.rightThin} px-1.5 py-1.5 text-right align-middle last:border-r-0`;
-
-const headlineFieldClassName =
-  'w-full min-w-0 cursor-text appearance-none border-0 bg-transparent p-0 font-[inherit] text-right text-[11px] leading-tight text-ink shadow-none outline-none';
+const valueCellClassName = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
 
 type HeadlineRowId = 'revenue' | 'contribution' | 'opex' | 'profit' | 'tax' | 'net' | 'rentability';
 
@@ -26,6 +33,15 @@ const ROWS: { id: HeadlineRowId; label: string }[] = [
   { id: 'net', label: 'Чистая прибыль' },
   { id: 'rentability', label: 'Рентабельность' },
 ];
+
+function IndicatorHead({ id, label, taxPercent }: { id: HeadlineRowId; label: string; taxPercent: number }) {
+  return (
+    <th scope="col" className={valueHeadClassName}>
+      <ColumnLabel label={label} />
+      {id === 'tax' ? <span className="mt-0.5 block text-sm text-muted">{taxPercent}&nbsp;%</span> : null}
+    </th>
+  );
+}
 
 export function SummaryHeadlineTable({
   headline,
@@ -47,8 +63,8 @@ export function SummaryHeadlineTable({
   const factOpexEditable = onFactOperatingExpense !== undefined;
 
   return (
-    <div className="w-full overflow-x-auto border border-line bg-sheet">
-      <table className="w-full border-separate border-spacing-0 text-[11px] leading-tight text-ink">
+    <div className={tableFrameClassName}>
+      <table className={tableClassName}>
         <caption className="sr-only">
           {view === 'current'
             ? 'Свод периода: план (корр.), факт и отклонение. Операционные расходы без НДС.'
@@ -58,41 +74,33 @@ export function SummaryHeadlineTable({
         </caption>
         <thead>
           <tr>
-            <th scope="col" className={labelHeadClassName}>
+            <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               <span className="sr-only">Показатель</span>
             </th>
             {ROWS.map((row) => (
-              <th key={row.id} scope="col" className={`${valueHeadClassName} whitespace-nowrap`}>
-                {row.id === 'tax' ? (
-                  <span>
-                    {row.label} <span className="text-[10px] text-muted">{headline.taxPercent}&nbsp;%</span>
-                  </span>
-                ) : (
-                  row.label
-                )}
-              </th>
+              <IndicatorHead key={row.id} id={row.id} label={row.label} taxPercent={headline.taxPercent} />
             ))}
           </tr>
         </thead>
         <tbody>
           <tr>
-            <th scope="row" className={`${labelCellClassName} whitespace-nowrap`}>
+            <th scope="row" className={labelCellClassName}>
               {planLabel}
             </th>
             {ROWS.map((row) => (
-              <td key={row.id} className={`${valueCellClassName} min-w-28`}>
+              <td key={row.id} className={valueCellClassName}>
                 <HeadlineValue row={row.id} side="plan" headline={headline} periodLabel={periodLabel} />
               </td>
             ))}
           </tr>
           <tr>
-            <th scope="row" className={`${labelCellClassName} whitespace-nowrap`}>
+            <th scope="row" className={labelCellClassName}>
               {factLabel}
             </th>
             {ROWS.map((row) => (
               <td
                 key={row.id}
-                className={`${valueCellClassName} min-w-28 ${row.id === 'opex' && factOpexEditable ? editableCellClassName : ''}`}
+                className={`${valueCellClassName} ${row.id === 'opex' && factOpexEditable ? editableCellClassName : ''}`}
               >
                 <HeadlineValue
                   row={row.id}
@@ -109,11 +117,11 @@ export function SummaryHeadlineTable({
             ))}
           </tr>
           <tr>
-            <th scope="row" className={`${labelCellClassName} whitespace-nowrap`}>
+            <th scope="row" className={labelCellClassName}>
               Откл.
             </th>
             {ROWS.map((row) => (
-              <td key={row.id} className={`${valueCellClassName} min-w-28`}>
+              <td key={row.id} className={valueCellClassName}>
                 <VarianceValue row={row.id} headline={headline} />
               </td>
             ))}
@@ -148,18 +156,16 @@ function HeadlineValue({
         value={values.operatingExpenseExVat}
         invalidMessage={OPERATING_EXPENSE_ERROR.amount}
         parse={parseOperatingExpense}
-        inputClassName={headlineFieldClassName}
-        unitClassName="whitespace-nowrap leading-tight"
         onChange={onOperatingExpense ? (next) => onOperatingExpense(side, next) : undefined}
       />
     );
   }
 
   if (row === 'revenue') {
-    return <MoneyCell value={values.revenueWithVat} />;
+    return <MoneyCell whole value={values.revenueWithVat} />;
   }
   if (row === 'contribution') {
-    return <MoneyCell value={values.contribution} />;
+    return <MoneyCell whole value={values.contribution} />;
   }
   if (row === 'profit') {
     return <MoneyCell value={values.profit} />;
@@ -181,10 +187,10 @@ function VarianceValue({ row, headline }: { row: HeadlineRowId; headline: Headli
     return <MoneyAmount amount={variance.operatingExpenseExVat} signed sense="cost" />;
   }
   if (row === 'revenue') {
-    return <MoneyCell value={variance.revenueWithVat} signed />;
+    return <MoneyCell whole value={variance.revenueWithVat} signed />;
   }
   if (row === 'contribution') {
-    return <MoneyCell value={variance.contribution} signed />;
+    return <MoneyCell whole value={variance.contribution} signed />;
   }
   if (row === 'profit') {
     return <MoneyCell value={variance.profit} signed />;
@@ -212,36 +218,28 @@ export function PlanHeadlineTable({
   onOperatingExpense: (amountExVat: number) => string | null;
 }) {
   return (
-    <div className="w-full overflow-x-auto border border-line bg-sheet">
-      <table className="w-full border-separate border-spacing-0 text-[11px] leading-tight text-ink">
+    <div className={tableFrameClassName}>
+      <table className={tableClassName}>
         <caption className="sr-only">{`Плановые показатели, ${periodLabel}. Операционные расходы без НДС.`}</caption>
         <thead>
           <tr>
-            <th scope="col" className={labelHeadClassName}>
+            <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               <span className="sr-only">Показатель</span>
             </th>
             {ROWS.map((row) => (
-              <th key={row.id} scope="col" className={`${valueHeadClassName} whitespace-nowrap`}>
-                {row.id === 'tax' ? (
-                  <span>
-                    {row.label} <span className="text-[10px] text-muted">{headline.taxPercent}&nbsp;%</span>
-                  </span>
-                ) : (
-                  row.label
-                )}
-              </th>
+              <IndicatorHead key={row.id} id={row.id} label={row.label} taxPercent={headline.taxPercent} />
             ))}
           </tr>
         </thead>
         <tbody>
           <tr>
-            <th scope="row" className={`${labelCellClassName} whitespace-nowrap`}>
+            <th scope="row" className={labelCellClassName}>
               План
             </th>
             {ROWS.map((row) => (
               <td
                 key={row.id}
-                className={`${valueCellClassName} min-w-28 ${row.id === 'opex' && editable ? editableCellClassName : ''}`}
+                className={`${valueCellClassName} ${row.id === 'opex' && editable ? editableCellClassName : ''}`}
               >
                 <HeadlineValue
                   row={row.id}

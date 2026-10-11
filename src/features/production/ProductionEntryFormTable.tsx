@@ -1,19 +1,27 @@
 'use client';
 
-import { useState } from 'react';
-
 import type { Product, ProductCategory } from '@/domain/document';
 import { parseProductionEntryPieces } from '@/features/production/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
+  blockCornerClassName,
+  blockHeadingClassName,
   ColumnLabel,
+  categoryBandClassName,
+  categoryNameClassName,
+  columnDividerClassName,
+  columnHeadingClassName,
   Empty,
   gridFieldClassName,
   keepWithNext,
   MergedTwoStory,
+  nameHeadingClassName,
+  ProductIndex,
   stickyHeadClassName,
   TableNumber,
   tableBorder,
+  totalNameClassName,
+  useOpenCategories,
 } from '@/features/table';
 import { sanitizeDraft } from '@/features/table/format';
 
@@ -55,19 +63,7 @@ export function ProductionEntryFormTable({
 }) {
   const groups = buildGroups(categories, products, drafts);
   const totalPieces = sumPieces(groups.flatMap((group) => group.rows));
-  const [openIds, setOpenIds] = useState<ReadonlySet<string>>(() => new Set(groups.map((group) => group.category.id)));
-
-  function toggleGroup(categoryId: string) {
-    setOpenIds((current) => {
-      const next = new Set(current);
-      if (next.has(categoryId)) {
-        next.delete(categoryId);
-      } else {
-        next.add(categoryId);
-      }
-      return next;
-    });
-  }
+  const { toggleCategory, categoryOpen } = useOpenCategories();
 
   return (
     <div className="w-max max-w-full border border-line bg-sheet">
@@ -75,25 +71,16 @@ export function ProductionEntryFormTable({
         <caption className="sr-only">Товары выпуска</caption>
         <thead className={stickyHeadClassName}>
           <tr>
-            <th className={`sticky left-0 z-40 ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper`} />
-            <th
-              scope="colgroup"
-              className={`${tableBorder.bottomThin} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink`}
-            >
+            <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
+            <th scope="colgroup" className={blockHeadingClassName}>
               {keepWithNext('Выпуск')}
             </th>
           </tr>
           <tr>
-            <th
-              scope="col"
-              className={`sticky left-0 z-40 w-px max-w-max whitespace-nowrap ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-muted`}
-            >
+            <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               Товар
             </th>
-            <th
-              scope="col"
-              className={`w-px whitespace-normal ${tableBorder.rightThin} ${tableBorder.bottomThin} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
-            >
+            <th scope="col" className={`${columnHeadingClassName} ${columnDividerClassName}`}>
               <ColumnLabel label="Шт" />
             </th>
           </tr>
@@ -103,19 +90,18 @@ export function ProductionEntryFormTable({
             <CategoryBlock
               key={group.category.id}
               group={group}
-              open={openIds.has(group.category.id)}
-              onToggle={() => toggleGroup(group.category.id)}
+              open={categoryOpen(group.category.id)}
+              onToggle={() => toggleCategory(group.category.id)}
               onChange={onChange}
             />
           ))}
           <tr>
-            <th
-              scope="row"
-              className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-t-[1.5px] border-t-muted border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink"
-            >
+            <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
               Всего
             </th>
-            <td className="h-px w-px border-t-[1.5px] border-t-muted border-r border-r-line border-b border-b-line bg-paper p-0 text-right align-middle last:border-r-0">
+            <td
+              className={`h-px w-px border-y-[3px] border-y-muted bg-sheet p-0 text-right align-middle text-sm font-bold ${columnDividerClassName}`}
+            >
               <PiecesTotal pieces={totalPieces} />
             </td>
           </tr>
@@ -196,7 +182,7 @@ function CategoryBlock({
       <tr>
         <th
           scope="row"
-          className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink"
+          className={`sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted px-3 py-2 text-left align-middle font-normal text-ink ${categoryBandClassName}`}
         >
           <div className="flex items-center gap-2">
             <button
@@ -213,34 +199,49 @@ function CategoryBlock({
             >
               {open ? <IconChevronDown /> : <IconChevronRight />}
             </button>
-            <span className="flex h-8 min-w-max flex-1 items-center text-sm font-semibold leading-none text-ink">
+            <span className={categoryNameClassName}>
               {group.category.name} ({productCount})
             </span>
             {deleted ? <span className="text-sm font-normal text-muted">(архив)</span> : null}
           </div>
         </th>
-        <td className="h-px w-px border-b border-b-line border-r border-r-line bg-paper p-0 text-right align-middle last:border-r-0">
+        <td
+          className={`h-px w-px border-b border-b-line p-0 text-right align-middle ${categoryBandClassName} ${columnDividerClassName}`}
+        >
           <PiecesTotal pieces={group.pieces} />
         </td>
       </tr>
-      {open ? group.rows.map((row) => <ProductRow key={row.product.id} row={row} onChange={onChange} />) : null}
+      {open
+        ? group.rows.map((row, index) => (
+            <ProductRow key={row.product.id} row={row} index={index + 1} onChange={onChange} />
+          ))
+        : null}
     </>
   );
 }
 
-function ProductRow({ row, onChange }: { row: EntryFormRow; onChange: (productId: string, raw: string) => void }) {
+function ProductRow({
+  row,
+  index,
+  onChange,
+}: {
+  row: EntryFormRow;
+  index: number;
+  onChange: (productId: string, raw: string) => void;
+}) {
   return (
     <tr>
       <th
         scope="row"
-        className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 pl-8 text-left align-middle font-normal"
+        className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle font-normal"
       >
-        <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <ProductIndex index={index} />
           <span className="text-sm text-ink">{row.product.name}</span>
           {row.product.deletedAt ? <span className="text-sm text-muted">(архив)</span> : null}
         </div>
       </th>
-      <td className="h-px w-px border-b border-b-line border-r border-r-line p-0 text-right align-middle last:border-r-0">
+      <td className={`h-px w-px border-b border-b-line p-0 text-right align-middle ${columnDividerClassName}`}>
         <MergedTwoStory highlighted>
           <PiecesInput
             label={`Штуки, ${row.product.name}`}

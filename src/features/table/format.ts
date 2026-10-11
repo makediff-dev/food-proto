@@ -18,11 +18,11 @@ export function parseMoneyInput(raw: string): number | null {
   return fromRubles(rubles);
 }
 
-/** Рентабельность в сотых процента: 1234 → «12,34 %». */
-export function formatPercentHundredths(hundredths: number): string {
+/** Сотые процента: 1234 → «12,34 %», с одним знаком — «12,3 %». */
+export function formatPercentHundredths(hundredths: number, fractionDigits: 1 | 2 = 2): string {
   return `${new Intl.NumberFormat('ru-RU', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
   }).format(hundredths / 100)} %`;
 }
 

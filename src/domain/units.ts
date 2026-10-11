@@ -34,11 +34,18 @@ export function fromRublesUpTo(rubles: number, maxKopecks: number): number | nul
   return amount;
 }
 
-export function formatRubles(amount: number, withCurrency = false): string {
+/** Копейки → целые рубли, половина вверх от нуля. */
+export function roundKopecksToRubles(kopecks: number): number {
+  const sign = kopecks < 0 ? -1 : 1;
+  return sign * Math.round(Math.abs(kopecks) / 100);
+}
+
+export function formatRubles(amount: number, withCurrency = false, fractionDigits: 0 | 2 = 2): string {
+  const rubles = fractionDigits === 0 ? roundKopecksToRubles(amount) : amount / 100;
   return new Intl.NumberFormat('ru-RU', {
     style: withCurrency ? 'currency' : 'decimal',
     currency: 'RUB',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount / 100);
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(rubles);
 }

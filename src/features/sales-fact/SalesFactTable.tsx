@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
 
 import {
   adjacentDay,
@@ -12,17 +12,28 @@ import {
 import { formatSignedPieces } from '@/features/sales-fact/text';
 import { IconChevronDown, IconChevronRight, IconChevronUp } from '@/features/shell/Icons';
 import {
+  blockCornerClassName,
+  blockHeadingClassName,
   ColumnLabel,
+  categoryBandClassName,
+  categoryNameClassName,
+  columnDividerClassName,
+  columnHeadingClassName,
   Empty,
   keepWithNext,
   MoneyCell,
   Muted,
+  nameHeadingClassName,
   PercentCell,
+  ProductIndex,
   stickyHeadClassName,
   TableNumber,
   tableBorder,
   tableClassName,
   tableFrameExpandedClassName,
+  totalNameClassName,
+  totalValueClassName,
+  useOpenCategories,
   VatMoneyCell,
 } from '@/features/table';
 
@@ -58,19 +69,7 @@ export function SalesFactTable({
   onDay: (day: string) => void;
   expanded?: boolean;
 }) {
-  const [openIds, setOpenIds] = useState<ReadonlySet<string>>(() => new Set());
-
-  function toggleGroup(categoryId: string) {
-    setOpenIds((current) => {
-      const next = new Set(current);
-      if (next.has(categoryId)) {
-        next.delete(categoryId);
-      } else {
-        next.add(categoryId);
-      }
-      return next;
-    });
-  }
+  const { toggleCategory, categoryOpen } = useOpenCategories();
 
   return (
     <div
@@ -85,37 +84,23 @@ export function SalesFactTable({
         <caption className="sr-only">Факт продаж по дням</caption>
         <thead className={stickyHeadClassName}>
           <tr>
-            <th
-              colSpan={2}
-              className={`sticky left-0 z-40 ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper`}
-            />
-            <th
-              colSpan={COLUMNS.length}
-              scope="colgroup"
-              className={`${tableBorder.bottomThin} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink`}
-            >
+            <th colSpan={2} className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
+            <th colSpan={COLUMNS.length} scope="colgroup" className={blockHeadingClassName}>
               {keepWithNext('Фактические показатели продаж за дату')}
             </th>
           </tr>
           <tr>
             <th
               scope="col"
-              className={`sticky left-0 z-40 w-10 max-w-10 ${tableBorder.rightThin} ${tableBorder.bottomThin} bg-paper p-0`}
+              className={`sticky left-0 z-40 w-10 max-w-10 border-y-[3px] border-y-muted ${tableBorder.rightThin} bg-paper p-0`}
             >
               <span className="sr-only">Дата</span>
             </th>
-            <th
-              scope="col"
-              className={`sticky left-10 z-40 w-px max-w-max whitespace-nowrap ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-muted`}
-            >
+            <th scope="col" className={`sticky left-10 z-40 ${nameHeadingClassName}`}>
               Товар
             </th>
             {COLUMNS.map((column) => (
-              <th
-                key={column.key}
-                scope="col"
-                className={`w-px whitespace-normal ${tableBorder.bottomThin} ${tableBorder.rightThin} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
-              >
+              <th key={column.key} scope="col" className={`${columnHeadingClassName} ${columnDividerClassName}`}>
                 <ColumnLabel label={column.label} />
               </th>
             ))}
@@ -126,7 +111,7 @@ export function SalesFactTable({
           const dateCell = (
             <th
               scope="rowgroup"
-              rowSpan={visibleDayRows(day.groups, openIds)}
+              rowSpan={visibleDayRows(day.groups, categoryOpen)}
               className={`sticky left-0 z-10 h-px w-10 max-w-10 border-r border-r-line bg-sheet p-0 align-middle font-normal ${
                 dayBreak ? 'border-b-[3px] border-b-muted' : 'border-b border-b-line'
               }`}
@@ -140,28 +125,18 @@ export function SalesFactTable({
                 <CategoryBlock
                   key={group.categoryId}
                   group={group}
-                  open={openIds.has(group.categoryId)}
+                  open={categoryOpen(group.categoryId)}
                   dateCell={groupIndex === 0 ? dateCell : null}
-                  onToggle={() => toggleGroup(group.categoryId)}
+                  onToggle={() => toggleCategory(group.categoryId)}
                 />
               ))}
               <tr>
                 {day.groups.length === 0 ? dateCell : null}
-                <th
-                  scope="row"
-                  className={`sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-t-[1.5px] border-t-muted border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink ${
-                    dayBreak ? 'border-b-[3px] border-b-muted' : 'border-b border-b-line'
-                  }`}
-                >
+                <th scope="row" className={`sticky left-10 z-10 ${totalNameClassName}`}>
                   Всего
                 </th>
                 {COLUMNS.map((column) => (
-                  <td
-                    key={column.key}
-                    className={`w-px border-t-[1.5px] border-t-muted border-r border-r-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0 ${
-                      dayBreak ? 'border-b-[3px] border-b-muted' : 'border-b border-b-line'
-                    }`}
-                  >
+                  <td key={column.key} className={`${totalValueClassName} ${columnDividerClassName}`}>
                     <TotalCell column={column.key} totals={day.totals} />
                   </td>
                 ))}
@@ -174,8 +149,8 @@ export function SalesFactTable({
   );
 }
 
-function visibleDayRows(groups: readonly SalesFactGroup[], openIds: ReadonlySet<string>): number {
-  return groups.reduce((count, group) => count + 1 + (openIds.has(group.categoryId) ? group.rows.length : 0), 1);
+function visibleDayRows(groups: readonly SalesFactGroup[], categoryOpen: (categoryId: string) => boolean): number {
+  return groups.reduce((count, group) => count + 1 + (categoryOpen(group.categoryId) ? group.rows.length : 0), 1);
 }
 
 function CategoryBlock({
@@ -197,7 +172,7 @@ function CategoryBlock({
         {dateCell}
         <th
           scope="row"
-          className="sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink"
+          className={`sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted px-3 py-2 text-left align-middle font-normal text-ink ${categoryBandClassName}`}
         >
           <div className="flex items-center gap-2">
             <button
@@ -212,7 +187,7 @@ function CategoryBlock({
             >
               {open ? <IconChevronDown /> : <IconChevronRight />}
             </button>
-            <span className="flex h-8 min-w-max flex-1 items-center text-sm font-semibold leading-none text-ink">
+            <span className={categoryNameClassName}>
               {group.name} ({productCount})
             </span>
             {group.deleted ? <span className="text-sm font-normal text-muted">(архив)</span> : null}
@@ -221,30 +196,33 @@ function CategoryBlock({
         {COLUMNS.map((column) => (
           <td
             key={column.key}
-            className="w-px border-b border-b-line border-r border-r-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0"
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${categoryBandClassName} ${columnDividerClassName}`}
           >
             <TotalCell column={column.key} totals={group.totals} />
           </td>
         ))}
       </tr>
-      {open ? group.rows.map((row) => <ProductRow key={row.productId} row={row} />) : null}
+      {open ? group.rows.map((row, index) => <ProductRow key={row.productId} row={row} index={index + 1} />) : null}
     </>
   );
 }
 
-function ProductRow({ row }: { row: SalesFactRow }) {
+function ProductRow({ row, index }: { row: SalesFactRow; index: number }) {
   return (
     <tr>
       <th
         scope="row"
-        className="sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 pl-8 text-left align-middle font-normal"
+        className="sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle font-normal"
       >
-        <ProductName row={row} />
+        <div className="flex items-center gap-2">
+          <ProductIndex index={index} />
+          <ProductName row={row} />
+        </div>
       </th>
       {COLUMNS.map((column) => (
         <td
           key={column.key}
-          className="w-px border-b border-b-line border-r border-r-line px-1.5 py-2 text-right align-middle last:border-r-0"
+          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`}
         >
           <RowCell column={column.key} row={row} />
         </td>
@@ -322,10 +300,10 @@ function ArrowButton({
 
 function ProductName({ row }: { row: SalesFactRow }) {
   return (
-    <div className="flex flex-col gap-1">
+    <span className="flex items-center gap-2">
       <span className="text-sm text-ink">{row.name}</span>
       {row.deleted ? <span className="text-sm text-muted">(архив)</span> : null}
-    </div>
+    </span>
   );
 }
 
@@ -346,13 +324,13 @@ function RowCell({ column, row }: { column: ColumnKey; row: SalesFactRow }) {
         <Muted>{keepWithNext('Себестоимость не считается')}</Muted>
       );
     case 'salesVolumeCost':
-      return <VatMoneyCell withVat={row.salesVolumeCostWithVat} exVat={row.salesVolumeCostExVat} />;
+      return <VatMoneyCell whole withVat={row.salesVolumeCostWithVat} exVat={row.salesVolumeCostExVat} />;
     case 'revenue':
-      return <VatMoneyCell withVat={row.revenueWithVat} exVat={row.revenueExVat} />;
+      return <VatMoneyCell whole withVat={row.revenueWithVat} exVat={row.revenueExVat} />;
     case 'contribution':
-      return <MoneyCell value={row.contribution} />;
+      return <MoneyCell whole value={row.contribution} />;
     case 'profitability':
-      return <PercentCell value={row.profitabilityHundredths} scale="hundredths" />;
+      return <PercentCell value={row.profitabilityHundredths} scale="hundredths" fractionDigits={1} />;
     case 'vat':
       return <PercentCell value={row.vatPercent} />;
     default:
@@ -367,12 +345,12 @@ function TotalCell({ column, totals }: { column: ColumnKey; totals: SalesFactTot
     case 'price':
       return <VatMoneyCell withVat={totals.priceWithVat} exVat={totals.priceExVat} />;
     case 'revenue':
-      return <VatMoneyCell withVat={totals.revenueWithVat} exVat={totals.revenueExVat} />;
+      return <VatMoneyCell whole withVat={totals.revenueWithVat} exVat={totals.revenueExVat} />;
     case 'contribution':
       return !totals.salesCostComplete || !totals.revenueComplete ? (
         <Muted>{keepWithNext('не по всем товарам')}</Muted>
       ) : (
-        <MoneyCell value={totals.contribution} />
+        <MoneyCell whole value={totals.contribution} />
       );
     case 'salesUnitCost':
       return (
@@ -394,7 +372,7 @@ function TotalCell({ column, totals }: { column: ColumnKey; totals: SalesFactTot
       return !totals.salesCostComplete ? (
         <Empty />
       ) : (
-        <PercentCell value={totals.profitabilityHundredths} scale="hundredths" />
+        <PercentCell value={totals.profitabilityHundredths} scale="hundredths" fractionDigits={1} />
       );
     case 'vat':
       return <PercentCell value={totals.vatPercentHundredths} scale="hundredths" />;
@@ -432,7 +410,7 @@ function VolumeTotal({
     return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
   }
 
-  return <VatMoneyCell withVat={withVat} exVat={exVat} />;
+  return <VatMoneyCell whole withVat={withVat} exVat={exVat} />;
 }
 
 function Pieces({ value }: { value: number | null }) {

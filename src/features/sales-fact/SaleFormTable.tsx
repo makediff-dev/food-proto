@@ -7,16 +7,26 @@ import { amountExVat, averageAmount } from '@/domain/money';
 import { hasAmountWithoutPieces, parseSaleAmount, parseSalePieces, parseSalePrice } from '@/features/sales-fact/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
+  blockCornerClassName,
+  blockHeadingClassName,
   ColumnLabel,
+  categoryBandClassName,
+  categoryNameClassName,
+  columnDividerClassName,
+  columnHeadingClassName,
   Empty,
   gridFieldClassName,
   keepWithNext,
   MergedTwoStory,
   MoneyAmount,
+  nameHeadingClassName,
+  ProductIndex,
   StackedPair,
   stickyHeadClassName,
   TableNumber,
   tableBorder,
+  totalNameClassName,
+  useOpenCategories,
   VatMoneyCell,
 } from '@/features/table';
 import { formatMoneyDraft, sanitizeDraft } from '@/features/table/format';
@@ -138,19 +148,7 @@ export function SaleFormTable({
 }) {
   const groups = buildGroups(categories, products, drafts);
   const totals = groupTotals(groups.flatMap((group) => group.rows));
-  const [openIds, setOpenIds] = useState<ReadonlySet<string>>(() => new Set(groups.map((group) => group.category.id)));
-
-  function toggleGroup(categoryId: string) {
-    setOpenIds((current) => {
-      const next = new Set(current);
-      if (next.has(categoryId)) {
-        next.delete(categoryId);
-      } else {
-        next.add(categoryId);
-      }
-      return next;
-    });
-  }
+  const { toggleCategory, categoryOpen } = useOpenCategories();
 
   return (
     <div className="w-max max-w-full border border-line bg-sheet">
@@ -158,28 +156,17 @@ export function SaleFormTable({
         <caption className="sr-only">Товары продажи</caption>
         <thead className={stickyHeadClassName}>
           <tr>
-            <th className={`sticky left-0 z-40 ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper`} />
-            <th
-              colSpan={COLUMNS.length}
-              scope="colgroup"
-              className={`${tableBorder.bottomThin} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink`}
-            >
+            <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
+            <th colSpan={COLUMNS.length} scope="colgroup" className={blockHeadingClassName}>
               {keepWithNext('Показатели продажи')}
             </th>
           </tr>
           <tr>
-            <th
-              scope="col"
-              className={`sticky left-0 z-40 w-px max-w-max whitespace-nowrap ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-muted`}
-            >
+            <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               Товар
             </th>
             {COLUMNS.map((column) => (
-              <th
-                key={column.key}
-                scope="col"
-                className={`w-px whitespace-normal ${tableBorder.rightThin} ${tableBorder.bottomThin} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
-              >
+              <th key={column.key} scope="col" className={`${columnHeadingClassName} ${columnDividerClassName}`}>
                 <ColumnLabel label={column.label} />
               </th>
             ))}
@@ -190,22 +177,19 @@ export function SaleFormTable({
             <CategoryBlock
               key={group.category.id}
               group={group}
-              open={openIds.has(group.category.id)}
-              onToggle={() => toggleGroup(group.category.id)}
+              open={categoryOpen(group.category.id)}
+              onToggle={() => toggleCategory(group.category.id)}
               onChange={onChange}
             />
           ))}
           <tr>
-            <th
-              scope="row"
-              className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-t-[1.5px] border-t-muted border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink"
-            >
+            <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
               Всего
             </th>
             {COLUMNS.map((column) => (
               <td
                 key={column.key}
-                className={`w-px border-t-[1.5px] border-t-muted border-r border-r-line border-b border-b-line bg-paper text-right align-middle last:border-r-0 ${
+                className={`w-px border-y-[3px] border-y-muted bg-sheet text-right align-middle text-sm font-bold ${columnDividerClassName} ${
                   column.key === 'pieces' ? 'h-px p-0' : 'px-1.5 py-2'
                 }`}
               >
@@ -266,7 +250,7 @@ function CategoryBlock({
       <tr>
         <th
           scope="row"
-          className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink"
+          className={`sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted px-3 py-2 text-left align-middle font-normal text-ink ${categoryBandClassName}`}
         >
           <div className="flex items-center gap-2">
             <button
@@ -283,7 +267,7 @@ function CategoryBlock({
             >
               {open ? <IconChevronDown /> : <IconChevronRight />}
             </button>
-            <span className="flex h-8 min-w-max flex-1 items-center text-sm font-semibold leading-none text-ink">
+            <span className={categoryNameClassName}>
               {group.category.name} ({productCount})
             </span>
             {deleted ? <span className="text-sm font-normal text-muted">(архив)</span> : null}
@@ -292,7 +276,7 @@ function CategoryBlock({
         {COLUMNS.map((column) => (
           <td
             key={column.key}
-            className={`w-px border-b border-b-line border-r border-r-line bg-paper text-right align-middle last:border-r-0 ${
+            className={`w-px border-b border-b-line text-right align-middle ${categoryBandClassName} ${columnDividerClassName} ${
               column.key === 'pieces' ? 'h-px p-0' : 'px-1.5 py-2'
             }`}
           >
@@ -300,25 +284,32 @@ function CategoryBlock({
           </td>
         ))}
       </tr>
-      {open ? group.rows.map((row) => <ProductRow key={row.product.id} row={row} onChange={onChange} />) : null}
+      {open
+        ? group.rows.map((row, index) => (
+            <ProductRow key={row.product.id} row={row} index={index + 1} onChange={onChange} />
+          ))
+        : null}
     </>
   );
 }
 
 function ProductRow({
   row,
+  index,
   onChange,
 }: {
   row: SaleFormRow;
+  index: number;
   onChange: (productId: string, field: SaleLineField, raw: string) => void;
 }) {
   return (
     <tr>
       <th
         scope="row"
-        className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 pl-8 text-left align-middle font-normal"
+        className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle font-normal"
       >
-        <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <ProductIndex index={index} />
           <span className="text-sm text-ink">{row.product.name}</span>
           {row.product.deletedAt ? <span className="text-sm text-muted">(архив)</span> : null}
         </div>
@@ -326,7 +317,7 @@ function ProductRow({
       {COLUMNS.map((column) => (
         <td
           key={column.key}
-          className={`w-px border-b border-b-line border-r border-r-line text-right align-middle last:border-r-0 ${
+          className={`w-px border-b border-b-line text-right align-middle ${columnDividerClassName} ${
             column.key === 'pieces' ? 'h-px p-0' : 'px-1.5 py-2'
           }`}
         >

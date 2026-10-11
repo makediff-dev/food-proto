@@ -7,16 +7,23 @@ import { formatPieces } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   ColumnLabel,
+  categoryBandClassName,
+  categoryNameClassName,
+  columnDividerClassName,
+  columnHeadingClassName,
   editableCellClassName,
   IntegerCell,
   keepWithNext,
   Muted,
+  nameHeadingClassName,
+  ProductIndex,
   stickyHeadClassName,
   TableNumber,
-  tableBorder,
   tableClassName,
   tableFrameClassName,
   tableFrameExpandedClassName,
+  totalNameClassName,
+  totalValueClassName,
   VatMoneyCell,
 } from '@/features/table';
 
@@ -64,18 +71,11 @@ export function FinishedGoodsMonthTable({
         <caption className="sr-only">Отчет общий: движение готовой продукции за месяц</caption>
         <thead className={stickyHeadClassName}>
           <tr>
-            <th
-              scope="col"
-              className={`sticky left-0 z-40 w-px max-w-max whitespace-nowrap ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-muted`}
-            >
+            <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               Товар
             </th>
             {COLUMNS.map((column) => (
-              <th
-                key={column.key}
-                scope="col"
-                className={`w-px whitespace-normal ${tableBorder.bottomThin} ${tableBorder.rightThin} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
-              >
+              <th key={column.key} scope="col" className={`${columnHeadingClassName} ${columnDividerClassName}`}>
                 <ColumnLabel label={column.label} />
               </th>
             ))}
@@ -86,17 +86,11 @@ export function FinishedGoodsMonthTable({
             <CategoryBlock key={group.categoryId} group={group} editable={editable} onOpeningAction={onOpeningAction} />
           ))}
           <tr>
-            <th
-              scope="row"
-              className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-t-[1.5px] border-t-muted border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink"
-            >
+            <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
               Всего
             </th>
             {COLUMNS.map((column) => (
-              <td
-                key={`total:${column.key}`}
-                className={`w-px border-t-[1.5px] border-t-muted border-b border-b-line ${tableBorder.rightThin} bg-paper px-1.5 py-2 text-right align-middle last:border-r-0`}
-              >
+              <td key={`total:${column.key}`} className={`${totalValueClassName} ${columnDividerClassName}`}>
                 <TotalsCell column={column.key} totals={totals} />
               </td>
             ))}
@@ -116,7 +110,7 @@ function CategoryBlock({
   editable: boolean;
   onOpeningAction: (productId: string, pieces: number) => string | null;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const productCount = group.rows.length;
 
   return (
@@ -124,7 +118,7 @@ function CategoryBlock({
       <tr>
         <th
           scope="row"
-          className={`sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink`}
+          className={`sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted px-3 py-2 text-left align-middle font-normal text-ink ${categoryBandClassName}`}
         >
           <div className="flex items-center gap-2">
             <button
@@ -139,7 +133,7 @@ function CategoryBlock({
             >
               {open ? <IconChevronDown /> : <IconChevronRight />}
             </button>
-            <span className="flex h-8 min-w-max flex-1 items-center text-sm font-semibold leading-none text-ink">
+            <span className={categoryNameClassName}>
               {group.name} ({productCount})
             </span>
             {group.deleted ? <span className="text-sm text-muted">(архив)</span> : null}
@@ -148,15 +142,21 @@ function CategoryBlock({
         {COLUMNS.map((column) => (
           <td
             key={`group:${column.key}`}
-            className={`w-px border-b border-b-line ${tableBorder.rightThin} bg-paper px-1.5 py-2 text-right align-middle last:border-r-0`}
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${categoryBandClassName} ${columnDividerClassName}`}
           >
             <TotalsCell column={column.key} totals={group.totals} />
           </td>
         ))}
       </tr>
       {open
-        ? group.rows.map((row) => (
-            <ProductRow key={row.productId} row={row} editable={editable} onOpeningAction={onOpeningAction} />
+        ? group.rows.map((row, index) => (
+            <ProductRow
+              key={row.productId}
+              row={row}
+              index={index + 1}
+              editable={editable}
+              onOpeningAction={onOpeningAction}
+            />
           ))
         : null}
     </>
@@ -165,10 +165,12 @@ function CategoryBlock({
 
 function ProductRow({
   row,
+  index,
   editable,
   onOpeningAction,
 }: {
   row: FinishedGoodsRow;
+  index: number;
   editable: boolean;
   onOpeningAction: (productId: string, pieces: number) => string | null;
 }) {
@@ -178,10 +180,11 @@ function ProductRow({
     <tr>
       <th
         scope="row"
-        className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 pl-8 text-left align-middle font-normal"
+        className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle font-normal"
       >
-        <div className="flex flex-col gap-1">
-          <span className="flex h-8 min-w-max flex-1 items-center text-sm leading-none text-ink">{row.name}</span>
+        <div className="flex items-center gap-2">
+          <ProductIndex index={index} />
+          <span className="flex h-8 min-w-max items-center text-sm leading-none text-ink">{row.name}</span>
           {row.deleted ? <span className="text-sm text-muted">(архив)</span> : null}
         </div>
       </th>
@@ -190,7 +193,7 @@ function ProductRow({
         return (
           <td
             key={`row:${column.key}`}
-            className={`w-px border-b border-b-line ${tableBorder.rightThin} px-1.5 py-2 text-right align-middle last:border-r-0 ${
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName} ${
               canEdit ? editableCellClassName : ''
             }`}
             onClick={(event) => {

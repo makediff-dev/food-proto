@@ -10,7 +10,13 @@ import { FIELD_ERROR, VAT_PARSE_ERROR } from '@/features/sales/fields';
 import { formatPerDay, formatPieces, formatPriceExVat, SALES_PLAN_ERROR } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight, IconPlus, IconTrash } from '@/features/shell/Icons';
 import {
+  blockCornerClassName,
+  blockHeadingClassName,
   ColumnLabel,
+  categoryBandClassName,
+  categoryNameClassName,
+  columnDividerClassName,
+  columnHeadingClassName,
   Empty,
   editableCellClassName,
   gridNameClassName,
@@ -19,7 +25,9 @@ import {
   MoneyAmount,
   MoneyCell,
   Muted,
+  nameHeadingClassName,
   PercentCell,
+  ProductIndex,
   StackedPair,
   stickyHeadClassName,
   TableNumber,
@@ -27,6 +35,8 @@ import {
   tableClassName,
   tableFrameClassName,
   tableFrameExpandedClassName,
+  totalNameClassName,
+  totalValueClassName,
   VatMoneyCell,
 } from '@/features/table';
 
@@ -135,13 +145,11 @@ export function SummaryTable({
         <caption className="sr-only">{caption}</caption>
         <thead className={stickyHeadClassName}>
           <tr>
-            <th className={`sticky left-0 z-40 ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper`} />
+            <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             <th
               colSpan={SIDE_COLUMNS.length}
               scope="colgroup"
-              className={`${tableBorder.bottomThin} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink ${
-                showFact ? tableBorder.rightThick : ''
-              }`}
+              className={`${blockHeadingClassName} ${showFact ? tableBorder.rightThick : ''}`}
             >
               {keepWithNext(planHeader)}
             </th>
@@ -150,32 +158,25 @@ export function SummaryTable({
                 <th
                   colSpan={SIDE_COLUMNS.length}
                   scope="colgroup"
-                  className={`${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink`}
+                  className={`${blockHeadingClassName} ${tableBorder.rightThick}`}
                 >
                   {keepWithNext(factIsForecast ? 'Фактические показатели (прогноз)' : 'Фактические показатели')}
                 </th>
-                <th
-                  colSpan={VARIANCE_COLUMNS.length}
-                  scope="colgroup"
-                  className={`${tableBorder.bottomThin} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink`}
-                >
+                <th colSpan={VARIANCE_COLUMNS.length} scope="colgroup" className={blockHeadingClassName}>
                   Отклонение
                 </th>
               </>
             ) : null}
           </tr>
           <tr>
-            <th
-              scope="col"
-              className={`sticky left-0 z-40 w-px max-w-max whitespace-nowrap ${tableBorder.bottomThin} ${tableBorder.rightThick} bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-muted`}
-            >
+            <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               Товар
             </th>
             {SIDE_COLUMNS.map((column) => (
               <th
                 key={`plan:${column.key}`}
                 scope="col"
-                className={`w-px whitespace-normal border-b border-b-line ${sectionRightClass('plan', column.key, part)} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
+                className={`${columnHeadingClassName} last:border-r-0 ${sectionRightClass('plan', column.key, part)}`}
               >
                 <ColumnLabel label={column.label} />
               </th>
@@ -185,7 +186,7 @@ export function SummaryTable({
                   <th
                     key={`fact:${column.key}`}
                     scope="col"
-                    className={`w-px whitespace-normal border-b border-b-line ${sectionRightClass('fact', column.key, part)} bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0`}
+                    className={`${columnHeadingClassName} last:border-r-0 ${sectionRightClass('fact', column.key, part)}`}
                   >
                     <ColumnLabel label={column.label} />
                   </th>
@@ -196,7 +197,7 @@ export function SummaryTable({
                   <th
                     key={`var:${column.key}`}
                     scope="col"
-                    className="w-px whitespace-normal border-r border-r-line border-b border-b-line bg-paper px-1.5 py-2 text-center align-middle text-sm font-normal leading-5 text-muted last:border-r-0"
+                    className={`${columnHeadingClassName} ${columnDividerClassName}`}
                   >
                     <ColumnLabel label={column.label} />
                   </th>
@@ -209,16 +210,13 @@ export function SummaryTable({
             <CategoryBlock key={group.categoryId} group={group} part={part} edit={edit} />
           ))}
           <tr>
-            <th
-              scope="row"
-              className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-t-[1.5px] border-t-muted border-b border-b-line border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-left align-middle font-normal text-ink"
-            >
+            <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
               Всего
             </th>
             {SIDE_COLUMNS.map((column) => (
               <td
                 key={`plan-total:${column.key}`}
-                className={`w-px border-t-[1.5px] border-t-muted border-b border-b-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('plan', column.key, part)}`}
+                className={`${totalValueClassName} last:border-r-0 ${sectionRightClass('plan', column.key, part)}`}
               >
                 {planTotals ? <SideCell column={column.key} side={planTotals} kind="total" /> : <Empty />}
               </td>
@@ -227,7 +225,7 @@ export function SummaryTable({
               ? SIDE_COLUMNS.map((column) => (
                   <td
                     key={`fact-total:${column.key}`}
-                    className={`w-px border-t-[1.5px] border-t-muted border-b border-b-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('fact', column.key, part)}`}
+                    className={`${totalValueClassName} last:border-r-0 ${sectionRightClass('fact', column.key, part)}`}
                   >
                     <SideCell column={column.key} side={factTotals} kind="total" />
                   </td>
@@ -235,10 +233,7 @@ export function SummaryTable({
               : null}
             {showFact
               ? VARIANCE_COLUMNS.map((column) => (
-                  <td
-                    key={`var-total:${column.key}`}
-                    className="w-px border-t-[1.5px] border-t-muted border-r border-r-line border-b border-b-line bg-paper px-1.5 py-2 text-right align-middle last:border-r-0"
-                  >
+                  <td key={`var-total:${column.key}`} className={`${totalValueClassName} ${columnDividerClassName}`}>
                     <VarianceCell column={column.key} variance={variance} />
                   </td>
                 ))
@@ -251,8 +246,8 @@ export function SummaryTable({
 }
 
 function CategoryBlock({ group, part, edit }: { group: SummaryGroup; part: 'full' | 'plan'; edit?: SummaryTableEdit }) {
-  const header = 'bg-paper';
-  const [open, setOpen] = useState(false);
+  const header = categoryBandClassName;
+  const [open, setOpen] = useState(true);
   const productCount = group.rows.length;
   const showFact = part === 'full';
   const catalogEditable = edit?.catalog === true;
@@ -278,7 +273,7 @@ function CategoryBlock({ group, part, edit }: { group: SummaryGroup; part: 'full
               {open ? <IconChevronDown /> : <IconChevronRight />}
             </button>
             {group.deleted || !catalogEditable || !edit ? (
-              <span className="flex h-8 min-w-max flex-1 items-center text-sm font-semibold leading-none text-ink">
+              <span className={categoryNameClassName}>
                 {group.name} ({productCount})
               </span>
             ) : (
@@ -286,6 +281,7 @@ function CategoryBlock({ group, part, edit }: { group: SummaryGroup; part: 'full
                 <GridText
                   label={`Категория, ${group.name}`}
                   value={group.name}
+                  caps
                   invalidMessage={FIELD_ERROR.empty}
                   onCommit={(next) => edit.onRenameCategory(group.categoryId, next)}
                 />
@@ -343,19 +339,33 @@ function CategoryBlock({ group, part, edit }: { group: SummaryGroup; part: 'full
           ? VARIANCE_COLUMNS.map((column) => (
               <td
                 key={`var-group:${column.key}`}
-                className={`w-px border-r border-r-line border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header}`}
+                className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${header} ${columnDividerClassName}`}
               >
                 <VarianceCell column={column.key} variance={group.variance} />
               </td>
             ))
           : null}
       </tr>
-      {open ? group.rows.map((row) => <ProductRow key={row.productId} row={row} part={part} edit={edit} />) : null}
+      {open
+        ? group.rows.map((row, index) => (
+            <ProductRow key={row.productId} row={row} index={index + 1} part={part} edit={edit} />
+          ))
+        : null}
     </>
   );
 }
 
-function ProductRow({ row, part, edit }: { row: SummaryRow; part: 'full' | 'plan'; edit?: SummaryTableEdit }) {
+function ProductRow({
+  row,
+  index,
+  part,
+  edit,
+}: {
+  row: SummaryRow;
+  index: number;
+  part: 'full' | 'plan';
+  edit?: SummaryTableEdit;
+}) {
   const showFact = part === 'full';
   const catalogEditable = edit?.catalog === true;
   const planEditable = edit?.plan === true;
@@ -365,33 +375,32 @@ function ProductRow({ row, part, edit }: { row: SummaryRow; part: 'full' | 'plan
     <tr>
       <th
         scope="row"
-        className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 pl-8 text-left align-middle font-normal"
+        className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle font-normal"
       >
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            {row.deleted || !catalogEditable || !edit ? (
-              <span className="flex h-8 min-w-max flex-1 items-center text-sm leading-none text-ink">{row.name}</span>
-            ) : (
-              <GridText
-                label={`Название, ${row.name}`}
-                value={row.name}
-                invalidMessage={FIELD_ERROR.empty}
-                onCommit={(next) => edit.onRenameProduct(row.productId, next)}
-              />
-            )}
-            {row.deleted || !catalogEditable || !edit ? null : (
-              <button
-                type="button"
-                aria-label={`Удалить ${row.name}`}
-                title="Удалить"
-                onClick={() => edit.onDeleteProduct(row.productId, row.name)}
-                className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-              >
-                <IconTrash />
-              </button>
-            )}
-          </div>
+        <div className="flex items-center gap-2">
+          <ProductIndex index={index} />
+          {row.deleted || !catalogEditable || !edit ? (
+            <span className="flex h-8 min-w-max items-center text-sm leading-none text-ink">{row.name}</span>
+          ) : (
+            <GridText
+              label={`Название, ${row.name}`}
+              value={row.name}
+              invalidMessage={FIELD_ERROR.empty}
+              onCommit={(next) => edit.onRenameProduct(row.productId, next)}
+            />
+          )}
           {row.deleted ? <span className="text-sm text-muted">(архив)</span> : null}
+          {row.deleted || !catalogEditable || !edit ? null : (
+            <button
+              type="button"
+              aria-label={`Удалить ${row.name}`}
+              title="Удалить"
+              onClick={() => edit.onDeleteProduct(row.productId, row.name)}
+              className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              <IconTrash />
+            </button>
+          )}
         </div>
       </th>
       {SIDE_COLUMNS.map((column) => {
@@ -450,7 +459,7 @@ function ProductRow({ row, part, edit }: { row: SummaryRow; part: 'full' | 'plan
         ? VARIANCE_COLUMNS.map((column) => (
             <td
               key={`var:${column.key}`}
-              className="w-px border-r border-r-line border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0"
+              className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`}
             >
               <VarianceCell column={column.key} variance={row.variance} />
             </td>
@@ -569,7 +578,7 @@ function SideCell({ column, side, kind }: { column: SideKey; side: SummarySide; 
       if (kind === 'total' && !side.costComplete) {
         return <Empty />;
       }
-      return <PercentCell value={side.profitabilityHundredths} scale="hundredths" />;
+      return <PercentCell value={side.profitabilityHundredths} scale="hundredths" fractionDigits={1} />;
     case 'price':
       if (side.priceExVatTenThousandths !== null && side.priceWithVat !== null) {
         return (
@@ -596,17 +605,17 @@ function SideCell({ column, side, kind }: { column: SideKey; side: SummarySide; 
       if (kind === 'total' && !side.revenueComplete) {
         return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
       }
-      return <VatMoneyCell withVat={side.revenueWithVat} exVat={side.revenueExVat} />;
+      return <VatMoneyCell whole withVat={side.revenueWithVat} exVat={side.revenueExVat} />;
     case 'contribution':
       if (kind === 'total' && (!side.costComplete || !side.revenueComplete)) {
         return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
       }
-      return <MoneyCell value={side.contribution} />;
+      return <MoneyCell whole value={side.contribution} />;
     case 'volumeCost':
       if (kind === 'total' && !side.costComplete) {
         return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
       }
-      return <VatMoneyCell withVat={side.volumeCostWithVat} exVat={side.volumeCostExVat} />;
+      return <VatMoneyCell whole withVat={side.volumeCostWithVat} exVat={side.volumeCostExVat} />;
     case 'perDay':
       return side.perDay === null ? (
         <Empty />
@@ -625,10 +634,10 @@ function SideCell({ column, side, kind }: { column: SideKey; side: SummarySide; 
 
 function VarianceCell({ column, variance }: { column: VarianceKey; variance: SummaryVariance }) {
   if (column === 'revenue') {
-    return <VatMoneyCell signed withVat={variance.revenueWithVat} exVat={variance.revenueExVat} />;
+    return <VatMoneyCell whole signed withVat={variance.revenueWithVat} exVat={variance.revenueExVat} />;
   }
 
-  return <MoneyCell value={variance.contribution} signed />;
+  return <MoneyCell whole value={variance.contribution} signed />;
 }
 
 function UnitCostValue({ cost }: { cost: UnitCost | null }) {
@@ -643,12 +652,14 @@ function GridText({
   label,
   value,
   disabled = false,
+  caps = false,
   invalidMessage,
   onCommit,
 }: {
   label: string;
   value: string;
   disabled?: boolean;
+  caps?: boolean;
   invalidMessage: string;
   onCommit: (value: string) => string | null;
 }) {
@@ -682,7 +693,10 @@ function GridText({
         {label}
       </label>
       <div className="relative min-w-max flex-1">
-        <span className="invisible flex h-8 items-center whitespace-nowrap text-sm leading-none" aria-hidden>
+        <span
+          className={`invisible flex h-8 items-center whitespace-nowrap text-sm leading-none ${caps ? 'uppercase' : ''}`}
+          aria-hidden
+        >
           {shown.length > 0 ? shown : '\u00a0'}
         </span>
         <input
@@ -705,7 +719,7 @@ function GridText({
               event.currentTarget.blur();
             }
           }}
-          className={gridNameClassName}
+          className={`${gridNameClassName} ${caps ? 'uppercase' : ''}`}
         />
       </div>
       {error ? (

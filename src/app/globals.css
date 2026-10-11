@@ -6,6 +6,7 @@
   --ink: #1a1a1a;
   --muted: #5e5e5e;
   --line: #deded8;
+  --band: #c4c4be;
   --sidebar: #1a1a1a;
   --sidebar-muted: #a8a8a2;
   --sidebar-line: #343432;
@@ -23,6 +24,7 @@
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-band: var(--band);
   --color-sidebar: var(--sidebar);
   --color-sidebar-muted: var(--sidebar-muted);
   --color-sidebar-line: var(--sidebar-line);
