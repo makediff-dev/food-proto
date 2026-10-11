@@ -1,7 +1,7 @@
 import { type UnitCost, unitCost } from '@/domain/cost';
 import { isOccurredOn, type Product, type PrototypeDocument } from '@/domain/document';
 import { amountExVat, averageAmount, percentHundredths, vatPercentHundredths } from '@/domain/money';
-import { periodGridCategories, periodGridProducts } from '@/domain/period-grid';
+import { dayGridProducts, periodGridCategories, periodGridProducts } from '@/domain/period-grid';
 import { workingSales } from '@/domain/sales';
 import { daysInMonth, monthKeyFromDate } from '@/domain/sales-plan';
 
@@ -274,10 +274,15 @@ export function salesFactMonth(document: PrototypeDocument, month: string): Sale
   const products = salesFactGridProducts(document, month);
 
   return monthDates(month).map((occurredOn) => {
-    const rows = products.map((product) =>
-      rowMetrics(document, product, saleDayProduct(document, occurredOn, product.id)),
+    const soldByProduct = new Map(
+      products.map((product) => [product.id, saleDayProduct(document, occurredOn, product.id)]),
     );
-    const groups = salesFactGroups(document, products, rows);
+    const dayProducts = dayGridProducts(products, (product) => (soldByProduct.get(product.id)?.pieces ?? 0) > 0);
+    const rows = dayProducts.map((product) => {
+      const sold = soldByProduct.get(product.id);
+      return rowMetrics(document, product, sold ?? { pieces: 0, revenueWithVat: null, revenueExVat: null });
+    });
+    const groups = salesFactGroups(document, dayProducts, rows);
     const groupedRows = groups.flatMap((group) => group.rows);
 
     return {

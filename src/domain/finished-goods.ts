@@ -6,7 +6,7 @@ import {
   type PrototypeDocument,
 } from '@/domain/document';
 import { amountExVat, averageAmount, ratioRound } from '@/domain/money';
-import { periodGridCategories, periodReferencedProductIds } from '@/domain/period-grid';
+import { dayGridProducts, periodGridCategories, periodReferencedProductIds } from '@/domain/period-grid';
 import { productionEntryDayPieces } from '@/domain/production-journal-fact';
 import { activeProducts } from '@/domain/products';
 import { monthDates, saleDayProduct } from '@/domain/sales-fact';
@@ -415,25 +415,35 @@ export function finishedGoodsMonthDays(document: PrototypeDocument, month: strin
   );
 
   return monthDates(month).map((occurredOn) => {
-    const rows = products.map((product) => {
-      const openingPieces = openingByProduct.get(product.id) ?? 0;
-      const planPrice = planPriceWithVatForProduct(document, month, product.id);
-      const sold = saleDayProduct(document, occurredOn, product.id);
-      const productionPieces = productionEntryDayPieces(document, occurredOn, product.id);
-      const row = rowFromParts(
-        product,
-        openingPieces,
-        planPrice,
-        sold.pieces,
-        sold.revenueWithVat,
-        sold.revenueExVat,
-        sold.revenueExVat !== null,
-        productionPieces,
-      );
-      openingByProduct.set(product.id, row.closingPieces);
-      return row;
+    const rowByProduct = new Map(
+      products.map((product) => {
+        const openingPieces = openingByProduct.get(product.id) ?? 0;
+        const planPrice = planPriceWithVatForProduct(document, month, product.id);
+        const sold = saleDayProduct(document, occurredOn, product.id);
+        const productionPieces = productionEntryDayPieces(document, occurredOn, product.id);
+        const row = rowFromParts(
+          product,
+          openingPieces,
+          planPrice,
+          sold.pieces,
+          sold.revenueWithVat,
+          sold.revenueExVat,
+          sold.revenueExVat !== null,
+          productionPieces,
+        );
+        openingByProduct.set(product.id, row.closingPieces);
+        return [product.id, row] as const;
+      }),
+    );
+    const dayProducts = dayGridProducts(products, (product) => {
+      const row = rowByProduct.get(product.id);
+      return row !== undefined && (row.salesPieces > 0 || row.productionPieces > 0);
     });
-    const groups = buildGroups(document, products, rows);
+    const rows = dayProducts.flatMap((product) => {
+      const row = rowByProduct.get(product.id);
+      return row ? [row] : [];
+    });
+    const groups = buildGroups(document, dayProducts, rows);
     const groupedRows = groups.flatMap((group) => group.rows);
 
     return {

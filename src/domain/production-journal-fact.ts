@@ -1,7 +1,7 @@
 import { type UnitCost, unitCost } from '@/domain/cost';
 import { type Product, type PrototypeDocument } from '@/domain/document';
 import { averageAmount } from '@/domain/money';
-import { periodGridCategories } from '@/domain/period-grid';
+import { dayGridProducts, periodGridCategories } from '@/domain/period-grid';
 import { productionFactGridProducts } from '@/domain/production-fact';
 import { workingProductionEntries } from '@/domain/production-journal';
 import { adjacentDay, defaultSalesFactDay, monthDates } from '@/domain/sales-fact';
@@ -148,10 +148,12 @@ export function productionJournalFactMonth(document: PrototypeDocument, month: s
   const products = productionJournalFactGridProducts(document, month);
 
   return monthDates(month).map((occurredOn) => {
-    const rows = products.map((product) =>
-      rowMetrics(document, product, productionEntryDayPieces(document, occurredOn, product.id)),
+    const piecesByProduct = new Map(
+      products.map((product) => [product.id, productionEntryDayPieces(document, occurredOn, product.id)]),
     );
-    const groups = productionJournalFactGroups(document, products, rows);
+    const dayProducts = dayGridProducts(products, (product) => (piecesByProduct.get(product.id) ?? 0) > 0);
+    const rows = dayProducts.map((product) => rowMetrics(document, product, piecesByProduct.get(product.id) ?? 0));
+    const groups = productionJournalFactGroups(document, dayProducts, rows);
     const groupedRows = groups.flatMap((group) => group.rows);
 
     return {

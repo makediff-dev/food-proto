@@ -70,6 +70,14 @@ export function periodGridCategories(document: PrototypeDocument, products: read
   return [...active, ...archived];
 }
 
+/**
+ * Товары одного дня подневной сетки: рабочие всегда; архивный — только если
+ * в этом дне у него ненулевое количество (`keepArchived`).
+ */
+export function dayGridProducts(products: readonly Product[], keepArchived: (product: Product) => boolean): Product[] {
+  return products.filter((item) => item.deletedAt === null || keepArchived(item));
+}
+
 /** Удалённый товар можно брать в продажу месяца, если он уже в сетке периода. */
 export function productAllowedInPeriodSale(document: PrototypeDocument, productId: string, month: string): boolean {
   const product = document.products.find((item) => item.id === productId);
