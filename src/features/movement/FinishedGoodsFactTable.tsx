@@ -44,8 +44,10 @@ type ColumnKey =
   | 'planPrice'
   | 'openingValue'
   | 'salesPieces'
+  | 'salesPrice'
   | 'salesRevenue'
   | 'productionPieces'
+  | 'productionPrice'
   | 'productionValue'
   | 'closing'
   | 'min'
@@ -67,6 +69,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
     label: 'Продажи',
     columns: [
       { key: 'salesPieces', label: 'Объём' },
+      { key: 'salesPrice', label: 'Цена' },
       { key: 'salesRevenue', label: 'Стоимость' },
     ],
   },
@@ -74,6 +77,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
     label: 'Производство',
     columns: [
       { key: 'productionPieces', label: 'Объём' },
+      { key: 'productionPrice', label: 'Себест' },
       { key: 'productionValue', label: 'Стоимость' },
     ],
   },
@@ -315,6 +319,11 @@ function MetricCell({ column, metrics }: { column: ColumnKey; metrics: FinishedG
       return <VatMoneyCell withVat={metrics.openingValueWithVat} exVat={metrics.openingValueExVat} />;
     case 'salesPieces':
       return <TableNumber value={metrics.salesPieces}>{formatPieces(metrics.salesPieces)} шт</TableNumber>;
+    case 'salesPrice':
+      if (!metrics.revenueComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return <VatMoneyCell withVat={metrics.factPriceWithVat} exVat={metrics.factPriceExVat} />;
     case 'salesRevenue':
       if (!metrics.revenueComplete) {
         return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
@@ -322,6 +331,8 @@ function MetricCell({ column, metrics }: { column: ColumnKey; metrics: FinishedG
       return <VatMoneyCell withVat={metrics.salesRevenueWithVat} exVat={metrics.salesRevenueExVat} />;
     case 'productionPieces':
       return <TableNumber value={metrics.productionPieces}>{formatPieces(metrics.productionPieces)} шт</TableNumber>;
+    case 'productionPrice':
+      return <VatMoneyCell withVat={metrics.productionPriceWithVat} exVat={metrics.productionPriceExVat} />;
     case 'productionValue':
       return <VatMoneyCell withVat={metrics.productionValueWithVat} exVat={metrics.productionValueExVat} />;
     case 'closing':

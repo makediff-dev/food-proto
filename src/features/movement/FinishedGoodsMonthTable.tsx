@@ -37,8 +37,10 @@ type ColumnKey =
   | 'openingDeviationValue'
   | 'openingValue'
   | 'salesPieces'
+  | 'salesPrice'
   | 'salesRevenue'
   | 'productionPieces'
+  | 'productionPrice'
   | 'productionValue'
   | 'closing'
   | 'min'
@@ -63,6 +65,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
     label: 'Продажи',
     columns: [
       { key: 'salesPieces', label: 'Объём' },
+      { key: 'salesPrice', label: 'Цена' },
       { key: 'salesRevenue', label: 'Стоимость' },
     ],
   },
@@ -70,6 +73,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
     label: 'Производство',
     columns: [
       { key: 'productionPieces', label: 'Объём' },
+      { key: 'productionPrice', label: 'Себест' },
       { key: 'productionValue', label: 'Стоимость' },
     ],
   },
@@ -244,6 +248,11 @@ function RowCell({ column, row }: { column: ColumnKey; row: FinishedGoodsRow }) 
       return <VatMoneyCell withVat={row.openingValueWithVat} exVat={row.openingValueExVat} />;
     case 'salesPieces':
       return <TableNumber value={row.salesPieces}>{formatPieces(row.salesPieces)} шт</TableNumber>;
+    case 'salesPrice':
+      if (!row.revenueComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return <VatMoneyCell withVat={row.factPriceWithVat} exVat={row.factPriceExVat} />;
     case 'salesRevenue':
       if (!row.revenueComplete) {
         return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
@@ -251,6 +260,8 @@ function RowCell({ column, row }: { column: ColumnKey; row: FinishedGoodsRow }) 
       return <VatMoneyCell withVat={row.salesRevenueWithVat} exVat={row.salesRevenueExVat} />;
     case 'productionPieces':
       return <TableNumber value={row.productionPieces}>{formatPieces(row.productionPieces)} шт</TableNumber>;
+    case 'productionPrice':
+      return <VatMoneyCell withVat={row.productionPriceWithVat} exVat={row.productionPriceExVat} />;
     case 'productionValue':
       return <VatMoneyCell withVat={row.productionValueWithVat} exVat={row.productionValueExVat} />;
     case 'closing':
@@ -286,6 +297,11 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: FinishedGoo
       return <VatMoneyCell withVat={totals.openingValueWithVat} exVat={totals.openingValueExVat} />;
     case 'salesPieces':
       return <TableNumber value={totals.salesPieces}>{formatPieces(totals.salesPieces)} шт</TableNumber>;
+    case 'salesPrice':
+      if (!totals.revenueComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return <VatMoneyCell withVat={totals.factPriceWithVat} exVat={totals.factPriceExVat} />;
     case 'salesRevenue':
       if (!totals.revenueComplete) {
         return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
@@ -293,6 +309,8 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: FinishedGoo
       return <VatMoneyCell withVat={totals.salesRevenueWithVat} exVat={totals.salesRevenueExVat} />;
     case 'productionPieces':
       return <TableNumber value={totals.productionPieces}>{formatPieces(totals.productionPieces)} шт</TableNumber>;
+    case 'productionPrice':
+      return <VatMoneyCell withVat={totals.productionPriceWithVat} exVat={totals.productionPriceExVat} />;
     case 'productionValue':
       return <VatMoneyCell withVat={totals.productionValueWithVat} exVat={totals.productionValueExVat} />;
     case 'closing':

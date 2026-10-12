@@ -7,6 +7,11 @@ import {
 } from '@/domain/document';
 import { amountExVat, averageAmount } from '@/domain/money';
 import { dayGridProducts, periodGridCategories, periodReferencedProductIds } from '@/domain/period-grid';
+import {
+  type ProductionProductSpend,
+  productionSpendByProduct,
+  workingProductionEntries,
+} from '@/domain/production-journal';
 import { productionEntryDayPieces } from '@/domain/production-journal-fact';
 import { activeProducts } from '@/domain/products';
 import { monthDates, saleDayProduct } from '@/domain/sales-fact';
@@ -44,6 +49,13 @@ export interface FinishedGoodsTotals {
   salesRevenueWithVat: number | null;
   salesRevenueExVat: number | null;
   productionPieces: number;
+  /**
+   * Себестоимость 1 шт выпуска: сумма строк журнала / штуки.
+   * Не цена продаж и не цена остатка. Выпуска не было — 0. Себестоимость не считается — пусто.
+   */
+  productionPriceWithVat: number | null;
+  productionPriceExVat: number | null;
+  /** Сумма себестоимостей строк журнала выпуска. Выпуска не было — 0. */
   productionValueWithVat: number | null;
   productionValueExVat: number | null;
   closingPieces: number;
@@ -250,6 +262,8 @@ function emptyTotals(): FinishedGoodsTotals {
     salesRevenueWithVat: 0,
     salesRevenueExVat: 0,
     productionPieces: 0,
+    productionPriceWithVat: null,
+    productionPriceExVat: null,
     productionValueWithVat: null,
     productionValueExVat: null,
     closingPieces: 0,
@@ -297,6 +311,32 @@ function priceAverage(amount: number | null, pieces: number): number | null {
   return averageAmount(amount, pieces);
 }
 
+function productionSpendOn(
+  document: PrototypeDocument,
+  dates: ReadonlySet<string>,
+): Map<string, ProductionProductSpend> {
+  return productionSpendByProduct(
+    document,
+    workingProductionEntries(document).filter((entry) => dates.has(entry.occurredOn)),
+  );
+}
+
+/** Штуки и себестоимость выпуска. Нет выпуска — нули. */
+function productionAmounts(spend: ProductionProductSpend | undefined): {
+  pieces: number;
+  costWithVat: number | null;
+  costExVat: number | null;
+} {
+  if (!spend || spend.pieces === 0) {
+    return { pieces: 0, costWithVat: 0, costExVat: 0 };
+  }
+  if (!spend.complete) {
+    return { pieces: spend.pieces, costWithVat: null, costExVat: null };
+  }
+
+  return { pieces: spend.pieces, costWithVat: spend.costWithVat, costExVat: spend.costExVat };
+}
+
 function rowFromParts(
   product: Product,
   bookOpeningPieces: number,
@@ -308,9 +348,9 @@ function rowFromParts(
   salesRevenueExVat: number | null,
   revenueComplete: boolean,
   productionPieces: number,
+  productionCostWithVat: number | null,
+  productionCostExVat: number | null,
   norm: Pick<FinishedGoodsTotals, 'minPieces' | 'maxPieces'>,
-  /** В подневном отчёте выпуск 0 — стоимость производства 0, даже без цены факта. */
-  zeroProductionValueWithoutOutput = false,
 ): FinishedGoodsRow {
   const vat = product.vatPercent;
   const openingPriceExTen = openingPriceWithVat === null ? null : priceExVatTenThousandths(openingPriceWithVat, vat);
@@ -325,18 +365,8 @@ function rowFromParts(
 
   const closingPieces = closingStockPieces(openingPieces, productionPieces, salesPieces);
   const normMetrics = closingNormMetrics(closingPieces, norm.minPieces, norm.maxPieces);
-  const productionValueWith =
-    productionPieces === 0 && zeroProductionValueWithoutOutput
-      ? 0
-      : factPriceWith === null
-        ? null
-        : productionPieces * factPriceWith;
-  const productionValueEx =
-    productionPieces === 0 && zeroProductionValueWithoutOutput
-      ? 0
-      : factPriceEx === null
-        ? null
-        : productionPieces * factPriceEx;
+  const productionPriceWith = priceAverage(productionCostWithVat, productionPieces);
+  const productionPriceEx = priceAverage(productionCostExVat, productionPieces);
   const closingValueWith = factPriceWith === null ? null : closingPieces * factPriceWith;
   const closingValueEx = factPriceEx === null ? null : closingPieces * factPriceEx;
 
@@ -359,8 +389,10 @@ function rowFromParts(
     salesRevenueWithVat: revenueComplete ? salesRevenueWithVat : null,
     salesRevenueExVat: revenueComplete ? salesRevenueExVat : null,
     productionPieces,
-    productionValueWithVat: productionValueWith,
-    productionValueExVat: productionValueEx,
+    productionPriceWithVat: productionPriceWith,
+    productionPriceExVat: productionPriceEx,
+    productionValueWithVat: productionCostWithVat,
+    productionValueExVat: productionCostExVat,
     closingPieces,
     factPriceWithVat: factPriceWith,
     factPriceExVat: factPriceEx,
@@ -479,6 +511,10 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
   const openingPriceExVat = openingValueExComplete ? priceAverage(openingValueEx, openingPieces) : null;
   const factPriceWithVat = averageAmount(salesRevenueWithVat, salesPieces);
   const factPriceExVat = averageAmount(salesRevenueExVat, salesPieces);
+  const productionValueWithVat = productionValueComplete ? productionValueWith : null;
+  const productionValueExVat = productionValueComplete ? productionValueEx : null;
+  const productionPriceWithVat = priceAverage(productionValueWithVat, productionPieces);
+  const productionPriceExVat = priceAverage(productionValueExVat, productionPieces);
 
   return {
     bookOpeningPieces,
@@ -495,8 +531,10 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
     salesRevenueWithVat,
     salesRevenueExVat,
     productionPieces,
-    productionValueWithVat: productionValueComplete ? productionValueWith : null,
-    productionValueExVat: productionValueComplete ? productionValueEx : null,
+    productionPriceWithVat,
+    productionPriceExVat,
+    productionValueWithVat,
+    productionValueExVat,
     closingPieces,
     factPriceWithVat,
     factPriceExVat,
@@ -579,11 +617,13 @@ function monthSalesAndProduction(
 /** Свод месяца: перенос и отклонение считают, инвентаризацию читают из документа. */
 export function finishedGoodsMonthView(document: PrototypeDocument, month: string): FinishedGoodsMonthView {
   const products = finishedGoodsGridProducts(document, month);
+  const producedByProduct = productionSpendOn(document, new Set(monthDates(month)));
   const rows = products.map((product) => {
     const bookOpeningPieces = bookOpeningPiecesForProduct(document, month, product.id);
     const openingPieces = openingPiecesForProduct(document, month, product.id);
     const openingPrice = monthOpeningPrice(document, month, product);
     const fact = monthSalesAndProduction(document, month, product.id);
+    const produced = productionAmounts(producedByProduct.get(product.id));
     return rowFromParts(
       product,
       bookOpeningPieces,
@@ -594,7 +634,9 @@ export function finishedGoodsMonthView(document: PrototypeDocument, month: strin
       fact.salesRevenueWithVat,
       fact.salesRevenueExVat,
       fact.revenueComplete,
-      fact.productionPieces,
+      produced.pieces,
+      produced.costWithVat,
+      produced.costExVat,
       normForProduct(document, month, product.id),
     );
   });
@@ -621,12 +663,13 @@ export function finishedGoodsMonthDays(document: PrototypeDocument, month: strin
   );
 
   return monthDates(month).map((occurredOn) => {
+    const producedByProduct = productionSpendOn(document, new Set([occurredOn]));
     const rowByProduct = new Map(
       products.map((product) => {
         const openingPieces = openingByProduct.get(product.id) ?? 0;
         const openingPrice = planOpeningPrice(document, month, product);
         const sold = saleDayProduct(document, occurredOn, product.id);
-        const productionPieces = productionEntryDayPieces(document, occurredOn, product.id);
+        const produced = productionAmounts(producedByProduct.get(product.id));
         const row = rowFromParts(
           product,
           openingPieces,
@@ -637,9 +680,10 @@ export function finishedGoodsMonthDays(document: PrototypeDocument, month: strin
           sold.revenueWithVat,
           sold.revenueExVat,
           sold.revenueExVat !== null,
-          productionPieces,
+          produced.pieces,
+          produced.costWithVat,
+          produced.costExVat,
           normForProduct(document, month, product.id),
-          true,
         );
         openingByProduct.set(product.id, row.closingPieces);
         return [product.id, row] as const;
