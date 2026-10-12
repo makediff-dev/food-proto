@@ -122,14 +122,18 @@ export function FinishedGoodsMonthTable({
             ))}
           </tr>
           <tr>
-            <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+            <th rowSpan={2} scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               Товар
             </th>
             <FinishedGoodsReportColumnHeaders
+              row="primary"
               columns={COLUMNS}
               groupEndClass={groupEndClass}
               lastColumnExtraClassName="last:border-r-0"
             />
+          </tr>
+          <tr>
+            <FinishedGoodsReportColumnHeaders row="secondary" columns={COLUMNS} groupEndClass={groupEndClass} />
           </tr>
         </thead>
         <tbody>

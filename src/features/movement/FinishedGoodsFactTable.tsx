@@ -138,16 +138,20 @@ export function FinishedGoodsFactTable({
           </tr>
           <tr>
             <th
+              rowSpan={2}
               scope="col"
               className={`sticky left-0 z-40 ${dayDateColumnClassName} border-y-[3px] border-y-muted ${tableBorder.rightThin} bg-paper p-0`}
             >
               <span className="sr-only">Дата</span>
             </th>
-            <th scope="col" className={`sticky left-10 z-40 ${nameHeadingClassName}`}>
+            <th rowSpan={2} scope="col" className={`sticky left-10 z-40 ${nameHeadingClassName}`}>
               Товар
             </th>
-            <FinishedGoodsReportColumnHeaders columns={COLUMNS} groupEndClass={groupEndClass} />
-            <th aria-hidden className={dayFactSpacerHeadClassName} />
+            <FinishedGoodsReportColumnHeaders row="primary" columns={COLUMNS} groupEndClass={groupEndClass} />
+            <th rowSpan={2} aria-hidden className={dayFactSpacerHeadClassName} />
+          </tr>
+          <tr>
+            <FinishedGoodsReportColumnHeaders row="secondary" columns={COLUMNS} groupEndClass={groupEndClass} />
           </tr>
         </thead>
         {days.map((day, dayIndex) => {

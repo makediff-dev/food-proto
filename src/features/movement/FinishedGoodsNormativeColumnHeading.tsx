@@ -1,39 +1,44 @@
 import type { ReactNode } from 'react';
 
 import { ColumnLabel, keepWithNext } from '@/features/table/ColumnLabel';
-import { columnHeadingClassName } from '@/features/table/styles';
+import { columnHeadingClassName, tableBorder } from '@/features/table/styles';
 
 const NORMATIVE_GROUP_LABEL = 'нормативный';
 
 const NORMATIVE_COLUMN_KEYS = new Set(['min', 'max', 'normDeviation']);
 
-function NormativeGroupedHeading({ columns }: { columns: readonly { key: string; label: string }[] }) {
-  return (
-    <div className="-mx-1.5 -my-2 flex min-w-0 flex-col">
-      <div className="border-b border-line px-1.5 py-1 text-center text-sm font-normal uppercase leading-5 text-ink">
-        {keepWithNext(NORMATIVE_GROUP_LABEL)}
-      </div>
-      <div className="grid grid-cols-3 divide-x divide-line">
-        {columns.map((column) => (
-          <div key={column.key} className="px-1.5 py-1 text-center">
-            <ColumnLabel label={column.label} />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+const normativeBannerHeadingClassName =
+  'w-px whitespace-normal border-t-[3px] border-t-muted border-b border-b-line bg-paper px-1.5 py-1 text-center align-middle text-sm font-normal uppercase leading-5 text-ink';
+
+const normativeSubHeadingClassName =
+  'w-px whitespace-normal border-b-[3px] border-b-muted bg-paper px-1.5 py-1 text-center align-middle text-sm font-normal leading-5 text-ink';
 
 export function FinishedGoodsReportColumnHeaders<K extends string>({
+  row,
   columns,
   groupEndClass,
   lastColumnExtraClassName = '',
 }: {
+  row: 'primary' | 'secondary';
   columns: readonly { key: K; label: string }[];
   groupEndClass: (key: K) => string;
   lastColumnExtraClassName?: string;
 }): ReactNode {
   const normativeColumns = columns.filter((column) => NORMATIVE_COLUMN_KEYS.has(column.key));
+
+  if (row === 'secondary') {
+    return normativeColumns.map((column) => (
+      <th
+        key={column.key}
+        scope="col"
+        className={`${normativeSubHeadingClassName} ${
+          column.key === 'normDeviation' ? tableBorder.rightThin : groupEndClass(column.key)
+        }`}
+      >
+        <ColumnLabel label={column.label} />
+      </th>
+    ));
+  }
 
   return columns.map((column) => {
     if (column.key === 'max' || column.key === 'normDeviation') {
@@ -46,9 +51,9 @@ export function FinishedGoodsReportColumnHeaders<K extends string>({
           key="normative-columns"
           colSpan={3}
           scope="colgroup"
-          className={`${columnHeadingClassName} ${groupEndClass(column.key)}`}
+          className={`${normativeBannerHeadingClassName} ${groupEndClass(column.key)}`}
         >
-          <NormativeGroupedHeading columns={normativeColumns} />
+          {keepWithNext(NORMATIVE_GROUP_LABEL)}
         </th>
       );
     }
@@ -56,6 +61,7 @@ export function FinishedGoodsReportColumnHeaders<K extends string>({
     return (
       <th
         key={column.key}
+        rowSpan={2}
         scope="col"
         className={`${columnHeadingClassName} ${lastColumnExtraClassName} ${groupEndClass(column.key)}`}
       >
