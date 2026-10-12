@@ -19,6 +19,10 @@ import {
   columnDividerClassName,
   columnHeadingClassName,
   dayDateColumnClassName,
+  dayFactSpacerBandClassName,
+  dayFactSpacerCellClassName,
+  dayFactSpacerHeadClassName,
+  dayFactSpacerTotalClassName,
   dayFactTableClassName,
   IntegerCell,
   keepWithNext,
@@ -86,7 +90,7 @@ export function FinishedGoodsFactTable({
         <thead className={stickyHeadClassName}>
           <tr>
             <th colSpan={2} className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
-            <th colSpan={COLUMNS.length} scope="colgroup" className={blockHeadingClassName}>
+            <th colSpan={COLUMNS.length + 1} scope="colgroup" className={blockHeadingClassName}>
               {keepWithNext('Движение готовой продукции за дату')}
             </th>
           </tr>
@@ -105,6 +109,7 @@ export function FinishedGoodsFactTable({
                 <ColumnLabel label={column.label} />
               </th>
             ))}
+            <th aria-hidden className={dayFactSpacerHeadClassName} />
           </tr>
         </thead>
         {days.map((day, dayIndex) => {
@@ -142,6 +147,7 @@ export function FinishedGoodsFactTable({
                     <MetricCell column={column.key} metrics={day.totals} />
                   </td>
                 ))}
+                <td aria-hidden className={dayFactSpacerTotalClassName} />
               </tr>
             </tbody>
           );
@@ -206,6 +212,12 @@ function CategoryBlock({
             <MetricCell column={column.key} metrics={group.totals} />
           </td>
         ))}
+        <td
+          aria-hidden
+          className={
+            dayBreak && !open ? 'w-full min-w-0 border-b-[3px] border-b-muted bg-band p-0' : dayFactSpacerBandClassName
+          }
+        />
       </tr>
       {open
         ? group.rows.map((row, index) => (
@@ -240,6 +252,10 @@ function ProductRow({ row, index, dayBreak }: { row: FinishedGoodsRow; index: nu
           <MetricCell column={column.key} metrics={row} />
         </td>
       ))}
+      <td
+        aria-hidden
+        className={dayBreak ? 'w-full min-w-0 border-b-[3px] border-b-muted bg-sheet p-0' : dayFactSpacerCellClassName}
+      />
     </tr>
   );
 }

@@ -20,6 +20,10 @@ import {
   columnDividerClassName,
   columnHeadingClassName,
   dayDateColumnClassName,
+  dayFactSpacerBandClassName,
+  dayFactSpacerCellClassName,
+  dayFactSpacerHeadClassName,
+  dayFactSpacerTotalClassName,
   dayFactTableClassName,
   Empty,
   keepWithNext,
@@ -70,7 +74,7 @@ export function ProductionJournalFactTable({
         <thead className={stickyHeadClassName}>
           <tr>
             <th colSpan={2} className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
-            <th colSpan={COLUMNS.length} scope="colgroup" className={blockHeadingClassName}>
+            <th colSpan={COLUMNS.length + 1} scope="colgroup" className={blockHeadingClassName}>
               {keepWithNext('Фактические показатели выпуска за дату')}
             </th>
           </tr>
@@ -89,6 +93,7 @@ export function ProductionJournalFactTable({
                 <ColumnLabel label={column.label} />
               </th>
             ))}
+            <th aria-hidden className={dayFactSpacerHeadClassName} />
           </tr>
         </thead>
         {days.map((day, dayIndex) => {
@@ -125,6 +130,7 @@ export function ProductionJournalFactTable({
                     <TotalCell column={column.key} totals={day.totals} />
                   </td>
                 ))}
+                <td aria-hidden className={dayFactSpacerTotalClassName} />
               </tr>
             </tbody>
           );
@@ -189,6 +195,7 @@ function CategoryBlock({
             <TotalCell column={column.key} totals={group.totals} />
           </td>
         ))}
+        <td aria-hidden className={dayFactSpacerBandClassName} />
       </tr>
       {open ? group.rows.map((row, index) => <ProductRow key={row.productId} row={row} index={index + 1} />) : null}
     </>
@@ -216,6 +223,7 @@ function ProductRow({ row, index }: { row: ProductionJournalFactRow; index: numb
           <RowCell column={column.key} row={row} />
         </td>
       ))}
+      <td aria-hidden className={dayFactSpacerCellClassName} />
     </tr>
   );
 }

@@ -24,13 +24,23 @@ export const tableFrameExpandedClassName = 'h-dvh contain-paint overflow-auto bg
 export const tableClassName = 'w-max min-w-full border-separate border-spacing-0 text-sm';
 
 /**
- * Подневные сетки: без min-w-full, иначе при узкой таблице колонка даты
+ * Подневные сетки: min-w-full заполняет узкий экран.
+ * Лишнюю ширину забирает колонка-распорка (dayFactSpacer*), иначе колонка даты
  * растягивается и ломает sticky left-10 у названия товара.
  */
-export const dayFactTableClassName = 'w-max border-separate border-spacing-0 text-sm';
+export const dayFactTableClassName = 'w-max min-w-full border-separate border-spacing-0 text-sm';
 
 /** Колонка номера дня: как на /sales (2.5rem), совпадает с left-10. */
 export const dayDateColumnClassName = 'w-10 min-w-10 max-w-10';
+
+/** Пустая колонка: забирает свободную ширину при min-w-full. */
+export const dayFactSpacerHeadClassName = 'w-full min-w-0 border-y-[3px] border-y-muted bg-paper p-0';
+
+export const dayFactSpacerCellClassName = 'w-full min-w-0 border-b border-b-line bg-sheet p-0';
+
+export const dayFactSpacerBandClassName = 'w-full min-w-0 border-b border-b-line bg-band p-0';
+
+export const dayFactSpacerTotalClassName = 'w-full min-w-0 border-y-[3px] border-y-muted bg-sheet p-0';
 
 export const stickyHeadClassName = 'sticky top-0 z-30';
 
