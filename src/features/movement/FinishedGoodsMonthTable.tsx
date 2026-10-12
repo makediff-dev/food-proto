@@ -34,7 +34,8 @@ type ColumnKey =
   | 'bookOpening'
   | 'inventory'
   | 'openingDeviation'
-  | 'planPrice'
+  | 'openingPrice'
+  | 'openingDeviationValue'
   | 'openingValue'
   | 'salesPieces'
   | 'salesRevenue'
@@ -54,7 +55,8 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
       { key: 'bookOpening', label: 'План' },
       { key: 'inventory', label: 'Факт' },
       { key: 'openingDeviation', label: 'Откл.' },
-      { key: 'planPrice', label: 'Цена (план)' },
+      { key: 'openingPrice', label: 'Цена' },
+      { key: 'openingDeviationValue', label: 'Стоимость отклонения' },
       { key: 'openingValue', label: 'Стоимость' },
     ],
   },
@@ -235,8 +237,10 @@ function RowCell({ column, row }: { column: ColumnKey; row: FinishedGoodsRow }) 
       return <TableNumber value={row.openingPieces}>{formatPieces(row.openingPieces)} шт</TableNumber>;
     case 'openingDeviation':
       return <IntegerCell value={row.openingDeviationPieces} unit="шт" signed />;
-    case 'planPrice':
-      return <VatMoneyCell withVat={row.planPriceWithVat} exVat={row.planPriceExVat} />;
+    case 'openingPrice':
+      return <VatMoneyCell withVat={row.openingPriceWithVat} exVat={row.openingPriceExVat} />;
+    case 'openingDeviationValue':
+      return <VatMoneyCell withVat={row.openingDeviationValueWithVat} exVat={row.openingDeviationValueExVat} signed />;
     case 'openingValue':
       return <VatMoneyCell withVat={row.openingValueWithVat} exVat={row.openingValueExVat} />;
     case 'salesPieces':
@@ -273,8 +277,12 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: FinishedGoo
       return <TableNumber value={totals.openingPieces}>{formatPieces(totals.openingPieces)} шт</TableNumber>;
     case 'openingDeviation':
       return <IntegerCell value={totals.openingDeviationPieces} unit="шт" signed />;
-    case 'planPrice':
-      return <VatMoneyCell withVat={totals.planPriceWithVat} exVat={totals.planPriceExVat} />;
+    case 'openingPrice':
+      return <VatMoneyCell withVat={totals.openingPriceWithVat} exVat={totals.openingPriceExVat} />;
+    case 'openingDeviationValue':
+      return (
+        <VatMoneyCell withVat={totals.openingDeviationValueWithVat} exVat={totals.openingDeviationValueExVat} signed />
+      );
     case 'openingValue':
       return <VatMoneyCell withVat={totals.openingValueWithVat} exVat={totals.openingValueExVat} />;
     case 'salesPieces':

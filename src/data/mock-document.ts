@@ -18,7 +18,8 @@ import {
  * У гамбургера выпуск 1 000 при продажах 1 100 — дефицит −100 шт (переносится в октябрь как остаток на начало план).
  * Факт октября — 2 и 9 число: продажи и выпуск 200, 250, 250 и 300. Цезарь и Оливье выше темпа, гуляш и гамбургер ниже.
  * Операционные расходы и инвентаризация пустые.
- * Цены с НДС: салаты — мок, гуляш `Svod!F31`, гамбургер `Svod!F63`.
+ * Плановые цены с НДС: салаты — мок, гуляш `Svod!F31`, гамбургер `Svod!F63`.
+ * Факт продаж — круглые и полукруглые: 95, 70, 100 и 85 ₽ с НДС.
  * НДС у всех товаров 20%. В книге у горячих `Svod!N31` 10%, у роллов `Svod!N63` 20%.
  * Объёмы книги (4 000, 5 000, 6 000, 20 000) в мок не переносятся: на экране нужны лёгкие сотни.
  */
@@ -62,12 +63,23 @@ const burger: Product = {
   deletedAt: null,
 };
 
-/** Цена с НДС, копейки. Салаты — мок, гуляш `Svod!F31`, гамбургер `Svod!F63`. */
+/** Плановая цена с НДС, копейки. Салаты — мок, гуляш `Svod!F31`, гамбургер `Svod!F63`. */
 const priceWithVat = {
   'product-caesar': 9_640,
   'product-olivier': 6_850,
   'product-goulash': 9_914,
   'product-burger': 8_513,
+} as const;
+
+/**
+ * Фактическая цена продажи с НДС, копейки. Круглые и полукруглые, рядом с планом:
+ * 95, 70, 100 и 85 ₽.
+ */
+const factPriceWithVat = {
+  'product-caesar': 9_500,
+  'product-olivier': 7_000,
+  'product-goulash': 10_000,
+  'product-burger': 8_500,
 } as const;
 
 type CatalogProductId = keyof typeof priceWithVat;
@@ -257,7 +269,7 @@ function salesFromOrders(drafts: readonly OrderDraft[]): Sale[] {
       id: `${order.id}-${line.productId.slice('product-'.length)}`,
       productId: line.productId,
       pieces: line.pieces,
-      amountWithVat: line.pieces * priceWithVat[line.productId],
+      amountWithVat: line.pieces * factPriceWithVat[line.productId],
     })),
   }));
 }

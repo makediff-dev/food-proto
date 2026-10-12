@@ -28,9 +28,16 @@ export interface FinishedGoodsTotals {
   openingPieces: number;
   /** Инвентаризация − расчётный перенос. */
   openingDeviationPieces: number;
-  planPriceWithVat: number | null;
-  planPriceExVat: number | null;
-  planPriceExVatTenThousandths: number | null;
+  /**
+   * Цена блока «Остаток на начало».
+   * На своде — продажи прошлого месяца, иначе его план. На дне — план этого месяца.
+   */
+  openingPriceWithVat: number | null;
+  openingPriceExVat: number | null;
+  openingPriceExVatTenThousandths: number | null;
+  /** Отклонение штук × цена остатка на начало. */
+  openingDeviationValueWithVat: number | null;
+  openingDeviationValueExVat: number | null;
   openingValueWithVat: number | null;
   openingValueExVat: number | null;
   salesPieces: number;
@@ -189,14 +196,54 @@ function planPriceWithVatForProduct(document: PrototypeDocument, month: string, 
   return suggestedPriceWithVat(document, productId, month);
 }
 
+function planOpeningPrice(
+  document: PrototypeDocument,
+  month: string,
+  product: Product,
+): { withVat: number; exVat: number | null } {
+  const withVat = planPriceWithVatForProduct(document, month, product.id);
+  return { withVat, exVat: amountExVat(withVat, product.vatPercent) };
+}
+
+/**
+ * Цена остатка на начало месяца.
+ * Для начала ноября — продажи октября; штук не было — плановая цена октября.
+ * Нет прошлого месяца — пусто.
+ */
+function monthOpeningPrice(
+  document: PrototypeDocument,
+  month: string,
+  product: Product,
+): { withVat: number | null; exVat: number | null } {
+  if (!isMonthKey(month) || month <= '2000-01') {
+    return { withVat: null, exVat: null };
+  }
+  const previousMonth = shiftMonth(month, -1);
+  if (!isMonthKey(previousMonth) || previousMonth < '2000-01') {
+    return { withVat: null, exVat: null };
+  }
+
+  const sold = monthSalesAndProduction(document, previousMonth, product.id);
+  if (sold.salesPieces > 0) {
+    return {
+      withVat: averageAmount(sold.salesRevenueWithVat, sold.salesPieces),
+      exVat: averageAmount(sold.salesRevenueExVat, sold.salesPieces),
+    };
+  }
+
+  return planOpeningPrice(document, previousMonth, product);
+}
+
 function emptyTotals(): FinishedGoodsTotals {
   return {
     bookOpeningPieces: 0,
     openingPieces: 0,
     openingDeviationPieces: 0,
-    planPriceWithVat: null,
-    planPriceExVat: null,
-    planPriceExVatTenThousandths: null,
+    openingPriceWithVat: null,
+    openingPriceExVat: null,
+    openingPriceExVatTenThousandths: null,
+    openingDeviationValueWithVat: null,
+    openingDeviationValueExVat: null,
     openingValueWithVat: null,
     openingValueExVat: null,
     salesPieces: 0,
@@ -257,7 +304,8 @@ function rowFromParts(
   product: Product,
   bookOpeningPieces: number,
   openingPieces: number,
-  planPriceWithVat: number,
+  openingPriceWithVat: number | null,
+  openingPriceExVat: number | null,
   salesPieces: number,
   salesRevenueWithVat: number | null,
   salesRevenueExVat: number | null,
@@ -266,10 +314,12 @@ function rowFromParts(
   norm: Pick<FinishedGoodsTotals, 'minPieces' | 'maxPieces'>,
 ): FinishedGoodsRow {
   const vat = product.vatPercent;
-  const planPriceEx = amountExVat(planPriceWithVat, vat);
-  const planPriceExTen = priceExVatTenThousandths(planPriceWithVat, vat);
-  const openingValueWith = openingPieces * planPriceWithVat;
-  const openingValueEx = planPriceEx === null ? null : openingPieces * planPriceEx;
+  const openingPriceExTen = openingPriceWithVat === null ? null : priceExVatTenThousandths(openingPriceWithVat, vat);
+  const openingDeviation = openingDeviationPieces(openingPieces, bookOpeningPieces);
+  const openingValueWith = openingPriceWithVat === null ? null : openingPieces * openingPriceWithVat;
+  const openingValueEx = openingPriceExVat === null ? null : openingPieces * openingPriceExVat;
+  const openingDeviationValueWith = openingPriceWithVat === null ? null : openingDeviation * openingPriceWithVat;
+  const openingDeviationValueEx = openingPriceExVat === null ? null : openingDeviation * openingPriceExVat;
 
   const factPriceWith = averageAmount(salesRevenueWithVat, salesPieces);
   const factPriceEx = averageAmount(salesRevenueExVat, salesPieces);
@@ -288,10 +338,12 @@ function rowFromParts(
     vatPercent: vat,
     bookOpeningPieces,
     openingPieces,
-    openingDeviationPieces: openingDeviationPieces(openingPieces, bookOpeningPieces),
-    planPriceWithVat,
-    planPriceExVat: planPriceEx,
-    planPriceExVatTenThousandths: planPriceExTen,
+    openingDeviationPieces: openingDeviation,
+    openingPriceWithVat,
+    openingPriceExVat,
+    openingPriceExVatTenThousandths: openingPriceExTen,
+    openingDeviationValueWithVat: openingDeviationValueWith,
+    openingDeviationValueExVat: openingDeviationValueEx,
     openingValueWithVat: openingValueWith,
     openingValueExVat: openingValueEx,
     salesPieces,
@@ -319,7 +371,12 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
   let openingDeviationPiecesSum = 0;
   let openingValueWith = 0;
   let openingValueEx = 0;
+  let openingValueWithComplete = true;
   let openingValueExComplete = true;
+  let openingDeviationValueWith = 0;
+  let openingDeviationValueEx = 0;
+  let openingDeviationValueWithComplete = true;
+  let openingDeviationValueExComplete = true;
   let salesPieces = 0;
   let salesRevenueWith = 0;
   let salesRevenueEx = 0;
@@ -341,7 +398,11 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
     bookOpeningPieces += row.bookOpeningPieces;
     openingPieces += row.openingPieces;
     openingDeviationPiecesSum += row.openingDeviationPieces;
-    if (row.openingValueWithVat !== null) {
+    if (row.openingValueWithVat === null) {
+      if (row.openingPieces !== 0) {
+        openingValueWithComplete = false;
+      }
+    } else {
       openingValueWith += row.openingValueWithVat;
     }
     if (row.openingValueExVat === null) {
@@ -350,6 +411,20 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
       }
     } else {
       openingValueEx += row.openingValueExVat;
+    }
+    if (row.openingDeviationValueWithVat === null) {
+      if (row.openingDeviationPieces !== 0) {
+        openingDeviationValueWithComplete = false;
+      }
+    } else {
+      openingDeviationValueWith += row.openingDeviationValueWithVat;
+    }
+    if (row.openingDeviationValueExVat === null) {
+      if (row.openingDeviationPieces !== 0) {
+        openingDeviationValueExComplete = false;
+      }
+    } else {
+      openingDeviationValueEx += row.openingDeviationValueExVat;
     }
 
     salesPieces += row.salesPieces;
@@ -389,8 +464,10 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
 
   const salesRevenueWithVat = revenueComplete ? salesRevenueWith : null;
   const salesRevenueExVat = revenueComplete ? salesRevenueEx : null;
-  const planPriceWithVat = priceAverage(openingValueWith, openingPieces);
-  const planPriceExVat = openingValueExComplete ? priceAverage(openingValueEx, openingPieces) : null;
+  const openingValueWithVat = openingValueWithComplete ? openingValueWith : null;
+  const openingValueExVat = openingValueExComplete ? openingValueEx : null;
+  const openingPriceWithVat = openingValueWithComplete ? priceAverage(openingValueWith, openingPieces) : null;
+  const openingPriceExVat = openingValueExComplete ? priceAverage(openingValueEx, openingPieces) : null;
   const factPriceWithVat = averageAmount(salesRevenueWithVat, salesPieces);
   const factPriceExVat = averageAmount(salesRevenueExVat, salesPieces);
 
@@ -398,11 +475,13 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
     bookOpeningPieces,
     openingPieces,
     openingDeviationPieces: openingDeviationPiecesSum,
-    planPriceWithVat,
-    planPriceExVat,
-    planPriceExVatTenThousandths: null,
-    openingValueWithVat: openingValueWith,
-    openingValueExVat: openingValueExComplete ? openingValueEx : null,
+    openingPriceWithVat,
+    openingPriceExVat,
+    openingPriceExVatTenThousandths: null,
+    openingDeviationValueWithVat: openingDeviationValueWithComplete ? openingDeviationValueWith : null,
+    openingDeviationValueExVat: openingDeviationValueExComplete ? openingDeviationValueEx : null,
+    openingValueWithVat,
+    openingValueExVat,
     salesPieces,
     salesRevenueWithVat,
     salesRevenueExVat,
@@ -494,13 +573,14 @@ export function finishedGoodsMonthView(document: PrototypeDocument, month: strin
   const rows = products.map((product) => {
     const bookOpeningPieces = bookOpeningPiecesForProduct(document, month, product.id);
     const openingPieces = openingPiecesForProduct(document, month, product.id);
-    const planPrice = planPriceWithVatForProduct(document, month, product.id);
+    const openingPrice = monthOpeningPrice(document, month, product);
     const fact = monthSalesAndProduction(document, month, product.id);
     return rowFromParts(
       product,
       bookOpeningPieces,
       openingPieces,
-      planPrice,
+      openingPrice.withVat,
+      openingPrice.exVat,
       fact.salesPieces,
       fact.salesRevenueWithVat,
       fact.salesRevenueExVat,
@@ -535,14 +615,15 @@ export function finishedGoodsMonthDays(document: PrototypeDocument, month: strin
     const rowByProduct = new Map(
       products.map((product) => {
         const openingPieces = openingByProduct.get(product.id) ?? 0;
-        const planPrice = planPriceWithVatForProduct(document, month, product.id);
+        const openingPrice = planOpeningPrice(document, month, product);
         const sold = saleDayProduct(document, occurredOn, product.id);
         const productionPieces = productionEntryDayPieces(document, occurredOn, product.id);
         const row = rowFromParts(
           product,
           openingPieces,
           openingPieces,
-          planPrice,
+          openingPrice.withVat,
+          openingPrice.exVat,
           sold.pieces,
           sold.revenueWithVat,
           sold.revenueExVat,

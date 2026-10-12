@@ -311,7 +311,7 @@ function MetricCell({ column, metrics }: { column: ColumnKey; metrics: FinishedG
     case 'opening':
       return <TableNumber value={metrics.openingPieces}>{formatPieces(metrics.openingPieces)} шт</TableNumber>;
     case 'planPrice':
-      return <VatMoneyCell withVat={metrics.planPriceWithVat} exVat={metrics.planPriceExVat} />;
+      return <VatMoneyCell withVat={metrics.openingPriceWithVat} exVat={metrics.openingPriceExVat} />;
     case 'openingValue':
       return <VatMoneyCell withVat={metrics.openingValueWithVat} exVat={metrics.openingValueExVat} />;
     case 'salesPieces':
