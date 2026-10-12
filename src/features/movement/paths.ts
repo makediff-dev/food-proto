@@ -7,6 +7,8 @@ export const MOVEMENT_FACT_TITLE = 'Отчет подневный';
 
 export const MOVEMENT_PLAN_TITLE = 'Ввод плана';
 
+export const MOVEMENT_INVENTORY_TITLE = 'Инвентаризация';
+
 export type FinishedGoodsFactView = 'day' | 'all';
 
 export function parseFinishedGoodsMonthQuery(params: { month?: string }): {
@@ -41,6 +43,23 @@ export function movementPlanHref(options: { month: string; currentMonth: string 
   }
   const query = params.toString();
   return query ? `/movement/plan?${query}` : '/movement/plan';
+}
+
+export function parseMovementInventoryQuery(params: { month?: string }): {
+  month: string;
+} {
+  return {
+    month: params.month ?? '',
+  };
+}
+
+export function movementInventoryHref(options: { month: string; currentMonth: string }): string {
+  const params = new URLSearchParams();
+  if (options.month && options.month !== options.currentMonth) {
+    params.set('month', options.month);
+  }
+  const query = params.toString();
+  return query ? `/movement/inventory?${query}` : '/movement/inventory';
 }
 
 export function parseFinishedGoodsFactQuery(params: { month?: string; day?: string; view?: string }): {

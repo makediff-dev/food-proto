@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import type { FinishedGoodsGroup, FinishedGoodsRow, FinishedGoodsTotals } from '@/domain/finished-goods';
+import { NormDeviationCell } from '@/features/movement/NormDeviationCell';
 import { formatPieces } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
@@ -42,8 +43,7 @@ type ColumnKey =
   | 'closing'
   | 'min'
   | 'max'
-  | 'belowMin'
-  | 'aboveMax'
+  | 'normDeviation'
   | 'factPrice'
   | 'closingValue';
 
@@ -78,8 +78,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
       { key: 'closing', label: 'Остаток' },
       { key: 'min', label: 'Мин' },
       { key: 'max', label: 'Макс' },
-      { key: 'belowMin', label: 'Ниже мин' },
-      { key: 'aboveMax', label: 'Выше макс' },
+      { key: 'normDeviation', label: 'Откл.' },
       { key: 'factPrice', label: 'Цена (факт)' },
       { key: 'closingValue', label: 'Стоимость' },
     ],
@@ -257,10 +256,8 @@ function RowCell({ column, row }: { column: ColumnKey; row: FinishedGoodsRow }) 
       return <TableNumber value={row.minPieces}>{formatPieces(row.minPieces)} шт</TableNumber>;
     case 'max':
       return <TableNumber value={row.maxPieces}>{formatPieces(row.maxPieces)} шт</TableNumber>;
-    case 'belowMin':
-      return <IntegerCell value={row.belowMinPieces} unit="шт" signed />;
-    case 'aboveMax':
-      return <IntegerCell value={row.aboveMaxPieces} unit="шт" signed />;
+    case 'normDeviation':
+      return <NormDeviationCell belowMinPieces={row.belowMinPieces} aboveMaxPieces={row.aboveMaxPieces} />;
     case 'factPrice':
       return <VatMoneyCell withVat={row.factPriceWithVat} exVat={row.factPriceExVat} />;
     case 'closingValue':
@@ -297,10 +294,8 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: FinishedGoo
       return <TableNumber value={totals.minPieces}>{formatPieces(totals.minPieces)} шт</TableNumber>;
     case 'max':
       return <TableNumber value={totals.maxPieces}>{formatPieces(totals.maxPieces)} шт</TableNumber>;
-    case 'belowMin':
-      return <IntegerCell value={totals.belowMinPieces} unit="шт" signed />;
-    case 'aboveMax':
-      return <IntegerCell value={totals.aboveMaxPieces} unit="шт" signed />;
+    case 'normDeviation':
+      return <NormDeviationCell belowMinPieces={totals.belowMinPieces} aboveMaxPieces={totals.aboveMaxPieces} />;
     case 'factPrice':
       return <VatMoneyCell withVat={totals.factPriceWithVat} exVat={totals.factPriceExVat} />;
     case 'closingValue':

@@ -8,6 +8,7 @@ import type {
   MovementPlanRow,
   MovementPlanTotals,
 } from '@/domain/movement-plan';
+import { NormDeviationCell } from '@/features/movement/NormDeviationCell';
 import { formatPieces } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
@@ -29,44 +30,28 @@ import {
   totalValueClassName,
 } from '@/features/table';
 
-type ColumnKey =
-  | 'bookOpening'
-  | 'inventory'
-  | 'openingDeviation'
-  | 'stock'
-  | 'min'
-  | 'max'
-  | 'belowMin'
-  | 'aboveMax'
-  | 'recommended';
+type ColumnKey = 'min' | 'max' | 'normDeviation' | 'recommended';
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: 'bookOpening', label: 'Остаток на начало (план)' },
-  { key: 'inventory', label: 'Остаток на начало (факт)' },
-  { key: 'openingDeviation', label: 'Отклонение' },
-  { key: 'stock', label: 'Остаток на конец' },
   { key: 'min', label: 'Минимум' },
   { key: 'max', label: 'Максимум' },
-  { key: 'belowMin', label: 'Ниже минимума' },
-  { key: 'aboveMax', label: 'Выше максимума' },
+  { key: 'normDeviation', label: 'Откл.' },
   { key: 'recommended', label: 'Рекомендуемый объём' },
 ];
 
-const EDITABLE_COLUMNS = new Set<ColumnKey>(['inventory', 'min', 'max']);
+const EDITABLE_COLUMNS = new Set<ColumnKey>(['min', 'max']);
 
 export function MovementPlanTable({
   groups,
   totals,
   editable,
   expanded = false,
-  onOpeningAction,
   onNormAction,
 }: {
   groups: MovementPlanGroup[];
   totals: MovementPlanTotals;
   editable: boolean;
   expanded?: boolean;
-  onOpeningAction: (productId: string, pieces: number) => string | null;
   onNormAction: (productId: string, field: FinishedGoodsNormField, value: number) => string | null;
 }) {
   return (
@@ -87,13 +72,7 @@ export function MovementPlanTable({
         </thead>
         <tbody>
           {groups.map((group) => (
-            <CategoryBlock
-              key={group.categoryId}
-              group={group}
-              editable={editable}
-              onOpeningAction={onOpeningAction}
-              onNormAction={onNormAction}
-            />
+            <CategoryBlock key={group.categoryId} group={group} editable={editable} onNormAction={onNormAction} />
           ))}
           <tr>
             <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
@@ -114,12 +93,10 @@ export function MovementPlanTable({
 function CategoryBlock({
   group,
   editable,
-  onOpeningAction,
   onNormAction,
 }: {
   group: MovementPlanGroup;
   editable: boolean;
-  onOpeningAction: (productId: string, pieces: number) => string | null;
   onNormAction: (productId: string, field: FinishedGoodsNormField, value: number) => string | null;
 }) {
   const [open, setOpen] = useState(true);
@@ -167,7 +144,6 @@ function CategoryBlock({
               row={row}
               index={index + 1}
               editable={editable}
-              onOpeningAction={onOpeningAction}
               onNormAction={onNormAction}
             />
           ))
@@ -180,13 +156,11 @@ function ProductRow({
   row,
   index,
   editable,
-  onOpeningAction,
   onNormAction,
 }: {
   row: MovementPlanRow;
   index: number;
   editable: boolean;
-  onOpeningAction: (productId: string, pieces: number) => string | null;
   onNormAction: (productId: string, field: FinishedGoodsNormField, value: number) => string | null;
 }) {
   const canEdit = editable && !row.deleted;
@@ -239,13 +213,7 @@ function ProductRow({
               }
             }}
           >
-            <RowCell
-              column={column.key}
-              row={row}
-              editable={canEdit}
-              onOpeningAction={onOpeningAction}
-              onNormAction={onNormAction}
-            />
+            <RowCell column={column.key} row={row} editable={canEdit} onNormAction={onNormAction} />
           </td>
         );
       })}
@@ -257,36 +225,14 @@ function RowCell({
   column,
   row,
   editable,
-  onOpeningAction,
   onNormAction,
 }: {
   column: ColumnKey;
   row: MovementPlanRow;
   editable: boolean;
-  onOpeningAction: (productId: string, pieces: number) => string | null;
   onNormAction: (productId: string, field: FinishedGoodsNormField, value: number) => string | null;
 }) {
   switch (column) {
-    case 'bookOpening':
-      return <TableNumber value={row.bookOpeningPieces}>{formatPieces(row.bookOpeningPieces)} шт</TableNumber>;
-    case 'inventory':
-      if (!editable) {
-        return <TableNumber value={row.openingPieces}>{formatPieces(row.openingPieces)} шт</TableNumber>;
-      }
-      return (
-        <IntegerCell
-          label={`Остаток на начало (факт), ${row.name}`}
-          value={row.openingPieces}
-          unit="шт"
-          allowNegative
-          invalidMessage="Укажите остаток на начало (факт) целым числом штук."
-          onChange={(next) => onOpeningAction(row.productId, next)}
-        />
-      );
-    case 'openingDeviation':
-      return <IntegerCell value={row.openingDeviationPieces} unit="шт" signed />;
-    case 'stock':
-      return <IntegerCell value={row.stockPieces} unit="шт" signed />;
     case 'min':
       if (!editable) {
         return <TableNumber value={row.minPieces}>{formatPieces(row.minPieces)} шт</TableNumber>;
@@ -315,10 +261,8 @@ function RowCell({
           onChange={(next) => onNormAction(row.productId, 'maxPieces', next)}
         />
       );
-    case 'belowMin':
-      return <IntegerCell value={row.belowMinPieces} unit="шт" signed />;
-    case 'aboveMax':
-      return <IntegerCell value={row.aboveMaxPieces} unit="шт" signed />;
+    case 'normDeviation':
+      return <NormDeviationCell belowMinPieces={row.belowMinPieces} aboveMaxPieces={row.aboveMaxPieces} />;
     case 'recommended':
       return <TableNumber value={row.recommendedPieces}>{formatPieces(row.recommendedPieces)} шт</TableNumber>;
   }
@@ -326,22 +270,12 @@ function RowCell({
 
 function TotalsCell({ column, totals }: { column: ColumnKey; totals: MovementPlanTotals }) {
   switch (column) {
-    case 'bookOpening':
-      return <TableNumber value={totals.bookOpeningPieces}>{formatPieces(totals.bookOpeningPieces)} шт</TableNumber>;
-    case 'inventory':
-      return <TableNumber value={totals.openingPieces}>{formatPieces(totals.openingPieces)} шт</TableNumber>;
-    case 'openingDeviation':
-      return <IntegerCell value={totals.openingDeviationPieces} unit="шт" signed />;
-    case 'stock':
-      return <IntegerCell value={totals.stockPieces} unit="шт" signed />;
     case 'min':
       return <TableNumber value={totals.minPieces}>{formatPieces(totals.minPieces)} шт</TableNumber>;
     case 'max':
       return <TableNumber value={totals.maxPieces}>{formatPieces(totals.maxPieces)} шт</TableNumber>;
-    case 'belowMin':
-      return <IntegerCell value={totals.belowMinPieces} unit="шт" signed />;
-    case 'aboveMax':
-      return <IntegerCell value={totals.aboveMaxPieces} unit="шт" signed />;
+    case 'normDeviation':
+      return <NormDeviationCell belowMinPieces={totals.belowMinPieces} aboveMaxPieces={totals.aboveMaxPieces} />;
     case 'recommended':
       return <TableNumber value={totals.recommendedPieces}>{formatPieces(totals.recommendedPieces)} шт</TableNumber>;
   }

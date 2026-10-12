@@ -8,6 +8,7 @@ import type {
   FinishedGoodsTotals,
 } from '@/domain/finished-goods';
 import { adjacentDay } from '@/domain/sales-fact';
+import { NormDeviationCell } from '@/features/movement/NormDeviationCell';
 import { formatPieces } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight, IconChevronUp } from '@/features/shell/Icons';
 import {
@@ -50,8 +51,7 @@ type ColumnKey =
   | 'closing'
   | 'min'
   | 'max'
-  | 'belowMin'
-  | 'aboveMax'
+  | 'normDeviation'
   | 'factPrice'
   | 'closingValue';
 
@@ -84,8 +84,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
       { key: 'closing', label: 'Остаток' },
       { key: 'min', label: 'Мин' },
       { key: 'max', label: 'Макс' },
-      { key: 'belowMin', label: 'Ниже мин' },
-      { key: 'aboveMax', label: 'Выше макс' },
+      { key: 'normDeviation', label: 'Откл.' },
       { key: 'factPrice', label: 'Цена (факт)' },
       { key: 'closingValue', label: 'Стоимость' },
     ],
@@ -332,10 +331,8 @@ function MetricCell({ column, metrics }: { column: ColumnKey; metrics: FinishedG
       return <TableNumber value={metrics.minPieces}>{formatPieces(metrics.minPieces)} шт</TableNumber>;
     case 'max':
       return <TableNumber value={metrics.maxPieces}>{formatPieces(metrics.maxPieces)} шт</TableNumber>;
-    case 'belowMin':
-      return <IntegerCell value={metrics.belowMinPieces} unit="шт" signed />;
-    case 'aboveMax':
-      return <IntegerCell value={metrics.aboveMaxPieces} unit="шт" signed />;
+    case 'normDeviation':
+      return <NormDeviationCell belowMinPieces={metrics.belowMinPieces} aboveMaxPieces={metrics.aboveMaxPieces} />;
     case 'factPrice':
       return <VatMoneyCell withVat={metrics.factPriceWithVat} exVat={metrics.factPriceExVat} />;
     case 'closingValue':

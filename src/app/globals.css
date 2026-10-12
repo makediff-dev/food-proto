@@ -13,6 +13,7 @@
   --sidebar-active: #2c2c2a;
   --mark: #8d3326;
   --negative: #d44532;
+  --caution: #c9a227;
   --positive: #2f9a4e;
   --background: var(--paper);
   --foreground: var(--ink);
@@ -31,6 +32,7 @@
   --color-sidebar-active: var(--sidebar-active);
   --color-mark: var(--mark);
   --color-negative: var(--negative);
+  --color-caution: var(--caution);
   --color-positive: var(--positive);
   --color-background: var(--background);
   --color-foreground: var(--foreground);

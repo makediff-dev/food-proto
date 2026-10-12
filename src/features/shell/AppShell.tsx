@@ -7,6 +7,7 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { useDocumentStore } from '@/data/DocumentProvider';
 import {
   MOVEMENT_FACT_TITLE,
+  MOVEMENT_INVENTORY_TITLE,
   MOVEMENT_PLAN_TITLE,
   MOVEMENT_SECTION_TITLE,
   MOVEMENT_SUMMARY_TITLE,
@@ -49,6 +50,7 @@ const MOVEMENT_NAV: readonly NavItem[] = [
   { href: '/movement', label: MOVEMENT_SUMMARY_TITLE, exact: true },
   { href: '/movement/fact', label: MOVEMENT_FACT_TITLE },
   { href: '/movement/plan', label: MOVEMENT_PLAN_TITLE },
+  { href: '/movement/inventory', label: MOVEMENT_INVENTORY_TITLE },
 ];
 
 const QUESTIONS_HREF = '/questions';

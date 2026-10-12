@@ -226,7 +226,7 @@ function buildRow(document: PrototypeDocument, month: string, product: Product):
   };
 }
 
-/** Свод месяца: инвентаризацию и норматив вводят, отклонения и рекомендацию считают. */
+/** Свод месяца: инвентаризацию и норматив читают, отклонения и рекомендацию считают. */
 export function movementPlanMonthView(document: PrototypeDocument, month: string): MovementPlanMonthView {
   const products = movementPlanGridProducts(document, month);
   const rows = products.map((product) => buildRow(document, month, product));
