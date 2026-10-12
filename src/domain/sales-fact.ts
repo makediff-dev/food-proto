@@ -17,7 +17,7 @@ export interface SalesFactRow {
   deleted: boolean;
   vatPercent: number | null;
   salesPieces: number;
-  /** Выручка / объём, копейки. Нет объёма — пусто. */
+  /** Выручка / объём, копейки. Нулевой объём — 0. */
   priceWithVat: number | null;
   priceExVat: number | null;
   revenueWithVat: number | null;

@@ -22,7 +22,7 @@ export interface ProductionFactSide {
   volumeCostExVat: number | null;
   /** Есть строка со штуками, у которой себестоимость не считается. */
   costComplete: boolean;
-  /** Себестоимость объёма / объём, копейки. Только если себестоимость полная и объём больше нуля. */
+  /** Себестоимость объёма / объём, копейки. Только если себестоимость полная; нулевой объём — 0. */
   averageCostWithVat: number | null;
   averageCostExVat: number | null;
 }
@@ -165,8 +165,8 @@ function spendSide(pieces: number, withVat: number, exVat: number, complete: boo
     volumeCostWithVat: withVat,
     volumeCostExVat: exVat,
     costComplete: true,
-    averageCostWithVat: pieces > 0 ? averageAmount(withVat, pieces) : null,
-    averageCostExVat: pieces > 0 ? averageAmount(exVat, pieces) : null,
+    averageCostWithVat: averageAmount(withVat, pieces),
+    averageCostExVat: averageAmount(exVat, pieces),
   };
 }
 

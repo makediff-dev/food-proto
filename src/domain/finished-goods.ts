@@ -5,7 +5,7 @@ import {
   type Product,
   type PrototypeDocument,
 } from '@/domain/document';
-import { amountExVat, averageAmount, ratioRound } from '@/domain/money';
+import { amountExVat, averageAmount } from '@/domain/money';
 import { dayGridProducts, periodGridCategories, periodReferencedProductIds } from '@/domain/period-grid';
 import { productionEntryDayPieces } from '@/domain/production-journal-fact';
 import { activeProducts } from '@/domain/products';
@@ -294,10 +294,7 @@ export function closingStockPieces(openingPieces: number, productionPieces: numb
 }
 
 function priceAverage(amount: number | null, pieces: number): number | null {
-  if (amount === null || pieces === 0) {
-    return null;
-  }
-  return ratioRound(amount, pieces);
+  return averageAmount(amount, pieces);
 }
 
 function rowFromParts(

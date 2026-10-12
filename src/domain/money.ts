@@ -1,5 +1,5 @@
 /**
- * Частное, половина от нуля. Ноль знаменателя — `null`.
+ * Частное, половина от нуля. Ноль знаменателя — `null` (для средних цен и сумм на объём — `averageAmount`, там нулевой объём даёт 0).
  * Для неотрицательных это то же «половина вверх», что в книге.
  * `bigint` только здесь: целое деление без float.
  */
@@ -21,7 +21,13 @@ export function ratioRound(numerator: number, denominator: number): number | nul
 }
 
 export function averageAmount(amount: number | null, volume: number | null): number | null {
-  if (amount === null || volume === null || volume <= 0) {
+  if (amount === null || volume === null) {
+    return null;
+  }
+  if (volume === 0) {
+    return 0;
+  }
+  if (volume < 0) {
     return null;
   }
 

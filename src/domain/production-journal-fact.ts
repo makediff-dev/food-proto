@@ -105,8 +105,8 @@ function rowMetrics(
   }
 
   const complete = spend.complete;
-  const unitWith = complete && pieces > 0 ? averageAmount(spend.costWithVat, pieces) : null;
-  const unitEx = complete && pieces > 0 ? averageAmount(spend.costExVat, pieces) : null;
+  const unitWith = complete ? averageAmount(spend.costWithVat, pieces) : null;
+  const unitEx = complete ? averageAmount(spend.costExVat, pieces) : null;
   const unitCost: UnitCost | null =
     unitWith === null || unitEx === null
       ? null
@@ -154,8 +154,8 @@ function dayTotals(rows: readonly ProductionJournalFactRow[]): ProductionJournal
     volumeCostWithVat: costComplete ? costWith : null,
     volumeCostExVat: costComplete ? costEx : null,
     costComplete,
-    averageCostWithVat: !costComplete ? null : pieces > 0 ? averageAmount(costWith, pieces) : 0,
-    averageCostExVat: !costComplete ? null : pieces > 0 ? averageAmount(costEx, pieces) : 0,
+    averageCostWithVat: !costComplete ? null : averageAmount(costWith, pieces),
+    averageCostExVat: !costComplete ? null : averageAmount(costEx, pieces),
   };
 }
 
