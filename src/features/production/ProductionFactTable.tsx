@@ -18,6 +18,7 @@ import {
   categoryBandClassName,
   categoryNameClassName,
   columnHeadingClassName,
+  Empty,
   keepWithNext,
   Muted,
   nameHeadingClassName,
@@ -220,16 +221,32 @@ function ProductSideCells({ kind, row }: { kind: 'plan' | 'fact'; row: Productio
   return COLUMNS.map((column) => (
     <MetricCell key={`${kind}:${column.key}`} kind={kind} column={column.key} sheet>
       {column.key === 'unitCost' ? (
-        row.unitCost ? (
-          <VatMoneyCell withVat={row.unitCost.withVat} exVat={row.unitCost.exVat} />
-        ) : (
-          <Muted>{keepWithNext('Себестоимость не считается')}</Muted>
-        )
+        <ProductUnitCost kind={kind} row={row} />
       ) : (
         <SideValue column={column.key} side={side} />
       )}
     </MetricCell>
   ));
+}
+
+function ProductUnitCost({ kind, row }: { kind: 'plan' | 'fact'; row: ProductionFactRow }) {
+  if (kind === 'plan') {
+    return row.unitCost ? (
+      <VatMoneyCell withVat={row.unitCost.withVat} exVat={row.unitCost.exVat} />
+    ) : (
+      <Muted>{keepWithNext('Себестоимость не считается')}</Muted>
+    );
+  }
+
+  if (row.fact.volumePieces <= 0) {
+    return <Empty />;
+  }
+
+  if (!row.fact.costComplete) {
+    return <Muted>{keepWithNext('Себестоимость не считается')}</Muted>;
+  }
+
+  return <VatMoneyCell withVat={row.fact.averageCostWithVat} exVat={row.fact.averageCostExVat} />;
 }
 
 function ProductVarianceCells({ row }: { row: ProductionFactRow }) {

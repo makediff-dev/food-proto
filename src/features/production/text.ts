@@ -1,4 +1,5 @@
 import type { ProductionEntryRejection } from '@/domain/production-journal';
+import { parseMoneyInput } from '@/features/table/format';
 
 export const PRODUCTION_ENTRY_ERROR: Record<ProductionEntryRejection, string> = {
   missing: 'Запись не найдена.',
@@ -8,6 +9,7 @@ export const PRODUCTION_ENTRY_ERROR: Record<ProductionEntryRejection, string> = 
   product: 'Выберите конечный товар.',
   'duplicate-line': 'Этот товар уже есть в записи.',
   pieces: 'Укажите целое число штук от 1.',
+  cost: 'Укажите себестоимость.',
   locked: 'Удалённый товар в новую строку не ставится.',
 };
 
@@ -41,4 +43,13 @@ export function parseProductionEntryPieces(raw: string): number | null {
   }
 
   return value;
+}
+
+/** Себестоимость штуки выпуска, копейки. Пусто — 0. Нечисло — `null`. */
+export function parseProductionEntryCost(raw: string): number | null {
+  if (raw.trim() === '') {
+    return 0;
+  }
+
+  return parseMoneyInput(raw);
 }

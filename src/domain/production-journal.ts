@@ -1,3 +1,4 @@
+import { costExVat } from '@/domain/cost';
 import {
   isOccurredOn,
   type ProductionEntry,
@@ -6,6 +7,7 @@ import {
 } from '@/domain/document';
 import { productAllowedInPeriodSale } from '@/domain/period-grid';
 import { daysInMonth, monthKeyFromDate, PLAN_HORIZON_MONTHS, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
+import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
 export type ProductionEntryRejection =
   | 'missing'
@@ -15,7 +17,80 @@ export type ProductionEntryRejection =
   | 'product'
   | 'duplicate-line'
   | 'pieces'
+  | 'cost'
   | 'locked';
+
+/** Себестоимость штуки строки. Нет поля или мусор — 0. */
+export function productionEntryLineCostWithVat(line: ProductionEntryLine): number {
+  const value = line.unitCostWithVat;
+  if (!Number.isInteger(value) || value < 0 || value > MAX_PRICE_KOPECKS) {
+    return 0;
+  }
+
+  return value;
+}
+
+function isLineCost(value: number): boolean {
+  return Number.isInteger(value) && value >= 0 && value <= MAX_PRICE_KOPECKS;
+}
+
+/** Сумма строки с НДС, копейки. Себестоимость штуки × штуки. */
+export function productionLineAmountWithVat(unitCostWithVat: number, pieces: number): number {
+  return unitCostWithVat * pieces;
+}
+
+/** Сумма строки без НДС, копейки. Округлённая себестоимость штуки без НДС × штуки. */
+export function productionLineAmountExVat(unitCostWithVat: number, pieces: number, vatPercent: number): number | null {
+  const exVat = costExVat(unitCostWithVat, vatPercent);
+  if (exVat === null) {
+    return null;
+  }
+
+  return exVat * pieces;
+}
+
+/** Факт выпуска товара: штуки и суммы строк журнала. */
+export interface ProductionProductSpend {
+  pieces: number;
+  /** Копейки с НДС. Сумма строк. */
+  costWithVat: number;
+  /** Копейки без НДС. Сумма строк. */
+  costExVat: number;
+  /** Нет товара или ставка НДС не считается. */
+  complete: boolean;
+}
+
+export function productionSpendByProduct(
+  document: PrototypeDocument,
+  entries: readonly ProductionEntry[],
+): Map<string, ProductionProductSpend> {
+  const vatByProduct = new Map(document.products.map((product) => [product.id, product.vatPercent]));
+  const map = new Map<string, ProductionProductSpend>();
+
+  for (const entry of entries) {
+    for (const line of entry.lines) {
+      const current = map.get(line.productId) ?? {
+        pieces: 0,
+        costWithVat: 0,
+        costExVat: 0,
+        complete: true,
+      };
+      const vatPercent = vatByProduct.get(line.productId);
+      const unitCostWithVat = productionEntryLineCostWithVat(line);
+      const amountExVat =
+        vatPercent === undefined ? null : productionLineAmountExVat(unitCostWithVat, line.pieces, vatPercent);
+      map.set(line.productId, {
+        pieces: current.pieces + line.pieces,
+        costWithVat:
+          current.costWithVat + (amountExVat === null ? 0 : productionLineAmountWithVat(unitCostWithVat, line.pieces)),
+        costExVat: current.costExVat + (amountExVat ?? 0),
+        complete: current.complete && amountExVat !== null,
+      });
+    }
+  }
+
+  return map;
+}
 
 /** Последний день горизонта плана — верхняя граница даты выпуска. */
 export function maxProductionEntryOccurredOn(today: Date): string {
@@ -74,6 +149,9 @@ function lineRejection(
     }
     if (!Number.isInteger(line.pieces) || line.pieces < 1) {
       return 'pieces';
+    }
+    if (!isLineCost(line.unitCostWithVat)) {
+      return 'cost';
     }
 
     seenProducts.add(line.productId);

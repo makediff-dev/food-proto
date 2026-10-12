@@ -23,22 +23,29 @@ import {
   emptyProductionEntryLineDraft,
   ProductionEntryFormTable,
   type ProductionEntryLineDraft,
+  type ProductionEntryLineField,
 } from '@/features/production/ProductionEntryFormTable';
 import {
   NEW_PRODUCTION_ENTRY_TITLE,
   PRODUCTION_JOURNAL_TITLE,
   productionJournalHref,
 } from '@/features/production/paths';
-import { PRODUCTION_ENTRY_ERROR, parseProductionEntryPieces } from '@/features/production/text';
+import {
+  PRODUCTION_ENTRY_ERROR,
+  parseProductionEntryCost,
+  parseProductionEntryPieces,
+} from '@/features/production/text';
 import { useProductionJournal } from '@/features/production/use-production-journal';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { IconArrowLeft, IconCheck, IconTrash } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
+import { formatMoneyDraft } from '@/features/table/format';
 
 function lineDraftFromEntry(line: ProductionEntryLine): ProductionEntryLineDraft {
   return {
     id: line.id,
     pieces: String(line.pieces),
+    cost: formatMoneyDraft(line.unitCostWithVat ?? 0),
   };
 }
 
@@ -85,7 +92,7 @@ export function ProductionEntryScreen({ entryId, dayQuery }: { entryId: string |
       <PageFrame
         title={PRODUCTION_JOURNAL_TITLE}
         full
-        lede="Запись выпуска: дата и штуки по товарам."
+        lede="Запись выпуска: дата, штуки и себестоимость по товарам."
         back={
           <Link
             href={productionJournalHref({ month: currentMonth, currentMonth })}
@@ -159,13 +166,13 @@ function EntryForm({
     });
   }, [products]);
 
-  function setLine(productId: string, raw: string) {
+  function setLine(productId: string, field: ProductionEntryLineField, raw: string) {
     setDrafts((current) => {
       const line = current[productId];
       if (!line) {
         return current;
       }
-      return { ...current, [productId]: { ...line, pieces: raw } };
+      return { ...current, [productId]: { ...line, [field]: raw } };
     });
   }
 
@@ -188,10 +195,17 @@ function EntryForm({
         continue;
       }
 
+      const unitCostWithVat = parseProductionEntryCost(line.cost);
+      if (unitCostWithVat === null) {
+        setSaveError(PRODUCTION_ENTRY_ERROR.cost);
+        return null;
+      }
+
       result.push({
         id: line.id,
         productId: product.id,
         pieces,
+        unitCostWithVat,
       });
     }
 
@@ -235,7 +249,7 @@ function EntryForm({
     <PageFrame
       title={entryId ? PRODUCTION_JOURNAL_TITLE : NEW_PRODUCTION_ENTRY_TITLE}
       full
-      lede={entryId ? 'Запись выпуска: дата и штуки по товарам.' : undefined}
+      lede={entryId ? 'Запись выпуска: дата, штуки и себестоимость по товарам.' : undefined}
       back={
         entryId ? (
           <Link
