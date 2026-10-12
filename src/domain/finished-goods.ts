@@ -312,6 +312,8 @@ function rowFromParts(
   revenueComplete: boolean,
   productionPieces: number,
   norm: Pick<FinishedGoodsTotals, 'minPieces' | 'maxPieces'>,
+  /** В подневном отчёте выпуск 0 — стоимость производства 0, даже без цены факта. */
+  zeroProductionValueWithoutOutput = false,
 ): FinishedGoodsRow {
   const vat = product.vatPercent;
   const openingPriceExTen = openingPriceWithVat === null ? null : priceExVatTenThousandths(openingPriceWithVat, vat);
@@ -326,8 +328,18 @@ function rowFromParts(
 
   const closingPieces = closingStockPieces(openingPieces, productionPieces, salesPieces);
   const normMetrics = closingNormMetrics(closingPieces, norm.minPieces, norm.maxPieces);
-  const productionValueWith = factPriceWith === null ? null : productionPieces * factPriceWith;
-  const productionValueEx = factPriceEx === null ? null : productionPieces * factPriceEx;
+  const productionValueWith =
+    productionPieces === 0 && zeroProductionValueWithoutOutput
+      ? 0
+      : factPriceWith === null
+        ? null
+        : productionPieces * factPriceWith;
+  const productionValueEx =
+    productionPieces === 0 && zeroProductionValueWithoutOutput
+      ? 0
+      : factPriceEx === null
+        ? null
+        : productionPieces * factPriceEx;
   const closingValueWith = factPriceWith === null ? null : closingPieces * factPriceWith;
   const closingValueEx = factPriceEx === null ? null : closingPieces * factPriceEx;
 
@@ -630,6 +642,7 @@ export function finishedGoodsMonthDays(document: PrototypeDocument, month: strin
           sold.revenueExVat !== null,
           productionPieces,
           normForProduct(document, month, product.id),
+          true,
         );
         openingByProduct.set(product.id, row.closingPieces);
         return [product.id, row] as const;
