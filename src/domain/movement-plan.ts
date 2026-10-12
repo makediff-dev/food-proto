@@ -5,7 +5,13 @@ import {
   type Product,
   type PrototypeDocument,
 } from '@/domain/document';
-import { closingStockPieces, finishedGoodsGridProducts, openingPiecesForProduct } from '@/domain/finished-goods';
+import {
+  bookOpeningPiecesForProduct,
+  closingStockPieces,
+  finishedGoodsGridProducts,
+  openingDeviationPieces,
+  openingPiecesForProduct,
+} from '@/domain/finished-goods';
 import { periodGridCategories } from '@/domain/period-grid';
 import { productionEntryDayPieces } from '@/domain/production-journal-fact';
 import { monthDates, saleDayProduct } from '@/domain/sales-fact';
@@ -17,6 +23,12 @@ export type FinishedGoodsNormRejection = 'month' | 'closed' | 'product' | 'locke
 
 /** Показатели строки / итога планирования движения. */
 export interface MovementPlanTotals {
+  /** Расчётный перенос с конца прошлого месяца. */
+  bookOpeningPieces: number;
+  /** Инвентаризация на начало месяца. Нет записи — 0. */
+  openingPieces: number;
+  /** Инвентаризация − расчётный перенос. */
+  openingDeviationPieces: number;
   /** Остаток на конец на своде месяца — с ним сравнивают мин/макс. */
   stockPieces: number;
   minPieces: number;
@@ -107,7 +119,7 @@ export function movementPlanGridProducts(document: PrototypeDocument, month: str
 
 /**
  * Запас для сравнения с нормативом: тот же остаток на конец, что на своде месяца.
- * Начало на произв-ве + выпуск факта − продажи факта (итог книги без РЦ).
+ * Инвентаризация + выпуск факта − продажи факта (итог книги без РЦ).
  */
 export function stockPiecesForProduct(document: PrototypeDocument, month: string, productId: string): number {
   const opening = openingPiecesForProduct(document, month, productId);
@@ -144,6 +156,9 @@ export function recommendedVolumePieces(document: PrototypeDocument, month: stri
 
 function emptyTotals(): MovementPlanTotals {
   return {
+    bookOpeningPieces: 0,
+    openingPieces: 0,
+    openingDeviationPieces: 0,
     stockPieces: 0,
     minPieces: 0,
     maxPieces: 0,
@@ -154,6 +169,9 @@ function emptyTotals(): MovementPlanTotals {
 }
 
 function sumRows(rows: readonly MovementPlanRow[]): MovementPlanTotals {
+  let bookOpeningPieces = 0;
+  let openingPieces = 0;
+  let openingDeviation = 0;
   let stockPieces = 0;
   let minPieces = 0;
   let maxPieces = 0;
@@ -162,6 +180,9 @@ function sumRows(rows: readonly MovementPlanRow[]): MovementPlanTotals {
   let recommendedPieces = 0;
 
   for (const row of rows) {
+    bookOpeningPieces += row.bookOpeningPieces;
+    openingPieces += row.openingPieces;
+    openingDeviation += row.openingDeviationPieces;
     stockPieces += row.stockPieces;
     minPieces += row.minPieces;
     maxPieces += row.maxPieces;
@@ -171,6 +192,9 @@ function sumRows(rows: readonly MovementPlanRow[]): MovementPlanTotals {
   }
 
   return {
+    bookOpeningPieces,
+    openingPieces,
+    openingDeviationPieces: openingDeviation,
     stockPieces,
     minPieces,
     maxPieces,
@@ -182,12 +206,17 @@ function sumRows(rows: readonly MovementPlanRow[]): MovementPlanTotals {
 
 function buildRow(document: PrototypeDocument, month: string, product: Product): MovementPlanRow {
   const norm = normForProduct(document, month, product.id);
+  const bookOpening = bookOpeningPiecesForProduct(document, month, product.id);
+  const inventory = openingPiecesForProduct(document, month, product.id);
   const stockPieces = stockPiecesForProduct(document, month, product.id);
   const metrics = movementPlanMetrics(stockPieces, norm.minPieces, norm.maxPieces);
   return {
     productId: product.id,
     name: product.name,
     deleted: product.deletedAt !== null,
+    bookOpeningPieces: bookOpening,
+    openingPieces: inventory,
+    openingDeviationPieces: openingDeviationPieces(inventory, bookOpening),
     stockPieces,
     minPieces: norm.minPieces,
     maxPieces: norm.maxPieces,
@@ -197,7 +226,7 @@ function buildRow(document: PrototypeDocument, month: string, product: Product):
   };
 }
 
-/** Свод месяца: норматив вводят, отклонения и рекомендацию считают. */
+/** Свод месяца: инвентаризацию и норматив вводят, отклонения и рекомендацию считают. */
 export function movementPlanMonthView(document: PrototypeDocument, month: string): MovementPlanMonthView {
   const products = movementPlanGridProducts(document, month);
   const rows = products.map((product) => buildRow(document, month, product));

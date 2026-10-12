@@ -23,6 +23,15 @@ export const tableFrameExpandedClassName = 'h-dvh contain-paint overflow-auto bg
 
 export const tableClassName = 'w-max min-w-full border-separate border-spacing-0 text-sm';
 
+/**
+ * Подневные сетки: без min-w-full, иначе при узкой таблице колонка даты
+ * растягивается и ломает sticky left-10 у названия товара.
+ */
+export const dayFactTableClassName = 'w-max border-separate border-spacing-0 text-sm';
+
+/** Колонка номера дня: как на /sales (2.5rem), совпадает с left-10. */
+export const dayDateColumnClassName = 'w-10 min-w-10 max-w-10';
+
 export const stickyHeadClassName = 'sticky top-0 z-30';
 
 /** Строка категории: темнее клетки ввода. */

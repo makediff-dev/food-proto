@@ -11,7 +11,6 @@ import {
   categoryNameClassName,
   columnDividerClassName,
   columnHeadingClassName,
-  editableCellClassName,
   IntegerCell,
   keepWithNext,
   Muted,
@@ -28,7 +27,9 @@ import {
 } from '@/features/table';
 
 type ColumnKey =
-  | 'opening'
+  | 'bookOpening'
+  | 'inventory'
+  | 'openingDeviation'
   | 'planPrice'
   | 'openingValue'
   | 'salesPieces'
@@ -40,7 +41,9 @@ type ColumnKey =
   | 'closingValue';
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: 'opening', label: 'Остаток на начало' },
+  { key: 'bookOpening', label: 'Остаток на начало (план)' },
+  { key: 'inventory', label: 'Остаток на начало (факт)' },
+  { key: 'openingDeviation', label: 'Отклонение' },
   { key: 'planPrice', label: 'Цена план' },
   { key: 'openingValue', label: 'Стоимость остатка на начало' },
   { key: 'salesPieces', label: 'Объём продаж' },
@@ -55,15 +58,11 @@ const COLUMNS: { key: ColumnKey; label: string }[] = [
 export function FinishedGoodsMonthTable({
   groups,
   totals,
-  editable,
   expanded = false,
-  onOpeningAction,
 }: {
   groups: FinishedGoodsGroup[];
   totals: FinishedGoodsTotals;
-  editable: boolean;
   expanded?: boolean;
-  onOpeningAction: (productId: string, pieces: number) => string | null;
 }) {
   return (
     <div className={expanded ? tableFrameExpandedClassName : tableFrameClassName}>
@@ -83,7 +82,7 @@ export function FinishedGoodsMonthTable({
         </thead>
         <tbody>
           {groups.map((group) => (
-            <CategoryBlock key={group.categoryId} group={group} editable={editable} onOpeningAction={onOpeningAction} />
+            <CategoryBlock key={group.categoryId} group={group} />
           ))}
           <tr>
             <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
@@ -101,15 +100,7 @@ export function FinishedGoodsMonthTable({
   );
 }
 
-function CategoryBlock({
-  group,
-  editable,
-  onOpeningAction,
-}: {
-  group: FinishedGoodsGroup;
-  editable: boolean;
-  onOpeningAction: (productId: string, pieces: number) => string | null;
-}) {
+function CategoryBlock({ group }: { group: FinishedGoodsGroup }) {
   const [open, setOpen] = useState(true);
   const productCount = group.rows.length;
 
@@ -148,34 +139,12 @@ function CategoryBlock({
           </td>
         ))}
       </tr>
-      {open
-        ? group.rows.map((row, index) => (
-            <ProductRow
-              key={row.productId}
-              row={row}
-              index={index + 1}
-              editable={editable}
-              onOpeningAction={onOpeningAction}
-            />
-          ))
-        : null}
+      {open ? group.rows.map((row, index) => <ProductRow key={row.productId} row={row} index={index + 1} />) : null}
     </>
   );
 }
 
-function ProductRow({
-  row,
-  index,
-  editable,
-  onOpeningAction,
-}: {
-  row: FinishedGoodsRow;
-  index: number;
-  editable: boolean;
-  onOpeningAction: (productId: string, pieces: number) => string | null;
-}) {
-  const canEditOpening = editable && !row.deleted;
-
+function ProductRow({ row, index }: { row: FinishedGoodsRow; index: number }) {
   return (
     <tr>
       <th
@@ -188,76 +157,26 @@ function ProductRow({
           {row.deleted ? <span className="text-sm text-muted">(архив)</span> : null}
         </div>
       </th>
-      {COLUMNS.map((column) => {
-        const canEdit = canEditOpening && column.key === 'opening';
-        return (
-          <td
-            key={`row:${column.key}`}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName} ${
-              canEdit ? editableCellClassName : ''
-            }`}
-            onClick={(event) => {
-              if (!canEdit) {
-                return;
-              }
-              if (event.target instanceof HTMLInputElement) {
-                return;
-              }
-              const field = editableFieldNear(event.target, event.currentTarget);
-              if (field instanceof HTMLInputElement && document.activeElement !== field) {
-                field.focus();
-              }
-            }}
-            onKeyDown={(event) => {
-              if (!canEdit) {
-                return;
-              }
-              if (event.key !== 'Enter' && event.key !== ' ') {
-                return;
-              }
-              if (event.target instanceof HTMLInputElement) {
-                return;
-              }
-              const field = editableFieldNear(event.target, event.currentTarget);
-              if (field instanceof HTMLInputElement) {
-                field.focus();
-              }
-            }}
-          >
-            <RowCell column={column.key} row={row} editable={canEditOpening} onOpeningAction={onOpeningAction} />
-          </td>
-        );
-      })}
+      {COLUMNS.map((column) => (
+        <td
+          key={`row:${column.key}`}
+          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`}
+        >
+          <RowCell column={column.key} row={row} />
+        </td>
+      ))}
     </tr>
   );
 }
 
-function RowCell({
-  column,
-  row,
-  editable,
-  onOpeningAction,
-}: {
-  column: ColumnKey;
-  row: FinishedGoodsRow;
-  editable: boolean;
-  onOpeningAction: (productId: string, pieces: number) => string | null;
-}) {
+function RowCell({ column, row }: { column: ColumnKey; row: FinishedGoodsRow }) {
   switch (column) {
-    case 'opening':
-      if (!editable) {
-        return <TableNumber value={row.openingPieces}>{formatPieces(row.openingPieces)} шт</TableNumber>;
-      }
-      return (
-        <IntegerCell
-          label={`Остаток на начало, ${row.name}`}
-          value={row.openingPieces}
-          unit="шт"
-          allowNegative
-          invalidMessage="Укажите остаток целым числом штук."
-          onChange={(next) => onOpeningAction(row.productId, next)}
-        />
-      );
+    case 'bookOpening':
+      return <TableNumber value={row.bookOpeningPieces}>{formatPieces(row.bookOpeningPieces)} шт</TableNumber>;
+    case 'inventory':
+      return <TableNumber value={row.openingPieces}>{formatPieces(row.openingPieces)} шт</TableNumber>;
+    case 'openingDeviation':
+      return <IntegerCell value={row.openingDeviationPieces} unit="шт" signed />;
     case 'planPrice':
       return <VatMoneyCell withVat={row.planPriceWithVat} exVat={row.planPriceExVat} />;
     case 'openingValue':
@@ -284,8 +203,12 @@ function RowCell({
 
 function TotalsCell({ column, totals }: { column: ColumnKey; totals: FinishedGoodsTotals }) {
   switch (column) {
-    case 'opening':
+    case 'bookOpening':
+      return <TableNumber value={totals.bookOpeningPieces}>{formatPieces(totals.bookOpeningPieces)} шт</TableNumber>;
+    case 'inventory':
       return <TableNumber value={totals.openingPieces}>{formatPieces(totals.openingPieces)} шт</TableNumber>;
+    case 'openingDeviation':
+      return <IntegerCell value={totals.openingDeviationPieces} unit="шт" signed />;
     case 'planPrice':
       return <VatMoneyCell withVat={totals.planPriceWithVat} exVat={totals.planPriceExVat} />;
     case 'openingValue':
@@ -308,11 +231,4 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: FinishedGoo
     case 'closingValue':
       return <VatMoneyCell withVat={totals.closingValueWithVat} exVat={totals.closingValueExVat} signed />;
   }
-}
-
-function editableFieldNear(target: EventTarget | null, cell: HTMLElement): HTMLInputElement | null {
-  if (target instanceof HTMLInputElement) {
-    return target;
-  }
-  return cell.querySelector('input');
 }

@@ -13,9 +13,11 @@ import {
  * Мок: два салата, одно горячее и гамбургер.
  * Себестоимость 1 шт с НДС округлена до целых десятков рублей.
  * План продаж и план выпуска сентября и октября 2026 одинаковые: 500, 600, 800 и 1 000 шт.
- * Факт сентября чуть выше плана: 550, 650, 900 и 1 100.
- * Факт октября — 2 и 9 число: 200, 250, 250 и 300. Цезарь и Оливье выше темпа, гуляш и гамбургер ниже.
- * Выпуск тех же дней повторяет штуки продаж. Операционные расходы и остатки на начало пустые.
+ * Факт продаж сентября чуть выше плана: 550, 650, 900 и 1 100.
+ * Выпуск сентября чуть выше продаж у салатов и гуляша (650, 800, 1 050) — на конец месяца остаток 100, 150 и 150 шт.
+ * У гамбургера выпуск 1 000 при продажах 1 100 — дефицит −100 шт (переносится в октябрь как остаток на начало план).
+ * Факт октября — 2 и 9 число: продажи и выпуск 200, 250, 250 и 300. Цезарь и Оливье выше темпа, гуляш и гамбургер ниже.
+ * Операционные расходы и инвентаризация пустые.
  * Цены с НДС: салаты — мок, гуляш `Svod!F31`, гамбургер `Svod!F63`.
  * НДС у всех товаров 20%. В книге у горячих `Svod!N31` 10%, у роллов `Svod!N63` 20%.
  * Объёмы книги (4 000, 5 000, 6 000, 20 000) в мок не переносятся: на экране нужны лёгкие сотни.
@@ -115,7 +117,7 @@ interface OrderDraft {
 }
 
 /**
- * Сентябрь: 550, 650, 900 и 1 100 шт — примерно на десятую выше плана.
+ * Сентябрь продажи: 550, 650, 900 и 1 100 шт — примерно на десятую выше плана.
  * Октябрь: 200, 250, 250 и 300 шт за 2 и 9 число. Цезарь и Оливье выше темпа 11/31, гуляш и гамбургер ниже.
  */
 const orders: OrderDraft[] = [
@@ -150,6 +152,69 @@ const orders: OrderDraft[] = [
       'product-olivier': 200,
       'product-goulash': 350,
       'product-burger': 400,
+    },
+  },
+  {
+    id: 'sale-2026-10-02',
+    customerName: 'РИТЕЙЛ Север',
+    occurredOn: '2026-10-02',
+    pieces: {
+      'product-caesar': 100,
+      'product-olivier': 150,
+      'product-goulash': 150,
+      'product-burger': 150,
+    },
+  },
+  {
+    id: 'sale-2026-10-09',
+    customerName: 'РИТЕЙЛ Юг',
+    occurredOn: '2026-10-09',
+    pieces: {
+      'product-caesar': 100,
+      'product-olivier': 100,
+      'product-goulash': 100,
+      'product-burger': 150,
+    },
+  },
+];
+
+/**
+ * Выпуск тех же дней. Октябрь = продажи.
+ * Сентябрь: салаты и гуляш выше продаж (остаток), гамбургер ниже (дефицит −100).
+ * Итого выпуск сентября: 650, 800, 1 050 и 1 000 → конец месяца 100, 150, 150 и −100.
+ */
+const productionOrders: OrderDraft[] = [
+  {
+    id: 'sale-2026-09-03',
+    customerName: 'РИТЕЙЛ Север',
+    occurredOn: '2026-09-03',
+    pieces: {
+      'product-caesar': 180,
+      'product-olivier': 250,
+      'product-goulash': 300,
+      'product-burger': 270,
+    },
+  },
+  {
+    id: 'sale-2026-09-10',
+    customerName: 'РИТЕЙЛ Центр',
+    occurredOn: '2026-09-10',
+    pieces: {
+      'product-caesar': 240,
+      'product-olivier': 300,
+      'product-goulash': 350,
+      'product-burger': 360,
+    },
+  },
+  {
+    id: 'sale-2026-09-18',
+    customerName: 'РИТЕЙЛ Юг',
+    occurredOn: '2026-09-18',
+    pieces: {
+      'product-caesar': 230,
+      'product-olivier': 250,
+      'product-goulash': 400,
+      'product-burger': 370,
     },
   },
   {
@@ -219,7 +284,7 @@ export const mockDocument: PrototypeDocument = {
   salesPlans,
   productionPlans,
   sales: salesFromOrders(orders),
-  productionEntries: productionFromOrders(orders),
+  productionEntries: productionFromOrders(productionOrders),
   operatingExpenses: [],
   finishedGoodsOpenings: [],
   finishedGoodsNorms: [],

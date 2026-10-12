@@ -10,13 +10,24 @@ import { dayGridProducts, periodGridCategories, periodReferencedProductIds } fro
 import { productionEntryDayPieces } from '@/domain/production-journal-fact';
 import { activeProducts } from '@/domain/products';
 import { monthDates, saleDayProduct } from '@/domain/sales-fact';
-import { planMonthOpen, priceExVatTenThousandths, salesPlanForMonth, suggestedPriceWithVat } from '@/domain/sales-plan';
+import {
+  planMonthOpen,
+  priceExVatTenThousandths,
+  salesPlanForMonth,
+  shiftMonth,
+  suggestedPriceWithVat,
+} from '@/domain/sales-plan';
 
 export type FinishedGoodsOpeningRejection = 'month' | 'closed' | 'product' | 'locked' | 'pieces';
 
 /** Показатели строки / итога движения готовой продукции. */
 export interface FinishedGoodsTotals {
+  /** Расчётный перенос с конца прошлого месяца. */
+  bookOpeningPieces: number;
+  /** Инвентаризация (рабочее число для стоимости, конца и дней). Нет записи — 0. */
   openingPieces: number;
+  /** Инвентаризация − расчётный перенос. */
+  openingDeviationPieces: number;
   planPriceWithVat: number | null;
   planPriceExVat: number | null;
   planPriceExVatTenThousandths: number | null;
@@ -74,13 +85,34 @@ export function workingFinishedGoodsOpening(document: PrototypeDocument, month: 
   return finishedGoodsOpeningsList(document).find((item) => item.month === month) ?? null;
 }
 
-/** Остаток на начало месяца на произв-ве. Нет записи — 0. */
+/** Инвентаризация на начало месяца. Нет записи — 0. */
 export function openingPiecesForProduct(document: PrototypeDocument, month: string, productId: string): number {
   const opening = workingFinishedGoodsOpening(document, month);
   if (!opening) {
     return 0;
   }
   return opening.lines.find((line) => line.productId === productId)?.pieces ?? 0;
+}
+
+/**
+ * Расчётный остаток на начало: конец прошлого месяца
+ * (инвентаризация прошлого месяца + выпуск − продажи). Нет прошлого месяца — 0.
+ */
+export function bookOpeningPiecesForProduct(document: PrototypeDocument, month: string, productId: string): number {
+  if (!isMonthKey(month) || month <= '2000-01') {
+    return 0;
+  }
+  const previousMonth = shiftMonth(month, -1);
+  if (!isMonthKey(previousMonth) || previousMonth < '2000-01') {
+    return 0;
+  }
+  const inventory = openingPiecesForProduct(document, previousMonth, productId);
+  const fact = monthSalesAndProduction(document, previousMonth, productId);
+  return closingStockPieces(inventory, fact.productionPieces, fact.salesPieces);
+}
+
+export function openingDeviationPieces(inventoryPieces: number, bookOpeningPieces: number): number {
+  return inventoryPieces - bookOpeningPieces;
 }
 
 function openingReferencedProductIds(document: PrototypeDocument, month: string): Set<string> {
@@ -95,13 +127,34 @@ function openingReferencedProductIds(document: PrototypeDocument, month: string)
   return ids;
 }
 
+function bookOpeningReferencedProductIds(document: PrototypeDocument, month: string): Set<string> {
+  const ids = new Set<string>();
+  if (!isMonthKey(month) || month <= '2000-01') {
+    return ids;
+  }
+  const previousMonth = shiftMonth(month, -1);
+  if (!isMonthKey(previousMonth) || previousMonth < '2000-01') {
+    return ids;
+  }
+  for (const product of document.products) {
+    if (bookOpeningPiecesForProduct(document, month, product.id) !== 0) {
+      ids.add(product.id);
+    }
+  }
+  return ids;
+}
+
 /**
- * Товары сетки: рабочие и архивные с планом, продажей, выпуском или остатком в месяце.
+ * Товары сетки: рабочие и архивные с планом, продажей, выпуском,
+ * инвентаризацией или ненулевым расчётным остатком в месяце.
  */
 export function finishedGoodsGridProducts(document: PrototypeDocument, month: string): Product[] {
   const active = activeProducts(document);
   const referenced = new Set(periodReferencedProductIds(document, month));
   for (const id of openingReferencedProductIds(document, month)) {
+    referenced.add(id);
+  }
+  for (const id of bookOpeningReferencedProductIds(document, month)) {
     referenced.add(id);
   }
   const prefix = `${month}-`;
@@ -133,7 +186,9 @@ function planPriceWithVatForProduct(document: PrototypeDocument, month: string, 
 
 function emptyTotals(): FinishedGoodsTotals {
   return {
+    bookOpeningPieces: 0,
     openingPieces: 0,
+    openingDeviationPieces: 0,
     planPriceWithVat: null,
     planPriceExVat: null,
     planPriceExVatTenThousandths: null,
@@ -154,7 +209,7 @@ function emptyTotals(): FinishedGoodsTotals {
   };
 }
 
-/** Остаток на конец, шт: начало + выпуск − продажи. */
+/** Остаток на конец, шт: рабочее начало (инвентаризация) + выпуск − продажи. */
 export function closingStockPieces(openingPieces: number, productionPieces: number, salesPieces: number): number {
   return openingPieces + productionPieces - salesPieces;
 }
@@ -168,6 +223,7 @@ function priceAverage(amount: number | null, pieces: number): number | null {
 
 function rowFromParts(
   product: Product,
+  bookOpeningPieces: number,
   openingPieces: number,
   planPriceWithVat: number,
   salesPieces: number,
@@ -196,7 +252,9 @@ function rowFromParts(
     name: product.name,
     deleted: product.deletedAt !== null,
     vatPercent: vat,
+    bookOpeningPieces,
     openingPieces,
+    openingDeviationPieces: openingDeviationPieces(openingPieces, bookOpeningPieces),
     planPriceWithVat,
     planPriceExVat: planPriceEx,
     planPriceExVatTenThousandths: planPriceExTen,
@@ -218,7 +276,9 @@ function rowFromParts(
 }
 
 function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
+  let bookOpeningPieces = 0;
   let openingPieces = 0;
+  let openingDeviationPiecesSum = 0;
   let openingValueWith = 0;
   let openingValueEx = 0;
   let openingValueExComplete = true;
@@ -236,7 +296,9 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
   let closingValueComplete = true;
 
   for (const row of rows) {
+    bookOpeningPieces += row.bookOpeningPieces;
     openingPieces += row.openingPieces;
+    openingDeviationPiecesSum += row.openingDeviationPieces;
     if (row.openingValueWithVat !== null) {
       openingValueWith += row.openingValueWithVat;
     }
@@ -287,7 +349,9 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
   const factPriceExVat = averageAmount(salesRevenueExVat, salesPieces);
 
   return {
+    bookOpeningPieces,
     openingPieces,
+    openingDeviationPieces: openingDeviationPiecesSum,
     planPriceWithVat,
     planPriceExVat,
     planPriceExVatTenThousandths: null,
@@ -374,15 +438,17 @@ function monthSalesAndProduction(
   };
 }
 
-/** Свод месяца: остаток вводят, остальное считают. В документ ничего производного не пишется. */
+/** Свод месяца: перенос и отклонение считают, инвентаризацию читают из документа. */
 export function finishedGoodsMonthView(document: PrototypeDocument, month: string): FinishedGoodsMonthView {
   const products = finishedGoodsGridProducts(document, month);
   const rows = products.map((product) => {
+    const bookOpeningPieces = bookOpeningPiecesForProduct(document, month, product.id);
     const openingPieces = openingPiecesForProduct(document, month, product.id);
     const planPrice = planPriceWithVatForProduct(document, month, product.id);
     const fact = monthSalesAndProduction(document, month, product.id);
     return rowFromParts(
       product,
+      bookOpeningPieces,
       openingPieces,
       planPrice,
       fact.salesPieces,
@@ -404,8 +470,8 @@ export function finishedGoodsMonthView(document: PrototypeDocument, month: strin
 }
 
 /**
- * Дни месяца сверху вниз. Начало дня = конец предыдущего
- * (остаток месяца + выпуск − продажи с 1-го по вчера).
+ * Дни месяца сверху вниз. Начало 1-го = инвентаризация месяца;
+ * следующий день — с конца предыдущего.
  * Конец последнего дня = конец на своде месяца.
  */
 export function finishedGoodsMonthDays(document: PrototypeDocument, month: string): FinishedGoodsDayView[] {
@@ -423,6 +489,7 @@ export function finishedGoodsMonthDays(document: PrototypeDocument, month: strin
         const productionPieces = productionEntryDayPieces(document, occurredOn, product.id);
         const row = rowFromParts(
           product,
+          openingPieces,
           openingPieces,
           planPrice,
           sold.pieces,
@@ -483,8 +550,8 @@ export function setFinishedGoodsOpeningRejection(
 }
 
 /**
- * Пишет остаток на начало. Нет записи месяца — создаёт.
- * Первая правка материализует месяц; производные суммы не пишет.
+ * Пишет инвентаризацию на начало месяца. Нет записи месяца — создаёт.
+ * Первая правка материализует месяц; перенос и отклонение не пишет.
  */
 export function setFinishedGoodsOpening(
   document: PrototypeDocument,

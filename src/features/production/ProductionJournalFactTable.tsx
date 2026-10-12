@@ -19,6 +19,8 @@ import {
   categoryNameClassName,
   columnDividerClassName,
   columnHeadingClassName,
+  dayDateColumnClassName,
+  dayFactTableClassName,
   Empty,
   keepWithNext,
   Muted,
@@ -27,7 +29,6 @@ import {
   stickyHeadClassName,
   TableNumber,
   tableBorder,
-  tableClassName,
   tableFrameExpandedClassName,
   totalNameClassName,
   totalValueClassName,
@@ -64,7 +65,7 @@ export function ProductionJournalFactTable({
           : 'h-full min-h-0 contain-paint overflow-auto border border-line bg-sheet'
       }
     >
-      <table className={tableClassName}>
+      <table className={dayFactTableClassName}>
         <caption className="sr-only">Факт выпуска по дням</caption>
         <thead className={stickyHeadClassName}>
           <tr>
@@ -76,7 +77,7 @@ export function ProductionJournalFactTable({
           <tr>
             <th
               scope="col"
-              className={`sticky left-0 z-40 w-10 max-w-10 border-y-[3px] border-y-muted ${tableBorder.rightThin} bg-paper p-0`}
+              className={`sticky left-0 z-40 ${dayDateColumnClassName} border-y-[3px] border-y-muted ${tableBorder.rightThin} bg-paper p-0`}
             >
               <span className="sr-only">Дата</span>
             </th>
@@ -96,7 +97,7 @@ export function ProductionJournalFactTable({
             <th
               scope="rowgroup"
               rowSpan={visibleDayRows(day.groups, categoryOpen)}
-              className={`sticky left-0 z-10 h-px w-10 max-w-10 border-r border-r-line bg-sheet p-0 align-middle font-normal ${
+              className={`sticky left-0 z-10 h-px ${dayDateColumnClassName} border-r border-r-line bg-sheet p-0 align-middle font-normal ${
                 dayBreak ? 'border-b-[3px] border-b-muted' : 'border-b border-b-line'
               }`}
             >

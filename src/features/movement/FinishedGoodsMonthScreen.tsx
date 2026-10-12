@@ -3,14 +3,13 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+import { useDocumentStore } from '@/data/DocumentProvider';
 import { activeCategories } from '@/domain/categories';
 import { finishedGoodsMonthView } from '@/domain/finished-goods';
-import { activeProducts } from '@/domain/products';
 import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { lastHorizonMonth } from '@/domain/summary';
 import { FinishedGoodsMonthTable } from '@/features/movement/FinishedGoodsMonthTable';
 import { finishedGoodsMonthHref, MOVEMENT_SUMMARY_TITLE } from '@/features/movement/paths';
-import { useFinishedGoods } from '@/features/movement/use-finished-goods';
 import { monthFieldClassName } from '@/features/sales/fields';
 import { IconFullscreen, IconFullscreenExit } from '@/features/shell/Icons';
 import { MonthStep } from '@/features/shell/MonthStep';
@@ -25,13 +24,11 @@ export function FinishedGoodsMonthScreen({ month }: { month: string }) {
 }
 
 function Workspace({ month, currentMonth, today }: { month: string; currentMonth: string; today: Date }) {
-  const movement = useFinishedGoods();
+  const { document: prototypeDocument } = useDocumentStore();
   const router = useRouter();
   const [fullscreen, setFullscreen] = useState(false);
-  const view = useMemo(() => finishedGoodsMonthView(movement.document, month), [movement.document, month]);
-  const products = activeProducts(movement.document);
-  const categories = activeCategories(movement.document);
-  const openingEditable = movement.hydrated && products.length > 0;
+  const view = useMemo(() => finishedGoodsMonthView(prototypeDocument, month), [prototypeDocument, month]);
+  const categories = activeCategories(prototypeDocument);
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
   const horizonEnd = lastHorizonMonth(today);
@@ -109,31 +106,7 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
               className={tableExpanded ? 'fixed inset-0 z-50 bg-paper' : undefined}
               aria-label={tableExpanded ? 'Таблица на весь экран' : 'Таблица движения готовой продукции'}
             >
-              <FinishedGoodsMonthTable
-                groups={view.groups}
-                totals={view.totals}
-                editable={openingEditable}
-                expanded={tableExpanded}
-                onOpeningAction={(productId, pieces) => {
-                  const rejection = movement.setOpening(month, productId, pieces);
-                  if (rejection === 'pieces') {
-                    return 'Укажите остаток целым числом штук.';
-                  }
-                  if (rejection === 'month') {
-                    return 'Этот месяц выбрать нельзя.';
-                  }
-                  if (rejection === 'closed') {
-                    return 'Этот месяц сейчас нельзя править.';
-                  }
-                  if (rejection === 'locked') {
-                    return 'Удалённый товар не меняется.';
-                  }
-                  if (rejection) {
-                    return 'Запись не найдена.';
-                  }
-                  return null;
-                }}
-              />
+              <FinishedGoodsMonthTable groups={view.groups} totals={view.totals} expanded={tableExpanded} />
             </section>
           ) : (
             <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">

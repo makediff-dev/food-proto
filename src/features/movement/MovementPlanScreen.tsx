@@ -64,6 +64,25 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
     });
   }
 
+  function openingError(rejection: ReturnType<typeof movementPlan.setOpening>): string | null {
+    if (rejection === 'pieces') {
+      return 'Укажите остаток на начало (факт) целым числом штук.';
+    }
+    if (rejection === 'month') {
+      return 'Этот месяц выбрать нельзя.';
+    }
+    if (rejection === 'closed') {
+      return 'Этот месяц сейчас нельзя править.';
+    }
+    if (rejection === 'locked') {
+      return 'Удалённый товар не меняется.';
+    }
+    if (rejection) {
+      return 'Запись не найдена.';
+    }
+    return null;
+  }
+
   function normError(rejection: ReturnType<typeof movementPlan.setNorm>): string | null {
     if (rejection === 'pieces') {
       return 'Укажите значение целым числом штук.';
@@ -87,7 +106,7 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
     <>
       <PageFrame
         title={MOVEMENT_PLAN_TITLE}
-        lede="Нормативы остатков, отклонения и рекомендуемый выпуск."
+        lede="Остаток на начало (факт), нормативы и рекомендуемый выпуск."
         full
         intro={
           <div className="w-full border border-line bg-sheet p-4">
@@ -133,6 +152,7 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
                 totals={view.totals}
                 editable={normEditable}
                 expanded={tableExpanded}
+                onOpeningAction={(productId, pieces) => openingError(movementPlan.setOpening(month, productId, pieces))}
                 onNormAction={(productId, field: FinishedGoodsNormField, value) =>
                   normError(movementPlan.setNorm(month, productId, field, value))
                 }

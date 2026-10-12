@@ -19,6 +19,8 @@ export {
   categoryNameClassName,
   columnDividerClassName,
   columnHeadingClassName,
+  dayDateColumnClassName,
+  dayFactTableClassName,
   editableCellClassName,
   gridFieldClassName,
   gridNameClassName,

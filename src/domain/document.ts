@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 39 as const;
+export const SCHEMA_VERSION = 40 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -138,19 +138,19 @@ export interface MonthOperatingExpense {
   factExVat: number;
 }
 
-/** Строка остатка на начало месяца на производстве. `DGP!D`. */
+/** Строка инвентаризации на начало месяца на производстве. */
 export interface FinishedGoodsOpeningLine {
   id: string;
   /** Конечный товар. Ссылка живёт и после удаления товара. */
   productId: string;
-  /** Остаток на начало периода на произв-ве, шт. Может быть отрицательным. */
+  /** Результат инвентаризации, шт. Может быть отрицательным. */
   pieces: number;
 }
 
 /**
- * Остатки на начало месяца на производстве.
+ * Инвентаризация на начало месяца на производстве.
  * На один месяц — одна запись. Мягкого удаления нет: это не план.
- * Стоимости и конец периода в документ не пишутся.
+ * Расчётный перенос, отклонение, стоимости и конец периода в документ не пишутся.
  */
 export interface FinishedGoodsOpening {
   id: string;
@@ -196,7 +196,7 @@ export interface PrototypeDocument {
   productionEntries: ProductionEntry[];
   operatingExpenses: MonthOperatingExpense[];
   /**
-   * Остатки на начало месяца на производстве.
+   * Инвентаризация на начало месяца на производстве.
    * Старый документ без поля читается как пустой массив.
    */
   finishedGoodsOpenings: FinishedGoodsOpening[];
