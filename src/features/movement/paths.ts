@@ -11,18 +11,28 @@ export const MOVEMENT_INVENTORY_TITLE = 'Инвентаризация';
 
 export type FinishedGoodsFactView = 'day' | 'all';
 
-export function parseFinishedGoodsMonthQuery(params: { month?: string }): {
-  month: string;
+export function parseFinishedGoodsSummaryQuery(params: { from?: string; to?: string; month?: string }): {
+  from: string;
+  to: string;
 } {
-  return {
-    month: params.month ?? '',
-  };
+  const legacyMonth = params.month ?? '';
+  const from = params.from ?? legacyMonth;
+  const to = params.to ?? params.from ?? legacyMonth;
+  return { from, to };
 }
 
-export function finishedGoodsMonthHref(options: { month: string; currentMonth: string }): string {
+/** Адрес свода. Текущий месяц без параметров. Старый `month` читается как один месяц. */
+export function finishedGoodsSummaryHref(options: { from: string; to: string; currentMonth: string }): string {
   const params = new URLSearchParams();
-  if (options.month && options.month !== options.currentMonth) {
-    params.set('month', options.month);
+  if (options.from && options.to && options.currentMonth) {
+    if (options.from === options.to) {
+      if (options.from !== options.currentMonth) {
+        params.set('from', options.from);
+      }
+    } else {
+      params.set('from', options.from);
+      params.set('to', options.to);
+    }
   }
   const query = params.toString();
   return query ? `/movement?${query}` : '/movement';

@@ -16,12 +16,14 @@ import { productionEntryDayPieces } from '@/domain/production-journal-fact';
 import { activeProducts } from '@/domain/products';
 import { monthDates, saleDayProduct } from '@/domain/sales-fact';
 import {
+  monthKeyFromDate,
   planMonthOpen,
   priceExVatTenThousandths,
   salesPlanForMonth,
   shiftMonth,
   suggestedPriceWithVat,
 } from '@/domain/sales-plan';
+import { monthsInRange, normalizeMonthRange } from '@/domain/summary';
 
 export type FinishedGoodsOpeningRejection = 'month' | 'closed' | 'product' | 'locked' | 'pieces';
 
@@ -88,6 +90,15 @@ export interface FinishedGoodsGroup {
 
 export interface FinishedGoodsMonthView {
   month: string;
+  groups: FinishedGoodsGroup[];
+  rows: FinishedGoodsRow[];
+  totals: FinishedGoodsTotals;
+}
+
+/** Свод «с — по» по текущий месяц включительно. Один месяц — тот же расчёт, что у свода месяца. */
+export interface FinishedGoodsRangeView {
+  from: string;
+  to: string;
   groups: FinishedGoodsGroup[];
   rows: FinishedGoodsRow[];
   totals: FinishedGoodsTotals;
@@ -351,6 +362,7 @@ function rowFromParts(
   productionCostWithVat: number | null,
   productionCostExVat: number | null,
   norm: Pick<FinishedGoodsTotals, 'minPieces' | 'maxPieces'>,
+  closingPieces = closingStockPieces(openingPieces, productionPieces, salesPieces),
 ): FinishedGoodsRow {
   const vat = product.vatPercent;
   const openingPriceExTen = openingPriceWithVat === null ? null : priceExVatTenThousandths(openingPriceWithVat, vat);
@@ -363,7 +375,6 @@ function rowFromParts(
   const factPriceWith = averageAmount(salesRevenueWithVat, salesPieces);
   const factPriceEx = averageAmount(salesRevenueExVat, salesPieces);
 
-  const closingPieces = closingStockPieces(openingPieces, productionPieces, salesPieces);
   const normMetrics = closingNormMetrics(closingPieces, norm.minPieces, norm.maxPieces);
   const productionPriceWith = priceAverage(productionCostWithVat, productionPieces);
   const productionPriceEx = priceAverage(productionCostExVat, productionPieces);
@@ -614,40 +625,176 @@ function monthSalesAndProduction(
   };
 }
 
-/** Свод месяца: перенос и отклонение считают, инвентаризацию читают из документа. */
-export function finishedGoodsMonthView(document: PrototypeDocument, month: string): FinishedGoodsMonthView {
-  const products = finishedGoodsGridProducts(document, month);
-  const producedByProduct = productionSpendOn(document, new Set(monthDates(month)));
+/** Текущий месяц, если он не раньше `2000-01`. Будущие в свод не входят. */
+export function lastSummaryMonth(today: Date): string | null {
+  const current = monthKeyFromDate(today);
+  if (!isMonthKey(current) || current < '2000-01') {
+    return null;
+  }
+  return current;
+}
+
+/**
+ * Месяц свода: с `2000-01` по текущий включительно.
+ * Позже текущего — текущий. Иначе `null`.
+ */
+export function clampSummaryMonth(month: string, today: Date): string | null {
+  const last = lastSummaryMonth(today);
+  if (!last || !isMonthKey(month) || month < '2000-01') {
+    return null;
+  }
+  return month > last ? last : month;
+}
+
+/** «С — по» по текущий месяц включительно. Пустые концы — текущий. */
+export function resolveSummaryMonthRange(from: string, to: string, today: Date): { from: string; to: string } | null {
+  const last = lastSummaryMonth(today);
+  if (!last) {
+    return null;
+  }
+  const start = clampSummaryMonth(from, today) ?? last;
+  const end = clampSummaryMonth(to, today) ?? start;
+  return normalizeMonthRange(start, end);
+}
+
+function finishedGoodsRangeProducts(document: PrototypeDocument, months: readonly string[]): Product[] {
+  const active = activeProducts(document);
+  const activeIds = new Set(active.map((item) => item.id));
+  const archived = new Map<string, Product>();
+  for (const month of months) {
+    for (const product of finishedGoodsGridProducts(document, month)) {
+      if (!activeIds.has(product.id)) {
+        archived.set(product.id, product);
+      }
+    }
+  }
+  return [...active, ...archived.values()];
+}
+
+function rangeSales(
+  document: PrototypeDocument,
+  months: readonly string[],
+  productId: string,
+): {
+  salesPieces: number;
+  salesRevenueWithVat: number | null;
+  salesRevenueExVat: number | null;
+  revenueComplete: boolean;
+  lastSalesPieces: number;
+} {
+  const lastMonth = months[months.length - 1] ?? '';
+  let salesPieces = 0;
+  let salesRevenueWith = 0;
+  let salesRevenueEx = 0;
+  let revenueComplete = true;
+  let lastSalesPieces = 0;
+
+  for (const month of months) {
+    const fact = monthSalesAndProduction(document, month, productId);
+    salesPieces += fact.salesPieces;
+    if (!fact.revenueComplete) {
+      revenueComplete = false;
+    } else if (fact.salesRevenueWithVat !== null && fact.salesRevenueExVat !== null) {
+      salesRevenueWith += fact.salesRevenueWithVat;
+      salesRevenueEx += fact.salesRevenueExVat;
+    }
+    if (month === lastMonth) {
+      lastSalesPieces = fact.salesPieces;
+    }
+  }
+
+  return {
+    salesPieces,
+    salesRevenueWithVat: revenueComplete ? salesRevenueWith : null,
+    salesRevenueExVat: revenueComplete ? salesRevenueEx : null,
+    revenueComplete,
+    lastSalesPieces,
+  };
+}
+
+function emptyRangeView(from: string, to: string): FinishedGoodsRangeView {
+  return {
+    from,
+    to,
+    groups: [],
+    rows: [],
+    totals: emptyTotals(),
+  };
+}
+
+/**
+ * Свод интервала по текущий месяц включительно.
+ * Начало — первый месяц. Продажи и выпуск — сумма. Конец и норматив — последний месяц.
+ */
+export function finishedGoodsRangeView(document: PrototypeDocument, from: string, to: string): FinishedGoodsRangeView {
+  if (!isMonthKey(from) || !isMonthKey(to)) {
+    return emptyRangeView(from, to);
+  }
+
+  const months = monthsInRange(from, to);
+  const firstMonth = months[0];
+  const lastMonth = months[months.length - 1];
+  if (!firstMonth || !lastMonth) {
+    return emptyRangeView(from, to);
+  }
+
+  const products = finishedGoodsRangeProducts(document, months);
+  const dates = new Set<string>();
+  const lastDates = new Set<string>();
+  for (const month of months) {
+    for (const day of monthDates(month)) {
+      dates.add(day);
+      if (month === lastMonth) {
+        lastDates.add(day);
+      }
+    }
+  }
+  const producedByProduct = productionSpendOn(document, dates);
+  const lastProducedByProduct = months.length === 1 ? producedByProduct : productionSpendOn(document, lastDates);
   const rows = products.map((product) => {
-    const bookOpeningPieces = bookOpeningPiecesForProduct(document, month, product.id);
-    const openingPieces = openingPiecesForProduct(document, month, product.id);
-    const openingPrice = monthOpeningPrice(document, month, product);
-    const fact = monthSalesAndProduction(document, month, product.id);
+    const openingPrice = monthOpeningPrice(document, firstMonth, product);
+    const sales = rangeSales(document, months, product.id);
     const produced = productionAmounts(producedByProduct.get(product.id));
+    const lastOpeningPieces = openingPiecesForProduct(document, lastMonth, product.id);
+    const lastProduced = productionAmounts(lastProducedByProduct.get(product.id));
+    const closingPieces = closingStockPieces(lastOpeningPieces, lastProduced.pieces, sales.lastSalesPieces);
     return rowFromParts(
       product,
-      bookOpeningPieces,
-      openingPieces,
+      bookOpeningPiecesForProduct(document, firstMonth, product.id),
+      openingPiecesForProduct(document, firstMonth, product.id),
       openingPrice.withVat,
       openingPrice.exVat,
-      fact.salesPieces,
-      fact.salesRevenueWithVat,
-      fact.salesRevenueExVat,
-      fact.revenueComplete,
+      sales.salesPieces,
+      sales.salesRevenueWithVat,
+      sales.salesRevenueExVat,
+      sales.revenueComplete,
       produced.pieces,
       produced.costWithVat,
       produced.costExVat,
-      normForProduct(document, month, product.id),
+      normForProduct(document, lastMonth, product.id),
+      closingPieces,
     );
   });
   const groups = buildGroups(document, products, rows);
   const groupedRows = groups.flatMap((group) => group.rows);
 
   return {
-    month,
+    from: firstMonth,
+    to: lastMonth,
     groups,
     rows: groupedRows,
     totals: groupedRows.length === 0 ? emptyTotals() : sumRows(groupedRows),
+  };
+}
+
+/** Свод одного месяца. Тот же расчёт, что интервал из этого месяца. */
+export function finishedGoodsMonthView(document: PrototypeDocument, month: string): FinishedGoodsMonthView {
+  const range = finishedGoodsRangeView(document, month, month);
+  return {
+    month,
+    groups: range.groups,
+    rows: range.rows,
+    totals: range.totals,
   };
 }
 

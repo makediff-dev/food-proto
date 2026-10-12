@@ -102,15 +102,17 @@ export function FinishedGoodsMonthTable({
   groups,
   totals,
   expanded = false,
+  caption = 'Отчет общий: движение готовой продукции за месяц',
 }: {
   groups: FinishedGoodsGroup[];
   totals: FinishedGoodsTotals;
   expanded?: boolean;
+  caption?: string;
 }) {
   return (
     <div className={expanded ? tableFrameExpandedClassName : tableFrameClassName}>
       <table className={tableClassName}>
-        <caption className="sr-only">Отчет общий: движение готовой продукции за месяц</caption>
+        <caption className="sr-only">{caption}</caption>
         <thead className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />

@@ -1,39 +1,69 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 
 import { useDocumentStore } from '@/data/DocumentProvider';
 import { activeCategories } from '@/domain/categories';
-import { finishedGoodsMonthView } from '@/domain/finished-goods';
-import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
-import { lastHorizonMonth } from '@/domain/summary';
+import { finishedGoodsRangeView, lastSummaryMonth, resolveSummaryMonthRange } from '@/domain/finished-goods';
 import { FinishedGoodsMonthTable } from '@/features/movement/FinishedGoodsMonthTable';
-import { finishedGoodsMonthHref, MOVEMENT_SUMMARY_TITLE } from '@/features/movement/paths';
+import { finishedGoodsSummaryHref, MOVEMENT_SUMMARY_TITLE } from '@/features/movement/paths';
 import { monthFieldClassName } from '@/features/sales/fields';
+import { formatMonth } from '@/features/sales/text';
 import { IconFullscreen, IconFullscreenExit } from '@/features/shell/Icons';
-import { MonthStep } from '@/features/shell/MonthStep';
 import { PageFrame } from '@/features/shell/PageFrame';
 
-export function FinishedGoodsMonthScreen({ month }: { month: string }) {
-  const today = useMemo(() => new Date(), []);
-  const currentMonth = monthKeyFromDate(today);
-  const selectedMonth = resolveMonth(month, today);
+const LEDE = 'Остатки на производстве, продажи и выпуск по текущий месяц. Будущие месяцы не выбираются.';
 
-  return <Workspace month={selectedMonth} currentMonth={currentMonth} today={today} />;
+export function FinishedGoodsMonthScreen({ from, to }: { from: string; to: string }) {
+  const today = useMemo(() => new Date(), []);
+  const router = useRouter();
+  const range = resolveSummaryMonthRange(from, to, today);
+  const currentMonth = lastSummaryMonth(today);
+  const rangeFrom = range?.from ?? '';
+  const rangeTo = range?.to ?? '';
+
+  useEffect(() => {
+    if (!currentMonth || !rangeFrom || !rangeTo) {
+      return;
+    }
+    if (from === rangeFrom && to === rangeTo) {
+      return;
+    }
+    if (from === '' && to === '' && rangeFrom === currentMonth && rangeTo === currentMonth) {
+      return;
+    }
+    router.replace(finishedGoodsSummaryHref({ from: rangeFrom, to: rangeTo, currentMonth }), { scroll: false });
+  }, [from, to, rangeFrom, rangeTo, currentMonth, router]);
+
+  if (!range) {
+    return (
+      <PageFrame title={MOVEMENT_SUMMARY_TITLE} lede={LEDE}>
+        <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
+          Свод строится с января 2000 по текущий месяц. Этот месяц ещё не наступил.
+        </p>
+      </PageFrame>
+    );
+  }
+
+  return <Workspace from={range.from} to={range.to} today={today} />;
 }
 
-function Workspace({ month, currentMonth, today }: { month: string; currentMonth: string; today: Date }) {
+function Workspace({ from, to, today }: { from: string; to: string; today: Date }) {
   const { document: prototypeDocument } = useDocumentStore();
   const router = useRouter();
+  const fromFieldId = useId();
+  const toFieldId = useId();
   const [fullscreen, setFullscreen] = useState(false);
-  const view = useMemo(() => finishedGoodsMonthView(prototypeDocument, month), [prototypeDocument, month]);
+  const currentMonth = lastSummaryMonth(today) ?? from;
+  const view = useMemo(() => finishedGoodsRangeView(prototypeDocument, from, to), [prototypeDocument, from, to]);
   const categories = activeCategories(prototypeDocument);
-  const previousMonth = shiftMonth(month, -1);
-  const nextMonth = shiftMonth(month, 1);
-  const horizonEnd = lastHorizonMonth(today);
   const hasTable = view.groups.length > 0;
   const tableExpanded = fullscreen && hasTable;
+  const caption =
+    from === to
+      ? `Отчет общий: движение готовой продукции за ${formatMonth(from)}`
+      : `Отчет общий: движение готовой продукции с ${formatMonth(from)} по ${formatMonth(to)}`;
 
   useEffect(() => {
     if (!tableExpanded) {
@@ -55,47 +85,63 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
     };
   }, [tableExpanded]);
 
-  function open(nextMonthKey: string) {
-    router.push(finishedGoodsMonthHref({ month: nextMonthKey, currentMonth }), {
-      scroll: false,
-    });
+  function open(nextFrom: string, nextTo: string) {
+    const range = resolveSummaryMonthRange(nextFrom, nextTo, today);
+    if (!range) {
+      return;
+    }
+    router.push(finishedGoodsSummaryHref({ from: range.from, to: range.to, currentMonth }), { scroll: false });
   }
 
   return (
     <>
       <PageFrame
         title={MOVEMENT_SUMMARY_TITLE}
-        lede="Остатки на производстве, продажи и выпуск за месяц."
+        lede={LEDE}
         full
         intro={
           <div className="w-full border border-line bg-sheet p-4">
-            <div className="flex items-center gap-2">
-              <MonthStep
-                label="Предыдущий месяц"
-                direction="previous"
-                disabled={!planMonthOpen(previousMonth, today)}
-                onClick={() => open(previousMonth)}
-              />
-              <input
-                type="month"
-                aria-label="Месяц"
-                min="2000-01"
-                max={horizonEnd}
-                value={month}
-                onChange={(event) => {
-                  const next = event.target.value;
-                  if (planMonthOpen(next, today)) {
-                    open(next);
-                  }
-                }}
-                className={monthFieldClassName}
-              />
-              <MonthStep
-                label="Следующий месяц"
-                direction="next"
-                disabled={nextMonth > horizonEnd}
-                onClick={() => open(nextMonth)}
-              />
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <label htmlFor={fromFieldId} className="text-sm text-muted">
+                  С
+                </label>
+                <input
+                  id={fromFieldId}
+                  type="month"
+                  min="2000-01"
+                  max={currentMonth}
+                  value={from}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    if (!next) {
+                      return;
+                    }
+                    open(next, next > to ? next : to);
+                  }}
+                  className={monthFieldClassName}
+                />
+              </div>
+              <div className="flex min-w-0 items-center gap-2">
+                <label htmlFor={toFieldId} className="text-sm text-muted">
+                  По
+                </label>
+                <input
+                  id={toFieldId}
+                  type="month"
+                  min="2000-01"
+                  max={currentMonth}
+                  value={to}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    if (!next) {
+                      return;
+                    }
+                    open(next < from ? next : from, next);
+                  }}
+                  className={monthFieldClassName}
+                />
+              </div>
             </div>
           </div>
         }
@@ -106,7 +152,12 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
               className={tableExpanded ? 'fixed inset-0 z-50 bg-paper' : undefined}
               aria-label={tableExpanded ? 'Таблица на весь экран' : 'Таблица движения готовой продукции'}
             >
-              <FinishedGoodsMonthTable groups={view.groups} totals={view.totals} expanded={tableExpanded} />
+              <FinishedGoodsMonthTable
+                groups={view.groups}
+                totals={view.totals}
+                expanded={tableExpanded}
+                caption={caption}
+              />
             </section>
           ) : (
             <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
@@ -123,14 +174,6 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
       ) : null}
     </>
   );
-}
-
-function resolveMonth(month: string, today: Date): string {
-  if (planMonthOpen(month, today)) {
-    return month;
-  }
-
-  return monthKeyFromDate(today);
 }
 
 function FullscreenToggle({ active, onToggle }: { active: boolean; onToggle: () => void }) {
