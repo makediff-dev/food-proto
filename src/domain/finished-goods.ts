@@ -44,6 +44,11 @@ export interface FinishedGoodsTotals {
   factPriceExVat: number | null;
   closingValueWithVat: number | null;
   closingValueExVat: number | null;
+  /** Норматив мин/макс и отклонения остатка на конец (как во «Вводе плана»). */
+  minPieces: number;
+  maxPieces: number;
+  belowMinPieces: number;
+  aboveMaxPieces: number;
   revenueComplete: boolean;
 }
 
@@ -205,8 +210,35 @@ function emptyTotals(): FinishedGoodsTotals {
     factPriceExVat: null,
     closingValueWithVat: null,
     closingValueExVat: null,
+    minPieces: 0,
+    maxPieces: 0,
+    belowMinPieces: 0,
+    aboveMaxPieces: 0,
     revenueComplete: true,
   };
+}
+
+function normForProduct(
+  document: PrototypeDocument,
+  month: string,
+  productId: string,
+): Pick<FinishedGoodsTotals, 'minPieces' | 'maxPieces'> {
+  const norm = document.finishedGoodsNorms?.find((item) => item.month === month);
+  const line = norm?.lines.find((item) => item.productId === productId);
+  if (!line) {
+    return { minPieces: 0, maxPieces: 0 };
+  }
+  return { minPieces: line.minPieces, maxPieces: line.maxPieces };
+}
+
+function closingNormMetrics(
+  closingPieces: number,
+  minPieces: number,
+  maxPieces: number,
+): Pick<FinishedGoodsTotals, 'belowMinPieces' | 'aboveMaxPieces'> {
+  const belowMinPieces = closingPieces < minPieces ? closingPieces - minPieces : 0;
+  const aboveMaxPieces = closingPieces > maxPieces ? closingPieces - maxPieces : 0;
+  return { belowMinPieces, aboveMaxPieces };
 }
 
 /** Остаток на конец, шт: рабочее начало (инвентаризация) + выпуск − продажи. */
@@ -231,6 +263,7 @@ function rowFromParts(
   salesRevenueExVat: number | null,
   revenueComplete: boolean,
   productionPieces: number,
+  norm: Pick<FinishedGoodsTotals, 'minPieces' | 'maxPieces'>,
 ): FinishedGoodsRow {
   const vat = product.vatPercent;
   const planPriceEx = amountExVat(planPriceWithVat, vat);
@@ -242,6 +275,7 @@ function rowFromParts(
   const factPriceEx = averageAmount(salesRevenueExVat, salesPieces);
 
   const closingPieces = closingStockPieces(openingPieces, productionPieces, salesPieces);
+  const normMetrics = closingNormMetrics(closingPieces, norm.minPieces, norm.maxPieces);
   const productionValueWith = factPriceWith === null ? null : productionPieces * factPriceWith;
   const productionValueEx = factPriceEx === null ? null : productionPieces * factPriceEx;
   const closingValueWith = factPriceWith === null ? null : closingPieces * factPriceWith;
@@ -271,6 +305,10 @@ function rowFromParts(
     factPriceExVat: factPriceEx,
     closingValueWithVat: closingValueWith,
     closingValueExVat: closingValueEx,
+    minPieces: norm.minPieces,
+    maxPieces: norm.maxPieces,
+    belowMinPieces: normMetrics.belowMinPieces,
+    aboveMaxPieces: normMetrics.aboveMaxPieces,
     revenueComplete,
   };
 }
@@ -294,6 +332,10 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
   let closingValueWith = 0;
   let closingValueEx = 0;
   let closingValueComplete = true;
+  let minPieces = 0;
+  let maxPieces = 0;
+  let belowMinPieces = 0;
+  let aboveMaxPieces = 0;
 
   for (const row of rows) {
     bookOpeningPieces += row.bookOpeningPieces;
@@ -331,6 +373,10 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
     }
 
     closingPieces += row.closingPieces;
+    minPieces += row.minPieces;
+    maxPieces += row.maxPieces;
+    belowMinPieces += row.belowMinPieces;
+    aboveMaxPieces += row.aboveMaxPieces;
     if (row.closingValueWithVat === null || row.closingValueExVat === null) {
       if (row.closingPieces !== 0) {
         closingValueComplete = false;
@@ -368,6 +414,10 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
     factPriceExVat,
     closingValueWithVat: closingValueComplete ? closingValueWith : null,
     closingValueExVat: closingValueComplete ? closingValueEx : null,
+    minPieces,
+    maxPieces,
+    belowMinPieces,
+    aboveMaxPieces,
     revenueComplete,
   };
 }
@@ -456,6 +506,7 @@ export function finishedGoodsMonthView(document: PrototypeDocument, month: strin
       fact.salesRevenueExVat,
       fact.revenueComplete,
       fact.productionPieces,
+      normForProduct(document, month, product.id),
     );
   });
   const groups = buildGroups(document, products, rows);
@@ -497,6 +548,7 @@ export function finishedGoodsMonthDays(document: PrototypeDocument, month: strin
           sold.revenueExVat,
           sold.revenueExVat !== null,
           productionPieces,
+          normForProduct(document, month, product.id),
         );
         openingByProduct.set(product.id, row.closingPieces);
         return [product.id, row] as const;

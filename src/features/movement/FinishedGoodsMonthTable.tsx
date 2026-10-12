@@ -6,6 +6,8 @@ import type { FinishedGoodsGroup, FinishedGoodsRow, FinishedGoodsTotals } from '
 import { formatPieces } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
+  blockCornerClassName,
+  blockHeadingClassName,
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
@@ -18,6 +20,7 @@ import {
   ProductIndex,
   stickyHeadClassName,
   TableNumber,
+  tableBorder,
   tableClassName,
   tableFrameClassName,
   tableFrameExpandedClassName,
@@ -37,23 +40,59 @@ type ColumnKey =
   | 'productionPieces'
   | 'productionValue'
   | 'closing'
+  | 'min'
+  | 'max'
+  | 'belowMin'
+  | 'aboveMax'
   | 'factPrice'
   | 'closingValue';
 
-const COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: 'bookOpening', label: 'Остаток на начало (план)' },
-  { key: 'inventory', label: 'Остаток на начало (факт)' },
-  { key: 'openingDeviation', label: 'Отклонение' },
-  { key: 'planPrice', label: 'Цена план' },
-  { key: 'openingValue', label: 'Стоимость остатка на начало' },
-  { key: 'salesPieces', label: 'Объём продаж' },
-  { key: 'salesRevenue', label: 'Стоимость продаж' },
-  { key: 'productionPieces', label: 'Объём произв-ва' },
-  { key: 'productionValue', label: 'Стоимость произв-ва' },
-  { key: 'closing', label: 'Остаток на конец' },
-  { key: 'factPrice', label: 'Цена факт' },
-  { key: 'closingValue', label: 'Стоимость остатка на конец' },
+const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }[] }[] = [
+  {
+    label: 'Остаток на начало',
+    columns: [
+      { key: 'bookOpening', label: 'План' },
+      { key: 'inventory', label: 'Факт' },
+      { key: 'openingDeviation', label: 'Откл.' },
+      { key: 'planPrice', label: 'Цена (план)' },
+      { key: 'openingValue', label: 'Стоимость' },
+    ],
+  },
+  {
+    label: 'Продажи',
+    columns: [
+      { key: 'salesPieces', label: 'Объём' },
+      { key: 'salesRevenue', label: 'Стоимость' },
+    ],
+  },
+  {
+    label: 'Производство',
+    columns: [
+      { key: 'productionPieces', label: 'Объём' },
+      { key: 'productionValue', label: 'Стоимость' },
+    ],
+  },
+  {
+    label: 'Остаток на конец',
+    columns: [
+      { key: 'closing', label: 'Остаток' },
+      { key: 'min', label: 'Мин' },
+      { key: 'max', label: 'Макс' },
+      { key: 'belowMin', label: 'Ниже мин' },
+      { key: 'aboveMax', label: 'Выше макс' },
+      { key: 'factPrice', label: 'Цена (факт)' },
+      { key: 'closingValue', label: 'Стоимость' },
+    ],
+  },
 ];
+
+const COLUMNS = COLUMN_GROUPS.flatMap((group) => group.columns);
+
+const GROUP_END_KEYS = new Set(COLUMN_GROUPS.slice(0, -1).map((group) => group.columns[group.columns.length - 1].key));
+
+function groupEndClass(key: ColumnKey): string {
+  return GROUP_END_KEYS.has(key) ? tableBorder.rightThick : columnDividerClassName;
+}
 
 export function FinishedGoodsMonthTable({
   groups,
@@ -70,11 +109,28 @@ export function FinishedGoodsMonthTable({
         <caption className="sr-only">Отчет общий: движение готовой продукции за месяц</caption>
         <thead className={stickyHeadClassName}>
           <tr>
+            <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
+            {COLUMN_GROUPS.map((group, index) => (
+              <th
+                key={group.label}
+                colSpan={group.columns.length}
+                scope="colgroup"
+                className={`${blockHeadingClassName} ${index < COLUMN_GROUPS.length - 1 ? tableBorder.rightThick : ''}`}
+              >
+                {keepWithNext(group.label)}
+              </th>
+            ))}
+          </tr>
+          <tr>
             <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               Товар
             </th>
             {COLUMNS.map((column) => (
-              <th key={column.key} scope="col" className={`${columnHeadingClassName} ${columnDividerClassName}`}>
+              <th
+                key={column.key}
+                scope="col"
+                className={`${columnHeadingClassName} last:border-r-0 ${groupEndClass(column.key)}`}
+              >
                 <ColumnLabel label={column.label} />
               </th>
             ))}
@@ -89,7 +145,10 @@ export function FinishedGoodsMonthTable({
               Всего
             </th>
             {COLUMNS.map((column) => (
-              <td key={`total:${column.key}`} className={`${totalValueClassName} ${columnDividerClassName}`}>
+              <td
+                key={`total:${column.key}`}
+                className={`${totalValueClassName} last:border-r-0 ${groupEndClass(column.key)}`}
+              >
                 <TotalsCell column={column.key} totals={totals} />
               </td>
             ))}
@@ -133,7 +192,7 @@ function CategoryBlock({ group }: { group: FinishedGoodsGroup }) {
         {COLUMNS.map((column) => (
           <td
             key={`group:${column.key}`}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${categoryBandClassName} ${columnDividerClassName}`}
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${categoryBandClassName} ${groupEndClass(column.key)}`}
           >
             <TotalsCell column={column.key} totals={group.totals} />
           </td>
@@ -160,7 +219,7 @@ function ProductRow({ row, index }: { row: FinishedGoodsRow; index: number }) {
       {COLUMNS.map((column) => (
         <td
           key={`row:${column.key}`}
-          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`}
+          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${groupEndClass(column.key)}`}
         >
           <RowCell column={column.key} row={row} />
         </td>
@@ -194,6 +253,14 @@ function RowCell({ column, row }: { column: ColumnKey; row: FinishedGoodsRow }) 
       return <VatMoneyCell withVat={row.productionValueWithVat} exVat={row.productionValueExVat} />;
     case 'closing':
       return <IntegerCell value={row.closingPieces} unit="шт" signed />;
+    case 'min':
+      return <TableNumber value={row.minPieces}>{formatPieces(row.minPieces)} шт</TableNumber>;
+    case 'max':
+      return <TableNumber value={row.maxPieces}>{formatPieces(row.maxPieces)} шт</TableNumber>;
+    case 'belowMin':
+      return <IntegerCell value={row.belowMinPieces} unit="шт" signed />;
+    case 'aboveMax':
+      return <IntegerCell value={row.aboveMaxPieces} unit="шт" signed />;
     case 'factPrice':
       return <VatMoneyCell withVat={row.factPriceWithVat} exVat={row.factPriceExVat} />;
     case 'closingValue':
@@ -226,6 +293,14 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: FinishedGoo
       return <VatMoneyCell withVat={totals.productionValueWithVat} exVat={totals.productionValueExVat} />;
     case 'closing':
       return <IntegerCell value={totals.closingPieces} unit="шт" signed />;
+    case 'min':
+      return <TableNumber value={totals.minPieces}>{formatPieces(totals.minPieces)} шт</TableNumber>;
+    case 'max':
+      return <TableNumber value={totals.maxPieces}>{formatPieces(totals.maxPieces)} шт</TableNumber>;
+    case 'belowMin':
+      return <IntegerCell value={totals.belowMinPieces} unit="шт" signed />;
+    case 'aboveMax':
+      return <IntegerCell value={totals.aboveMaxPieces} unit="шт" signed />;
     case 'factPrice':
       return <VatMoneyCell withVat={totals.factPriceWithVat} exVat={totals.factPriceExVat} />;
     case 'closingValue':

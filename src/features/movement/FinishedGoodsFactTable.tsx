@@ -48,21 +48,57 @@ type ColumnKey =
   | 'productionPieces'
   | 'productionValue'
   | 'closing'
+  | 'min'
+  | 'max'
+  | 'belowMin'
+  | 'aboveMax'
   | 'factPrice'
   | 'closingValue';
 
-const COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: 'opening', label: 'Остаток на начало' },
-  { key: 'planPrice', label: 'Цена план' },
-  { key: 'openingValue', label: 'Стоимость остатка на начало' },
-  { key: 'salesPieces', label: 'Объём продаж' },
-  { key: 'salesRevenue', label: 'Стоимость продаж' },
-  { key: 'productionPieces', label: 'Объём произв-ва' },
-  { key: 'productionValue', label: 'Стоимость произв-ва' },
-  { key: 'closing', label: 'Остаток на конец' },
-  { key: 'factPrice', label: 'Цена факт' },
-  { key: 'closingValue', label: 'Стоимость остатка на конец' },
+const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }[] }[] = [
+  {
+    label: 'Остаток на начало',
+    columns: [
+      { key: 'opening', label: 'Факт' },
+      { key: 'planPrice', label: 'Цена (план)' },
+      { key: 'openingValue', label: 'Стоимость' },
+    ],
+  },
+  {
+    label: 'Продажи',
+    columns: [
+      { key: 'salesPieces', label: 'Объём' },
+      { key: 'salesRevenue', label: 'Стоимость' },
+    ],
+  },
+  {
+    label: 'Производство',
+    columns: [
+      { key: 'productionPieces', label: 'Объём' },
+      { key: 'productionValue', label: 'Стоимость' },
+    ],
+  },
+  {
+    label: 'Остаток на конец',
+    columns: [
+      { key: 'closing', label: 'Остаток' },
+      { key: 'min', label: 'Мин' },
+      { key: 'max', label: 'Макс' },
+      { key: 'belowMin', label: 'Ниже мин' },
+      { key: 'aboveMax', label: 'Выше макс' },
+      { key: 'factPrice', label: 'Цена (факт)' },
+      { key: 'closingValue', label: 'Стоимость' },
+    ],
+  },
 ];
+
+const COLUMNS = COLUMN_GROUPS.flatMap((group) => group.columns);
+
+const GROUP_END_KEYS = new Set(COLUMN_GROUPS.slice(0, -1).map((group) => group.columns[group.columns.length - 1].key));
+
+function groupEndClass(key: ColumnKey): string {
+  return GROUP_END_KEYS.has(key) ? tableBorder.rightThick : columnDividerClassName;
+}
 
 export function FinishedGoodsFactTable({
   days,
@@ -90,9 +126,17 @@ export function FinishedGoodsFactTable({
         <thead className={stickyHeadClassName}>
           <tr>
             <th colSpan={2} className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
-            <th colSpan={COLUMNS.length + 1} scope="colgroup" className={blockHeadingClassName}>
-              {keepWithNext('Движение готовой продукции за дату')}
-            </th>
+            {COLUMN_GROUPS.map((group, index) => (
+              <th
+                key={group.label}
+                colSpan={group.columns.length}
+                scope="colgroup"
+                className={`${blockHeadingClassName} ${index < COLUMN_GROUPS.length - 1 ? tableBorder.rightThick : ''}`}
+              >
+                {keepWithNext(group.label)}
+              </th>
+            ))}
+            <th aria-hidden className="w-full min-w-0 border-b-[3px] border-b-muted bg-paper p-0" />
           </tr>
           <tr>
             <th
@@ -105,7 +149,7 @@ export function FinishedGoodsFactTable({
               Товар
             </th>
             {COLUMNS.map((column) => (
-              <th key={column.key} scope="col" className={`${columnHeadingClassName} ${columnDividerClassName}`}>
+              <th key={column.key} scope="col" className={`${columnHeadingClassName} ${groupEndClass(column.key)}`}>
                 <ColumnLabel label={column.label} />
               </th>
             ))}
@@ -143,7 +187,7 @@ export function FinishedGoodsFactTable({
                   Всего
                 </th>
                 {COLUMNS.map((column) => (
-                  <td key={column.key} className={`${totalValueClassName} ${columnDividerClassName}`}>
+                  <td key={column.key} className={`${totalValueClassName} ${groupEndClass(column.key)}`}>
                     <MetricCell column={column.key} metrics={day.totals} />
                   </td>
                 ))}
@@ -207,7 +251,7 @@ function CategoryBlock({
         {COLUMNS.map((column) => (
           <td
             key={column.key}
-            className={`w-px ${bottom} px-1.5 py-2 text-right align-middle ${categoryBandClassName} ${columnDividerClassName}`}
+            className={`w-px ${bottom} px-1.5 py-2 text-right align-middle ${categoryBandClassName} ${groupEndClass(column.key)}`}
           >
             <MetricCell column={column.key} metrics={group.totals} />
           </td>
@@ -248,7 +292,10 @@ function ProductRow({ row, index, dayBreak }: { row: FinishedGoodsRow; index: nu
         </div>
       </th>
       {COLUMNS.map((column) => (
-        <td key={column.key} className={`w-px ${bottom} px-1.5 py-2 text-right align-middle ${columnDividerClassName}`}>
+        <td
+          key={column.key}
+          className={`w-px ${bottom} px-1.5 py-2 text-right align-middle ${groupEndClass(column.key)}`}
+        >
           <MetricCell column={column.key} metrics={row} />
         </td>
       ))}
@@ -281,6 +328,14 @@ function MetricCell({ column, metrics }: { column: ColumnKey; metrics: FinishedG
       return <VatMoneyCell withVat={metrics.productionValueWithVat} exVat={metrics.productionValueExVat} />;
     case 'closing':
       return <IntegerCell value={metrics.closingPieces} unit="шт" signed />;
+    case 'min':
+      return <TableNumber value={metrics.minPieces}>{formatPieces(metrics.minPieces)} шт</TableNumber>;
+    case 'max':
+      return <TableNumber value={metrics.maxPieces}>{formatPieces(metrics.maxPieces)} шт</TableNumber>;
+    case 'belowMin':
+      return <IntegerCell value={metrics.belowMinPieces} unit="шт" signed />;
+    case 'aboveMax':
+      return <IntegerCell value={metrics.aboveMaxPieces} unit="шт" signed />;
     case 'factPrice':
       return <VatMoneyCell withVat={metrics.factPriceWithVat} exVat={metrics.factPriceExVat} />;
     case 'closingValue':
