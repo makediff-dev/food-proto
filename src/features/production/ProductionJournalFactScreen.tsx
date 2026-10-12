@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useDocumentStore } from '@/data/DocumentProvider';
 import { isOccurredOn } from '@/domain/document';
+import { recommendedDayKey, recommendedVolumeByDay } from '@/domain/movement-plan';
 import {
   defaultProductionJournalFactDay,
   monthDates,
@@ -62,7 +63,19 @@ function Workspace({
   const router = useRouter();
   const [fullscreen, setFullscreen] = useState(false);
   const products = productionJournalFactGridProducts(store.document, month);
-  const days = useMemo(() => productionJournalFactMonth(store.document, month), [store.document, month]);
+  const days = useMemo(() => {
+    const grid = productionJournalFactGridProducts(store.document, month);
+    const recommended = recommendedVolumeByDay(
+      store.document,
+      month,
+      grid.map((product) => product.id),
+    );
+    return productionJournalFactMonth(
+      store.document,
+      month,
+      (productId, occurredOn) => recommended.get(recommendedDayKey(occurredOn, productId)) ?? 0,
+    );
+  }, [store.document, month]);
   const fallbackDay = defaultProductionJournalFactDay(month, today);
   const selectedDay = resolveDay(month, dayQuery, fallbackDay);
   const visible = view === 'all' ? days : days.filter((item) => item.occurredOn === selectedDay);

@@ -6,6 +6,7 @@ import { useEffect, useId, useMemo, useState } from 'react';
 
 import { useDocumentStore } from '@/data/DocumentProvider';
 import { activeCategories } from '@/domain/categories';
+import { recommendedVolumePiecesForMonths } from '@/domain/movement-plan';
 import { productionFactForLens } from '@/domain/production-fact';
 import { monthKeyFromDate, planMonthOpen } from '@/domain/sales-plan';
 import {
@@ -57,6 +58,20 @@ function Workspace({
   const summary = useMemo(
     () => productionFactForLens(store.document, periodFrom, periodTo, view, today),
     [store.document, periodFrom, periodTo, today, view],
+  );
+  const recommendedByProduct = useMemo(() => {
+    const months = monthsInRange(summary.from, summary.to);
+    const map = new Map<string, number>();
+    for (const group of summary.groups) {
+      for (const row of group.rows) {
+        map.set(row.productId, recommendedVolumePiecesForMonths(store.document, months, row.productId));
+      }
+    }
+    return map;
+  }, [store.document, summary]);
+  const recommendedTotal = useMemo(
+    () => [...recommendedByProduct.values()].reduce((sum, pieces) => sum + pieces, 0),
+    [recommendedByProduct],
   );
   const categories = activeCategories(store.document);
   const horizonEnd = lastHorizonMonth(today);
@@ -217,6 +232,8 @@ function Workspace({
                 plan={summary.plan}
                 fact={summary.fact}
                 variance={summary.variance}
+                recommendedByProduct={recommendedByProduct}
+                recommendedTotal={recommendedTotal}
                 view={view}
                 periodClosed={periodClosed}
                 expanded={tableExpanded}

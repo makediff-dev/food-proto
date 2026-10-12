@@ -8,17 +8,16 @@ import type {
   FinishedGoodsTotals,
 } from '@/domain/finished-goods';
 import { adjacentDay } from '@/domain/sales-fact';
+import { FinishedGoodsReportColumnHeaders } from '@/features/movement/FinishedGoodsNormativeColumnHeading';
 import { NormDeviationCell } from '@/features/movement/NormDeviationCell';
 import { formatPieces } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight, IconChevronUp } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
   blockHeadingClassName,
-  ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
   columnDividerClassName,
-  columnHeadingClassName,
   dayDateColumnClassName,
   dayFactSpacerBandClassName,
   dayFactSpacerCellClassName,
@@ -147,11 +146,7 @@ export function FinishedGoodsFactTable({
             <th scope="col" className={`sticky left-10 z-40 ${nameHeadingClassName}`}>
               Товар
             </th>
-            {COLUMNS.map((column) => (
-              <th key={column.key} scope="col" className={`${columnHeadingClassName} ${groupEndClass(column.key)}`}>
-                <ColumnLabel label={column.label} />
-              </th>
-            ))}
+            <FinishedGoodsReportColumnHeaders columns={COLUMNS} groupEndClass={groupEndClass} />
             <th aria-hidden className={dayFactSpacerHeadClassName} />
           </tr>
         </thead>

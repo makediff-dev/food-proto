@@ -9,6 +9,7 @@ import {
   type ProductionJournalFactRow,
   type ProductionJournalFactTotals,
 } from '@/domain/production-journal-fact';
+import { formatPieces } from '@/features/sales/text';
 import { formatSignedPieces } from '@/features/sales-fact/text';
 import { IconChevronDown, IconChevronRight, IconChevronUp } from '@/features/shell/Icons';
 import {
@@ -40,11 +41,12 @@ import {
   VatMoneyCell,
 } from '@/features/table';
 
-type ColumnKey = 'unitCost' | 'volume' | 'volumeCost';
+type ColumnKey = 'unitCost' | 'volume' | 'recommended' | 'volumeCost';
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: 'unitCost', label: 'Себест' },
   { key: 'volume', label: 'Объём' },
+  { key: 'recommended', label: 'Рекомендуемый объём' },
   { key: 'volumeCost', label: 'Себест объёма' },
 ];
 
@@ -308,12 +310,20 @@ function RowCell({ column, row }: { column: ColumnKey; row: ProductionJournalFac
     return <Pieces value={row.pieces} />;
   }
 
+  if (column === 'recommended') {
+    return <Pieces value={row.recommendedPieces} plain />;
+  }
+
   return <VatMoneyCell whole withVat={row.volumeCostWithVat} exVat={row.volumeCostExVat} />;
 }
 
 function TotalCell({ column, totals }: { column: ColumnKey; totals: ProductionJournalFactTotals }) {
   if (column === 'volume') {
     return <Pieces value={totals.pieces} />;
+  }
+
+  if (column === 'recommended') {
+    return <Pieces value={totals.recommendedPieces} plain />;
   }
 
   if (!totals.costComplete) {
@@ -327,10 +337,10 @@ function TotalCell({ column, totals }: { column: ColumnKey; totals: ProductionJo
   return <VatMoneyCell whole withVat={totals.volumeCostWithVat} exVat={totals.volumeCostExVat} />;
 }
 
-function Pieces({ value }: { value: number | null }) {
+function Pieces({ value, plain = false }: { value: number | null; plain?: boolean }) {
   if (value === null) {
     return <Empty />;
   }
 
-  return <TableNumber value={value}>{formatSignedPieces(value)} шт</TableNumber>;
+  return <TableNumber value={value}>{plain ? formatPieces(value) : formatSignedPieces(value)} шт</TableNumber>;
 }

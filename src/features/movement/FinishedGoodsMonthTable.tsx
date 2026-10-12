@@ -3,17 +3,16 @@
 import { useState } from 'react';
 
 import type { FinishedGoodsGroup, FinishedGoodsRow, FinishedGoodsTotals } from '@/domain/finished-goods';
+import { FinishedGoodsReportColumnHeaders } from '@/features/movement/FinishedGoodsNormativeColumnHeading';
 import { NormDeviationCell } from '@/features/movement/NormDeviationCell';
 import { formatPieces } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
   blockHeadingClassName,
-  ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
   columnDividerClassName,
-  columnHeadingClassName,
   IntegerCell,
   keepWithNext,
   Muted,
@@ -126,15 +125,11 @@ export function FinishedGoodsMonthTable({
             <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               Товар
             </th>
-            {COLUMNS.map((column) => (
-              <th
-                key={column.key}
-                scope="col"
-                className={`${columnHeadingClassName} last:border-r-0 ${groupEndClass(column.key)}`}
-              >
-                <ColumnLabel label={column.label} />
-              </th>
-            ))}
+            <FinishedGoodsReportColumnHeaders
+              columns={COLUMNS}
+              groupEndClass={groupEndClass}
+              lastColumnExtraClassName="last:border-r-0"
+            />
           </tr>
         </thead>
         <tbody>

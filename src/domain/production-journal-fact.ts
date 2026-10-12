@@ -22,6 +22,8 @@ export interface ProductionJournalFactRow {
   name: string;
   deleted: boolean;
   pieces: number;
+  /** Сколько ещё выпустить к концу дня, чтобы добрать максимум, если остаток ниже минимума. */
+  recommendedPieces: number;
   /** Себестоимость 1 шт: сумма журнала этого дня / штуки. Нет выпуска — 0. */
   unitCost: UnitCost | null;
   /** Копейки. Сумма фактических себестоимостей строк журнала за день. Нет выпуска — 0. */
@@ -32,6 +34,8 @@ export interface ProductionJournalFactRow {
 
 export interface ProductionJournalFactTotals {
   pieces: number;
+  /** Сумма рекомендуемых объёмов строк. */
+  recommendedPieces: number;
   /** Копейки. Сумма себестоимостей объёма, если себестоимость полная. */
   volumeCostWithVat: number | null;
   volumeCostExVat: number | null;
@@ -81,7 +85,11 @@ export function productionEntryDayPieces(document: PrototypeDocument, occurredOn
 
 const ZERO_UNIT_COST: UnitCost = { withVat: 0, exVat: 0 };
 
-function rowMetrics(product: Product, spend: ProductionProductSpend | undefined): ProductionJournalFactRow {
+function rowMetrics(
+  product: Product,
+  spend: ProductionProductSpend | undefined,
+  recommendedPieces: number,
+): ProductionJournalFactRow {
   const pieces = spend?.pieces ?? 0;
   if (!spend || pieces === 0) {
     return {
@@ -89,6 +97,7 @@ function rowMetrics(product: Product, spend: ProductionProductSpend | undefined)
       name: product.name,
       deleted: product.deletedAt !== null,
       pieces: 0,
+      recommendedPieces,
       unitCost: ZERO_UNIT_COST,
       volumeCostWithVat: 0,
       volumeCostExVat: 0,
@@ -111,6 +120,7 @@ function rowMetrics(product: Product, spend: ProductionProductSpend | undefined)
     name: product.name,
     deleted: product.deletedAt !== null,
     pieces,
+    recommendedPieces,
     unitCost,
     volumeCostWithVat: complete ? spend.costWithVat : null,
     volumeCostExVat: complete ? spend.costExVat : null,
@@ -119,12 +129,14 @@ function rowMetrics(product: Product, spend: ProductionProductSpend | undefined)
 
 function dayTotals(rows: readonly ProductionJournalFactRow[]): ProductionJournalFactTotals {
   let pieces = 0;
+  let recommendedPieces = 0;
   let costWith = 0;
   let costEx = 0;
   let costComplete = true;
 
   for (const row of rows) {
     pieces += row.pieces;
+    recommendedPieces += row.recommendedPieces;
     if (row.pieces > 0 && (row.volumeCostWithVat === null || row.volumeCostExVat === null)) {
       costComplete = false;
     }
@@ -138,6 +150,7 @@ function dayTotals(rows: readonly ProductionJournalFactRow[]): ProductionJournal
 
   return {
     pieces,
+    recommendedPieces,
     volumeCostWithVat: costComplete ? costWith : null,
     volumeCostExVat: costComplete ? costEx : null,
     costComplete,
@@ -173,7 +186,11 @@ function productionJournalFactGroups(
 }
 
 /** Дни месяца сверху вниз. Факт дня считается из журнала выпуска. */
-export function productionJournalFactMonth(document: PrototypeDocument, month: string): ProductionJournalFactDayView[] {
+export function productionJournalFactMonth(
+  document: PrototypeDocument,
+  month: string,
+  recommendedPieces: (productId: string, occurredOn: string) => number = () => 0,
+): ProductionJournalFactDayView[] {
   const products = productionJournalFactGridProducts(document, month);
 
   return monthDates(month).map((occurredOn) => {
@@ -182,7 +199,9 @@ export function productionJournalFactMonth(document: PrototypeDocument, month: s
       workingProductionEntries(document).filter((entry) => entry.occurredOn === occurredOn),
     );
     const dayProducts = dayGridProducts(products, (product) => (spendByProduct.get(product.id)?.pieces ?? 0) > 0);
-    const rows = dayProducts.map((product) => rowMetrics(product, spendByProduct.get(product.id)));
+    const rows = dayProducts.map((product) =>
+      rowMetrics(product, spendByProduct.get(product.id), recommendedPieces(product.id, occurredOn)),
+    );
     const groups = productionJournalFactGroups(document, dayProducts, rows);
     const groupedRows = groups.flatMap((group) => group.rows);
 

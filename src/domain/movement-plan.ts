@@ -154,6 +154,57 @@ export function recommendedVolumePieces(document: PrototypeDocument, month: stri
   return movementPlanMetrics(stock, norm.minPieces, norm.maxPieces).recommendedPieces;
 }
 
+/** Сумма месячных рекомендаций. Линза периода её не масштабирует. */
+export function recommendedVolumePiecesForMonths(
+  document: PrototypeDocument,
+  months: readonly string[],
+  productId: string,
+): number {
+  let sum = 0;
+  for (const month of months) {
+    sum += recommendedVolumePieces(document, month, productId);
+  }
+  return sum;
+}
+
+export function recommendedDayKey(occurredOn: string, productId: string): string {
+  return `${occurredOn}:${productId}`;
+}
+
+/**
+ * Рекомендуемый объём на каждый день месяца.
+ * Запас — остаток на конец дня (начало дня + выпуск − продажи).
+ * Норматив мин/макс — тот же, что у месяца. В последний день цифра совпадает с месяцем.
+ * Ключ — `recommendedDayKey`.
+ */
+export function recommendedVolumeByDay(
+  document: PrototypeDocument,
+  month: string,
+  productIds: readonly string[],
+): Map<string, number> {
+  const openingByProduct = new Map(
+    productIds.map((productId) => [productId, openingPiecesForProduct(document, month, productId)]),
+  );
+  const byDay = new Map<string, number>();
+
+  for (const occurredOn of monthDates(month)) {
+    for (const productId of productIds) {
+      const opening = openingByProduct.get(productId) ?? 0;
+      const salesPieces = saleDayProduct(document, occurredOn, productId).pieces;
+      const productionPieces = productionEntryDayPieces(document, occurredOn, productId);
+      const closing = closingStockPieces(opening, productionPieces, salesPieces);
+      const norm = normForProduct(document, month, productId);
+      byDay.set(
+        recommendedDayKey(occurredOn, productId),
+        movementPlanMetrics(closing, norm.minPieces, norm.maxPieces).recommendedPieces,
+      );
+      openingByProduct.set(productId, closing);
+    }
+  }
+
+  return byDay;
+}
+
 function emptyTotals(): MovementPlanTotals {
   return {
     bookOpeningPieces: 0,

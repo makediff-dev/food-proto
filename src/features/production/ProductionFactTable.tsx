@@ -34,19 +34,29 @@ import {
   VatMoneyCell,
 } from '@/features/table';
 
-type ColumnKey = 'unitCost' | 'volume' | 'volumeCost';
+type ColumnKey = 'unitCost' | 'volume' | 'recommended' | 'volumeCost';
 type SectionKind = 'plan' | 'fact' | 'variance';
 
-const COLUMNS: { key: ColumnKey; label: string }[] = [
+const FACT_COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: 'unitCost', label: 'Себест' },
   { key: 'volume', label: 'Объём' },
   { key: 'volumeCost', label: 'Себест объёма' },
 ];
 
-const LAST_COLUMN = COLUMNS.at(-1)?.key;
+const PLAN_COLUMNS: { key: ColumnKey; label: string }[] = [
+  { key: 'unitCost', label: 'Себест' },
+  { key: 'volume', label: 'Объём' },
+  { key: 'recommended', label: 'Рекомендуемый объём' },
+  { key: 'volumeCost', label: 'Себест объёма' },
+];
+
+function columnsOf(kind: SectionKind): { key: ColumnKey; label: string }[] {
+  return kind === 'plan' ? PLAN_COLUMNS : FACT_COLUMNS;
+}
 
 function sectionRightClass(kind: SectionKind, key: ColumnKey): string {
-  if (kind !== 'variance' && key === LAST_COLUMN) {
+  const last = columnsOf(kind).at(-1)?.key;
+  if (kind !== 'variance' && key === last) {
     return tableBorder.rightThick;
   }
 
@@ -58,6 +68,8 @@ export function ProductionFactTable({
   plan,
   fact,
   variance,
+  recommendedByProduct,
+  recommendedTotal,
   view,
   periodClosed = false,
   expanded = false,
@@ -66,6 +78,8 @@ export function ProductionFactTable({
   plan: ProductionFactSide;
   fact: ProductionFactSide;
   variance: ProductionFactVariance;
+  recommendedByProduct: ReadonlyMap<string, number>;
+  recommendedTotal: number;
   view: SummaryLens;
   periodClosed?: boolean;
   expanded?: boolean;
@@ -86,9 +100,12 @@ export function ProductionFactTable({
         <thead className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
-            <SectionHeading label={planHeader} />
-            <SectionHeading label={factIsForecast ? 'Фактические показатели (прогноз)' : 'Фактические показатели'} />
-            <SectionHeading label="Отклонение" last />
+            <SectionHeading label={planHeader} span={PLAN_COLUMNS.length} />
+            <SectionHeading
+              label={factIsForecast ? 'Фактические показатели (прогноз)' : 'Фактические показатели'}
+              span={FACT_COLUMNS.length}
+            />
+            <SectionHeading label="Отклонение" span={FACT_COLUMNS.length} last />
           </tr>
           <tr>
             <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
@@ -101,13 +118,13 @@ export function ProductionFactTable({
         </thead>
         <tbody>
           {groups.map((group) => (
-            <CategoryBlock key={group.categoryId} group={group} />
+            <CategoryBlock key={group.categoryId} group={group} recommendedByProduct={recommendedByProduct} />
           ))}
           <tr>
             <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
               Всего
             </th>
-            <SideCells kind="plan" side={plan} total />
+            <SideCells kind="plan" side={plan} recommendedPieces={recommendedTotal} total />
             <SideCells kind="fact" side={fact} total />
             <VarianceCells variance={variance} total />
           </tr>
@@ -117,9 +134,16 @@ export function ProductionFactTable({
   );
 }
 
-function CategoryBlock({ group }: { group: ProductionFactGroup }) {
+function CategoryBlock({
+  group,
+  recommendedByProduct,
+}: {
+  group: ProductionFactGroup;
+  recommendedByProduct: ReadonlyMap<string, number>;
+}) {
   const [open, setOpen] = useState(true);
   const productCount = group.rows.length;
+  const recommendedPieces = group.rows.reduce((sum, row) => sum + (recommendedByProduct.get(row.productId) ?? 0), 0);
 
   return (
     <>
@@ -147,16 +171,33 @@ function CategoryBlock({ group }: { group: ProductionFactGroup }) {
             {group.deleted ? <span className="text-sm text-muted">(архив)</span> : null}
           </div>
         </th>
-        <SideCells kind="plan" side={group.plan} />
+        <SideCells kind="plan" side={group.plan} recommendedPieces={recommendedPieces} />
         <SideCells kind="fact" side={group.fact} />
         <VarianceCells variance={group.variance} />
       </tr>
-      {open ? group.rows.map((row, index) => <ProductRow key={row.productId} row={row} index={index + 1} />) : null}
+      {open
+        ? group.rows.map((row, index) => (
+            <ProductRow
+              key={row.productId}
+              row={row}
+              index={index + 1}
+              recommendedPieces={recommendedByProduct.get(row.productId) ?? 0}
+            />
+          ))
+        : null}
     </>
   );
 }
 
-function ProductRow({ row, index }: { row: ProductionFactRow; index: number }) {
+function ProductRow({
+  row,
+  index,
+  recommendedPieces,
+}: {
+  row: ProductionFactRow;
+  index: number;
+  recommendedPieces: number;
+}) {
   return (
     <tr>
       <th
@@ -169,27 +210,23 @@ function ProductRow({ row, index }: { row: ProductionFactRow; index: number }) {
           {row.deleted ? <span className="text-sm text-muted">(архив)</span> : null}
         </div>
       </th>
-      <ProductSideCells kind="plan" row={row} />
+      <ProductSideCells kind="plan" row={row} recommendedPieces={recommendedPieces} />
       <ProductSideCells kind="fact" row={row} />
       <ProductVarianceCells row={row} />
     </tr>
   );
 }
 
-function SectionHeading({ label, last = false }: { label: string; last?: boolean }) {
+function SectionHeading({ label, span, last = false }: { label: string; span: number; last?: boolean }) {
   return (
-    <th
-      colSpan={COLUMNS.length}
-      scope="colgroup"
-      className={`${blockHeadingClassName} ${last ? '' : tableBorder.rightThick}`}
-    >
+    <th colSpan={span} scope="colgroup" className={`${blockHeadingClassName} ${last ? '' : tableBorder.rightThick}`}>
       {keepWithNext(label)}
     </th>
   );
 }
 
 function ColumnHeadings({ kind }: { kind: SectionKind }) {
-  return COLUMNS.map((column) => (
+  return columnsOf(kind).map((column) => (
     <th
       key={`${kind}:${column.key}`}
       scope="col"
@@ -200,27 +237,51 @@ function ColumnHeadings({ kind }: { kind: SectionKind }) {
   ));
 }
 
-function SideCells({ kind, side, total = false }: { kind: SectionKind; side: ProductionFactSide; total?: boolean }) {
-  return COLUMNS.map((column) => (
+function SideCells({
+  kind,
+  side,
+  recommendedPieces = 0,
+  total = false,
+}: {
+  kind: SectionKind;
+  side: ProductionFactSide;
+  recommendedPieces?: number;
+  total?: boolean;
+}) {
+  return columnsOf(kind).map((column) => (
     <MetricCell key={`${kind}:${column.key}`} kind={kind} column={column.key} total={total}>
-      <SideValue column={column.key} side={side} />
+      {column.key === 'recommended' ? (
+        <Pieces value={recommendedPieces} />
+      ) : (
+        <SideValue column={column.key} side={side} />
+      )}
     </MetricCell>
   ));
 }
 
 function VarianceCells({ variance, total = false }: { variance: ProductionFactVariance; total?: boolean }) {
-  return COLUMNS.map((column) => (
+  return FACT_COLUMNS.map((column) => (
     <MetricCell key={`variance:${column.key}`} kind="variance" column={column.key} total={total}>
       <VarianceValue column={column.key} variance={variance} />
     </MetricCell>
   ));
 }
 
-function ProductSideCells({ kind, row }: { kind: 'plan' | 'fact'; row: ProductionFactRow }) {
+function ProductSideCells({
+  kind,
+  row,
+  recommendedPieces = 0,
+}: {
+  kind: 'plan' | 'fact';
+  row: ProductionFactRow;
+  recommendedPieces?: number;
+}) {
   const side = kind === 'plan' ? row.plan : row.fact;
-  return COLUMNS.map((column) => (
+  return columnsOf(kind).map((column) => (
     <MetricCell key={`${kind}:${column.key}`} kind={kind} column={column.key} sheet>
-      {column.key === 'unitCost' ? (
+      {column.key === 'recommended' ? (
+        <Pieces value={recommendedPieces} />
+      ) : column.key === 'unitCost' ? (
         <ProductUnitCost kind={kind} row={row} />
       ) : (
         <SideValue column={column.key} side={side} />
@@ -251,7 +312,7 @@ function ProductUnitCost({ kind, row }: { kind: 'plan' | 'fact'; row: Production
 
 function ProductVarianceCells({ row }: { row: ProductionFactRow }) {
   const incomplete = !row.plan.costComplete || !row.fact.costComplete;
-  return COLUMNS.map((column) => (
+  return FACT_COLUMNS.map((column) => (
     <MetricCell key={`variance:${column.key}`} kind="variance" column={column.key} sheet>
       {column.key === 'volume' ? (
         <Pieces value={row.variance.volumePieces} signed />
