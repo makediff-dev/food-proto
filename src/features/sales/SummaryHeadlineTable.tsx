@@ -48,12 +48,15 @@ export function SummaryHeadlineTable({
   periodLabel,
   view,
   periodClosed = false,
+  expenseBasis = 'month',
   onFactOperatingExpense,
 }: {
   headline: Headline;
   periodLabel: string;
   view: SummaryLens;
   periodClosed?: boolean;
+  /** Прогноз — сумма месяца. Фактическая — доля прошедших дней. */
+  expenseBasis?: 'month' | 'elapsed';
   /** Фактические операционные расходы при одном месяце. План здесь не правят. */
   onFactOperatingExpense?: (amountExVat: number) => string | null;
 }) {
@@ -67,10 +70,10 @@ export function SummaryHeadlineTable({
       <table className={tableClassName}>
         <caption className="sr-only">
           {view === 'current'
-            ? 'Свод периода: план (корр.), факт и отклонение. Операционные расходы без НДС.'
+            ? 'Свод периода: план (корр.), факт и отклонение. Операционные расходы без НДС за прошедшие дни.'
             : factIsForecast
-              ? 'Свод периода: план, факт (прогноз) и отклонение. Операционные расходы без НДС.'
-              : 'Свод периода: план, факт и отклонение. Операционные расходы без НДС.'}
+              ? 'Свод периода: план, факт (прогноз) и отклонение. Операционные расходы без НДС за месяц.'
+              : 'Свод периода: план, факт и отклонение. Операционные расходы без НДС за месяц.'}
         </caption>
         <thead>
           <tr>
@@ -89,7 +92,13 @@ export function SummaryHeadlineTable({
             </th>
             {ROWS.map((row) => (
               <td key={row.id} className={valueCellClassName}>
-                <HeadlineValue row={row.id} side="plan" headline={headline} periodLabel={periodLabel} />
+                <HeadlineValue
+                  row={row.id}
+                  side="plan"
+                  headline={headline}
+                  periodLabel={periodLabel}
+                  expenseBasis={expenseBasis}
+                />
               </td>
             ))}
           </tr>
@@ -107,6 +116,7 @@ export function SummaryHeadlineTable({
                   side="fact"
                   headline={headline}
                   periodLabel={periodLabel}
+                  expenseBasis={expenseBasis}
                   onOperatingExpense={
                     row.id === 'opex' && onFactOperatingExpense
                       ? (_side, amountExVat) => onFactOperatingExpense(amountExVat)
@@ -137,21 +147,26 @@ function HeadlineValue({
   side,
   headline,
   periodLabel,
+  expenseBasis = 'month',
   onOperatingExpense,
 }: {
   row: HeadlineRowId;
   side: OperatingExpenseSide;
   headline: Headline;
   periodLabel: string;
+  expenseBasis?: 'month' | 'elapsed';
   onOperatingExpense?: (side: OperatingExpenseSide, amountExVat: number) => string | null;
 }) {
   const values = side === 'plan' ? headline.plan : headline.fact;
 
   if (row === 'opex') {
+    const span = expenseBasis === 'elapsed' ? 'за прошедшие дни' : 'за месяц';
     return (
       <MoneyCell
         label={
-          side === 'plan' ? `Операционные расходы, план, ${periodLabel}` : `Операционные расходы, факт, ${periodLabel}`
+          side === 'plan'
+            ? `Операционные расходы, план ${span}, ${periodLabel}`
+            : `Операционные расходы, факт ${span}, ${periodLabel}`
         }
         value={values.operatingExpenseExVat}
         invalidMessage={OPERATING_EXPENSE_ERROR.amount}

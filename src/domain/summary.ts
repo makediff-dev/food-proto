@@ -474,7 +474,8 @@ function headlineSide(totals: SummarySide | null, operatingExpenseExVat: number)
 /**
  * Верхний блок свода `Svod!D2:L8`.
  * Выручка и Т-проток — суммы по товарам, без вычета Factoring.
- * Операционные расходы — план во «Вводе плана», факт в отчете общем; без листа Operation Expense.
+ * Операционные расходы в документе — за весь месяц. План во «Вводе плана», факт в отчете общем.
+ * На фактической сводке обе суммы показываются за прошедшие дни.
  */
 export function summaryHeadline(
   planTotals: SummarySide | null,
@@ -899,6 +900,56 @@ function factVolumeScale(month: string, today: Date, lens: SummaryLens): VolumeS
   return { kind: 'ratio', numerator: days, denominator: elapsed };
 }
 
+/**
+ * Операционные расходы в документе — за весь месяц.
+ * Фактическая сводка показывает долю прошедших дней, прогноз — сумму месяца.
+ */
+function operatingExpenseDisplayScale(month: string, today: Date, lens: SummaryLens): VolumeScale {
+  if (lens !== 'current') {
+    return { kind: 'identity' };
+  }
+
+  return planVolumeScale(month, today, 'current');
+}
+
+function scaleOperatingExpense(amount: number, scale: VolumeScale): number {
+  return scaleAmount(amount, scale) ?? 0;
+}
+
+/** Сумма операционных расходов месяца так, как она стоит на сводке этого режима. */
+export function displayedOperatingExpense(storedExVat: number, month: string, lens: SummaryLens, today: Date): number {
+  return scaleOperatingExpense(storedExVat, operatingExpenseDisplayScale(month, today, lens));
+}
+
+/**
+ * Ввод факта операционных расходов → сумма месяца в документе.
+ * В прогнозе ввод уже за месяц. В фактической — за прошедшие дни.
+ */
+export function factOperatingExpenseStoredFromInput(
+  amountExVat: number,
+  month: string,
+  lens: SummaryLens,
+  today: Date,
+): number | null {
+  if (!Number.isInteger(amountExVat) || amountExVat < 0) {
+    return null;
+  }
+  if (lens !== 'current') {
+    return amountExVat;
+  }
+
+  const elapsed = elapsedDaysInMonth(month, today);
+  const days = daysInMonth(month);
+  if (elapsed <= 0) {
+    return null;
+  }
+  if (elapsed >= days) {
+    return amountExVat;
+  }
+
+  return ratioRound(amountExVat * days, elapsed);
+}
+
 function scaleInteger(value: number, numerator: number, denominator: number): number | null {
   return ratioRound(value * numerator, denominator);
 }
@@ -1009,12 +1060,14 @@ function applyFactScale(side: SummarySide, scale: VolumeScale, monthDays: number
 /**
  * Текущая сводка: план × прошедшие дни / дни месяца.
  * Прогнозируемая: факт × дни месяца / прошедшие дни.
- * Операционные расходы не трогает. В документ не пишет.
+ * Операционные расходы в фактической — та же доля прошедших дней; в прогнозе сумма месяца.
+ * В документ не пишет.
  */
 export function applySummaryLens(view: SummaryView, lens: SummaryLens, today: Date): SummaryView {
   const planScale = planVolumeScale(view.month, today, lens);
   const factScale = factVolumeScale(view.month, today, lens);
-  if (planScale.kind === 'identity' && factScale.kind === 'identity') {
+  const opexScale = operatingExpenseDisplayScale(view.month, today, lens);
+  if (planScale.kind === 'identity' && factScale.kind === 'identity' && opexScale.kind === 'identity') {
     return view;
   }
 
@@ -1058,8 +1111,8 @@ export function applySummaryLens(view: SummaryView, lens: SummaryLens, today: Da
     headline: summaryHeadline(
       planTotalsSide,
       factTotals,
-      view.headline.plan.operatingExpenseExVat,
-      view.headline.fact.operatingExpenseExVat,
+      scaleOperatingExpense(view.headline.plan.operatingExpenseExVat, opexScale),
+      scaleOperatingExpense(view.headline.fact.operatingExpenseExVat, opexScale),
     ),
   };
 }

@@ -7,9 +7,12 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { activeCategories } from '@/domain/categories';
 import { monthKeyFromDate, planMonthOpen } from '@/domain/sales-plan';
 import {
+  displayedOperatingExpense,
   elapsedDaysInMonth,
   ensureRangeIncludesMonth,
+  factOperatingExpenseStoredFromInput,
   lastHorizonMonth,
+  monthOperatingExpenseAmounts,
   monthsInRange,
   normalizeMonthRange,
   type SummaryLens,
@@ -214,10 +217,19 @@ function Workspace({
               periodLabel={periodLabel}
               view={view}
               periodClosed={periodClosed}
+              expenseBasis={isActual ? 'elapsed' : 'month'}
               onFactOperatingExpense={
                 factOpexEditable
                   ? (amountExVat) => {
-                      const rejection = sales.updateOperatingExpense(periodFrom, 'fact', amountExVat);
+                      const storedNow = monthOperatingExpenseAmounts(sales.document, periodFrom).factExVat;
+                      if (displayedOperatingExpense(storedNow, periodFrom, view, today) === amountExVat) {
+                        return null;
+                      }
+                      const stored = factOperatingExpenseStoredFromInput(amountExVat, periodFrom, view, today);
+                      if (stored === null) {
+                        return OPERATING_EXPENSE_ERROR.amount;
+                      }
+                      const rejection = sales.updateOperatingExpense(periodFrom, 'fact', stored);
                       return rejection ? OPERATING_EXPENSE_ERROR[rejection] : null;
                     }
                   : undefined

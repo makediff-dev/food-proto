@@ -18,15 +18,12 @@ import { planningHref } from '@/features/planning/paths';
 import { ProductionJournalFactTable } from '@/features/production/ProductionJournalFactTable';
 import {
   PRODUCTION_FACT_TITLE,
-  PRODUCTION_JOURNAL_TITLE,
   type ProductionJournalFactView,
-  productionEntryNewHref,
   productionJournalFactHref,
-  productionJournalHref,
 } from '@/features/production/paths';
-import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
+import { monthFieldClassName } from '@/features/sales/fields';
 import { formatSalesFactDay } from '@/features/sales-fact/text';
-import { IconEye, IconFullscreen, IconFullscreenExit, IconList, IconPlan, IconPlus } from '@/features/shell/Icons';
+import { IconEye, IconFullscreen, IconFullscreenExit, IconPlan } from '@/features/shell/Icons';
 import { MonthStep } from '@/features/shell/MonthStep';
 import { PageFrame } from '@/features/shell/PageFrame';
 
@@ -114,23 +111,7 @@ function Workspace({
 
   return (
     <>
-      <PageFrame
-        title={PRODUCTION_FACT_TITLE}
-        full
-        fill
-        aside={
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <Link href={productionJournalHref({ month, currentMonth })} className={quietLinkClassName}>
-              <IconList />
-              {PRODUCTION_JOURNAL_TITLE}
-            </Link>
-            <Link href={productionEntryNewHref()} className={primaryButtonClassName}>
-              <IconPlus />
-              Добавить запись
-            </Link>
-          </div>
-        }
-      >
+      <PageFrame title={PRODUCTION_FACT_TITLE} full fill>
         <div className="flex min-h-0 flex-1 flex-col gap-4">
           <div className="shrink-0 border border-line bg-sheet">
             <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-end lg:justify-between">
@@ -382,6 +363,3 @@ function viewLinkClass(selected: boolean): string {
     selected ? 'border-ink bg-ink text-white' : 'border-line bg-sheet text-ink hover:border-ink'
   }`;
 }
-
-const quietLinkClassName =
-  'inline-flex h-11 items-center justify-center gap-2 border border-line bg-sheet px-3 text-sm text-ink outline-none hover:border-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink';
