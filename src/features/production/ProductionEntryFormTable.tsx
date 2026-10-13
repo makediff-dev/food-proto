@@ -66,7 +66,7 @@ interface EntryFormGroup {
 }
 
 const COLUMNS = [
-  { key: 'cost', label: 'Себестоимость' },
+  { key: 'cost', label: 'Себест.' },
   { key: 'pieces', label: 'Шт' },
   { key: 'amount', label: 'Сумма' },
 ] as const;
@@ -370,7 +370,7 @@ function RowCell({
         bottomLabel="без НДС"
         top={
           <GridInput
-            label={`Себестоимость с НДС, ${row.product.name}`}
+            label={`Себест. с НДС, ${row.product.name}`}
             value={row.draft.cost}
             inputMode="decimal"
             unit="₽"

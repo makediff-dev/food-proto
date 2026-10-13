@@ -12,6 +12,8 @@ import { NormDeviationCell } from '@/features/movement/NormDeviationCell';
 import { formatPieces } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
+  blockCornerClassName,
+  blockHeadingClassName,
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
@@ -19,10 +21,12 @@ import {
   columnHeadingClassName,
   editableCellClassName,
   IntegerCell,
+  keepWithNext,
   nameHeadingClassName,
   ProductIndex,
   stickyHeadClassName,
   TableNumber,
+  tableBorder,
   tableClassName,
   tableFrameClassName,
   tableFrameExpandedClassName,
@@ -33,10 +37,10 @@ import {
 type ColumnKey = 'min' | 'max' | 'normDeviation' | 'recommended';
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: 'min', label: 'Минимум' },
-  { key: 'max', label: 'Максимум' },
+  { key: 'min', label: 'Мин.' },
+  { key: 'max', label: 'Макс.' },
   { key: 'normDeviation', label: 'Откл.' },
-  { key: 'recommended', label: 'Рекомендуемый объём' },
+  { key: 'recommended', label: 'Реком. объём' },
 ];
 
 const EDITABLE_COLUMNS = new Set<ColumnKey>(['min', 'max']);
@@ -60,11 +64,21 @@ export function MovementPlanTable({
         <caption className="sr-only">Ввод плана: движение готовой продукции</caption>
         <thead className={stickyHeadClassName}>
           <tr>
+            <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
+            <th colSpan={COLUMNS.length} scope="colgroup" className={blockHeadingClassName}>
+              {keepWithNext('Плановые показатели')}
+            </th>
+          </tr>
+          <tr>
             <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               Товар
             </th>
             {COLUMNS.map((column) => (
-              <th key={column.key} scope="col" className={`${columnHeadingClassName} ${columnDividerClassName}`}>
+              <th
+                key={column.key}
+                scope="col"
+                className={`${columnHeadingClassName} last:border-r-0 ${tableBorder.rightThin}`}
+              >
                 <ColumnLabel label={column.label} />
               </th>
             ))}

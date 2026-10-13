@@ -44,10 +44,10 @@ import {
 type ColumnKey = 'unitCost' | 'volume' | 'recommended' | 'volumeCost';
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: 'unitCost', label: 'Себест' },
+  { key: 'unitCost', label: 'Себест.' },
   { key: 'volume', label: 'Объём' },
-  { key: 'recommended', label: 'Рекомендуемый объём' },
-  { key: 'volumeCost', label: 'Себест объёма' },
+  { key: 'recommended', label: 'Реком. объём' },
+  { key: 'volumeCost', label: 'Себест. объёма' },
 ];
 
 export function ProductionJournalFactTable({

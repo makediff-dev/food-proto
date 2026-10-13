@@ -8,6 +8,8 @@ import { FIELD_ERROR } from '@/features/sales/fields';
 import { formatPieces } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
+  blockCornerClassName,
+  blockHeadingClassName,
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
@@ -22,6 +24,7 @@ import {
   ProductIndex,
   stickyHeadClassName,
   TableNumber,
+  tableBorder,
   tableClassName,
   tableFrameClassName,
   tableFrameExpandedClassName,
@@ -33,10 +36,10 @@ import {
 type ColumnKey = 'unitCost' | 'recommended' | 'volume' | 'volumeCost';
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: 'unitCost', label: 'Себест' },
-  { key: 'recommended', label: 'Рекомендуемый объём' },
+  { key: 'unitCost', label: 'Себест.' },
+  { key: 'recommended', label: 'Реком. объём' },
   { key: 'volume', label: 'Объём' },
-  { key: 'volumeCost', label: 'Себест объёма' },
+  { key: 'volumeCost', label: 'Себест. объёма' },
 ];
 
 export function ProductionPlanTable({
@@ -66,11 +69,21 @@ export function ProductionPlanTable({
         <caption className="sr-only">План производства по товарам</caption>
         <thead className={stickyHeadClassName}>
           <tr>
+            <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
+            <th colSpan={COLUMNS.length} scope="colgroup" className={blockHeadingClassName}>
+              {keepWithNext('Плановые показатели')}
+            </th>
+          </tr>
+          <tr>
             <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               Товар
             </th>
             {COLUMNS.map((column) => (
-              <th key={column.key} scope="col" className={`${columnHeadingClassName} ${columnDividerClassName}`}>
+              <th
+                key={column.key}
+                scope="col"
+                className={`${columnHeadingClassName} last:border-r-0 ${tableBorder.rightThin}`}
+              >
                 <ColumnLabel label={column.label} />
               </th>
             ))}

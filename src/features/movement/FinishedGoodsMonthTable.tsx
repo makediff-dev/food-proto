@@ -73,7 +73,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
     label: 'Производство',
     columns: [
       { key: 'productionPieces', label: 'Объём' },
-      { key: 'productionPrice', label: 'Себест' },
+      { key: 'productionPrice', label: 'Себест.' },
       { key: 'productionValue', label: 'Стоимость' },
     ],
   },
@@ -81,8 +81,8 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
     label: 'Остаток на конец',
     columns: [
       { key: 'closing', label: 'Остаток' },
-      { key: 'min', label: 'Мин' },
-      { key: 'max', label: 'Макс' },
+      { key: 'min', label: 'Мин.' },
+      { key: 'max', label: 'Макс.' },
       { key: 'normDeviation', label: 'Откл.' },
       { key: 'factPrice', label: 'Цена (факт)' },
       { key: 'closingValue', label: 'Стоимость' },

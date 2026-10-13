@@ -54,13 +54,13 @@ type SideKey =
 type VarianceKey = 'revenue' | 'contribution';
 
 const SIDE_COLUMNS: { key: SideKey; label: string }[] = [
-  { key: 'unitCost', label: 'Себест' },
-  { key: 'profitability', label: 'Рентаб' },
+  { key: 'unitCost', label: 'Себест.' },
+  { key: 'profitability', label: 'Рентаб.' },
   { key: 'price', label: 'Цена' },
   { key: 'volume', label: 'Объём продаж' },
   { key: 'revenue', label: 'Выручка' },
   { key: 'contribution', label: 'Т-проток' },
-  { key: 'volumeCost', label: 'Себест объёма' },
+  { key: 'volumeCost', label: 'Себест. объёма' },
   { key: 'perDay', label: 'В сутки' },
   { key: 'vat', label: 'НДС' },
 ];

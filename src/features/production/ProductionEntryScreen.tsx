@@ -92,7 +92,6 @@ export function ProductionEntryScreen({ entryId, dayQuery }: { entryId: string |
       <PageFrame
         title={PRODUCTION_JOURNAL_TITLE}
         full
-        lede="Запись выпуска: дата, штуки и себестоимость по товарам."
         back={
           <Link
             href={productionJournalHref({ month: currentMonth, currentMonth })}
@@ -249,7 +248,6 @@ function EntryForm({
     <PageFrame
       title={entryId ? PRODUCTION_JOURNAL_TITLE : NEW_PRODUCTION_ENTRY_TITLE}
       full
-      lede={entryId ? 'Запись выпуска: дата, штуки и себестоимость по товарам.' : undefined}
       back={
         entryId ? (
           <Link

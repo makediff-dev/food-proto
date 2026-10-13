@@ -13,8 +13,6 @@ import { formatMonth } from '@/features/sales/text';
 import { IconFullscreen, IconFullscreenExit } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
 
-const LEDE = 'Остатки на производстве, продажи и выпуск по текущий месяц. Будущие месяцы не выбираются.';
-
 export function FinishedGoodsMonthScreen({ from, to }: { from: string; to: string }) {
   const today = useMemo(() => new Date(), []);
   const router = useRouter();
@@ -38,7 +36,7 @@ export function FinishedGoodsMonthScreen({ from, to }: { from: string; to: strin
 
   if (!range) {
     return (
-      <PageFrame title={MOVEMENT_SUMMARY_TITLE} lede={LEDE}>
+      <PageFrame title={MOVEMENT_SUMMARY_TITLE}>
         <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
           Свод строится с января 2000 по текущий месяц. Этот месяц ещё не наступил.
         </p>
@@ -97,7 +95,6 @@ function Workspace({ from, to, today }: { from: string; to: string; today: Date 
     <>
       <PageFrame
         title={MOVEMENT_SUMMARY_TITLE}
-        lede={LEDE}
         full
         intro={
           <div className="w-full border border-line bg-sheet p-4">

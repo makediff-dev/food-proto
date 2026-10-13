@@ -119,7 +119,6 @@ export function SaleScreen({ saleId, dayQuery }: { saleId: string | null; dayQue
       <PageFrame
         title={SALES_JOURNAL_TITLE}
         full
-        lede="Продажа заказчику: дата, товары, цена и сумма."
         back={
           <Link
             href={salesJournalHref({ month: currentMonth, currentMonth })}
@@ -301,7 +300,6 @@ function SaleForm({
     <PageFrame
       title={saleId ? SALES_JOURNAL_TITLE : NEW_SALE_TITLE}
       full
-      lede={saleId ? 'Продажа заказчику: дата, товары, цена и сумма.' : undefined}
       back={
         saleId ? (
           <Link

@@ -103,7 +103,7 @@ function Workspace({
 
   return (
     <>
-      <PageFrame title={MOVEMENT_FACT_TITLE} lede="Остатки на производстве, продажи и выпуск по дням." full fill>
+      <PageFrame title={MOVEMENT_FACT_TITLE} full fill>
         <div className="flex min-h-0 flex-1 flex-col gap-4">
           <div className="shrink-0 border border-line bg-sheet">
             <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-end lg:justify-between">

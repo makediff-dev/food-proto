@@ -22,7 +22,6 @@ export function PlanningArchiveScreen() {
     <PageFrame
       title={PLANNING_ARCHIVE_TITLE}
       full
-      lede="Удалённые категории и товары можно вернуть."
       back={
         <Link
           href={planningHref()}

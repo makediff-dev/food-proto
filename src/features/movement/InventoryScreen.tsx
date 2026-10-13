@@ -87,7 +87,6 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
     <>
       <PageFrame
         title={MOVEMENT_INVENTORY_TITLE}
-        lede="Остаток на начало (план), остаток на начало (факт) и отклонение."
         full
         intro={
           <div className="w-full border border-line bg-sheet p-4">

@@ -31,7 +31,7 @@ export function PlanRedirect({ id }: { id: string }) {
   }, [currentMonth, id, router, sales.document.salesPlans, sales.hydrated]);
 
   return (
-    <PageFrame title={SUMMARY_SECTION_TITLE} full lede="Открываем месяц плана.">
+    <PageFrame title={SUMMARY_SECTION_TITLE} full>
       {null}
     </PageFrame>
   );

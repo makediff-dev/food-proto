@@ -6,6 +6,8 @@ import type { MovementPlanGroup, MovementPlanRow, MovementPlanTotals } from '@/d
 import { formatPieces } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
+  blockCornerClassName,
+  blockHeadingClassName,
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
@@ -13,10 +15,12 @@ import {
   columnHeadingClassName,
   editableCellClassName,
   IntegerCell,
+  keepWithNext,
   nameHeadingClassName,
   ProductIndex,
   stickyHeadClassName,
   TableNumber,
+  tableBorder,
   tableClassName,
   tableFrameClassName,
   tableFrameExpandedClassName,
@@ -27,9 +31,9 @@ import {
 type ColumnKey = 'bookOpening' | 'inventory' | 'openingDeviation';
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: 'bookOpening', label: 'Остаток на начало (план)' },
-  { key: 'inventory', label: 'Остаток на начало (факт)' },
-  { key: 'openingDeviation', label: 'Отклонение' },
+  { key: 'bookOpening', label: 'План' },
+  { key: 'inventory', label: 'Факт' },
+  { key: 'openingDeviation', label: 'Откл.' },
 ];
 
 export function InventoryTable({
@@ -51,11 +55,21 @@ export function InventoryTable({
         <caption className="sr-only">Инвентаризация: остаток на начало</caption>
         <thead className={stickyHeadClassName}>
           <tr>
+            <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
+            <th colSpan={COLUMNS.length} scope="colgroup" className={blockHeadingClassName}>
+              {keepWithNext('Остаток на начало')}
+            </th>
+          </tr>
+          <tr>
             <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               Товар
             </th>
             {COLUMNS.map((column) => (
-              <th key={column.key} scope="col" className={`${columnHeadingClassName} ${columnDividerClassName}`}>
+              <th
+                key={column.key}
+                scope="col"
+                className={`${columnHeadingClassName} last:border-r-0 ${tableBorder.rightThin}`}
+              >
                 <ColumnLabel label={column.label} />
               </th>
             ))}

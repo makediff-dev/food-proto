@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function QuestionsPage() {
   return (
-    <PageFrame title={TITLE} lede="Открытые вопросы по прототипу.">
+    <PageFrame title={TITLE}>
       {questions.length === 0 ? (
         <div className="border border-line bg-sheet px-4 py-4">
           <p className="text-sm text-ink">Пока вопросов нет.</p>

@@ -110,7 +110,6 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
     <>
       <PageFrame
         title={PRODUCTION_PLAN_TITLE}
-        lede="План выпуска готовой продукции."
         full
         intro={
           <div className="w-full border border-line bg-sheet p-4">

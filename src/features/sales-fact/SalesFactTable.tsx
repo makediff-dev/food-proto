@@ -53,13 +53,13 @@ type ColumnKey =
   | 'vat';
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: 'salesUnitCost', label: 'Себест продажи' },
-  { key: 'profitability', label: 'Рентаб' },
+  { key: 'salesUnitCost', label: 'Себест. продажи' },
+  { key: 'profitability', label: 'Рентаб.' },
   { key: 'price', label: 'Цена' },
   { key: 'salesPieces', label: 'Объём продаж' },
   { key: 'revenue', label: 'Выручка' },
   { key: 'contribution', label: 'Т-проток' },
-  { key: 'salesVolumeCost', label: 'Себест объёма' },
+  { key: 'salesVolumeCost', label: 'Себест. объёма' },
   { key: 'vat', label: 'НДС' },
 ];
 
