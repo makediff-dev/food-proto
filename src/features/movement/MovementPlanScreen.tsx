@@ -8,7 +8,7 @@ import { type FinishedGoodsNormField, movementPlanMonthView } from '@/domain/mov
 import { activeProducts } from '@/domain/products';
 import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { lastHorizonMonth } from '@/domain/summary';
-import { MovementPlanTable } from '@/features/movement/MovementPlanTable';
+import { MovementPlanTable, movementPlanNormRangeInvalid } from '@/features/movement/MovementPlanTable';
 import { MOVEMENT_PLAN_TITLE, movementPlanHref } from '@/features/movement/paths';
 import { useMovementPlan } from '@/features/movement/use-movement-plan';
 import { monthFieldClassName } from '@/features/sales/fields';
@@ -37,6 +37,7 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
   const horizonEnd = lastHorizonMonth(today);
   const hasTable = view.groups.length > 0;
   const tableExpanded = fullscreen && hasTable;
+  const invalidNormRanges = view.rows.some((row) => movementPlanNormRangeInvalid(row.minPieces, row.maxPieces));
 
   useEffect(() => {
     if (!tableExpanded) {
@@ -122,6 +123,12 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
         }
       >
         <div className="flex flex-col gap-4">
+          {invalidNormRanges ? (
+            <p role="alert" className="border border-caution/60 bg-caution/10 px-4 py-3 text-sm leading-6 text-ink">
+              У части товаров минимум больше максимума — норматив противоречивый. Исправьте значения в колонках «Мин.» и
+              «Макс.» (ячейки подсвечены).
+            </p>
+          ) : null}
           {hasTable ? (
             <section
               className={tableExpanded ? 'fixed inset-0 z-50 bg-paper' : undefined}

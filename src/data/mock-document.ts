@@ -1,5 +1,7 @@
 import {
   catalogCategories,
+  type FinishedGoodsNorm,
+  type FinishedGoodsOpening,
   type Product,
   type ProductionEntry,
   type ProductionPlan,
@@ -14,11 +16,11 @@ import {
  * Себестоимость 1 шт с НДС округлена до целых десятков рублей.
  * План продаж и план выпуска сентября и октября 2026 одинаковые: 500, 600, 800 и 1 000 шт.
  * Факт продаж сентября чуть выше плана: 550, 650, 900 и 1 100.
- * Выпуск сентября чуть выше продаж у салатов и гуляша (650, 800, 1 050) — на конец месяца остаток 100, 150 и 150 шт.
- * У гамбургера выпуск 1 000 при продажах 1 100 — дефицит −100 шт (переносится в октябрь как остаток на начало план).
- * Факт октября — 2, 9, 13, 16 и 20 число: продажи и выпуск 350, 420, 560 и 380.
- * До 21 октября Цезарь, Оливье и гуляш не ниже темпа месяца, гамбургер ниже.
- * Операционные расходы и инвентаризация пустые.
+ * Выпуск сентября чуть выше продаж у салатов и гуляша (650, 800, 1 050) — расчётный перенос на октябрь 140, 200 и 220 шт.
+ * У гамбургера выпуск 1 000 при продажах 1 100 — расчётный перенос 20 шт. Инвентаризация октября: недостача у Цезаря, гуляша и гамбургера, излишек у Оливье.
+ * Факт октября — 2, 9, 13, 16 и 20 число. Продажи за месяц: 350, 420, 560 и 380 шт.
+ * Выпуск октября не копирует продажи: Цезарь и гуляш чуть впереди, Оливье и гамбургер отстают.
+ * Операционные расходы пустые. Инвентаризация и нормативы движения — сентябрь и октябрь 2026; факт инвентаризации не ниже нуля, отклонение от переноса может быть отрицательным (недостача).
  * Плановые цены с НДС: салаты — мок, гуляш `Svod!F31`, гамбургер `Svod!F63`.
  * Факт продаж — круглые и полукруглые: 95, 70, 100 и 85 ₽ с НДС.
  * НДС у всех товаров 20%. В книге у горячих `Svod!N31` 10%, у роллов `Svod!N63` 20%.
@@ -134,6 +136,58 @@ function productionPlan(month: string): ProductionPlan {
   };
 }
 
+/** Норматив остатков на производстве, шт. Одинаковый в сентябре и октябре. */
+const normPieces = {
+  'product-caesar': { minPieces: 80, maxPieces: 180 },
+  'product-olivier': { minPieces: 100, maxPieces: 220 },
+  'product-goulash': { minPieces: 120, maxPieces: 250 },
+  'product-burger': { minPieces: 0, maxPieces: 80 },
+} as const satisfies Record<CatalogProductId, { minPieces: number; maxPieces: number }>;
+
+/** Инвентаризация на начало месяца, шт. */
+const openingInventorySeptember = {
+  'product-caesar': 40,
+  'product-olivier': 50,
+  'product-goulash': 70,
+  'product-burger': 120,
+} as const satisfies Record<CatalogProductId, number>;
+
+/**
+ * На начало октября. Расчётный перенос с сентября: 140, 200, 220 и 20 шт.
+ * Ниже переноса — недостача в «Откл.»; у Оливье излишек +10.
+ */
+const openingInventoryOctober = {
+  'product-caesar': 125,
+  'product-olivier': 210,
+  'product-goulash': 195,
+  'product-burger': 12,
+} as const satisfies Record<CatalogProductId, number>;
+
+function finishedGoodsOpening(month: string, piecesByProduct: Record<CatalogProductId, number>): FinishedGoodsOpening {
+  return {
+    id: `finished-goods-opening:${month}`,
+    month,
+    lines: catalogProductIds.map((productId) => ({
+      id: `finished-goods-opening-line:${month}:${productId.slice('product-'.length)}`,
+      productId,
+      pieces: piecesByProduct[productId],
+    })),
+  };
+}
+
+function finishedGoodsNorm(month: string): FinishedGoodsNorm {
+  return {
+    id: `finished-goods-norm:${month}`,
+    month,
+    lines: catalogProductIds.map((productId) => ({
+      id: `finished-goods-norm-line:${month}:${productId.slice('product-'.length)}`,
+      productId,
+      minPieces: normPieces[productId].minPieces,
+      maxPieces: normPieces[productId].maxPieces,
+    })),
+  };
+}
+
 interface OrderDraft {
   id: string;
   customerName: string;
@@ -238,9 +292,9 @@ const orders: OrderDraft[] = [
 ];
 
 /**
- * Выпуск тех же дней. Октябрь = продажи тех же дней.
- * Сентябрь: салаты и гуляш выше продаж (остаток), гамбургер ниже (дефицит −100).
- * Итого выпуск сентября: 650, 800, 1 050 и 1 000 → конец месяца 100, 150, 150 и −100.
+ * Выпуск тех же дней, что и продажи. Октябрь по товарам расходится с продажами.
+ * Сентябрь: салаты и гуляш выше продаж (остаток), гамбургер ниже.
+ * Итого выпуск сентября: 650, 800, 1 050 и 1 000.
  */
 const productionOrders: OrderDraft[] = [
   {
@@ -281,10 +335,10 @@ const productionOrders: OrderDraft[] = [
     customerName: 'РИТЕЙЛ Север',
     occurredOn: '2026-10-02',
     pieces: {
-      'product-caesar': 100,
-      'product-olivier': 150,
-      'product-goulash': 150,
-      'product-burger': 150,
+      'product-caesar': 115,
+      'product-olivier': 145,
+      'product-goulash': 165,
+      'product-burger': 130,
     },
   },
   {
@@ -292,10 +346,10 @@ const productionOrders: OrderDraft[] = [
     customerName: 'РИТЕЙЛ Юг',
     occurredOn: '2026-10-09',
     pieces: {
-      'product-caesar': 100,
-      'product-olivier': 100,
-      'product-goulash': 100,
-      'product-burger': 150,
+      'product-caesar': 110,
+      'product-olivier': 90,
+      'product-goulash': 115,
+      'product-burger': 140,
     },
   },
   {
@@ -303,10 +357,10 @@ const productionOrders: OrderDraft[] = [
     customerName: 'РИТЕЙЛ Центр',
     occurredOn: '2026-10-13',
     pieces: {
-      'product-caesar': 50,
-      'product-olivier': 60,
-      'product-goulash': 110,
-      'product-burger': 30,
+      'product-caesar': 55,
+      'product-olivier': 55,
+      'product-goulash': 120,
+      'product-burger': 25,
     },
   },
   {
@@ -314,10 +368,10 @@ const productionOrders: OrderDraft[] = [
     customerName: 'РИТЕЙЛ Север',
     occurredOn: '2026-10-16',
     pieces: {
-      'product-caesar': 50,
-      'product-olivier': 60,
-      'product-goulash': 100,
-      'product-burger': 30,
+      'product-caesar': 60,
+      'product-olivier': 55,
+      'product-goulash': 105,
+      'product-burger': 25,
     },
   },
   {
@@ -325,10 +379,10 @@ const productionOrders: OrderDraft[] = [
     customerName: 'РИТЕЙЛ Юг',
     occurredOn: '2026-10-20',
     pieces: {
-      'product-caesar': 50,
+      'product-caesar': 55,
       'product-olivier': 50,
-      'product-goulash': 100,
-      'product-burger': 20,
+      'product-goulash': 95,
+      'product-burger': 15,
     },
   },
 ];
@@ -369,6 +423,11 @@ function productionFromOrders(drafts: readonly OrderDraft[]): ProductionEntry[] 
 
 const salesPlans: SalesPlan[] = [salesPlan('2026-09'), salesPlan('2026-10')];
 const productionPlans: ProductionPlan[] = [productionPlan('2026-09'), productionPlan('2026-10')];
+const finishedGoodsNorms: FinishedGoodsNorm[] = [finishedGoodsNorm('2026-09'), finishedGoodsNorm('2026-10')];
+const finishedGoodsOpenings: FinishedGoodsOpening[] = [
+  finishedGoodsOpening('2026-09', openingInventorySeptember),
+  finishedGoodsOpening('2026-10', openingInventoryOctober),
+];
 
 export const mockDocument: PrototypeDocument = {
   schemaVersion: SCHEMA_VERSION,
@@ -379,8 +438,8 @@ export const mockDocument: PrototypeDocument = {
   sales: salesFromOrders(orders),
   productionEntries: productionFromOrders(productionOrders),
   operatingExpenses: [],
-  finishedGoodsOpenings: [],
-  finishedGoodsNorms: [],
+  finishedGoodsOpenings,
+  finishedGoodsNorms,
 };
 
 export function createMockDocument(): PrototypeDocument {

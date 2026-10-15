@@ -151,7 +151,7 @@ function groupSalesByDay(items: readonly Sale[]): {
   }
 
   return [...groups.entries()]
-    .sort((left, right) => right[0].localeCompare(left[0]))
+    .sort((left, right) => left[0].localeCompare(right[0]))
     .map(([occurredOn, dayItems]) => ({
       occurredOn,
       items: dayItems,

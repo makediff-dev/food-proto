@@ -45,6 +45,10 @@ const COLUMNS: { key: ColumnKey; label: string }[] = [
 
 const EDITABLE_COLUMNS = new Set<ColumnKey>(['min', 'max']);
 
+export function movementPlanNormRangeInvalid(minPieces: number, maxPieces: number): boolean {
+  return minPieces > maxPieces;
+}
+
 export function MovementPlanTable({
   groups,
   totals,
@@ -178,6 +182,7 @@ function ProductRow({
   onNormAction: (productId: string, field: FinishedGoodsNormField, value: number) => string | null;
 }) {
   const canEdit = editable && !row.deleted;
+  const normRangeInvalid = movementPlanNormRangeInvalid(row.minPieces, row.maxPieces);
 
   return (
     <tr>
@@ -193,12 +198,13 @@ function ProductRow({
       </th>
       {COLUMNS.map((column) => {
         const cellEditable = canEdit && EDITABLE_COLUMNS.has(column.key);
+        const normCellInvalid = normRangeInvalid && (column.key === 'min' || column.key === 'max');
         return (
           <td
             key={`row:${column.key}`}
             className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName} ${
               cellEditable ? editableCellClassName : ''
-            }`}
+            } ${normCellInvalid ? 'bg-caution/15 ring-1 ring-inset ring-caution/50' : ''}`}
             onClick={(event) => {
               if (!cellEditable) {
                 return;

@@ -22,35 +22,38 @@ import {
 } from '@/features/production/paths';
 import { SUMMARY_SECTION_TITLE } from '@/features/sales/paths';
 import { SALES_FACT_TITLE, SALES_JOURNAL_TITLE, SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
-import { IconMenu, IconUndo } from '@/features/shell/Icons';
+import { IconChevronDown, IconChevronRight, IconMenu, IconUndo } from '@/features/shell/Icons';
+
+type NavKind = 'report' | 'input';
 
 type NavItem = {
   href: string;
   label: string;
+  navKind: NavKind;
   /** Exact pathname only — for section roots that share a prefix with nested routes. */
   exact?: boolean;
   salesJournal?: boolean;
 };
 
 const SALES_NAV: readonly NavItem[] = [
-  { href: '/', label: SUMMARY_SECTION_TITLE, exact: true },
-  { href: '/sales', label: SALES_FACT_TITLE, exact: true },
-  { href: '/planning', label: PLANNING_SECTION_TITLE },
-  { href: '/sales/journal', label: SALES_JOURNAL_TITLE, salesJournal: true },
+  { href: '/', label: SUMMARY_SECTION_TITLE, exact: true, navKind: 'report' },
+  { href: '/sales', label: SALES_FACT_TITLE, exact: true, navKind: 'report' },
+  { href: '/planning', label: PLANNING_SECTION_TITLE, navKind: 'input' },
+  { href: '/sales/journal', label: SALES_JOURNAL_TITLE, salesJournal: true, navKind: 'input' },
 ];
 
 const PRODUCTION_NAV: readonly NavItem[] = [
-  { href: '/production', label: PRODUCTION_SUMMARY_TITLE, exact: true },
-  { href: '/production/fact', label: PRODUCTION_FACT_TITLE },
-  { href: '/production/plan', label: PRODUCTION_PLAN_TITLE },
-  { href: '/production/journal', label: PRODUCTION_JOURNAL_TITLE },
+  { href: '/production', label: PRODUCTION_SUMMARY_TITLE, exact: true, navKind: 'report' },
+  { href: '/production/fact', label: PRODUCTION_FACT_TITLE, navKind: 'report' },
+  { href: '/production/plan', label: PRODUCTION_PLAN_TITLE, navKind: 'input' },
+  { href: '/production/journal', label: PRODUCTION_JOURNAL_TITLE, navKind: 'input' },
 ];
 
 const MOVEMENT_NAV: readonly NavItem[] = [
-  { href: '/movement', label: MOVEMENT_SUMMARY_TITLE, exact: true },
-  { href: '/movement/fact', label: MOVEMENT_FACT_TITLE },
-  { href: '/movement/plan', label: MOVEMENT_PLAN_TITLE },
-  { href: '/movement/inventory', label: MOVEMENT_INVENTORY_TITLE },
+  { href: '/movement', label: MOVEMENT_SUMMARY_TITLE, exact: true, navKind: 'report' },
+  { href: '/movement/fact', label: MOVEMENT_FACT_TITLE, navKind: 'report' },
+  { href: '/movement/plan', label: MOVEMENT_PLAN_TITLE, navKind: 'input' },
+  { href: '/movement/inventory', label: MOVEMENT_INVENTORY_TITLE, navKind: 'input' },
 ];
 
 const QUESTIONS_HREF = '/questions';
@@ -115,6 +118,27 @@ function currentNavLabel(pathname: string): string | undefined {
   return undefined;
 }
 
+function navItemLinkClassName(current: boolean, navKind: NavKind): string {
+  const kindAccent =
+    navKind === 'report' ? 'border-l-2 border-l-sky-400/40 pl-[1.375rem]' : 'border-l-2 border-l-mark/55 pl-[1.375rem]';
+  const state = current ? 'bg-sidebar-active text-white' : 'text-sidebar-muted hover:bg-white/5 hover:text-white';
+  return `relative py-1 pr-3 text-xs leading-5 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${kindAccent} ${state}`;
+}
+
+function NavLink({ item, pathname, onNavigate }: { item: NavItem; pathname: string; onNavigate: () => void }) {
+  const current = navItemIsCurrent(pathname, item);
+  return (
+    <Link
+      href={item.href}
+      aria-current={current ? 'page' : undefined}
+      onClick={onNavigate}
+      className={navItemLinkClassName(current, item.navKind)}
+    >
+      {item.label}
+    </Link>
+  );
+}
+
 function NavGroup({
   title,
   items,
@@ -126,28 +150,39 @@ function NavGroup({
   pathname: string;
   onNavigate: () => void;
 }) {
+  const [collapsed, setCollapsed] = useState(true);
+  const reportItems = items.filter((item) => item.navKind === 'report');
+  const inputItems = items.filter((item) => item.navKind === 'input');
+
   return (
-    <div>
-      <p className="px-3 py-2 text-sm text-white">{title}</p>
-      <div className="flex flex-col">
-        {items.map((item) => {
-          const current = navItemIsCurrent(pathname, item);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={current ? 'page' : undefined}
-              onClick={onNavigate}
-              className={`relative py-1 pr-3 pl-6 text-xs leading-5 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-                current ? 'bg-sidebar-active text-white' : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
-              }`}
-            >
-              {current ? <span className="absolute inset-y-1 left-0 w-0.5 bg-mark" aria-hidden="true" /> : null}
-              {item.label}
-            </Link>
-          );
-        })}
-      </div>
+    <div className="pb-1">
+      <button
+        type="button"
+        aria-expanded={!collapsed}
+        aria-label={collapsed ? `Развернуть раздел «${title}»` : `Свернуть раздел «${title}»`}
+        onClick={() => setCollapsed((current) => !current)}
+        className="flex w-full items-center gap-1 px-3 py-2 text-left text-sm text-white outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+      >
+        <span className="inline-flex size-6 shrink-0 items-center justify-center text-sidebar-muted" aria-hidden="true">
+          {collapsed ? <IconChevronRight /> : <IconChevronDown />}
+        </span>
+        <span>{title}</span>
+      </button>
+      {collapsed ? null : (
+        <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col">
+            {reportItems.map((item) => (
+              <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
+            ))}
+          </div>
+          <div className="mx-3 border-t border-sidebar-line/90" aria-hidden="true" />
+          <div className="flex flex-col">
+            {inputItems.map((item) => (
+              <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -233,9 +268,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                 : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
             }`}
           >
-            {sectionIsCurrent(pathname, QUESTIONS_HREF) ? (
-              <span className="absolute inset-y-2 left-0 w-0.5 bg-mark" aria-hidden="true" />
-            ) : null}
             {QUESTIONS_LABEL}
           </Link>
         </div>

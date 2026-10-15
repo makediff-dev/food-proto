@@ -61,7 +61,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
     label: 'Остаток на начало',
     columns: [
       { key: 'opening', label: 'Факт' },
-      { key: 'planPrice', label: 'Цена (план)' },
+      { key: 'planPrice', label: 'Цена' },
       { key: 'openingValue', label: 'Стоимость' },
     ],
   },
@@ -88,7 +88,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
       { key: 'min', label: 'Мин.' },
       { key: 'max', label: 'Макс.' },
       { key: 'normDeviation', label: 'Откл.' },
-      { key: 'factPrice', label: 'Цена (факт)' },
+      { key: 'factPrice', label: 'Цена' },
       { key: 'closingValue', label: 'Стоимость' },
     ],
   },

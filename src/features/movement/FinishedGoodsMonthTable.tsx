@@ -84,7 +84,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
       { key: 'min', label: 'Мин.' },
       { key: 'max', label: 'Макс.' },
       { key: 'normDeviation', label: 'Откл.' },
-      { key: 'factPrice', label: 'Цена (факт)' },
+      { key: 'factPrice', label: 'Цена' },
       { key: 'closingValue', label: 'Стоимость' },
     ],
   },
