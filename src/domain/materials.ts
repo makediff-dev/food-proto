@@ -84,6 +84,10 @@ export interface MaterialMovementRow {
   factReceiptCost: MaterialMoney;
   /** Цена факта прихода. Нет прихода — пусто. */
   factReceiptPrice: MaterialMoney | null;
+  /** Отклонение цены прихода: факт − план. Нет факта — пусто. */
+  receiptDeviationPrice: MaterialMoney | null;
+  /** Отклонение стоимости прихода: факт − план. */
+  receiptDeviationCost: MaterialMoney;
   planConsumptionQuantity: number;
   factConsumptionQuantity: number;
   consumptionDeviationQuantity: number;
@@ -114,6 +118,7 @@ export interface MaterialMovementTotals {
   receiptDeviationQuantity: number | null;
   planReceiptCost: MaterialMoney;
   factReceiptCost: MaterialMoney;
+  receiptDeviationCost: MaterialMoney;
   planConsumptionQuantity: number | null;
   factConsumptionQuantity: number | null;
   consumptionDeviationQuantity: number | null;
@@ -678,6 +683,10 @@ function addMoney(left: MaterialMoney, right: MaterialMoney): MaterialMoney {
   return { withVat: left.withVat + right.withVat, exVat: left.exVat + right.exVat };
 }
 
+function subtractMoney(left: MaterialMoney, right: MaterialMoney): MaterialMoney {
+  return { withVat: left.withVat - right.withVat, exVat: left.exVat - right.exVat };
+}
+
 function productionPieces(document: PrototypeDocument, month: string, mode: 'plan' | 'fact'): Map<string, number> {
   const pieces = new Map<string, number>();
   if (mode === 'plan') {
@@ -820,6 +829,13 @@ function movementRow(
     receipt.quantity === 0
       ? null
       : priceOf(ratioRound(receipt.cost.withVat * QUANTITY_SCALE, receipt.quantity) ?? 0, material.vatPercent);
+  const planPrice = priceOf(priceWithVat, material.vatPercent);
+  const planReceiptCost = moneyOf(priceWithVat, planReceiptQuantity, material.vatPercent);
+  const receiptDeviationCost = subtractMoney(receipt.cost, planReceiptCost);
+  const receiptDeviationPrice =
+    factReceiptPrice === null
+      ? null
+      : { withVat: factReceiptPrice.withVat - planPrice.withVat, exVat: factReceiptPrice.exVat - planPrice.exVat };
 
   return {
     materialId: material.id,
@@ -830,13 +846,15 @@ function movementRow(
     normed,
     openingQuantity,
     openingCost: moneyOf(priceWithVat, openingQuantity, material.vatPercent),
-    planPrice: priceOf(priceWithVat, material.vatPercent),
+    planPrice,
     planReceiptQuantity,
     factReceiptQuantity: receipt.quantity,
     receiptDeviationQuantity: receipt.quantity - planReceiptQuantity,
-    planReceiptCost: moneyOf(priceWithVat, planReceiptQuantity, material.vatPercent),
+    planReceiptCost,
     factReceiptCost: receipt.cost,
     factReceiptPrice,
+    receiptDeviationPrice,
+    receiptDeviationCost,
     planConsumptionQuantity,
     factConsumptionQuantity,
     consumptionDeviationQuantity: factConsumptionQuantity - planConsumptionQuantity,
@@ -917,6 +935,7 @@ function emptyTotals(): MaterialMovementTotals {
     receiptDeviationQuantity: null,
     planReceiptCost: ZERO_MONEY,
     factReceiptCost: ZERO_MONEY,
+    receiptDeviationCost: ZERO_MONEY,
     planConsumptionQuantity: null,
     factConsumptionQuantity: null,
     consumptionDeviationQuantity: null,
@@ -941,6 +960,7 @@ function sumRows(rows: readonly MaterialMovementRow[]): MaterialMovementTotals {
       openingCost: addMoney(total.openingCost, row.openingCost),
       planReceiptCost: addMoney(total.planReceiptCost, row.planReceiptCost),
       factReceiptCost: addMoney(total.factReceiptCost, row.factReceiptCost),
+      receiptDeviationCost: addMoney(total.receiptDeviationCost, row.receiptDeviationCost),
       planConsumptionCost: addMoney(total.planConsumptionCost, row.planConsumptionCost),
       factConsumptionCost: addMoney(total.factConsumptionCost, row.factConsumptionCost),
       closingCost: addMoney(total.closingCost, row.closingCost),
@@ -949,6 +969,7 @@ function sumRows(rows: readonly MaterialMovementRow[]): MaterialMovementTotals {
       openingCost: ZERO_MONEY,
       planReceiptCost: ZERO_MONEY,
       factReceiptCost: ZERO_MONEY,
+      receiptDeviationCost: ZERO_MONEY,
       planConsumptionCost: ZERO_MONEY,
       factConsumptionCost: ZERO_MONEY,
       closingCost: ZERO_MONEY,
