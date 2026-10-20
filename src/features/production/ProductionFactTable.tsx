@@ -34,20 +34,20 @@ import {
   VatMoneyCell,
 } from '@/features/table';
 
-type ColumnKey = 'unitCost' | 'volume' | 'recommended' | 'volumeCost';
+type ColumnKey = 'volume' | 'recommended' | 'price' | 'value';
 type SectionKind = 'plan' | 'fact' | 'variance';
 
 const FACT_COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: 'unitCost', label: 'Себест.' },
   { key: 'volume', label: 'Объём' },
-  { key: 'volumeCost', label: 'Себест. объёма' },
+  { key: 'price', label: 'Цена' },
+  { key: 'value', label: 'Стоимость' },
 ];
 
 const PLAN_COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: 'unitCost', label: 'Себест.' },
   { key: 'volume', label: 'Объём' },
   { key: 'recommended', label: 'Реком. объём' },
-  { key: 'volumeCost', label: 'Себест. объёма' },
+  { key: 'price', label: 'Цена' },
+  { key: 'value', label: 'Стоимость' },
 ];
 
 function columnsOf(kind: SectionKind): { key: ColumnKey; label: string }[] {
@@ -281,8 +281,8 @@ function ProductSideCells({
     <MetricCell key={`${kind}:${column.key}`} kind={kind} column={column.key} sheet>
       {column.key === 'recommended' ? (
         <Pieces value={recommendedPieces} />
-      ) : column.key === 'unitCost' ? (
-        <ProductUnitCost kind={kind} row={row} />
+      ) : column.key === 'price' ? (
+        <ProductUnitPrice kind={kind} row={row} />
       ) : (
         <SideValue column={column.key} side={side} />
       )}
@@ -290,12 +290,12 @@ function ProductSideCells({
   ));
 }
 
-function ProductUnitCost({ kind, row }: { kind: 'plan' | 'fact'; row: ProductionFactRow }) {
+function ProductUnitPrice({ kind, row }: { kind: 'plan' | 'fact'; row: ProductionFactRow }) {
   if (kind === 'plan') {
-    return row.unitCost ? (
-      <VatMoneyCell withVat={row.unitCost.withVat} exVat={row.unitCost.exVat} />
+    return row.unitPrice.exVat === null ? (
+      <Muted>{keepWithNext('Цена не считается')}</Muted>
     ) : (
-      <Muted>{keepWithNext('Себестоимость не считается')}</Muted>
+      <VatMoneyCell withVat={row.unitPrice.withVat} exVat={row.unitPrice.exVat} />
     );
   }
 
@@ -304,7 +304,7 @@ function ProductUnitCost({ kind, row }: { kind: 'plan' | 'fact'; row: Production
   }
 
   if (!row.fact.costComplete) {
-    return <Muted>{keepWithNext('Себестоимость не считается')}</Muted>;
+    return <Muted>{keepWithNext('Цена не считается')}</Muted>;
   }
 
   return <VatMoneyCell withVat={row.fact.averageCostWithVat} exVat={row.fact.averageCostExVat} />;
@@ -316,27 +316,16 @@ function ProductVarianceCells({ row }: { row: ProductionFactRow }) {
     <MetricCell key={`variance:${column.key}`} kind="variance" column={column.key} sheet>
       {column.key === 'volume' ? (
         <Pieces value={row.variance.volumePieces} signed />
-      ) : column.key === 'unitCost' ? (
-        row.unitCost ? (
-          <VatMoneyCell
-            signed
-            sense="cost"
-            withVat={row.variance.averageCostWithVat}
-            exVat={row.variance.averageCostExVat}
-          />
+      ) : column.key === 'price' ? (
+        row.unitPrice.exVat === null ? (
+          <Muted>{keepWithNext('Цена не считается')}</Muted>
         ) : (
-          <Muted>{keepWithNext('Себестоимость не считается')}</Muted>
+          <VatMoneyCell signed withVat={row.variance.averageCostWithVat} exVat={row.variance.averageCostExVat} />
         )
       ) : incomplete ? (
         <Muted>{keepWithNext('не по всем товарам')}</Muted>
       ) : (
-        <VatMoneyCell
-          whole
-          signed
-          sense="cost"
-          withVat={row.variance.volumeCostWithVat}
-          exVat={row.variance.volumeCostExVat}
-        />
+        <VatMoneyCell whole signed withVat={row.variance.volumeCostWithVat} exVat={row.variance.volumeCostExVat} />
       )}
     </MetricCell>
   ));
@@ -351,7 +340,7 @@ function SideValue({ column, side }: { column: ColumnKey; side: ProductionFactSi
     return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
   }
 
-  if (column === 'unitCost') {
+  if (column === 'price') {
     return <VatMoneyCell withVat={side.averageCostWithVat} exVat={side.averageCostExVat} />;
   }
 
@@ -363,21 +352,19 @@ function VarianceValue({ column, variance }: { column: ColumnKey; variance: Prod
     return <Pieces value={variance.volumePieces} signed />;
   }
 
-  if (column === 'unitCost') {
-    if (variance.volumeCostWithVat === null || variance.volumeCostExVat === null) {
+  if (column === 'price') {
+    if (variance.averageCostWithVat === null || variance.averageCostExVat === null) {
       return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
     }
 
-    return <VatMoneyCell signed sense="cost" withVat={variance.averageCostWithVat} exVat={variance.averageCostExVat} />;
+    return <VatMoneyCell signed withVat={variance.averageCostWithVat} exVat={variance.averageCostExVat} />;
   }
 
   if (variance.volumeCostWithVat === null || variance.volumeCostExVat === null) {
     return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
   }
 
-  return (
-    <VatMoneyCell whole signed sense="cost" withVat={variance.volumeCostWithVat} exVat={variance.volumeCostExVat} />
-  );
+  return <VatMoneyCell whole signed withVat={variance.volumeCostWithVat} exVat={variance.volumeCostExVat} />;
 }
 
 function Pieces({ value, signed = false }: { value: number; signed?: boolean }) {
