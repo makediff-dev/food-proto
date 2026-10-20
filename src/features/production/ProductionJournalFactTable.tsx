@@ -41,13 +41,13 @@ import {
   VatMoneyCell,
 } from '@/features/table';
 
-type ColumnKey = 'unitCost' | 'volume' | 'recommended' | 'volumeCost';
+type ColumnKey = 'volume' | 'recommended' | 'price' | 'value';
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: 'unitCost', label: 'Себест.' },
   { key: 'volume', label: 'Объём' },
   { key: 'recommended', label: 'Реком. объём' },
-  { key: 'volumeCost', label: 'Себест. объёма' },
+  { key: 'price', label: 'Цена' },
+  { key: 'value', label: 'Стоимость' },
 ];
 
 export function ProductionJournalFactTable({
@@ -77,7 +77,7 @@ export function ProductionJournalFactTable({
           <tr>
             <th colSpan={2} className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             <th colSpan={COLUMNS.length + 1} scope="colgroup" className={blockHeadingClassName}>
-              {keepWithNext('Фактические показатели выпуска за дату')}
+              {keepWithNext('Выпуск на дату')}
             </th>
           </tr>
           <tr>
@@ -298,20 +298,20 @@ function ArrowButton({
 }
 
 function RowCell({ column, row }: { column: ColumnKey; row: ProductionJournalFactRow }) {
-  if (column === 'unitCost') {
-    return row.unitCost ? (
-      <VatMoneyCell withVat={row.unitCost.withVat} exVat={row.unitCost.exVat} />
-    ) : (
-      <Muted>{keepWithNext('Себестоимость не считается')}</Muted>
-    );
-  }
-
   if (column === 'volume') {
     return <Pieces value={row.pieces} />;
   }
 
   if (column === 'recommended') {
     return <Pieces value={row.recommendedPieces} plain />;
+  }
+
+  if (column === 'price') {
+    return row.unitCost ? (
+      <VatMoneyCell withVat={row.unitCost.withVat} exVat={row.unitCost.exVat} />
+    ) : (
+      <Muted>{keepWithNext('Цена не считается')}</Muted>
+    );
   }
 
   return <VatMoneyCell whole withVat={row.volumeCostWithVat} exVat={row.volumeCostExVat} />;
@@ -330,7 +330,7 @@ function TotalCell({ column, totals }: { column: ColumnKey; totals: ProductionJo
     return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
   }
 
-  if (column === 'unitCost') {
+  if (column === 'price') {
     return <VatMoneyCell withVat={totals.averageCostWithVat} exVat={totals.averageCostExVat} />;
   }
 

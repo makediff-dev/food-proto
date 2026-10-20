@@ -1,11 +1,16 @@
-import { type UnitCost, unitCost } from '@/domain/cost';
 import { type Product, type PrototypeDocument } from '@/domain/document';
-import { averageAmount, ratioRound } from '@/domain/money';
+import { amountExVat, averageAmount, ratioRound } from '@/domain/money';
 import { periodGridCategories, periodReferencedProductIds } from '@/domain/period-grid';
 import { type ProductionProductSpend, productionSpendByProduct } from '@/domain/production-journal';
 import { productionPlanForMonth } from '@/domain/production-plan';
 import { activeProducts } from '@/domain/products';
-import { daysInMonth, monthKeyFromDate } from '@/domain/sales-plan';
+import {
+  daysInMonth,
+  monthKeyFromDate,
+  planPriceWithVatForProduct,
+  revenueExVat,
+  revenueWithVat,
+} from '@/domain/sales-plan';
 import {
   elapsedDaysInMonth,
   ensureRangeIncludesMonth,
@@ -14,26 +19,26 @@ import {
   type SummaryLens,
 } from '@/domain/summary';
 
-/** План или факт выпуска: штуки и себестоимость объёма. */
+/** План или факт выпуска: штуки и стоимость по расчётной цене. */
 export interface ProductionFactSide {
   volumePieces: number;
-  /** Копейки. `null`, если себестоимость не по всем товарам со штуками. */
+  /** Копейки. `null`, если стоимость не по всем товарам со штуками. */
   volumeCostWithVat: number | null;
   volumeCostExVat: number | null;
-  /** Есть строка со штуками, у которой себестоимость не считается. */
+  /** Есть строка со штуками, у которой цена без НДС не считается. */
   costComplete: boolean;
-  /** Себестоимость объёма / объём, копейки. Только если себестоимость полная; нулевой объём — 0. */
+  /** Стоимость / объём, копейки. Только если цена полная; нулевой объём — 0. */
   averageCostWithVat: number | null;
   averageCostExVat: number | null;
 }
 
-/** Отклонение = факт − план. */
+/** Отклонение = факт − план. Деньги — стоимость (цена × объём). */
 export interface ProductionFactVariance {
   volumePieces: number;
   volumeCostWithVat: number | null;
   volumeCostExVat: number | null;
   /**
-   * На строке товара: фактическая себестоимость штуки (сумма журнала / штуки) минус себестоимость товара.
+   * На строке товара: средняя цена факта минус расчётная цена плана.
    * Нет факта выпуска — пусто. У группы — разница средних.
    */
   averageCostWithVat: number | null;
@@ -44,8 +49,9 @@ export interface ProductionFactRow {
   productId: string;
   name: string;
   deleted: boolean;
-  /** Плановая себестоимость 1 шт с товара. Факт на строке — среднее из журнала выпуска. */
-  unitCost: UnitCost | null;
+  vatPercent: number;
+  /** Расчётная цена плана продаж. Факт на строке — среднее из журнала выпуска. */
+  unitPrice: { withVat: number; exVat: number | null };
   plan: ProductionFactSide;
   fact: ProductionFactSide;
   variance: ProductionFactVariance;
@@ -74,15 +80,17 @@ export interface ProductionFactView {
 
 type VolumeScale = { kind: 'identity' } | { kind: 'zero' } | { kind: 'ratio'; numerator: number; denominator: number };
 
-function productSide(cost: UnitCost | null, volumePieces: number): ProductionFactSide {
-  const missing = volumePieces > 0 && cost === null;
+function productSide(priceWithVat: number, vatPercent: number, volumePieces: number): ProductionFactSide {
+  const valueExVat = revenueExVat(priceWithVat, vatPercent, volumePieces);
+  const missing = volumePieces > 0 && valueExVat === null;
+  const priceExVat = amountExVat(priceWithVat, vatPercent);
   return {
     volumePieces,
-    volumeCostWithVat: cost === null ? null : cost.withVat * volumePieces,
-    volumeCostExVat: cost === null ? null : cost.exVat * volumePieces,
+    volumeCostWithVat: missing ? null : revenueWithVat(priceWithVat, volumePieces),
+    volumeCostExVat: valueExVat,
     costComplete: !missing,
-    averageCostWithVat: cost === null || volumePieces <= 0 ? null : cost.withVat,
-    averageCostExVat: cost === null || volumePieces <= 0 ? null : cost.exVat,
+    averageCostWithVat: missing || volumePieces <= 0 ? null : priceWithVat,
+    averageCostExVat: missing || volumePieces <= 0 ? null : priceExVat,
   };
 }
 
@@ -124,26 +132,23 @@ function moneyDelta(fact: number | null, plan: number | null, complete: boolean)
   return fact - plan;
 }
 
-function varianceOf(
-  fact: ProductionFactSide,
-  plan: ProductionFactSide,
-  planUnitCost: UnitCost | null,
-): ProductionFactVariance {
+function varianceOf(fact: ProductionFactSide, plan: ProductionFactSide): ProductionFactVariance {
   const complete = fact.costComplete && plan.costComplete;
   const factUnitKnown = fact.volumePieces > 0;
+  const planPriceKnown = plan.averageCostWithVat !== null && plan.averageCostExVat !== null;
   return {
     volumePieces: fact.volumePieces - plan.volumePieces,
     volumeCostWithVat: moneyDelta(fact.volumeCostWithVat, plan.volumeCostWithVat, complete),
     volumeCostExVat: moneyDelta(fact.volumeCostExVat, plan.volumeCostExVat, complete),
     averageCostWithVat: moneyDelta(
       factUnitKnown ? fact.averageCostWithVat : null,
-      planUnitCost ? planUnitCost.withVat : null,
-      complete && planUnitCost !== null,
+      planPriceKnown ? plan.averageCostWithVat : null,
+      complete && planPriceKnown,
     ),
     averageCostExVat: moneyDelta(
       factUnitKnown ? fact.averageCostExVat : null,
-      planUnitCost ? planUnitCost.exVat : null,
-      complete && planUnitCost !== null,
+      planPriceKnown ? plan.averageCostExVat : null,
+      complete && planPriceKnown,
     ),
   };
 }
@@ -170,17 +175,6 @@ function spendSide(pieces: number, withVat: number, exVat: number, complete: boo
   };
 }
 
-function groupVariance(fact: ProductionFactSide, plan: ProductionFactSide): ProductionFactVariance {
-  const complete = fact.costComplete && plan.costComplete;
-  return {
-    volumePieces: fact.volumePieces - plan.volumePieces,
-    volumeCostWithVat: moneyDelta(fact.volumeCostWithVat, plan.volumeCostWithVat, complete),
-    volumeCostExVat: moneyDelta(fact.volumeCostExVat, plan.volumeCostExVat, complete),
-    averageCostWithVat: moneyDelta(fact.averageCostWithVat, plan.averageCostWithVat, complete),
-    averageCostExVat: moneyDelta(fact.averageCostExVat, plan.averageCostExVat, complete),
-  };
-}
-
 function totalsFromRows(rows: readonly ProductionFactRow[]): {
   plan: ProductionFactSide;
   fact: ProductionFactSide;
@@ -191,17 +185,19 @@ function totalsFromRows(rows: readonly ProductionFactRow[]): {
   return {
     plan,
     fact,
-    variance: groupVariance(fact, plan),
+    variance: varianceOf(fact, plan),
   };
 }
 
 function factRow(
-  identity: { productId: string; name: string; deleted: boolean },
-  planCost: UnitCost | null,
+  identity: { productId: string; name: string; deleted: boolean; vatPercent: number },
+  month: string,
+  document: PrototypeDocument,
   planVolumePieces: number,
   spend: ProductionProductSpend | undefined,
 ): ProductionFactRow {
-  const plan = productSide(planCost, planVolumePieces);
+  const priceWithVat = planPriceWithVatForProduct(document, identity.productId, month);
+  const plan = productSide(priceWithVat, identity.vatPercent, planVolumePieces);
   const fact = spend
     ? spendSide(spend.pieces, spend.costWithVat, spend.costExVat, spend.complete)
     : spendSide(0, 0, 0, true);
@@ -209,10 +205,11 @@ function factRow(
     productId: identity.productId,
     name: identity.name,
     deleted: identity.deleted,
-    unitCost: planCost,
+    vatPercent: identity.vatPercent,
+    unitPrice: { withVat: priceWithVat, exVat: amountExVat(priceWithVat, identity.vatPercent) },
     plan,
     fact,
-    variance: varianceOf(fact, plan, planCost),
+    variance: varianceOf(fact, plan),
   };
 }
 
@@ -238,7 +235,7 @@ export function productionFactGridProducts(document: PrototypeDocument, month: s
   return [...active, ...archived];
 }
 
-/** Штуки и фактическая себестоимость журнала выпуска за дни месяца. */
+/** Штуки и фактическая стоимость журнала выпуска за дни месяца. */
 function factSpendByProduct(document: PrototypeDocument, month: string): Map<string, ProductionProductSpend> {
   const prefix = `${month}-`;
   return productionSpendByProduct(
@@ -263,8 +260,14 @@ export function monthProductionFact(document: PrototypeDocument, month: string):
     rowByProduct.set(
       product.id,
       factRow(
-        { productId: product.id, name: product.name, deleted: product.deletedAt !== null },
-        unitCost(document, product.id),
+        {
+          productId: product.id,
+          name: product.name,
+          deleted: product.deletedAt !== null,
+          vatPercent: product.vatPercent,
+        },
+        month,
+        document,
         planVolumePieces,
         factByProduct.get(product.id),
       ),
@@ -366,13 +369,13 @@ function scaledFactSide(side: ProductionFactSide, scale: VolumeScale, pieces: nu
 }
 
 function applyRowLens(row: ProductionFactRow, planScale: VolumeScale, factScale: VolumeScale): ProductionFactRow {
-  const plan = productSide(row.unitCost, scalePieces(row.plan.volumePieces, planScale));
+  const plan = productSide(row.unitPrice.withVat, row.vatPercent, scalePieces(row.plan.volumePieces, planScale));
   const fact = scaledFactSide(row.fact, factScale, scalePieces(row.fact.volumePieces, factScale));
   return {
     ...row,
     plan,
     fact,
-    variance: varianceOf(fact, plan, row.unitCost),
+    variance: varianceOf(fact, plan),
   };
 }
 
@@ -413,12 +416,23 @@ function mergeFactRows(rows: readonly ProductionFactRow[]): ProductionFactRow {
   }
 
   let planPieces = 0;
+  let planWith = 0;
+  let planEx = 0;
+  let planComplete = true;
   let factPieces = 0;
   let factWith = 0;
   let factEx = 0;
   let factComplete = true;
   for (const row of rows) {
     planPieces += row.plan.volumePieces;
+    if (!row.plan.costComplete || row.plan.volumeCostWithVat === null || row.plan.volumeCostExVat === null) {
+      if (row.plan.volumePieces > 0) {
+        planComplete = false;
+      }
+    } else {
+      planWith += row.plan.volumeCostWithVat;
+      planEx += row.plan.volumeCostExVat;
+    }
     factPieces += row.fact.volumePieces;
     if (!row.fact.costComplete || row.fact.volumeCostWithVat === null || row.fact.volumeCostExVat === null) {
       if (row.fact.volumePieces > 0) {
@@ -430,13 +444,13 @@ function mergeFactRows(rows: readonly ProductionFactRow[]): ProductionFactRow {
     factEx += row.fact.volumeCostExVat;
   }
 
-  const plan = productSide(sample.unitCost, planPieces);
+  const plan = spendSide(planPieces, planWith, planEx, planComplete);
   const fact = spendSide(factPieces, factWith, factEx, factComplete);
   return {
     ...sample,
     plan,
     fact,
-    variance: varianceOf(fact, plan, sample.unitCost),
+    variance: varianceOf(fact, plan),
   };
 }
 

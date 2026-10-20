@@ -2,7 +2,7 @@
 
 import { useId, useState } from 'react';
 
-import type { UnitCost } from '@/domain/cost';
+import { costWithVat, type UnitCost } from '@/domain/cost';
 import { amountExVat } from '@/domain/money';
 import { priceWithVatFromExVat, type SalesPlanRejection } from '@/domain/sales-plan';
 import type { SummaryGroup, SummaryLens, SummaryRow, SummarySide, SummaryVariance } from '@/domain/summary';
@@ -91,8 +91,10 @@ export type SummaryTableEdit = {
   plan: boolean;
   vat: boolean;
   catalog: boolean;
+  cost?: boolean;
   onPlanLine: (lineId: string, priceWithVat: number, volumePieces: number) => SalesPlanRejection | null;
   onProductVat: (productId: string, vatPercent: number) => string | null;
+  onProductCost?: (productId: string, unitCostWithVat: number) => string | null;
   onRenameProduct: (productId: string, name: string) => string | null;
   onDeleteProduct: (productId: string, name: string) => void;
   onRenameCategory: (categoryId: string, name: string) => string | null;
@@ -406,7 +408,8 @@ function ProductRow({
       {SIDE_COLUMNS.map((column) => {
         const canEdit =
           (planEditable && row.planLineId !== null && (column.key === 'price' || column.key === 'volume')) ||
-          (vatEditable && column.key === 'vat');
+          (vatEditable && column.key === 'vat') ||
+          (edit?.cost === true && column.key === 'unitCost');
         return (
           <td
             key={`plan:${column.key}`}
@@ -491,7 +494,32 @@ function PlanCell({ column, row, edit }: { column: SideKey; row: SummaryRow; edi
 
   if (column === 'unitCost') {
     const side = row.plan ?? row.fact;
-    return <SideCell column={column} side={side} kind="row" />;
+    const costEditable = edit?.cost === true && edit.onProductCost;
+    if (!costEditable || !side.unitCost) {
+      return <SideCell column={column} side={side} kind="row" />;
+    }
+
+    const vatPercent = side.vatPercent;
+    return (
+      <VatMoneyCell
+        label={`Себестоимость, ${row.name}`}
+        withVat={side.unitCost.withVat}
+        exVat={side.unitCost.exVat}
+        invalidMessage={FIELD_ERROR.cost}
+        onChangeWithVat={(next) => edit.onProductCost?.(row.productId, next) ?? null}
+        onChangeExVat={
+          vatPercent === null
+            ? undefined
+            : (next) => {
+                const withVat = costWithVat(next, vatPercent);
+                if (withVat === null) {
+                  return FIELD_ERROR.cost;
+                }
+                return edit.onProductCost?.(row.productId, withVat) ?? null;
+              }
+        }
+      />
+    );
   }
 
   if (!row.plan) {

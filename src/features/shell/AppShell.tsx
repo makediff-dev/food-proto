@@ -239,9 +239,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             onClick={closeMenu}
             className="font-figure text-lg leading-tight tracking-tight text-white outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
           >
-            Мясное
+            Готовая
             <br />
-            производство
+            еда
           </Link>
         </div>
 

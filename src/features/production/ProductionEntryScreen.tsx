@@ -17,7 +17,7 @@ import {
   maxProductionEntryOccurredOn,
   productionEntryByIdOrNull,
 } from '@/domain/production-journal';
-import { monthKeyFromDate } from '@/domain/sales-plan';
+import { monthKeyFromDate, planPriceWithVatForProduct } from '@/domain/sales-plan';
 import { planningHref } from '@/features/planning/paths';
 import {
   emptyProductionEntryLineDraft,
@@ -32,8 +32,8 @@ import {
 } from '@/features/production/paths';
 import {
   PRODUCTION_ENTRY_ERROR,
-  parseProductionEntryCost,
   parseProductionEntryPieces,
+  parseProductionEntryPrice,
 } from '@/features/production/text';
 import { useProductionJournal } from '@/features/production/use-production-journal';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
@@ -45,7 +45,7 @@ function lineDraftFromEntry(line: ProductionEntryLine): ProductionEntryLineDraft
   return {
     id: line.id,
     pieces: String(line.pieces),
-    cost: formatMoneyDraft(line.unitCostWithVat ?? 0),
+    price: formatMoneyDraft(line.priceWithVat ?? 0),
   };
 }
 
@@ -75,7 +75,9 @@ function initialDrafts(
   const drafts: Record<string, ProductionEntryLineDraft> = {};
 
   for (const product of products) {
-    drafts[product.id] = byProduct.get(product.id) ?? emptyProductionEntryLineDraft();
+    drafts[product.id] =
+      byProduct.get(product.id) ??
+      emptyProductionEntryLineDraft(planPriceWithVatForProduct(document, product.id, month));
   }
 
   return drafts;
@@ -158,12 +160,14 @@ function EntryForm({
         if (next[product.id]) {
           continue;
         }
-        next[product.id] = emptyProductionEntryLineDraft();
+        next[product.id] = emptyProductionEntryLineDraft(
+          planPriceWithVatForProduct(journal.document, product.id, month),
+        );
         changed = true;
       }
       return changed ? next : current;
     });
-  }, [products]);
+  }, [journal.document, month, products]);
 
   function setLine(productId: string, field: ProductionEntryLineField, raw: string) {
     setDrafts((current) => {
@@ -194,9 +198,9 @@ function EntryForm({
         continue;
       }
 
-      const unitCostWithVat = parseProductionEntryCost(line.cost);
-      if (unitCostWithVat === null) {
-        setSaveError(PRODUCTION_ENTRY_ERROR.cost);
+      const priceWithVat = parseProductionEntryPrice(line.price);
+      if (priceWithVat === null) {
+        setSaveError(PRODUCTION_ENTRY_ERROR.price);
         return null;
       }
 
@@ -204,7 +208,7 @@ function EntryForm({
         id: line.id,
         productId: product.id,
         pieces,
-        unitCostWithVat,
+        priceWithVat,
       });
     }
 
