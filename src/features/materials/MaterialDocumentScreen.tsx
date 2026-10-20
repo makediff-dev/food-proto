@@ -4,10 +4,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useId, useMemo, useState } from 'react';
 
-import { MATERIAL_GROUPS, MATERIAL_WAREHOUSES, type MaterialWarehouseId } from '@/domain/document';
+import { MATERIAL_WAREHOUSES, type MaterialWarehouseId } from '@/domain/document';
 import { activeMaterials, materialReceiptById, materialReceiptRejection } from '@/domain/materials';
 import { maxProductionEntryOccurredOn } from '@/domain/production-journal';
 import { monthKeyFromDate } from '@/domain/sales-plan';
+import {
+  emptyMaterialReceiptLineDraft,
+  MaterialReceiptFormTable,
+  type MaterialReceiptLineDraft,
+  type MaterialReceiptLineField,
+} from '@/features/materials/MaterialReceiptFormTable';
 import {
   MATERIALS_RECEIPTS_TITLE,
   materialsReceiptsHref,
@@ -28,8 +34,20 @@ export function MaterialDocumentScreen({ documentId }: { documentId: string | nu
 
   if (documentId && !existing) {
     return (
-      <PageFrame title={MATERIALS_RECEIPTS_TITLE} full>
-        <p className="border border-line bg-sheet px-4 py-4 text-sm text-muted">Запись не найдена.</p>
+      <PageFrame
+        title={MATERIALS_RECEIPTS_TITLE}
+        full
+        back={
+          <Link
+            href={materialsReceiptsHref({ month: currentMonth, currentMonth })}
+            aria-label="Назад"
+            className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            <IconArrowLeft />
+          </Link>
+        }
+      >
+        <p className="border border-line bg-sheet px-4 py-4 text-sm text-ink">Запись не найдена.</p>
       </PageFrame>
     );
   }
@@ -51,15 +69,16 @@ function DocumentForm({
   const dateId = useId();
   const supplierId = useId();
   const receipt = documentId ? materialReceiptById(materials.document, documentId) : null;
-  const listHref = (month: string) => materialsReceiptsHref({ month, currentMonth });
+  const listMonth = receipt?.occurredOn.slice(0, 7) ?? currentMonth;
+  const listHref = materialsReceiptsHref({ month: listMonth, currentMonth });
 
   const [warehouseId, setWarehouseId] = useState<MaterialWarehouseId>(receipt?.warehouseId ?? 'warehouse-1');
   const [occurredOn, setOccurredOn] = useState(
     receipt?.occurredOn ?? `${currentMonth}-${String(today.getDate()).padStart(2, '0')}`,
   );
   const [supplierName, setSupplierName] = useState(receipt?.supplierName ?? '');
-  const [drafts, setDrafts] = useState<Record<string, { quantity: string; price: string }>>(() => {
-    const next: Record<string, { quantity: string; price: string }> = {};
+  const [drafts, setDrafts] = useState<Record<string, MaterialReceiptLineDraft>>(() => {
+    const next: Record<string, MaterialReceiptLineDraft> = {};
     for (const material of activeMaterials(materials.document)) {
       const receiptLine = receipt?.lines.find((item) => item.materialId === material.id);
       next[material.id] = {
@@ -71,6 +90,13 @@ function DocumentForm({
   });
   const [error, setError] = useState<string | null>(null);
   const rows = activeMaterials(materials.document);
+
+  function setLine(materialId: string, field: MaterialReceiptLineField, raw: string) {
+    setDrafts((current) => {
+      const line = current[materialId] ?? emptyMaterialReceiptLineDraft();
+      return { ...current, [materialId]: { ...line, [field]: raw } };
+    });
+  }
 
   function save() {
     const receiptLines: Array<{ id: string; materialId: string; quantity: number; priceWithVat: number }> = [];
@@ -101,150 +127,116 @@ function DocumentForm({
       return;
     }
     materials.saveReceipt(draft, today);
-    router.replace(listHref(occurredOn.slice(0, 7) || currentMonth));
+    router.replace(materialsReceiptsHref({ month: occurredOn.slice(0, 7) || currentMonth, currentMonth }));
   }
 
   const title = documentId ? MATERIALS_RECEIPTS_TITLE : NEW_MATERIAL_RECEIPT_TITLE;
+  const backHref = materialsReceiptsHref({
+    month: occurredOn.slice(0, 7) || currentMonth,
+    currentMonth,
+  });
 
   return (
     <PageFrame
       title={title}
       full
-      lede="Поступление на один склад. В остаток входит количество и цена этой записи."
       back={
-        <Link
-          href={listHref(receipt?.occurredOn.slice(0, 7) ?? currentMonth)}
-          aria-label="Назад"
-          className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
-          <IconArrowLeft />
-        </Link>
-      }
-    >
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-        <div className="min-w-0 flex-1 border border-line bg-sheet">
-          {MATERIAL_GROUPS.map((group) => {
-            const groupRows = rows.filter((item) => item.groupId === group.id);
-            if (groupRows.length === 0) {
-              return null;
-            }
-            return (
-              <section key={group.id}>
-                <h2 className="border-b border-line bg-paper px-4 py-2 text-sm text-ink">{group.name}</h2>
-                <ul>
-                  {groupRows.map((material) => {
-                    const draft = drafts[material.id] ?? { quantity: '', price: '' };
-                    return (
-                      <li
-                        key={material.id}
-                        className="grid gap-3 border-b border-line px-4 py-3 sm:grid-cols-[minmax(0,1fr)_9rem_9rem]"
-                      >
-                        <span className="text-sm text-ink">
-                          {material.name}
-                          <span className="text-muted"> · {material.unit}</span>
-                        </span>
-                        <label className="text-sm text-muted">
-                          Количество
-                          <input
-                            aria-label={`Количество ${material.name}`}
-                            value={draft.quantity}
-                            inputMode="decimal"
-                            onChange={(event) =>
-                              setDrafts((current) => ({
-                                ...current,
-                                [material.id]: { ...draft, quantity: event.target.value },
-                              }))
-                            }
-                            className={`mt-1 ${fieldClassName}`}
-                          />
-                        </label>
-                        <label className="text-sm text-muted">
-                          Цена с НДС, ₽
-                          <input
-                            aria-label={`Цена ${material.name}`}
-                            value={draft.price}
-                            inputMode="decimal"
-                            onChange={(event) =>
-                              setDrafts((current) => ({
-                                ...current,
-                                [material.id]: { ...draft, price: event.target.value },
-                              }))
-                            }
-                            className={`mt-1 ${fieldClassName}`}
-                          />
-                        </label>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            );
-          })}
-        </div>
-        <div className="sticky top-4 flex w-full shrink-0 flex-col gap-4 border border-line bg-sheet p-4 lg:w-72">
-          <label className="text-sm text-muted" htmlFor={dateId}>
-            Дата
-            <input
-              id={dateId}
-              type="date"
-              min="2000-01-01"
-              max={maxProductionEntryOccurredOn(today)}
-              value={occurredOn}
-              onChange={(event) => setOccurredOn(event.target.value)}
-              className={`mt-2 ${fieldClassName}`}
-            />
-          </label>
-          <label className="text-sm text-muted">
-            Склад
-            <select
-              aria-label="Склад"
-              value={warehouseId}
-              onChange={(event) => setWarehouseId(event.target.value as MaterialWarehouseId)}
-              className={`mt-2 ${fieldClassName}`}
-            >
-              {MATERIAL_WAREHOUSES.map((warehouse) => (
-                <option key={warehouse.id} value={warehouse.id}>
-                  {warehouse.name} · {warehouse.productionName}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm text-muted" htmlFor={supplierId}>
-            Поставщик
-            <input
-              id={supplierId}
-              value={supplierName}
-              onChange={(event) => setSupplierName(event.target.value)}
-              className={`mt-2 ${fieldClassName}`}
-            />
-          </label>
+        documentId ? (
+          <Link
+            href={backHref}
+            aria-label="Назад"
+            className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            <IconArrowLeft />
+          </Link>
+        ) : (
           <button
             type="button"
-            onClick={save}
-            disabled={!materials.hydrated}
-            className={`${primaryButtonClassName} w-full`}
+            aria-label="Назад"
+            onClick={() => router.back()}
+            className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
-            <IconCheck />
-            Сохранить
+            <IconArrowLeft />
           </button>
-          {documentId ? (
+        )
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-start gap-4">
+          <MaterialReceiptFormTable materials={rows} drafts={drafts} onChange={setLine} />
+
+          <div className="sticky top-16 z-20 flex w-72 shrink-0 flex-col gap-4 self-start border border-line bg-sheet p-4 lg:top-4">
+            <div>
+              <label htmlFor={dateId} className="text-sm text-muted">
+                Дата
+              </label>
+              <input
+                id={dateId}
+                type="date"
+                min="2000-01-01"
+                max={maxProductionEntryOccurredOn(today)}
+                value={occurredOn}
+                onChange={(event) => setOccurredOn(event.target.value)}
+                className={`mt-2 ${fieldClassName}`}
+              />
+            </div>
+            <div>
+              <label className="text-sm text-muted">
+                Склад
+                <select
+                  aria-label="Склад"
+                  value={warehouseId}
+                  onChange={(event) => setWarehouseId(event.target.value as MaterialWarehouseId)}
+                  className={`mt-2 ${fieldClassName}`}
+                >
+                  {MATERIAL_WAREHOUSES.map((warehouse) => (
+                    <option key={warehouse.id} value={warehouse.id}>
+                      {warehouse.name} · {warehouse.productionName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div>
+              <label htmlFor={supplierId} className="text-sm text-muted">
+                Поставщик
+              </label>
+              <input
+                id={supplierId}
+                value={supplierName}
+                onChange={(event) => setSupplierName(event.target.value)}
+                className={`mt-2 ${fieldClassName}`}
+              />
+            </div>
             <button
               type="button"
-              onClick={() => {
-                const confirmed = window.confirm('Удалить приход? Его нельзя будет вернуть.');
-                if (!confirmed) {
-                  return;
-                }
-                materials.removeReceipt(documentId);
-                router.push(listHref(receipt?.occurredOn.slice(0, 7) ?? currentMonth));
-              }}
-              className="inline-flex h-11 w-full items-center justify-center gap-2 text-sm text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              onClick={save}
+              disabled={!materials.hydrated}
+              className={`${primaryButtonClassName} w-full`}
             >
-              <IconTrash />
-              Удалить
+              <IconCheck />
+              Сохранить
             </button>
-          ) : null}
-          {error ? <p className="text-sm text-ink">{error}</p> : null}
+            {documentId ? (
+              <button
+                type="button"
+                aria-label="Удалить приход"
+                onClick={() => {
+                  const confirmed = window.confirm('Удалить приход? Его нельзя будет вернуть.');
+                  if (!confirmed) {
+                    return;
+                  }
+                  materials.removeReceipt(documentId);
+                  router.push(listHref);
+                }}
+                className="inline-flex h-11 w-full items-center justify-center gap-2 text-sm text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              >
+                <IconTrash />
+                Удалить
+              </button>
+            ) : null}
+            {error ? <p className="text-sm text-ink">{error}</p> : null}
+          </div>
         </div>
       </div>
     </PageFrame>
