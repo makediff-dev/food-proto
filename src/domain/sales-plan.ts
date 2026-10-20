@@ -188,6 +188,12 @@ export function planPriceWithVatForProduct(document: PrototypeDocument, productI
   return suggestedPriceWithVat(document, productId, month);
 }
 
+/** Объём плана продаж месяца. Нет строки — 0. */
+export function planSalesVolumePiecesForProduct(document: PrototypeDocument, productId: string, month: string): number {
+  const plan = salesPlanForMonth(document, month);
+  return plan.lines.find((item) => item.productId === productId)?.volumePieces ?? 0;
+}
+
 export function missingPlanProducts(document: PrototypeDocument, plan: SalesPlan): Product[] {
   const present = new Set(plan.lines.map((line) => line.productId));
   return activeProducts(document).filter((item) => !present.has(item.id));

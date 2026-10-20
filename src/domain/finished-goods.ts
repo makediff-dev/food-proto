@@ -19,6 +19,7 @@ import {
   monthKeyFromDate,
   planMonthOpen,
   planPriceWithVatForProduct,
+  planSalesVolumePiecesForProduct,
   priceExVatTenThousandths,
   shiftMonth,
 } from '@/domain/sales-plan';
@@ -156,11 +157,30 @@ export function openingPiecesForProduct(document: PrototypeDocument, month: stri
   return storedInventoryPiecesForProduct(document, previousMonth, productId);
 }
 
-/** Расчётный остаток на конец месяца: начало + выпуск − продажи. */
+/** Целевой остаток на конец месяца: середина норматива мин/макс. */
+export function targetClosingPiecesFromNorm(minPieces: number, maxPieces: number): number {
+  return Math.round((minPieces + maxPieces) / 2);
+}
+
+/**
+ * Плановый объём выпуска: план продаж + целевой остаток на конец − остаток на начало.
+ * Отрицательный результат — 0 шт.
+ */
+export function plannedProductionVolumePieces(document: PrototypeDocument, month: string, productId: string): number {
+  const opening = openingPiecesForProduct(document, month, productId);
+  const salesPlan = planSalesVolumePiecesForProduct(document, productId, month);
+  const norm = normForProduct(document, month, productId);
+  const targetClosing = targetClosingPiecesFromNorm(norm.minPieces, norm.maxPieces);
+  const volume = salesPlan + targetClosing - opening;
+  return volume < 0 ? 0 : volume;
+}
+
+/** Расчётный остаток на конец месяца (план): начало + план выпуска − план продаж. */
 export function bookClosingPiecesForProduct(document: PrototypeDocument, month: string, productId: string): number {
   const opening = openingPiecesForProduct(document, month, productId);
-  const fact = monthSalesAndProduction(document, month, productId);
-  return closingStockPieces(opening, fact.productionPieces, fact.salesPieces);
+  const salesPlan = planSalesVolumePiecesForProduct(document, productId, month);
+  const productionPlan = plannedProductionVolumePieces(document, month, productId);
+  return closingStockPieces(opening, productionPlan, salesPlan);
 }
 
 /** @deprecated Используйте bookClosingPiecesForProduct. */
@@ -812,24 +832,17 @@ export function finishedGoodsRangeView(document: PrototypeDocument, from: string
 
   const products = finishedGoodsRangeProducts(document, months);
   const dates = new Set<string>();
-  const lastDates = new Set<string>();
   for (const month of months) {
     for (const day of monthDates(month)) {
       dates.add(day);
-      if (month === lastMonth) {
-        lastDates.add(day);
-      }
     }
   }
   const producedByProduct = productionSpendOn(document, dates);
-  const lastProducedByProduct = months.length === 1 ? producedByProduct : productionSpendOn(document, lastDates);
   const rows = products.map((product) => {
     const openingPrice = monthOpeningPrice(document, firstMonth, product);
     const sales = rangeSales(document, months, product.id);
     const produced = productionAmounts(producedByProduct.get(product.id));
-    const lastOpeningPieces = openingPiecesForProduct(document, lastMonth, product.id);
-    const lastProduced = productionAmounts(lastProducedByProduct.get(product.id));
-    const bookClosingPieces = closingStockPieces(lastOpeningPieces, lastProduced.pieces, sales.lastSalesPieces);
+    const bookClosingPieces = bookClosingPiecesForProduct(document, lastMonth, product.id);
     const inventoryClosingPieces = storedInventoryPiecesForProduct(document, lastMonth, product.id);
     const hasInventoryLine = hasStoredInventoryLine(document, lastMonth, product.id);
     return rowFromParts(
