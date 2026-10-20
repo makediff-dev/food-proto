@@ -6,6 +6,15 @@ import { type ReactNode, useEffect, useState } from 'react';
 
 import { useDocumentStore } from '@/data/DocumentProvider';
 import {
+  MATERIALS_INVENTORY_TITLE,
+  MATERIALS_ISSUES_TITLE,
+  MATERIALS_NORMS_TITLE,
+  MATERIALS_PLAN_TITLE,
+  MATERIALS_RECEIPTS_TITLE,
+  MATERIALS_SECTION_TITLE,
+  MATERIALS_SUMMARY_TITLE,
+} from '@/features/materials/paths';
+import {
   MOVEMENT_FACT_TITLE,
   MOVEMENT_INVENTORY_TITLE,
   MOVEMENT_PLAN_TITLE,
@@ -54,6 +63,15 @@ const MOVEMENT_NAV: readonly NavItem[] = [
   { href: '/movement/fact', label: MOVEMENT_FACT_TITLE, navKind: 'report' },
   { href: '/movement/plan', label: MOVEMENT_PLAN_TITLE, navKind: 'input' },
   { href: '/movement/inventory', label: MOVEMENT_INVENTORY_TITLE, navKind: 'input' },
+];
+
+const MATERIALS_NAV: readonly NavItem[] = [
+  { href: '/materials', label: MATERIALS_SUMMARY_TITLE, exact: true, navKind: 'report' },
+  { href: '/materials/plan', label: MATERIALS_PLAN_TITLE, navKind: 'input' },
+  { href: '/materials/inventory', label: MATERIALS_INVENTORY_TITLE, navKind: 'input' },
+  { href: '/materials/receipts', label: MATERIALS_RECEIPTS_TITLE, navKind: 'input' },
+  { href: '/materials/issues', label: MATERIALS_ISSUES_TITLE, navKind: 'input' },
+  { href: '/materials/norms', label: MATERIALS_NORMS_TITLE, navKind: 'input' },
 ];
 
 const QUESTIONS_HREF = '/questions';
@@ -110,6 +128,12 @@ function currentNavLabel(pathname: string): string | undefined {
   }
 
   for (const item of MOVEMENT_NAV) {
+    if (navItemIsCurrent(pathname, item)) {
+      return item.label;
+    }
+  }
+
+  for (const item of MATERIALS_NAV) {
     if (navItemIsCurrent(pathname, item)) {
       return item.label;
     }
@@ -254,6 +278,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             onNavigate={closeMenu}
           />
           <NavGroup title={MOVEMENT_SECTION_TITLE} items={MOVEMENT_NAV} pathname={pathname} onNavigate={closeMenu} />
+          <NavGroup title={MATERIALS_SECTION_TITLE} items={MATERIALS_NAV} pathname={pathname} onNavigate={closeMenu} />
         </nav>
 
         <div className="border-t border-sidebar-line">

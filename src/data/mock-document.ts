@@ -1,3 +1,4 @@
+import { mockMaterials } from '@/data/mock-materials';
 import {
   catalogCategories,
   type FinishedGoodsNorm,
@@ -440,6 +441,12 @@ export const mockDocument: PrototypeDocument = {
   operatingExpenses: [],
   finishedGoodsOpenings,
   finishedGoodsNorms,
+  materials: mockMaterials.materials,
+  materialNorms: mockMaterials.materialNorms,
+  materialMonthPlans: mockMaterials.materialMonthPlans,
+  materialOpenings: mockMaterials.materialOpenings,
+  materialReceipts: mockMaterials.materialReceipts,
+  materialIssues: mockMaterials.materialIssues,
 };
 
 export function createMockDocument(): PrototypeDocument {
@@ -471,6 +478,24 @@ export function createMockDocument(): PrototypeDocument {
       lines: item.lines.map((line) => ({ ...line })),
     })),
     finishedGoodsNorms: mockDocument.finishedGoodsNorms.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    materials: mockDocument.materials.map((item) => ({ ...item })),
+    materialNorms: mockDocument.materialNorms.map((item) => ({ ...item })),
+    materialMonthPlans: mockDocument.materialMonthPlans.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    materialOpenings: mockDocument.materialOpenings.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    materialReceipts: mockDocument.materialReceipts.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    materialIssues: mockDocument.materialIssues.map((item) => ({
       ...item,
       lines: item.lines.map((line) => ({ ...line })),
     })),
