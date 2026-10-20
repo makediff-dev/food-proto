@@ -1,3 +1,5 @@
+'use client';
+
 import type { MaterialMovementRow, MaterialMovementTotals, MaterialPlanField } from '@/domain/materials';
 import { MaterialNormDeviation } from '@/features/materials/MaterialNormDeviation';
 import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
@@ -6,6 +8,7 @@ import {
   blockHeadingClassName,
   columnDividerClassName,
   columnHeadingClassName,
+  editableCellClassName,
   keepWithNext,
   nameHeadingClassName,
   stickyHeadClassName,
@@ -81,6 +84,10 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
 const COLUMNS = COLUMN_GROUPS.flatMap((group) => group.columns);
 const GROUP_END_KEYS = new Set(COLUMN_GROUPS.slice(0, -1).map((group) => group.columns[group.columns.length - 1]?.key));
 
+function factConsumptionEditable(editable: boolean, row: MaterialMovementRow): boolean {
+  return editable && !row.deleted;
+}
+
 function groupEndClass(key: ColumnKey): string {
   return GROUP_END_KEYS.has(key) ? tableBorder.rightThick : columnDividerClassName;
 }
@@ -144,9 +151,18 @@ export function MaterialsSummaryTable({
               {COLUMNS.map((column) => (
                 <td
                   key={column.key}
-                  className={`border-b border-b-line px-2 py-2 text-right align-middle ${groupEndClass(column.key)}`}
+                  className={`border-b border-b-line px-2 py-2 text-right align-middle ${groupEndClass(column.key)} ${
+                    column.key === 'factConsumption' && factConsumptionEditable(editable, row)
+                      ? editableCellClassName
+                      : ''
+                  }`}
                 >
-                  <RowCell column={column.key} row={row} editable={editable} onFactConsumption={onFactConsumption} />
+                  <RowCell
+                    column={column.key}
+                    row={row}
+                    editable={factConsumptionEditable(editable, row)}
+                    onFactConsumption={onFactConsumption}
+                  />
                 </td>
               ))}
             </tr>
