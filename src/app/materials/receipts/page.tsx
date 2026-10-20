@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 
 export default async function MaterialReceiptsPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
   const query = parseMaterialMonthQuery(await searchParams);
-  return <MaterialJournalScreen kind="receipt" month={query.month} />;
+  return <MaterialJournalScreen month={query.month} />;
 }

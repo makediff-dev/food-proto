@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 42 as const;
+export const SCHEMA_VERSION = 43 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -260,6 +260,11 @@ export interface MaterialMonthPlanLine {
    * Если на этом складе есть норма, ввод не используется: расход считается из выпуска.
    */
   consumptionQuantity: number;
+  /**
+   * Факт расхода за месяц, тысячные доли.
+   * Пока нормы нет, вводят в отчёте; при норме считается из выпуска.
+   */
+  factConsumptionQuantity: number;
   /** Плановая цена закупки с НДС, копейки за 1 единицу. `DSM Meat!H`. */
   priceWithVat: number;
   /** Нормативный минимум, тысячные доли. `DSM Meat!DU`. */
@@ -321,27 +326,6 @@ export interface MaterialReceipt {
   lines: MaterialReceiptLine[];
 }
 
-/** Строка расхода в производстве. Цена в документ не пишется. */
-export interface MaterialIssueLine {
-  id: string;
-  materialId: string;
-  /** Количество, тысячные доли единицы. Больше нуля. */
-  quantity: number;
-}
-
-/**
- * Расход в производстве со склада.
- * Для позиции с нормой на этом складе журнал в остаток не входит.
- * Удаление вырезает запись. Поля `deletedAt` нет.
- */
-export interface MaterialIssue {
-  id: string;
-  warehouseId: MaterialWarehouseId;
-  /** Календарный день, `ГГГГ-ММ-ДД`. */
-  occurredOn: string;
-  lines: MaterialIssueLine[];
-}
-
 /**
  * Единственный сохраняемый документ прототипа.
  * Предметные разделы добавляются полями сюда. Производные суммы сюда не писать.
@@ -378,8 +362,6 @@ export interface PrototypeDocument {
   materialOpenings: MaterialOpening[];
   /** Приходы от поставщика. Удаление вырезает запись. */
   materialReceipts: MaterialReceipt[];
-  /** Расход в производстве. Удаление вырезает запись. */
-  materialIssues: MaterialIssue[];
 }
 
 /** Метка мягкого удаления, которую пишет экран через `Date.toISOString()`. */

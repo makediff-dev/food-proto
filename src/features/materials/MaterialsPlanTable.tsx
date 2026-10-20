@@ -111,9 +111,7 @@ export function MaterialsPlanTable({
                 <td
                   key={column.key}
                   className={`border-b border-b-line px-2 py-2 text-right align-middle ${columnDividerClassName} ${
-                    editable && !row.deleted && column.editable && !(column.key === 'planConsumption' && row.normed)
-                      ? editableCellClassName
-                      : ''
+                    editable && !row.deleted && column.editable ? editableCellClassName : ''
                   }`}
                 >
                   <PlanCell column={column.key} row={row} editable={editable && !row.deleted} onField={onField} />
@@ -190,13 +188,8 @@ function PlanCell({
         />
       );
     case 'planConsumption':
-      if (!editable || row.normed) {
-        return (
-          <div>
-            <QuantityRead value={row.planConsumptionQuantity} unit={unit} />
-            {row.normed ? <div className="text-xs text-muted">по норме</div> : null}
-          </div>
-        );
+      if (!editable) {
+        return <QuantityRead value={row.planConsumptionQuantity} unit={unit} />;
       }
       return (
         <QuantityCell

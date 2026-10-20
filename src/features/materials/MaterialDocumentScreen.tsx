@@ -5,22 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useId, useMemo, useState } from 'react';
 
 import { MATERIAL_GROUPS, MATERIAL_WAREHOUSES, type MaterialWarehouseId } from '@/domain/document';
-import {
-  activeMaterials,
-  materialConsumptionIsNormed,
-  materialIssueById,
-  materialIssueRejection,
-  materialReceiptById,
-  materialReceiptRejection,
-} from '@/domain/materials';
+import { activeMaterials, materialReceiptById, materialReceiptRejection } from '@/domain/materials';
 import { maxProductionEntryOccurredOn } from '@/domain/production-journal';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import {
-  MATERIALS_ISSUES_TITLE,
   MATERIALS_RECEIPTS_TITLE,
-  materialsIssuesHref,
   materialsReceiptsHref,
-  NEW_MATERIAL_ISSUE_TITLE,
   NEW_MATERIAL_RECEIPT_TITLE,
 } from '@/features/materials/paths';
 import { formatQuantityDraft, MATERIAL_DOCUMENT_ERROR, parseQuantityInput } from '@/features/materials/text';
@@ -30,47 +20,28 @@ import { IconArrowLeft, IconCheck, IconTrash } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
 import { formatMoneyDraft, parseMoneyInput } from '@/features/table/format';
 
-type Kind = 'receipt' | 'issue';
-
-export function MaterialDocumentScreen({ kind, documentId }: { kind: Kind; documentId: string | null }) {
+export function MaterialDocumentScreen({ documentId }: { documentId: string | null }) {
   const materials = useMaterials();
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
-  const existing =
-    kind === 'receipt'
-      ? documentId
-        ? materialReceiptById(materials.document, documentId)
-        : null
-      : documentId
-        ? materialIssueById(materials.document, documentId)
-        : null;
+  const existing = documentId ? materialReceiptById(materials.document, documentId) : null;
 
   if (documentId && !existing) {
     return (
-      <PageFrame title={kind === 'receipt' ? MATERIALS_RECEIPTS_TITLE : MATERIALS_ISSUES_TITLE} full>
+      <PageFrame title={MATERIALS_RECEIPTS_TITLE} full>
         <p className="border border-line bg-sheet px-4 py-4 text-sm text-muted">Запись не найдена.</p>
       </PageFrame>
     );
   }
 
-  return (
-    <DocumentForm
-      key={documentId ?? 'new'}
-      kind={kind}
-      documentId={documentId}
-      currentMonth={currentMonth}
-      today={today}
-    />
-  );
+  return <DocumentForm key={documentId ?? 'new'} documentId={documentId} currentMonth={currentMonth} today={today} />;
 }
 
 function DocumentForm({
-  kind,
   documentId,
   currentMonth,
   today,
 }: {
-  kind: Kind;
   documentId: string | null;
   currentMonth: string;
   today: Date;
@@ -79,44 +50,31 @@ function DocumentForm({
   const router = useRouter();
   const dateId = useId();
   const supplierId = useId();
-  const receipt = kind === 'receipt' && documentId ? materialReceiptById(materials.document, documentId) : null;
-  const issue = kind === 'issue' && documentId ? materialIssueById(materials.document, documentId) : null;
-  const existing = receipt ?? issue;
-  const listHref = (month: string) =>
-    kind === 'receipt' ? materialsReceiptsHref({ month, currentMonth }) : materialsIssuesHref({ month, currentMonth });
+  const receipt = documentId ? materialReceiptById(materials.document, documentId) : null;
+  const listHref = (month: string) => materialsReceiptsHref({ month, currentMonth });
 
-  const [warehouseId, setWarehouseId] = useState<MaterialWarehouseId>(existing?.warehouseId ?? 'warehouse-1');
+  const [warehouseId, setWarehouseId] = useState<MaterialWarehouseId>(receipt?.warehouseId ?? 'warehouse-1');
   const [occurredOn, setOccurredOn] = useState(
-    existing?.occurredOn ?? `${currentMonth}-${String(today.getDate()).padStart(2, '0')}`,
+    receipt?.occurredOn ?? `${currentMonth}-${String(today.getDate()).padStart(2, '0')}`,
   );
   const [supplierName, setSupplierName] = useState(receipt?.supplierName ?? '');
   const [drafts, setDrafts] = useState<Record<string, { quantity: string; price: string }>>(() => {
     const next: Record<string, { quantity: string; price: string }> = {};
     for (const material of activeMaterials(materials.document)) {
       const receiptLine = receipt?.lines.find((item) => item.materialId === material.id);
-      const issueLine = issue?.lines.find((item) => item.materialId === material.id);
-      const quantity = receiptLine?.quantity ?? issueLine?.quantity;
       next[material.id] = {
-        quantity: quantity === undefined ? '' : formatQuantityDraft(quantity),
+        quantity: receiptLine === undefined ? '' : formatQuantityDraft(receiptLine.quantity),
         price: receiptLine ? formatMoneyDraft(receiptLine.priceWithVat) : '',
       };
     }
     return next;
   });
   const [error, setError] = useState<string | null>(null);
-  const rows = activeMaterials(materials.document).filter(
-    (material) => kind === 'receipt' || !materialConsumptionIsNormed(materials.document, warehouseId, material.id),
-  );
-  const normed = activeMaterials(materials.document).filter((material) =>
-    materialConsumptionIsNormed(materials.document, warehouseId, material.id),
-  );
+  const rows = activeMaterials(materials.document);
 
   function save() {
     const receiptLines: Array<{ id: string; materialId: string; quantity: number; priceWithVat: number }> = [];
-    const issueLines: Array<{ id: string; materialId: string; quantity: number }> = [];
-    const id =
-      documentId ??
-      (kind === 'receipt' ? `material-receipt:${crypto.randomUUID()}` : `material-issue:${crypto.randomUUID()}`);
+    const id = documentId ?? `material-receipt:${crypto.randomUUID()}`;
 
     for (const material of rows) {
       const draft = drafts[material.id];
@@ -125,61 +83,37 @@ function DocumentForm({
       }
       const quantity = parseQuantityInput(draft.quantity, false);
       if (quantity === null || quantity <= 0) {
-        setError(kind === 'receipt' ? 'Проверьте количество и цену.' : 'Проверьте количество.');
+        setError('Проверьте количество и цену.');
         return;
       }
-      if (kind === 'receipt') {
-        const priceWithVat = parseMoneyInput(draft.price);
-        if (priceWithVat === null) {
-          setError('Проверьте количество и цену.');
-          return;
-        }
-        receiptLines.push({ id: `${id}:${material.id}`, materialId: material.id, quantity, priceWithVat });
-      } else {
-        issueLines.push({ id: `${id}:${material.id}`, materialId: material.id, quantity });
+      const priceWithVat = parseMoneyInput(draft.price);
+      if (priceWithVat === null) {
+        setError('Проверьте количество и цену.');
+        return;
       }
+      receiptLines.push({ id: `${id}:${material.id}`, materialId: material.id, quantity, priceWithVat });
     }
 
-    if (kind === 'receipt') {
-      const draft = { id, warehouseId, supplierName, occurredOn, lines: receiptLines };
-      const rejection = materialReceiptRejection(materials.document, draft, today);
-      if (rejection) {
-        setError(MATERIAL_DOCUMENT_ERROR[rejection]);
-        return;
-      }
-      materials.saveReceipt(draft, today);
-    } else {
-      const draft = { id, warehouseId, occurredOn, lines: issueLines };
-      const rejection = materialIssueRejection(materials.document, draft, today);
-      if (rejection) {
-        setError(MATERIAL_DOCUMENT_ERROR[rejection]);
-        return;
-      }
-      materials.saveIssue(draft, today);
+    const draft = { id, warehouseId, supplierName, occurredOn, lines: receiptLines };
+    const rejection = materialReceiptRejection(materials.document, draft, today);
+    if (rejection) {
+      setError(MATERIAL_DOCUMENT_ERROR[rejection]);
+      return;
     }
+    materials.saveReceipt(draft, today);
     router.replace(listHref(occurredOn.slice(0, 7) || currentMonth));
   }
 
-  const title = documentId
-    ? kind === 'receipt'
-      ? MATERIALS_RECEIPTS_TITLE
-      : MATERIALS_ISSUES_TITLE
-    : kind === 'receipt'
-      ? NEW_MATERIAL_RECEIPT_TITLE
-      : NEW_MATERIAL_ISSUE_TITLE;
+  const title = documentId ? MATERIALS_RECEIPTS_TITLE : NEW_MATERIAL_RECEIPT_TITLE;
 
   return (
     <PageFrame
       title={title}
       full
-      lede={
-        kind === 'receipt'
-          ? 'Поступление на один склад. В остаток входит количество и цена этой записи.'
-          : 'Расход со склада в производство. Позиции с нормой сюда не входят.'
-      }
+      lede="Поступление на один склад. В остаток входит количество и цена этой записи."
       back={
         <Link
-          href={listHref(existing?.occurredOn.slice(0, 7) ?? currentMonth)}
+          href={listHref(receipt?.occurredOn.slice(0, 7) ?? currentMonth)}
           aria-label="Назад"
           className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         >
@@ -224,23 +158,21 @@ function DocumentForm({
                             className={`mt-1 ${fieldClassName}`}
                           />
                         </label>
-                        {kind === 'receipt' ? (
-                          <label className="text-sm text-muted">
-                            Цена с НДС, ₽
-                            <input
-                              aria-label={`Цена ${material.name}`}
-                              value={draft.price}
-                              inputMode="decimal"
-                              onChange={(event) =>
-                                setDrafts((current) => ({
-                                  ...current,
-                                  [material.id]: { ...draft, price: event.target.value },
-                                }))
-                              }
-                              className={`mt-1 ${fieldClassName}`}
-                            />
-                          </label>
-                        ) : null}
+                        <label className="text-sm text-muted">
+                          Цена с НДС, ₽
+                          <input
+                            aria-label={`Цена ${material.name}`}
+                            value={draft.price}
+                            inputMode="decimal"
+                            onChange={(event) =>
+                              setDrafts((current) => ({
+                                ...current,
+                                [material.id]: { ...draft, price: event.target.value },
+                              }))
+                            }
+                            className={`mt-1 ${fieldClassName}`}
+                          />
+                        </label>
                       </li>
                     );
                   })}
@@ -248,11 +180,6 @@ function DocumentForm({
               </section>
             );
           })}
-          {kind === 'issue' && normed.length > 0 ? (
-            <p className="px-4 py-3 text-sm leading-6 text-muted">
-              По норме на выпуск, в этот расход не входят: {normed.map((item) => item.name).join(', ')}.
-            </p>
-          ) : null}
         </div>
         <div className="sticky top-4 flex w-full shrink-0 flex-col gap-4 border border-line bg-sheet p-4 lg:w-72">
           <label className="text-sm text-muted" htmlFor={dateId}>
@@ -282,17 +209,15 @@ function DocumentForm({
               ))}
             </select>
           </label>
-          {kind === 'receipt' ? (
-            <label className="text-sm text-muted" htmlFor={supplierId}>
-              Поставщик
-              <input
-                id={supplierId}
-                value={supplierName}
-                onChange={(event) => setSupplierName(event.target.value)}
-                className={`mt-2 ${fieldClassName}`}
-              />
-            </label>
-          ) : null}
+          <label className="text-sm text-muted" htmlFor={supplierId}>
+            Поставщик
+            <input
+              id={supplierId}
+              value={supplierName}
+              onChange={(event) => setSupplierName(event.target.value)}
+              className={`mt-2 ${fieldClassName}`}
+            />
+          </label>
           <button
             type="button"
             onClick={save}
@@ -306,20 +231,12 @@ function DocumentForm({
             <button
               type="button"
               onClick={() => {
-                const confirmed = window.confirm(
-                  kind === 'receipt'
-                    ? 'Удалить приход? Его нельзя будет вернуть.'
-                    : 'Удалить расход? Его нельзя будет вернуть.',
-                );
+                const confirmed = window.confirm('Удалить приход? Его нельзя будет вернуть.');
                 if (!confirmed) {
                   return;
                 }
-                if (kind === 'receipt') {
-                  materials.removeReceipt(documentId);
-                } else {
-                  materials.removeIssue(documentId);
-                }
-                router.push(listHref(existing?.occurredOn.slice(0, 7) ?? currentMonth));
+                materials.removeReceipt(documentId);
+                router.push(listHref(receipt?.occurredOn.slice(0, 7) ?? currentMonth));
               }}
               className="inline-flex h-11 w-full items-center justify-center gap-2 text-sm text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             >

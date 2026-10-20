@@ -1,6 +1,6 @@
-import type { MaterialMovementRow, MaterialMovementTotals } from '@/domain/materials';
+import type { MaterialMovementRow, MaterialMovementTotals, MaterialPlanField } from '@/domain/materials';
 import { MaterialNormDeviation } from '@/features/materials/MaterialNormDeviation';
-import { QuantityRead } from '@/features/materials/QuantityCell';
+import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
 import {
   blockCornerClassName,
   blockHeadingClassName,
@@ -89,10 +89,14 @@ export function MaterialsSummaryTable({
   caption,
   rows,
   totals,
+  editable = false,
+  onFactConsumption,
 }: {
   caption: string;
   rows: MaterialMovementRow[];
   totals: MaterialMovementTotals;
+  editable?: boolean;
+  onFactConsumption?: (materialId: string, field: MaterialPlanField, value: number) => string | null;
 }) {
   return (
     <div className={tableFrameClassName}>
@@ -136,14 +140,13 @@ export function MaterialsSummaryTable({
               >
                 {row.name}
                 {row.deleted ? <span className="text-muted"> (архив)</span> : null}
-                {row.normed ? <span className="mt-0.5 block text-xs text-muted">расход по норме</span> : null}
               </th>
               {COLUMNS.map((column) => (
                 <td
                   key={column.key}
                   className={`border-b border-b-line px-2 py-2 text-right align-middle ${groupEndClass(column.key)}`}
                 >
-                  <RowCell column={column.key} row={row} />
+                  <RowCell column={column.key} row={row} editable={editable} onFactConsumption={onFactConsumption} />
                 </td>
               ))}
             </tr>
@@ -164,7 +167,17 @@ export function MaterialsSummaryTable({
   );
 }
 
-function RowCell({ column, row }: { column: ColumnKey; row: MaterialMovementRow }) {
+function RowCell({
+  column,
+  row,
+  editable,
+  onFactConsumption,
+}: {
+  column: ColumnKey;
+  row: MaterialMovementRow;
+  editable: boolean;
+  onFactConsumption?: (materialId: string, field: MaterialPlanField, value: number) => string | null;
+}) {
   const unit = row.unit;
   switch (column) {
     case 'bookOpening':
@@ -196,7 +209,17 @@ function RowCell({ column, row }: { column: ColumnKey; row: MaterialMovementRow 
     case 'planConsumption':
       return <QuantityRead value={row.planConsumptionQuantity} unit={unit} />;
     case 'factConsumption':
-      return <QuantityRead value={row.factConsumptionQuantity} unit={unit} />;
+      if (!editable || !onFactConsumption) {
+        return <QuantityRead value={row.factConsumptionQuantity} unit={unit} />;
+      }
+      return (
+        <QuantityCell
+          label={`Факт расхода ${row.name}`}
+          value={row.factConsumptionQuantity}
+          unit={unit}
+          onChange={(value) => onFactConsumption(row.materialId, 'factConsumptionQuantity', value)}
+        />
+      );
     case 'consumptionDeviation':
       return <QuantityRead value={row.consumptionDeviationQuantity} unit={unit} signed />;
     case 'consumptionPrice':

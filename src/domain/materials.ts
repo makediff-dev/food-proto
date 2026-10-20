@@ -9,8 +9,6 @@ import {
   MATERIAL_WAREHOUSES,
   type Material,
   type MaterialGroupId,
-  type MaterialIssue,
-  type MaterialIssueLine,
   type MaterialMonthPlan,
   type MaterialMonthPlanLine,
   type MaterialNorm,
@@ -37,6 +35,7 @@ export type MaterialFieldRejection = MaterialNameRejection | 'unit' | 'vat' | 'g
 export type MaterialPlanField =
   | 'receiptQuantity'
   | 'consumptionQuantity'
+  | 'factConsumptionQuantity'
   | 'priceWithVat'
   | 'minQuantity'
   | 'maxQuantity';
@@ -167,10 +166,6 @@ export function materialOpeningsList(document: PrototypeDocument): MaterialOpeni
 
 export function materialReceiptsList(document: PrototypeDocument): MaterialReceipt[] {
   return document.materialReceipts ?? [];
-}
-
-export function materialIssuesList(document: PrototypeDocument): MaterialIssue[] {
-  return document.materialIssues ?? [];
 }
 
 export function activeMaterials(document: PrototypeDocument): Material[] {
@@ -451,6 +446,7 @@ function emptyPlanLine(materialId: string, month: string, warehouseId: MaterialW
     materialId,
     receiptQuantity: 0,
     consumptionQuantity: 0,
+    factConsumptionQuantity: 0,
     priceWithVat: 0,
     minQuantity: 0,
     maxQuantity: 0,
@@ -481,9 +477,6 @@ export function setMaterialPlanRejection(
   }
   if (field === 'priceWithVat') {
     return isPrice(value) ? null : 'price';
-  }
-  if (field === 'consumptionQuantity' && materialConsumptionIsNormed(document, warehouseId, materialId)) {
-    return 'normed';
   }
   const allowNegative = field === 'minQuantity' || field === 'maxQuantity';
   return isQuantityThousandths(value, allowNegative) ? null : 'quantity';
@@ -681,19 +674,6 @@ function productionPieces(document: PrototypeDocument, month: string, mode: 'pla
   return pieces;
 }
 
-function normedQuantity(
-  document: PrototypeDocument,
-  warehouseId: MaterialWarehouseId,
-  materialId: string,
-  piecesByProduct: ReadonlyMap<string, number>,
-): number {
-  let quantity = 0;
-  for (const norm of liveNorms(document, warehouseId, materialId)) {
-    quantity += norm.quantityPerPiece * (piecesByProduct.get(norm.productId) ?? 0);
-  }
-  return quantity;
-}
-
 function receiptFact(
   document: PrototypeDocument,
   month: string,
@@ -718,42 +698,17 @@ function receiptFact(
   return { quantity, cost };
 }
 
-function issueQuantity(
-  document: PrototypeDocument,
-  month: string,
-  warehouseId: MaterialWarehouseId,
-  materialId: string,
-): number {
-  let quantity = 0;
-  for (const issue of materialIssuesList(document)) {
-    if (issue.warehouseId !== warehouseId || !issue.occurredOn.startsWith(`${month}-`)) {
-      continue;
-    }
-    for (const line of issue.lines) {
-      if (line.materialId === materialId) {
-        quantity += line.quantity;
-      }
-    }
-  }
-  return quantity;
-}
-
 function consumptionQuantity(
-  document: PrototypeDocument,
-  month: string,
-  warehouseId: MaterialWarehouseId,
-  materialId: string,
+  _document: PrototypeDocument,
+  _warehouseId: MaterialWarehouseId,
+  _materialId: string,
   mode: 'plan' | 'fact',
-  piecesByProduct: ReadonlyMap<string, number>,
+  _piecesByProduct: ReadonlyMap<string, number>,
   planConsumption: number,
+  factConsumption: number,
 ): number {
-  if (materialConsumptionIsNormed(document, warehouseId, materialId)) {
-    return normedQuantity(document, warehouseId, materialId, piecesByProduct);
-  }
-  if (mode === 'plan') {
-    return planConsumption;
-  }
-  return issueQuantity(document, month, warehouseId, materialId);
+  // Временно: и сырьё, и вспомогательные — план и факт из строки плана, без нормы на выпуск.
+  return mode === 'plan' ? planConsumption : factConsumption;
 }
 
 /**
@@ -786,17 +741,14 @@ export function bookOpeningQuantity(
   const opening = openingQuantityFor(document, previous, warehouseId, materialId);
   const receipt = receiptFact(document, previous, warehouseId, materialId, vatPercent).quantity;
   const planLine = planLineFor(document, previous, warehouseId, materialId);
-  const pieces = materialConsumptionIsNormed(document, warehouseId, materialId)
-    ? productionPieces(document, previous, 'fact')
-    : new Map<string, number>();
   const consumption = consumptionQuantity(
     document,
-    previous,
     warehouseId,
     materialId,
     'fact',
-    pieces,
+    new Map<string, number>(),
     planLine?.consumptionQuantity ?? 0,
+    planLine?.factConsumptionQuantity ?? 0,
   );
   return closingMaterialQuantity(opening, receipt, consumption);
 }
@@ -825,21 +777,21 @@ function movementRow(
   const planReceiptQuantity = planLine?.receiptQuantity ?? 0;
   const planConsumptionQuantity = consumptionQuantity(
     document,
-    month,
     warehouseId,
     material.id,
     'plan',
     planPieces,
     planLine?.consumptionQuantity ?? 0,
+    planLine?.factConsumptionQuantity ?? 0,
   );
   const factConsumptionQuantity = consumptionQuantity(
     document,
-    month,
     warehouseId,
     material.id,
     'fact',
     factPieces,
     planLine?.consumptionQuantity ?? 0,
+    planLine?.factConsumptionQuantity ?? 0,
   );
   const closingQuantity = closingMaterialQuantity(openingQuantity, receipt.quantity, factConsumptionQuantity);
   const valuation =
@@ -901,14 +853,6 @@ function referencedMaterialIds(
       continue;
     }
     for (const line of receipt.lines) {
-      ids.add(line.materialId);
-    }
-  }
-  for (const issue of materialIssuesList(document)) {
-    if (issue.warehouseId !== warehouseId || !issue.occurredOn.startsWith(`${month}-`)) {
-      continue;
-    }
-    for (const line of issue.lines) {
       ids.add(line.materialId);
     }
   }
@@ -1072,13 +1016,6 @@ export interface MaterialReceiptDraft {
   lines: MaterialReceiptLine[];
 }
 
-export interface MaterialIssueDraft {
-  id: string;
-  warehouseId: string;
-  occurredOn: string;
-  lines: MaterialIssueLine[];
-}
-
 export function materialReceiptRejection(
   document: PrototypeDocument,
   draft: MaterialReceiptDraft,
@@ -1173,95 +1110,4 @@ export function materialReceiptsInMonth(
       (left, right) =>
         right.occurredOn.localeCompare(left.occurredOn) || left.supplierName.localeCompare(right.supplierName, 'ru'),
     );
-}
-
-export function materialIssueRejection(
-  document: PrototypeDocument,
-  draft: MaterialIssueDraft,
-  today: Date,
-): MaterialDocumentRejection | null {
-  if (!isMaterialWarehouseId(draft.warehouseId)) {
-    return 'warehouse';
-  }
-  if (!occurredOnOpen(draft.occurredOn, today)) {
-    return 'date';
-  }
-  const lines = draft.lines.filter((line) => line.quantity !== 0);
-  if (lines.length === 0) {
-    return 'empty';
-  }
-  for (const line of lines) {
-    const material = materialById(document, line.materialId);
-    if (!material) {
-      return 'material';
-    }
-    if (material.deletedAt !== null) {
-      return 'locked';
-    }
-    if (materialConsumptionIsNormed(document, draft.warehouseId, line.materialId)) {
-      return 'normed';
-    }
-    if (!isQuantityThousandths(line.quantity, false) || line.quantity <= 0) {
-      return 'quantity';
-    }
-  }
-  return null;
-}
-
-export function saveMaterialIssue(
-  document: PrototypeDocument,
-  draft: MaterialIssueDraft,
-  today: Date,
-): PrototypeDocument {
-  if (materialIssueRejection(document, draft, today) || !isMaterialWarehouseId(draft.warehouseId)) {
-    return document;
-  }
-
-  const next: MaterialIssue = {
-    id: draft.id,
-    warehouseId: draft.warehouseId,
-    occurredOn: draft.occurredOn,
-    lines: draft.lines
-      .filter((line) => line.quantity > 0)
-      .map((line) => ({
-        id: line.id,
-        materialId: line.materialId,
-        quantity: line.quantity,
-      })),
-  };
-  const issues = materialIssuesList(document);
-  const exists = issues.some((item) => item.id === next.id);
-  return {
-    ...document,
-    materialIssues: exists ? issues.map((item) => (item.id === next.id ? next : item)) : [...issues, next],
-  };
-}
-
-export function deleteMaterialIssue(document: PrototypeDocument, id: string): PrototypeDocument {
-  const issues = materialIssuesList(document);
-  if (!issues.some((item) => item.id === id)) {
-    return document;
-  }
-  return {
-    ...document,
-    materialIssues: issues.filter((item) => item.id !== id),
-  };
-}
-
-export function materialIssueById(document: PrototypeDocument, id: string): MaterialIssue | null {
-  return materialIssuesList(document).find((item) => item.id === id) ?? null;
-}
-
-export function materialIssuesInMonth(
-  document: PrototypeDocument,
-  month: string,
-  warehouseId?: MaterialWarehouseId,
-): MaterialIssue[] {
-  return materialIssuesList(document)
-    .filter((item) => item.occurredOn.startsWith(`${month}-`) && (!warehouseId || item.warehouseId === warehouseId))
-    .sort((left, right) => right.occurredOn.localeCompare(left.occurredOn));
-}
-
-export function materialIssueIgnoredByNorm(document: PrototypeDocument, issue: MaterialIssue): boolean {
-  return issue.lines.some((line) => materialConsumptionIsNormed(document, issue.warehouseId, line.materialId));
 }

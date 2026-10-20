@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 
 export default async function MaterialReceiptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <MaterialDocumentScreen kind="receipt" documentId={decodeURIComponent(id)} />;
+  return <MaterialDocumentScreen documentId={decodeURIComponent(id)} />;
 }

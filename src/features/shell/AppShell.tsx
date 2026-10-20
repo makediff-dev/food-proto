@@ -7,8 +7,6 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { useDocumentStore } from '@/data/DocumentProvider';
 import {
   MATERIALS_INVENTORY_TITLE,
-  MATERIALS_ISSUES_TITLE,
-  MATERIALS_NORMS_TITLE,
   MATERIALS_PLAN_TITLE,
   MATERIALS_RECEIPTS_TITLE,
   MATERIALS_SECTION_TITLE,
@@ -70,8 +68,6 @@ const MATERIALS_NAV: readonly NavItem[] = [
   { href: '/materials/plan', label: MATERIALS_PLAN_TITLE, navKind: 'input' },
   { href: '/materials/inventory', label: MATERIALS_INVENTORY_TITLE, navKind: 'input' },
   { href: '/materials/receipts', label: MATERIALS_RECEIPTS_TITLE, navKind: 'input' },
-  { href: '/materials/issues', label: MATERIALS_ISSUES_TITLE, navKind: 'input' },
-  { href: '/materials/norms', label: MATERIALS_NORMS_TITLE, navKind: 'input' },
 ];
 
 const QUESTIONS_HREF = '/questions';

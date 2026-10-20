@@ -3,12 +3,14 @@
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 
-import { materialMovementMonth } from '@/domain/materials';
+import type { MaterialWarehouseId } from '@/domain/document';
+import { type MaterialPlanField, materialMovementMonth } from '@/domain/materials';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { MaterialMonthBar, resolveMaterialMonth } from '@/features/materials/MaterialMonthBar';
 import { MaterialsSummaryTable } from '@/features/materials/MaterialsSummaryTable';
 import { MaterialsWarehouseBlocks } from '@/features/materials/MaterialsWarehouseBlocks';
 import { MATERIALS_SUMMARY_TITLE, materialsSummaryHref } from '@/features/materials/paths';
+import { MATERIAL_PLAN_ERROR } from '@/features/materials/text';
 import { useMaterials } from '@/features/materials/use-materials';
 import { PageFrame } from '@/features/shell/PageFrame';
 
@@ -23,11 +25,21 @@ export function MaterialsSummaryScreen({ month }: { month: string }) {
     [materials.document, selectedMonth],
   );
 
+  function factConsumptionError(
+    warehouseId: MaterialWarehouseId,
+    materialId: string,
+    field: MaterialPlanField,
+    value: number,
+  ): string | null {
+    const rejection = materials.setPlan(selectedMonth, warehouseId, materialId, field, value, today);
+    return rejection ? MATERIAL_PLAN_ERROR[rejection] : null;
+  }
+
   return (
     <PageFrame
       title={MATERIALS_SUMMARY_TITLE}
       full
-      lede="Остаток на начало плюс приход от поставщика минус расход в производстве — остаток на конец. Склад 1 и склад 2 здесь не складываются."
+      lede="Остаток на начало плюс приход от поставщика минус расход в производстве — остаток на конец. Факт расхода без нормы вводят в колонке «Факт». Склад 1 и склад 2 здесь не складываются."
       intro={
         <MaterialMonthBar
           month={selectedMonth}
@@ -43,6 +55,10 @@ export function MaterialsSummaryScreen({ month }: { month: string }) {
             caption={`${group.name}, ${warehouse.name}`}
             rows={warehouse.rows}
             totals={warehouse.totals}
+            editable={materials.hydrated}
+            onFactConsumption={(materialId, field, value) =>
+              factConsumptionError(warehouse.warehouseId, materialId, field, value)
+            }
           />
         )}
       />

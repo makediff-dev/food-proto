@@ -446,7 +446,6 @@ export const mockDocument: PrototypeDocument = {
   materialMonthPlans: mockMaterials.materialMonthPlans,
   materialOpenings: mockMaterials.materialOpenings,
   materialReceipts: mockMaterials.materialReceipts,
-  materialIssues: mockMaterials.materialIssues,
 };
 
 export function createMockDocument(): PrototypeDocument {
@@ -492,10 +491,6 @@ export function createMockDocument(): PrototypeDocument {
       lines: item.lines.map((line) => ({ ...line })),
     })),
     materialReceipts: mockDocument.materialReceipts.map((item) => ({
-      ...item,
-      lines: item.lines.map((line) => ({ ...line })),
-    })),
-    materialIssues: mockDocument.materialIssues.map((item) => ({
       ...item,
       lines: item.lines.map((line) => ({ ...line })),
     })),

@@ -1,6 +1,5 @@
 import type {
   Material,
-  MaterialIssue,
   MaterialMonthPlan,
   MaterialMonthPlanLine,
   MaterialNorm,
@@ -13,7 +12,7 @@ import type {
  * Мок сырья двух складов.
  * Сентябрь и октябрь: на складе 1 недостача говядины 30 кг, на складе 2 излишек 30 кг.
  * Сумма отклонений складов нулевая — объединённый остаток недостачу прячет.
- * Ножи и лезвия склада 1 расходуются по норме на выпуск. Склад 2 ножи списывает журналом.
+ * Ножи и лезвия склада 1 расходуются по норме на выпуск. Склад 2 ножи вводят фактом в отчёте.
  * Оболочка в книге стоит на `DSM Meat`, в прототипе — в упаковке и вспомогательных, как на задаче.
  */
 
@@ -104,7 +103,12 @@ const priceWithVat: Record<string, number> = {
 type LineOverride = Partial<
   Pick<
     MaterialMonthPlanLine,
-    'receiptQuantity' | 'consumptionQuantity' | 'minQuantity' | 'maxQuantity' | 'priceWithVat'
+    | 'receiptQuantity'
+    | 'consumptionQuantity'
+    | 'factConsumptionQuantity'
+    | 'minQuantity'
+    | 'maxQuantity'
+    | 'priceWithVat'
   >
 >;
 
@@ -134,6 +138,7 @@ function materialPlan(
         materialId: material.id,
         receiptQuantity: override.receiptQuantity ?? 0,
         consumptionQuantity: override.consumptionQuantity ?? 0,
+        factConsumptionQuantity: override.factConsumptionQuantity ?? 0,
         priceWithVat: override.priceWithVat ?? priceWithVat[material.id] ?? 0,
         minQuantity: override.minQuantity ?? 0,
         maxQuantity: override.maxQuantity ?? defaultMax(material),
@@ -160,27 +165,55 @@ function materialOpening(
 }
 
 const septemberPlanW1 = materialPlan('2026-09', 'warehouse-1', {
-  'material-beef': { receiptQuantity: q(50), consumptionQuantity: q(40), minQuantity: q(80), maxQuantity: q(200) },
-  'material-chicken': { receiptQuantity: q(25), consumptionQuantity: q(15) },
-  'material-flour': { receiptQuantity: q(60), consumptionQuantity: q(40) },
-  'material-yeast': { receiptQuantity: q(10), consumptionQuantity: q(4) },
-  'material-ketchup': { receiptQuantity: q(15), consumptionQuantity: q(10) },
-  'material-oil': { receiptQuantity: q(12), consumptionQuantity: q(5) },
-  'material-salt': { receiptQuantity: q(6), consumptionQuantity: q(2) },
-  'material-label': { receiptQuantity: q(2_500), consumptionQuantity: q(1_000) },
-  'material-tray': { receiptQuantity: q(1_000), consumptionQuantity: q(400) },
-  'material-knives': { minQuantity: q(20), maxQuantity: q(40) },
-  'material-blades': { minQuantity: q(15), maxQuantity: q(40) },
+  'material-beef': {
+    receiptQuantity: q(50),
+    consumptionQuantity: q(40),
+    factConsumptionQuantity: q(35),
+    minQuantity: q(80),
+    maxQuantity: q(200),
+  },
+  'material-chicken': { receiptQuantity: q(25), consumptionQuantity: q(15), factConsumptionQuantity: q(12) },
+  'material-nitrite': { factConsumptionQuantity: q(1) },
+  'material-flour': { receiptQuantity: q(60), consumptionQuantity: q(40), factConsumptionQuantity: q(30) },
+  'material-yeast': { receiptQuantity: q(10), consumptionQuantity: q(4), factConsumptionQuantity: q(3) },
+  'material-ketchup': { receiptQuantity: q(15), consumptionQuantity: q(10), factConsumptionQuantity: q(8) },
+  'material-oil': { receiptQuantity: q(12), consumptionQuantity: q(5), factConsumptionQuantity: q(4) },
+  'material-salt': { receiptQuantity: q(6), consumptionQuantity: q(2), factConsumptionQuantity: q(1) },
+  'material-label': { receiptQuantity: q(2_500), consumptionQuantity: q(1_000), factConsumptionQuantity: q(1_000) },
+  'material-tray': { receiptQuantity: q(1_000), consumptionQuantity: q(400), factConsumptionQuantity: q(400) },
+  'material-knives': {
+    consumptionQuantity: q(18),
+    factConsumptionQuantity: q(20.5),
+    minQuantity: q(20),
+    maxQuantity: q(40),
+  },
+  'material-blades': {
+    consumptionQuantity: q(20),
+    factConsumptionQuantity: q(20),
+    minQuantity: q(15),
+    maxQuantity: q(40),
+  },
 });
 
 const septemberPlanW2 = materialPlan('2026-09', 'warehouse-2', {
-  'material-beef': { receiptQuantity: q(30), consumptionQuantity: q(20), minQuantity: q(40), maxQuantity: q(150) },
-  'material-flour': { receiptQuantity: q(20), consumptionQuantity: q(12) },
-  'material-yeast': { receiptQuantity: q(5), consumptionQuantity: q(2) },
-  'material-ketchup': { receiptQuantity: q(8), consumptionQuantity: q(3) },
-  'material-salt': { receiptQuantity: q(3), consumptionQuantity: q(1) },
-  'material-label': { receiptQuantity: q(600), consumptionQuantity: q(200) },
-  'material-knives': { consumptionQuantity: q(2), minQuantity: q(2), maxQuantity: q(15) },
+  'material-beef': {
+    receiptQuantity: q(30),
+    consumptionQuantity: q(20),
+    factConsumptionQuantity: q(15),
+    minQuantity: q(40),
+    maxQuantity: q(150),
+  },
+  'material-flour': { receiptQuantity: q(20), consumptionQuantity: q(12), factConsumptionQuantity: q(10) },
+  'material-yeast': { receiptQuantity: q(5), consumptionQuantity: q(2), factConsumptionQuantity: q(1) },
+  'material-ketchup': { receiptQuantity: q(8), consumptionQuantity: q(3), factConsumptionQuantity: q(2) },
+  'material-salt': { receiptQuantity: q(3), consumptionQuantity: q(1), factConsumptionQuantity: q(1) },
+  'material-label': { receiptQuantity: q(600), consumptionQuantity: q(200), factConsumptionQuantity: q(200) },
+  'material-knives': {
+    consumptionQuantity: q(2),
+    factConsumptionQuantity: q(1),
+    minQuantity: q(2),
+    maxQuantity: q(15),
+  },
 });
 
 const materialNorms: MaterialNorm[] = [
@@ -231,36 +264,33 @@ function receipt(
   };
 }
 
-function issue(
-  id: string,
-  warehouseId: MaterialWarehouseId,
-  occurredOn: string,
-  lines: Array<{ materialId: string; quantity: number }>,
-): MaterialIssue {
-  return {
-    id,
-    warehouseId,
-    occurredOn,
-    lines: lines.map((line) => ({
-      id: `${id}:${line.materialId}`,
-      materialId: line.materialId,
-      quantity: line.quantity,
-    })),
-  };
-}
-
 export const mockMaterials = {
   materials,
   materialNorms,
   materialMonthPlans: [
-    materialPlan('2026-08', 'warehouse-1'),
-    materialPlan('2026-08', 'warehouse-2'),
+    materialPlan('2026-08', 'warehouse-1', {
+      'material-beef': { factConsumptionQuantity: q(50) },
+    }),
+    materialPlan('2026-08', 'warehouse-2', {
+      'material-beef': { factConsumptionQuantity: q(10) },
+      'material-knives': { factConsumptionQuantity: q(3) },
+    }),
     septemberPlanW1,
     septemberPlanW2,
     materialPlan('2026-10', 'warehouse-1', {
       'material-beef': { minQuantity: q(80), maxQuantity: q(200) },
-      'material-knives': { minQuantity: q(20), maxQuantity: q(40) },
-      'material-blades': { minQuantity: q(15), maxQuantity: q(40) },
+      'material-knives': {
+        consumptionQuantity: q(18),
+        factConsumptionQuantity: q(9.35),
+        minQuantity: q(20),
+        maxQuantity: q(40),
+      },
+      'material-blades': {
+        consumptionQuantity: q(20),
+        factConsumptionQuantity: q(6.7),
+        minQuantity: q(15),
+        maxQuantity: q(40),
+      },
     }),
     materialPlan('2026-10', 'warehouse-2', {
       'material-beef': { minQuantity: q(40), maxQuantity: q(150) },
@@ -344,36 +374,6 @@ export const mockMaterials = {
     ]),
     receipt('material-receipt:2026-09-18:w2', 'warehouse-2', 'МЛ Принт Реклама', '2026-09-18', [
       { materialId: 'material-label', quantity: q(500) },
-    ]),
-  ],
-  materialIssues: [
-    issue('material-issue:2026-08-20:w1', 'warehouse-1', '2026-08-20', [
-      { materialId: 'material-beef', quantity: q(50) },
-    ]),
-    issue('material-issue:2026-08-20:w2', 'warehouse-2', '2026-08-20', [
-      { materialId: 'material-beef', quantity: q(10) },
-      { materialId: 'material-knives', quantity: q(3) },
-    ]),
-    issue('material-issue:2026-09-18:w1', 'warehouse-1', '2026-09-18', [
-      { materialId: 'material-beef', quantity: q(35) },
-      { materialId: 'material-chicken', quantity: q(12) },
-      { materialId: 'material-nitrite', quantity: q(1) },
-      { materialId: 'material-flour', quantity: q(30) },
-      { materialId: 'material-yeast', quantity: q(3) },
-      { materialId: 'material-ketchup', quantity: q(8) },
-      { materialId: 'material-oil', quantity: q(4) },
-      { materialId: 'material-salt', quantity: q(1) },
-      { materialId: 'material-label', quantity: q(1_000) },
-      { materialId: 'material-tray', quantity: q(400) },
-    ]),
-    issue('material-issue:2026-09-18:w2', 'warehouse-2', '2026-09-18', [
-      { materialId: 'material-beef', quantity: q(15) },
-      { materialId: 'material-flour', quantity: q(10) },
-      { materialId: 'material-yeast', quantity: q(1) },
-      { materialId: 'material-ketchup', quantity: q(2) },
-      { materialId: 'material-salt', quantity: q(1) },
-      { materialId: 'material-label', quantity: q(200) },
-      { materialId: 'material-knives', quantity: q(1) },
     ]),
   ],
 };

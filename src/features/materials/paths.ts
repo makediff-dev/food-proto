@@ -8,13 +8,9 @@ export const MATERIALS_INVENTORY_TITLE = 'Инвентаризация';
 
 export const MATERIALS_RECEIPTS_TITLE = 'Приход от поставщика';
 
-export const MATERIALS_ISSUES_TITLE = 'Расход в производстве';
-
 export const MATERIALS_NORMS_TITLE = 'Нормы расхода';
 
 export const NEW_MATERIAL_RECEIPT_TITLE = 'Новый приход';
-
-export const NEW_MATERIAL_ISSUE_TITLE = 'Новый расход';
 
 export function parseMaterialMonthQuery(params: { month?: string }): { month: string } {
   return { month: params.month ?? '' };
@@ -43,24 +39,12 @@ export function materialsReceiptsHref(options: { month: string; currentMonth: st
   return monthHref('/materials/receipts', options.month, options.currentMonth);
 }
 
-export function materialsIssuesHref(options: { month: string; currentMonth: string }): string {
-  return monthHref('/materials/issues', options.month, options.currentMonth);
-}
-
 export function materialReceiptHref(id: string): string {
   return `/materials/receipts/${id}`;
 }
 
 export function materialReceiptNewHref(): string {
   return '/materials/receipts/new';
-}
-
-export function materialIssueHref(id: string): string {
-  return `/materials/issues/${id}`;
-}
-
-export function materialIssueNewHref(): string {
-  return '/materials/issues/new';
 }
 
 export function materialsNormsHref(): string {

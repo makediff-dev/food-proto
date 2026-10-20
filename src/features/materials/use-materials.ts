@@ -5,15 +5,12 @@ import type { Material, MaterialGroupId, MaterialUnit, MaterialWarehouseId } fro
 import {
   addMaterial,
   deleteMaterial,
-  deleteMaterialIssue,
   deleteMaterialReceipt,
-  type MaterialIssueDraft,
   type MaterialPlanField,
   type MaterialReceiptDraft,
   materialNameRejection,
   renameMaterial,
   restoreMaterial,
-  saveMaterialIssue,
   saveMaterialReceipt,
   setMaterialNorm,
   setMaterialNormRejection,
@@ -109,12 +106,6 @@ export function useMaterials() {
     },
     removeReceipt(id: string) {
       store.updateDocument((current) => deleteMaterialReceipt(current, id));
-    },
-    saveIssue(draft: MaterialIssueDraft, today: Date) {
-      store.updateDocument((current) => saveMaterialIssue(current, draft, today));
-    },
-    removeIssue(id: string) {
-      store.updateDocument((current) => deleteMaterialIssue(current, id));
     },
   };
 }

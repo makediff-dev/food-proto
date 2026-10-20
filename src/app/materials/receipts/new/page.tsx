@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function NewMaterialReceiptPage() {
-  return <MaterialDocumentScreen kind="receipt" documentId={null} />;
+  return <MaterialDocumentScreen documentId={null} />;
 }
