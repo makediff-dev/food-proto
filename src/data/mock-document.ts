@@ -144,19 +144,12 @@ const normPieces = {
   'product-burger': { minPieces: 0, maxPieces: 80 },
 } as const satisfies Record<CatalogProductId, { minPieces: number; maxPieces: number }>;
 
-/** Инвентаризация на начало месяца, шт. */
-const openingInventorySeptember = {
-  'product-caesar': 40,
-  'product-olivier': 50,
-  'product-goulash': 70,
-  'product-burger': 120,
-} as const satisfies Record<CatalogProductId, number>;
-
 /**
- * На начало октября. Расчётный перенос с сентября: 140, 200, 220 и 20 шт.
- * Ниже переноса — недостача в «Откл.»; у Оливье излишек +10.
+ * Инвентаризация на конец сентября 2026, шт.
+ * Расчётный остаток на конец сентября: 140, 200, 220 и 20 шт.
+ * Ниже расчёта — недостача в «Откл.»; у Оливье излишек +10.
  */
-const openingInventoryOctober = {
+const closingInventorySeptember = {
   'product-caesar': 125,
   'product-olivier': 210,
   'product-goulash': 195,
@@ -424,10 +417,7 @@ function productionFromOrders(drafts: readonly OrderDraft[]): ProductionEntry[] 
 const salesPlans: SalesPlan[] = [salesPlan('2026-09'), salesPlan('2026-10')];
 const productionPlans: ProductionPlan[] = [productionPlan('2026-09'), productionPlan('2026-10')];
 const finishedGoodsNorms: FinishedGoodsNorm[] = [finishedGoodsNorm('2026-09'), finishedGoodsNorm('2026-10')];
-const finishedGoodsOpenings: FinishedGoodsOpening[] = [
-  finishedGoodsOpening('2026-09', openingInventorySeptember),
-  finishedGoodsOpening('2026-10', openingInventoryOctober),
-];
+const finishedGoodsOpenings: FinishedGoodsOpening[] = [finishedGoodsOpening('2026-09', closingInventorySeptember)];
 
 export const mockDocument: PrototypeDocument = {
   schemaVersion: SCHEMA_VERSION,

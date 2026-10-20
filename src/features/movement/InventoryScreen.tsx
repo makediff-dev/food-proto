@@ -66,7 +66,7 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
 
   function openingError(rejection: ReturnType<typeof movementPlan.setOpening>): string | null {
     if (rejection === 'pieces') {
-      return 'Укажите остаток на начало (факт) целым числом штук.';
+      return 'Укажите остаток на конец (факт) целым числом штук.';
     }
     if (rejection === 'month') {
       return 'Этот месяц выбрать нельзя.';

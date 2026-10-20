@@ -12,6 +12,7 @@ import {
 } from 'react';
 
 import { clearDocument, readDocument, writeDocument } from '@/data/document-storage';
+import { migrateDocument } from '@/data/migrate-document';
 import { createMockDocument } from '@/data/mock-document';
 import type { PrototypeDocument } from '@/domain/document';
 
@@ -48,16 +49,24 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
 
   useLayoutEffect(() => {
     const stored = readDocument();
-    if (stored) {
-      documentRef.current = stored;
+    const document = stored ? migrateDocument(stored) : null;
+    if (document) {
+      documentRef.current = document;
+      if (stored && document !== stored) {
+        try {
+          writeDocument(document);
+        } catch {
+          // Ошибку покажет следующая правка через updateDocument.
+        }
+      }
     }
 
     // localStorage нельзя читать на сервере. Подмена до paint, иначе мок вспыхивает поверх сохранённых чисел.
     // Подмена до paint: иначе мок вспыхивает поверх сохранённых чисел.
     setState((current) => ({
       ...current,
-      document: stored ?? current.document,
-      source: stored ? 'local' : 'mock',
+      document: document ?? current.document,
+      source: document ? 'local' : 'mock',
       hydrated: true,
     }));
   }, []);
