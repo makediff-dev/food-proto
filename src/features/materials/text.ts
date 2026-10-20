@@ -63,7 +63,7 @@ export const MATERIAL_OPENING_ERROR: Record<MaterialOpeningRejection, string> = 
   closed: 'Этот месяц сейчас нельзя править.',
   material: 'Позиция не найдена.',
   locked: 'Удалённую позицию не меняют.',
-  quantity: 'Укажите остаток на начало.',
+  quantity: 'Укажите остаток на конец.',
   warehouse: 'Выберите склад.',
 };
 

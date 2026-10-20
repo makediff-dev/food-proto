@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 43 as const;
+export const SCHEMA_VERSION = 44 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -284,17 +284,18 @@ export interface MaterialMonthPlan {
   lines: MaterialMonthPlanLine[];
 }
 
-/** Строка инвентаризации склада на начало месяца. */
+/** Строка инвентаризации склада на конец месяца. */
 export interface MaterialOpeningLine {
   id: string;
   materialId: string;
-  /** Факт остатка на начало, тысячные доли. Может быть отрицательным. */
+  /** Факт остатка на конец, тысячные доли. Может быть отрицательным. */
   quantity: number;
 }
 
 /**
- * Инвентаризация склада на начало месяца.
+ * Инвентаризация склада на конец месяца.
  * На один месяц и один склад — одна запись. Мягкого удаления нет.
+ * Остаток на начало следующего месяца — этот факт.
  */
 export interface MaterialOpening {
   id: string;
@@ -358,7 +359,7 @@ export interface PrototypeDocument {
   materialNorms: MaterialNorm[];
   /** План прихода, расхода, цены и норматива по складу и месяцу. */
   materialMonthPlans: MaterialMonthPlan[];
-  /** Инвентаризация остатка на начало по складу и месяцу. */
+  /** Инвентаризация остатка на конец по складу и месяцу. */
   materialOpenings: MaterialOpening[];
   /** Приходы от поставщика. Удаление вырезает запись. */
   materialReceipts: MaterialReceipt[];

@@ -21,9 +21,7 @@ import {
 } from '@/features/table';
 
 type ColumnKey =
-  | 'bookOpening'
   | 'opening'
-  | 'openingDeviation'
   | 'planReceipt'
   | 'factReceipt'
   | 'receiptDeviation'
@@ -34,7 +32,9 @@ type ColumnKey =
   | 'consumptionDeviation'
   | 'consumptionPrice'
   | 'consumptionCost'
+  | 'bookClosing'
   | 'closing'
+  | 'closingDeviation'
   | 'min'
   | 'max'
   | 'normDeviation'
@@ -43,11 +43,7 @@ type ColumnKey =
 const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }[] }[] = [
   {
     label: 'Остаток на начало',
-    columns: [
-      { key: 'bookOpening', label: 'План' },
-      { key: 'opening', label: 'Факт' },
-      { key: 'openingDeviation', label: 'Откл.' },
-    ],
+    columns: [{ key: 'opening', label: 'Остаток' }],
   },
   {
     label: 'Приход от поставщика',
@@ -72,10 +68,12 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
   {
     label: 'Остаток на конец',
     columns: [
-      { key: 'closing', label: 'Остаток' },
+      { key: 'bookClosing', label: 'План' },
+      { key: 'closing', label: 'Факт' },
+      { key: 'closingDeviation', label: 'Откл.' },
       { key: 'min', label: 'Мин.' },
       { key: 'max', label: 'Макс.' },
-      { key: 'normDeviation', label: 'Откл.' },
+      { key: 'normDeviation', label: 'Откл. от норм.' },
       { key: 'closingCost', label: 'Стоимость' },
     ],
   },
@@ -196,12 +194,8 @@ function RowCell({
 }) {
   const unit = row.unit;
   switch (column) {
-    case 'bookOpening':
-      return <QuantityRead value={row.bookOpeningQuantity} unit={unit} />;
     case 'opening':
       return <QuantityRead value={row.openingQuantity} unit={unit} />;
-    case 'openingDeviation':
-      return <QuantityRead value={row.openingDeviationQuantity} unit={unit} signed />;
     case 'planReceipt':
       return <QuantityRead value={row.planReceiptQuantity} unit={unit} />;
     case 'factReceipt':
@@ -250,8 +244,12 @@ function RowCell({
           exVat={row.factConsumptionCost.exVat}
         />
       );
+    case 'bookClosing':
+      return <QuantityRead value={row.bookClosingQuantity} unit={unit} signed />;
     case 'closing':
       return <QuantityRead value={row.closingQuantity} unit={unit} signed />;
+    case 'closingDeviation':
+      return <QuantityRead value={row.closingDeviationQuantity} unit={unit} signed />;
     case 'min':
       return <QuantityRead value={row.minQuantity} unit={unit} />;
     case 'max':
@@ -281,12 +279,8 @@ function RowCell({
 function TotalsCell({ column, totals }: { column: ColumnKey; totals: MaterialMovementTotals }) {
   const unit = totals.unit ?? undefined;
   switch (column) {
-    case 'bookOpening':
-      return <QuantityRead value={totals.bookOpeningQuantity} unit={unit} />;
     case 'opening':
       return <QuantityRead value={totals.openingQuantity} unit={unit} />;
-    case 'openingDeviation':
-      return <QuantityRead value={totals.openingDeviationQuantity} unit={unit} signed />;
     case 'planReceipt':
       return <QuantityRead value={totals.planReceiptQuantity} unit={unit} />;
     case 'factReceipt':
@@ -318,8 +312,12 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: MaterialMov
           exVat={totals.factConsumptionCost.exVat}
         />
       );
+    case 'bookClosing':
+      return <QuantityRead value={totals.bookClosingQuantity} unit={unit} signed />;
     case 'closing':
       return <QuantityRead value={totals.closingQuantity} unit={unit} signed />;
+    case 'closingDeviation':
+      return <QuantityRead value={totals.closingDeviationQuantity} unit={unit} signed />;
     case 'min':
       return <QuantityRead value={totals.minQuantity} unit={unit} />;
     case 'max':

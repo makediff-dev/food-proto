@@ -25,7 +25,7 @@ export function MaterialsInventoryScreen({ month }: { month: string }) {
     [materials.document, selectedMonth],
   );
 
-  function openingError(warehouseId: MaterialWarehouseId, materialId: string, quantity: number): string | null {
+  function closingError(warehouseId: MaterialWarehouseId, materialId: string, quantity: number): string | null {
     const rejection = materials.setOpening(selectedMonth, warehouseId, materialId, quantity, today);
     return rejection ? MATERIAL_OPENING_ERROR[rejection] : null;
   }
@@ -34,7 +34,7 @@ export function MaterialsInventoryScreen({ month }: { month: string }) {
     <PageFrame
       title={MATERIALS_INVENTORY_TITLE}
       full
-      lede="Факт остатка на начало каждого склада. Отклонение показывает недостачу или излишек именно этого склада и производства."
+      lede="Факт остатка на конец каждого склада. Отклонение показывает недостачу или излишек именно этого склада и производства. Этот факт — остаток на начало следующего месяца."
       intro={
         <MaterialMonthBar
           month={selectedMonth}
@@ -51,7 +51,7 @@ export function MaterialsInventoryScreen({ month }: { month: string }) {
             rows={warehouse.rows}
             totals={warehouse.totals}
             editable={materials.hydrated}
-            onOpening={(materialId, quantity) => openingError(warehouse.warehouseId, materialId, quantity)}
+            onClosing={(materialId, quantity) => closingError(warehouse.warehouseId, materialId, quantity)}
           />
         )}
       />

@@ -10,9 +10,9 @@ import type {
 
 /**
  * Мок сырья двух складов.
- * Сентябрь и октябрь: на складе 1 недостача говядины 30 кг, на складе 2 излишек 30 кг.
- * Сумма отклонений складов нулевая — объединённый остаток недостачу прячет.
- * Ножи и лезвия склада 1 расходуются по норме на выпуск. Склад 2 ножи вводят фактом в отчёте.
+ * Инвентаризация — на конец месяца. Сентябрь и октябрь: на складе 1 недостача говядины 30 кг
+ * на конец, на складе 2 излишек 30 кг. Сумма отклонений складов нулевая — объединённый остаток недостачу прячет.
+ * Ножи и лезвия склада 1 и склада 2: факт расхода вводят в отчёте.
  * Оболочка в книге стоит на `DSM Meat`, в прототипе — в упаковке и вспомогательных, как на задаче.
  */
 
@@ -298,14 +298,37 @@ export const mockMaterials = {
     }),
   ],
   materialOpenings: [
+    materialOpening('2026-08', 'warehouse-1', {
+      'material-beef': q(150),
+      'material-knives': q(30),
+      'material-blades': q(25),
+    }),
+    materialOpening('2026-08', 'warehouse-2', {
+      'material-beef': q(70),
+      'material-knives': q(5),
+    }),
     materialOpening('2026-09', 'warehouse-1', {
-      'material-beef': q(120),
-      'material-knives': q(25),
-      'material-blades': q(22),
+      'material-beef': q(125),
+      'material-chicken': q(8),
+      'material-nitrite': q(2),
+      'material-flour': q(20),
+      'material-yeast': q(5),
+      'material-ketchup': q(4),
+      'material-oil': q(6),
+      'material-salt': q(4),
+      'material-label': q(1_000),
+      'material-tray': q(400),
+      'material-knives': q(14.5),
+      'material-blades': q(10),
     }),
     materialOpening('2026-09', 'warehouse-2', {
-      'material-beef': q(100),
-      'material-knives': q(5),
+      'material-beef': q(105),
+      'material-flour': q(5),
+      'material-yeast': q(3),
+      'material-ketchup': q(4),
+      'material-salt': q(1),
+      'material-label': q(300),
+      'material-knives': q(4),
     }),
     materialOpening('2026-10', 'warehouse-1', {
       'material-beef': q(95),
@@ -318,8 +341,8 @@ export const mockMaterials = {
       'material-salt': q(4),
       'material-label': q(1_000),
       'material-tray': q(400),
-      'material-knives': q(14.5),
-      'material-blades': q(10),
+      'material-knives': q(5.15),
+      'material-blades': q(3.3),
     }),
     materialOpening('2026-10', 'warehouse-2', {
       'material-beef': q(135),

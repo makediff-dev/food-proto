@@ -19,9 +19,9 @@ import {
 } from '@/features/table';
 
 const COLUMNS = [
-  { key: 'bookOpening', label: 'План' },
-  { key: 'opening', label: 'Факт' },
-  { key: 'openingDeviation', label: 'Откл.' },
+  { key: 'bookClosing', label: 'План' },
+  { key: 'closing', label: 'Факт' },
+  { key: 'closingDeviation', label: 'Откл.' },
 ] as const;
 
 export function MaterialsInventoryTable({
@@ -29,13 +29,13 @@ export function MaterialsInventoryTable({
   rows,
   totals,
   editable,
-  onOpening,
+  onClosing,
 }: {
   caption: string;
   rows: MaterialMovementRow[];
   totals: MaterialMovementTotals;
   editable: boolean;
-  onOpening: (materialId: string, quantity: number) => string | null;
+  onClosing: (materialId: string, quantity: number) => string | null;
 }) {
   return (
     <div className={tableFrameClassName}>
@@ -45,7 +45,7 @@ export function MaterialsInventoryTable({
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             <th colSpan={COLUMNS.length} scope="colgroup" className={blockHeadingClassName}>
-              {keepWithNext('Остаток на начало')}
+              {keepWithNext('Остаток на конец')}
             </th>
           </tr>
           <tr>
@@ -70,7 +70,7 @@ export function MaterialsInventoryTable({
                 {row.deleted ? <span className="text-muted"> (архив)</span> : null}
               </th>
               <td className={`border-b border-b-line px-2 py-2 text-right ${columnDividerClassName}`}>
-                <QuantityRead value={row.bookOpeningQuantity} unit={row.unit} />
+                <QuantityRead value={row.bookClosingQuantity} unit={row.unit} signed />
               </td>
               <td
                 className={`border-b border-b-line px-2 py-2 text-right ${columnDividerClassName} ${
@@ -79,18 +79,18 @@ export function MaterialsInventoryTable({
               >
                 {editable && !row.deleted ? (
                   <QuantityCell
-                    label={`Остаток на начало ${row.name}`}
-                    value={row.openingQuantity}
+                    label={`Остаток на конец ${row.name}`}
+                    value={row.closingQuantity}
                     unit={row.unit}
                     allowNegative
-                    onChange={(value) => onOpening(row.materialId, value)}
+                    onChange={(value) => onClosing(row.materialId, value)}
                   />
                 ) : (
-                  <QuantityRead value={row.openingQuantity} unit={row.unit} />
+                  <QuantityRead value={row.closingQuantity} unit={row.unit} signed />
                 )}
               </td>
               <td className={`border-b border-b-line px-2 py-2 text-right ${columnDividerClassName}`}>
-                <QuantityRead value={row.openingDeviationQuantity} unit={row.unit} signed />
+                <QuantityRead value={row.closingDeviationQuantity} unit={row.unit} signed />
               </td>
             </tr>
           ))}
@@ -99,13 +99,13 @@ export function MaterialsInventoryTable({
               {totals.unit ? 'Всего' : 'Сумма'}
             </th>
             <td className={`${totalValueClassName} ${columnDividerClassName}`}>
-              <QuantityRead value={totals.bookOpeningQuantity} unit={totals.unit ?? undefined} />
+              <QuantityRead value={totals.bookClosingQuantity} unit={totals.unit ?? undefined} signed />
             </td>
             <td className={`${totalValueClassName} ${columnDividerClassName}`}>
-              <QuantityRead value={totals.openingQuantity} unit={totals.unit ?? undefined} />
+              <QuantityRead value={totals.closingQuantity} unit={totals.unit ?? undefined} signed />
             </td>
             <td className={`${totalValueClassName} ${columnDividerClassName}`}>
-              <QuantityRead value={totals.openingDeviationQuantity} unit={totals.unit ?? undefined} signed />
+              <QuantityRead value={totals.closingDeviationQuantity} unit={totals.unit ?? undefined} signed />
             </td>
           </tr>
         </tbody>
