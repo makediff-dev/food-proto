@@ -75,9 +75,7 @@ function initialDrafts(
   const drafts: Record<string, ProductionEntryLineDraft> = {};
 
   for (const product of products) {
-    drafts[product.id] =
-      byProduct.get(product.id) ??
-      emptyProductionEntryLineDraft();
+    drafts[product.id] = byProduct.get(product.id) ?? emptyProductionEntryLineDraft();
   }
 
   return drafts;

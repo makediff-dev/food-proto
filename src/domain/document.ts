@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 42 as const;
+export const SCHEMA_VERSION = 44 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -150,7 +150,7 @@ export interface MonthOperatingExpense {
   factExVat: number;
 }
 
-/** Строка инвентаризации на начало месяца на производстве. */
+/** Строка инвентаризации на конец месяца на производстве. */
 export interface FinishedGoodsOpeningLine {
   id: string;
   /** Конечный товар. Ссылка живёт и после удаления товара. */
@@ -194,6 +194,139 @@ export interface FinishedGoodsNorm {
   lines: FinishedGoodsNormLine[];
 }
 
+/** Четыре группы листов `DSM`. Это не справочник категорий. */
+export const MATERIAL_GROUPS = [
+  { id: 'meat', name: 'Мясное сырьё и мясные специи' },
+  { id: 'bakery', name: 'Пекарня' },
+  { id: 'sauces', name: 'Соусы, овощи и крупы' },
+  { id: 'packaging', name: 'Упаковка и вспомогательные материалы' },
+] as const;
+
+export type MaterialGroupId = (typeof MATERIAL_GROUPS)[number]['id'];
+
+/**
+ * Два склада сырья и материалов двух производств.
+ * Склад готовой продукции общий и здесь не делится.
+ */
+export const MATERIAL_WAREHOUSES = [
+  { id: 'warehouse-1', name: 'Склад 1', productionName: 'Производство 1' },
+  { id: 'warehouse-2', name: 'Склад 2', productionName: 'Производство 2' },
+] as const;
+
+export type MaterialWarehouseId = (typeof MATERIAL_WAREHOUSES)[number]['id'];
+
+/** Единицы листов `DSM`: кг, шт, л, пм. */
+export const MATERIAL_UNITS = ['кг', 'шт', 'л', 'пм'] as const;
+
+export type MaterialUnit = (typeof MATERIAL_UNITS)[number];
+
+/**
+ * Группа, в которой расход можно нормировать на штуку продукции.
+ * Ножи, лезвия, оболочка и остальная упаковка.
+ */
+export const NORMED_MATERIAL_GROUP_ID: MaterialGroupId = 'packaging';
+
+/** Позиция сырья или материалов. Группу после создания не меняют. */
+export interface Material extends DeletableRecord {
+  groupId: MaterialGroupId;
+  unit: MaterialUnit;
+  /** НДС закупки, целые проценты. `DSM Meat!F`. */
+  vatPercent: number;
+}
+
+/**
+ * Норма расхода склада на одну штуку продукции.
+ * Тысячные доли единицы материала на 1 шт. Нет записи — позиция не нормирована.
+ * Имени нет: норма — связь склада, позиции и товара.
+ */
+export interface MaterialNorm {
+  id: string;
+  materialId: string;
+  warehouseId: MaterialWarehouseId;
+  productId: string;
+  /** Тысячные доли единицы на 1 шт продукции. */
+  quantityPerPiece: number;
+  deletedAt: string | null;
+}
+
+/** Строка месячного плана склада: приход, расход, цена и норматив. */
+export interface MaterialMonthPlanLine {
+  id: string;
+  materialId: string;
+  /** План прихода, тысячные доли единицы. */
+  receiptQuantity: number;
+  /**
+   * План расхода, тысячные доли единицы.
+   * Если на этом складе есть норма, ввод не используется: расход считается из выпуска.
+   */
+  consumptionQuantity: number;
+  /**
+   * Факт расхода за месяц, тысячные доли.
+   * Пока нормы нет, вводят в отчёте; при норме считается из выпуска.
+   */
+  factConsumptionQuantity: number;
+  /** Плановая цена закупки с НДС, копейки за 1 единицу. `DSM Meat!H`. */
+  priceWithVat: number;
+  /** Нормативный минимум, тысячные доли. `DSM Meat!DU`. */
+  minQuantity: number;
+  /** Нормативный максимум, тысячные доли. `DSM Meat!DV`. */
+  maxQuantity: number;
+}
+
+/**
+ * План склада на месяц. На один месяц и один склад — одна запись.
+ * Мягкого удаления нет.
+ */
+export interface MaterialMonthPlan {
+  id: string;
+  month: string;
+  warehouseId: MaterialWarehouseId;
+  lines: MaterialMonthPlanLine[];
+}
+
+/** Строка инвентаризации склада на конец месяца. */
+export interface MaterialOpeningLine {
+  id: string;
+  materialId: string;
+  /** Факт остатка на конец, тысячные доли. Может быть отрицательным. */
+  quantity: number;
+}
+
+/**
+ * Инвентаризация склада на конец месяца.
+ * На один месяц и один склад — одна запись. Мягкого удаления нет.
+ * Остаток на начало следующего месяца — этот факт.
+ */
+export interface MaterialOpening {
+  id: string;
+  month: string;
+  warehouseId: MaterialWarehouseId;
+  lines: MaterialOpeningLine[];
+}
+
+/** Строка прихода от поставщика. Сумма строки в документ не пишется. */
+export interface MaterialReceiptLine {
+  id: string;
+  materialId: string;
+  /** Количество, тысячные доли единицы. Больше нуля. */
+  quantity: number;
+  /** Цена с НДС, копейки за 1 единицу. */
+  priceWithVat: number;
+}
+
+/**
+ * Приход от поставщика на один склад.
+ * Удаление вырезает запись. Поля `deletedAt` нет.
+ */
+export interface MaterialReceipt {
+  id: string;
+  warehouseId: MaterialWarehouseId;
+  supplierName: string;
+  /** Календарный день, `ГГГГ-ММ-ДД`. */
+  occurredOn: string;
+  lines: MaterialReceiptLine[];
+}
+
 /**
  * Единственный сохраняемый документ прототипа.
  * Предметные разделы добавляются полями сюда. Производные суммы сюда не писать.
@@ -217,6 +350,19 @@ export interface PrototypeDocument {
    * Старый документ без поля читается как пустой массив.
    */
   finishedGoodsNorms: FinishedGoodsNorm[];
+  /**
+   * Сырьё и материалы четырёх групп `DSM`.
+   * Старый документ без поля читается как пустой массив.
+   */
+  materials: Material[];
+  /** Нормы расхода упаковки и вспомогательных материалов на штуку продукции. */
+  materialNorms: MaterialNorm[];
+  /** План прихода, расхода, цены и норматива по складу и месяцу. */
+  materialMonthPlans: MaterialMonthPlan[];
+  /** Инвентаризация остатка на конец по складу и месяцу. */
+  materialOpenings: MaterialOpening[];
+  /** Приходы от поставщика. Удаление вырезает запись. */
+  materialReceipts: MaterialReceipt[];
 }
 
 /** Метка мягкого удаления, которую пишет экран через `Date.toISOString()`. */
