@@ -28,11 +28,11 @@ export type FinishedGoodsOpeningRejection = 'month' | 'closed' | 'product' | 'lo
 
 /** Показатели строки / итога движения готовой продукции. */
 export interface FinishedGoodsTotals {
-  /** Расчётный перенос с конца прошлого месяца. */
+  /** @deprecated На своде не показывают; оставлено для совместимости типов. */
   bookOpeningPieces: number;
-  /** Инвентаризация (рабочее число для стоимости, конца и дней). Нет записи — 0. */
+  /** Остаток на начало месяца: факт инвентаризации конца прошлого месяца. */
   openingPieces: number;
-  /** Инвентаризация − расчётный перенос. */
+  /** @deprecated Сравнение план–факт на начало месяца снято. */
   openingDeviationPieces: number;
   /**
    * Цена блока «Остаток на начало».
@@ -41,11 +41,19 @@ export interface FinishedGoodsTotals {
   openingPriceWithVat: number | null;
   openingPriceExVat: number | null;
   openingPriceExVatTenThousandths: number | null;
-  /** Отклонение штук × цена остатка на начало. */
+  /** @deprecated Стоимость отклонения на начало месяца снята. */
   openingDeviationValueWithVat: number | null;
   openingDeviationValueExVat: number | null;
   openingValueWithVat: number | null;
   openingValueExVat: number | null;
+  /** Расчётный остаток на конец месяца: начало + выпуск − продажи. */
+  bookClosingPieces: number;
+  /** Факт инвентаризации на конец месяца. Нет строки — 0. */
+  inventoryClosingPieces: number;
+  /** Факт − расчётный остаток на конец (только если введена инвентаризация). */
+  closingInventoryDeviationPieces: number;
+  closingInventoryDeviationValueWithVat: number | null;
+  closingInventoryDeviationValueExVat: number | null;
   salesPieces: number;
   salesRevenueWithVat: number | null;
   salesRevenueExVat: number | null;
@@ -119,8 +127,8 @@ export function workingFinishedGoodsOpening(document: PrototypeDocument, month: 
   return finishedGoodsOpeningsList(document).find((item) => item.month === month) ?? null;
 }
 
-/** Инвентаризация на начало месяца. Нет записи — 0. */
-export function openingPiecesForProduct(document: PrototypeDocument, month: string, productId: string): number {
+/** Факт инвентаризации на конец месяца. Нет строки — 0. */
+export function storedInventoryPiecesForProduct(document: PrototypeDocument, month: string, productId: string): number {
   const opening = workingFinishedGoodsOpening(document, month);
   if (!opening) {
     return 0;
@@ -128,11 +136,16 @@ export function openingPiecesForProduct(document: PrototypeDocument, month: stri
   return opening.lines.find((line) => line.productId === productId)?.pieces ?? 0;
 }
 
+export function hasStoredInventoryLine(document: PrototypeDocument, month: string, productId: string): boolean {
+  const opening = workingFinishedGoodsOpening(document, month);
+  return opening?.lines.some((line) => line.productId === productId) ?? false;
+}
+
 /**
- * Расчётный остаток на начало: конец прошлого месяца
- * (инвентаризация прошлого месяца + выпуск − продажи). Нет прошлого месяца — 0.
+ * Остаток на начало месяца: факт инвентаризации на конец прошлого месяца.
+ * Нет прошлого месяца — 0.
  */
-export function bookOpeningPiecesForProduct(document: PrototypeDocument, month: string, productId: string): number {
+export function openingPiecesForProduct(document: PrototypeDocument, month: string, productId: string): number {
   if (!isMonthKey(month) || month <= '2000-01') {
     return 0;
   }
@@ -140,13 +153,27 @@ export function bookOpeningPiecesForProduct(document: PrototypeDocument, month: 
   if (!isMonthKey(previousMonth) || previousMonth < '2000-01') {
     return 0;
   }
-  const inventory = openingPiecesForProduct(document, previousMonth, productId);
-  const fact = monthSalesAndProduction(document, previousMonth, productId);
-  return closingStockPieces(inventory, fact.productionPieces, fact.salesPieces);
+  return storedInventoryPiecesForProduct(document, previousMonth, productId);
+}
+
+/** Расчётный остаток на конец месяца: начало + выпуск − продажи. */
+export function bookClosingPiecesForProduct(document: PrototypeDocument, month: string, productId: string): number {
+  const opening = openingPiecesForProduct(document, month, productId);
+  const fact = monthSalesAndProduction(document, month, productId);
+  return closingStockPieces(opening, fact.productionPieces, fact.salesPieces);
+}
+
+/** @deprecated Используйте bookClosingPiecesForProduct. */
+export function bookOpeningPiecesForProduct(document: PrototypeDocument, month: string, productId: string): number {
+  return bookClosingPiecesForProduct(document, month, productId);
+}
+
+export function closingInventoryDeviationPieces(inventoryPieces: number, bookClosingPieces: number): number {
+  return inventoryPieces - bookClosingPieces;
 }
 
 export function openingDeviationPieces(inventoryPieces: number, bookOpeningPieces: number): number {
-  return inventoryPieces - bookOpeningPieces;
+  return closingInventoryDeviationPieces(inventoryPieces, bookOpeningPieces);
 }
 
 function openingReferencedProductIds(document: PrototypeDocument, month: string): Set<string> {
@@ -161,17 +188,13 @@ function openingReferencedProductIds(document: PrototypeDocument, month: string)
   return ids;
 }
 
-function bookOpeningReferencedProductIds(document: PrototypeDocument, month: string): Set<string> {
+function bookClosingReferencedProductIds(document: PrototypeDocument, month: string): Set<string> {
   const ids = new Set<string>();
-  if (!isMonthKey(month) || month <= '2000-01') {
-    return ids;
-  }
-  const previousMonth = shiftMonth(month, -1);
-  if (!isMonthKey(previousMonth) || previousMonth < '2000-01') {
+  if (!isMonthKey(month)) {
     return ids;
   }
   for (const product of document.products) {
-    if (bookOpeningPiecesForProduct(document, month, product.id) !== 0) {
+    if (bookClosingPiecesForProduct(document, month, product.id) !== 0) {
       ids.add(product.id);
     }
   }
@@ -188,7 +211,7 @@ export function finishedGoodsGridProducts(document: PrototypeDocument, month: st
   for (const id of openingReferencedProductIds(document, month)) {
     referenced.add(id);
   }
-  for (const id of bookOpeningReferencedProductIds(document, month)) {
+  for (const id of bookClosingReferencedProductIds(document, month)) {
     referenced.add(id);
   }
   const prefix = `${month}-`;
@@ -259,6 +282,11 @@ function emptyTotals(): FinishedGoodsTotals {
     openingDeviationValueExVat: null,
     openingValueWithVat: null,
     openingValueExVat: null,
+    bookClosingPieces: 0,
+    inventoryClosingPieces: 0,
+    closingInventoryDeviationPieces: 0,
+    closingInventoryDeviationValueWithVat: null,
+    closingInventoryDeviationValueExVat: null,
     salesPieces: 0,
     salesRevenueWithVat: 0,
     salesRevenueExVat: 0,
@@ -340,7 +368,6 @@ function productionAmounts(spend: ProductionProductSpend | undefined): {
 
 function rowFromParts(
   product: Product,
-  bookOpeningPieces: number,
   openingPieces: number,
   openingPriceWithVat: number | null,
   openingPriceExVat: number | null,
@@ -352,18 +379,34 @@ function rowFromParts(
   productionCostWithVat: number | null,
   productionCostExVat: number | null,
   norm: Pick<FinishedGoodsTotals, 'minPieces' | 'maxPieces'>,
-  closingPieces = closingStockPieces(openingPieces, productionPieces, salesPieces),
+  options: {
+    bookClosingPieces?: number;
+    inventoryClosingPieces?: number;
+    hasInventoryLine?: boolean;
+    closingPieces?: number;
+  } = {},
 ): FinishedGoodsRow {
   const vat = product.vatPercent;
   const openingPriceExTen = openingPriceWithVat === null ? null : priceExVatTenThousandths(openingPriceWithVat, vat);
-  const openingDeviation = openingDeviationPieces(openingPieces, bookOpeningPieces);
   const openingValueWith = openingPriceWithVat === null ? null : openingPieces * openingPriceWithVat;
   const openingValueEx = openingPriceExVat === null ? null : openingPieces * openingPriceExVat;
-  const openingDeviationValueWith = openingPriceWithVat === null ? null : openingDeviation * openingPriceWithVat;
-  const openingDeviationValueEx = openingPriceExVat === null ? null : openingDeviation * openingPriceExVat;
 
   const factPriceWith = averageAmount(salesRevenueWithVat, salesPieces);
   const factPriceEx = averageAmount(salesRevenueExVat, salesPieces);
+
+  const bookClosingPieces =
+    options.bookClosingPieces ?? closingStockPieces(openingPieces, productionPieces, salesPieces);
+  const inventoryClosingPieces = options.inventoryClosingPieces ?? 0;
+  const hasInventoryLine = options.hasInventoryLine ?? false;
+  const closingInventoryDeviation = hasInventoryLine
+    ? closingInventoryDeviationPieces(inventoryClosingPieces, bookClosingPieces)
+    : 0;
+  const closingInventoryDeviationValueWith =
+    hasInventoryLine && factPriceWith !== null ? closingInventoryDeviation * factPriceWith : null;
+  const closingInventoryDeviationValueEx =
+    hasInventoryLine && factPriceEx !== null ? closingInventoryDeviation * factPriceEx : null;
+
+  const closingPieces = options.closingPieces ?? (hasInventoryLine ? inventoryClosingPieces : bookClosingPieces);
 
   const normMetrics = closingNormMetrics(closingPieces, norm.minPieces, norm.maxPieces);
   const productionPriceWith = priceAverage(productionCostWithVat, productionPieces);
@@ -376,16 +419,21 @@ function rowFromParts(
     name: product.name,
     deleted: product.deletedAt !== null,
     vatPercent: vat,
-    bookOpeningPieces,
+    bookOpeningPieces: 0,
     openingPieces,
-    openingDeviationPieces: openingDeviation,
+    openingDeviationPieces: 0,
     openingPriceWithVat,
     openingPriceExVat,
     openingPriceExVatTenThousandths: openingPriceExTen,
-    openingDeviationValueWithVat: openingDeviationValueWith,
-    openingDeviationValueExVat: openingDeviationValueEx,
+    openingDeviationValueWithVat: null,
+    openingDeviationValueExVat: null,
     openingValueWithVat: openingValueWith,
     openingValueExVat: openingValueEx,
+    bookClosingPieces,
+    inventoryClosingPieces,
+    closingInventoryDeviationPieces: closingInventoryDeviation,
+    closingInventoryDeviationValueWithVat: closingInventoryDeviationValueWith,
+    closingInventoryDeviationValueExVat: closingInventoryDeviationValueEx,
     salesPieces,
     salesRevenueWithVat: revenueComplete ? salesRevenueWithVat : null,
     salesRevenueExVat: revenueComplete ? salesRevenueExVat : null,
@@ -427,6 +475,13 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
   let productionValueWith = 0;
   let productionValueEx = 0;
   let productionValueComplete = true;
+  let bookClosingPieces = 0;
+  let inventoryClosingPieces = 0;
+  let closingInventoryDeviationPiecesSum = 0;
+  let closingInventoryDeviationValueWith = 0;
+  let closingInventoryDeviationValueEx = 0;
+  let closingInventoryDeviationValueWithComplete = true;
+  let closingInventoryDeviationValueExComplete = true;
   let closingPieces = 0;
   let closingValueWith = 0;
   let closingValueEx = 0;
@@ -489,6 +544,24 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
       productionValueEx += row.productionValueExVat;
     }
 
+    bookClosingPieces += row.bookClosingPieces;
+    inventoryClosingPieces += row.inventoryClosingPieces;
+    closingInventoryDeviationPiecesSum += row.closingInventoryDeviationPieces;
+    if (row.closingInventoryDeviationValueWithVat === null) {
+      if (row.closingInventoryDeviationPieces !== 0) {
+        closingInventoryDeviationValueWithComplete = false;
+      }
+    } else {
+      closingInventoryDeviationValueWith += row.closingInventoryDeviationValueWithVat;
+    }
+    if (row.closingInventoryDeviationValueExVat === null) {
+      if (row.closingInventoryDeviationPieces !== 0) {
+        closingInventoryDeviationValueExComplete = false;
+      }
+    } else {
+      closingInventoryDeviationValueEx += row.closingInventoryDeviationValueExVat;
+    }
+
     closingPieces += row.closingPieces;
     minPieces += row.minPieces;
     maxPieces += row.maxPieces;
@@ -528,6 +601,15 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
     openingDeviationValueExVat: openingDeviationValueExComplete ? openingDeviationValueEx : null,
     openingValueWithVat,
     openingValueExVat,
+    bookClosingPieces,
+    inventoryClosingPieces,
+    closingInventoryDeviationPieces: closingInventoryDeviationPiecesSum,
+    closingInventoryDeviationValueWithVat: closingInventoryDeviationValueWithComplete
+      ? closingInventoryDeviationValueWith
+      : null,
+    closingInventoryDeviationValueExVat: closingInventoryDeviationValueExComplete
+      ? closingInventoryDeviationValueEx
+      : null,
     salesPieces,
     salesRevenueWithVat,
     salesRevenueExVat,
@@ -747,10 +829,11 @@ export function finishedGoodsRangeView(document: PrototypeDocument, from: string
     const produced = productionAmounts(producedByProduct.get(product.id));
     const lastOpeningPieces = openingPiecesForProduct(document, lastMonth, product.id);
     const lastProduced = productionAmounts(lastProducedByProduct.get(product.id));
-    const closingPieces = closingStockPieces(lastOpeningPieces, lastProduced.pieces, sales.lastSalesPieces);
+    const bookClosingPieces = closingStockPieces(lastOpeningPieces, lastProduced.pieces, sales.lastSalesPieces);
+    const inventoryClosingPieces = storedInventoryPiecesForProduct(document, lastMonth, product.id);
+    const hasInventoryLine = hasStoredInventoryLine(document, lastMonth, product.id);
     return rowFromParts(
       product,
-      bookOpeningPiecesForProduct(document, firstMonth, product.id),
       openingPiecesForProduct(document, firstMonth, product.id),
       openingPrice.withVat,
       openingPrice.exVat,
@@ -762,7 +845,11 @@ export function finishedGoodsRangeView(document: PrototypeDocument, from: string
       produced.costWithVat,
       produced.costExVat,
       normForProduct(document, lastMonth, product.id),
-      closingPieces,
+      {
+        bookClosingPieces,
+        inventoryClosingPieces,
+        hasInventoryLine,
+      },
     );
   });
   const groups = buildGroups(document, products, rows);
@@ -789,9 +876,9 @@ export function finishedGoodsMonthView(document: PrototypeDocument, month: strin
 }
 
 /**
- * Дни месяца сверху вниз. Начало 1-го = инвентаризация месяца;
- * следующий день — с конца предыдущего.
- * Конец последнего дня = конец на своде месяца.
+ * Дни месяца сверху вниз. Начало 1-го = перенос с конца прошлого месяца;
+ * следующий день — с конца предыдущего дня.
+ * Конец последнего дня = расчётный конец на своде месяца (до инвентаризации).
  */
 export function finishedGoodsMonthDays(document: PrototypeDocument, month: string): FinishedGoodsDayView[] {
   const products = finishedGoodsGridProducts(document, month);
@@ -807,9 +894,9 @@ export function finishedGoodsMonthDays(document: PrototypeDocument, month: strin
         const openingPrice = planOpeningPrice(document, month, product);
         const sold = saleDayProduct(document, occurredOn, product.id);
         const produced = productionAmounts(producedByProduct.get(product.id));
+        const closingPieces = closingStockPieces(openingPieces, produced.pieces, sold.pieces);
         const row = rowFromParts(
           product,
-          openingPieces,
           openingPieces,
           openingPrice.withVat,
           openingPrice.exVat,
@@ -821,6 +908,7 @@ export function finishedGoodsMonthDays(document: PrototypeDocument, month: strin
           produced.costWithVat,
           produced.costExVat,
           normForProduct(document, month, product.id),
+          { closingPieces },
         );
         openingByProduct.set(product.id, row.closingPieces);
         return [product.id, row] as const;
@@ -874,8 +962,8 @@ export function setFinishedGoodsOpeningRejection(
 }
 
 /**
- * Пишет инвентаризацию на начало месяца. Нет записи месяца — создаёт.
- * Первая правка материализует месяц; перенос и отклонение не пишет.
+ * Пишет инвентаризацию на конец месяца. Нет записи месяца — создаёт.
+ * Первая правка материализует месяц; расчётный остаток и отклонение не пишет.
  */
 export function setFinishedGoodsOpening(
   document: PrototypeDocument,

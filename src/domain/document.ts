@@ -160,9 +160,9 @@ export interface FinishedGoodsOpeningLine {
 }
 
 /**
- * Инвентаризация на начало месяца на производстве.
+ * Инвентаризация на конец месяца на производстве.
  * На один месяц — одна запись. Мягкого удаления нет: это не план.
- * Расчётный перенос, отклонение, стоимости и конец периода в документ не пишутся.
+ * Расчётный остаток, отклонение и стоимости в документ не пишутся.
  */
 export interface FinishedGoodsOpening {
   id: string;
@@ -208,7 +208,7 @@ export interface PrototypeDocument {
   productionEntries: ProductionEntry[];
   operatingExpenses: MonthOperatingExpense[];
   /**
-   * Инвентаризация на начало месяца на производстве.
+   * Инвентаризация на конец месяца на производстве (факт, шт).
    * Старый документ без поля читается как пустой массив.
    */
   finishedGoodsOpenings: FinishedGoodsOpening[];
