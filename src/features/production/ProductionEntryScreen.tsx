@@ -17,7 +17,7 @@ import {
   maxProductionEntryOccurredOn,
   productionEntryByIdOrNull,
 } from '@/domain/production-journal';
-import { monthKeyFromDate, planPriceWithVatForProduct } from '@/domain/sales-plan';
+import { monthKeyFromDate } from '@/domain/sales-plan';
 import { planningHref } from '@/features/planning/paths';
 import {
   emptyProductionEntryLineDraft,
@@ -77,7 +77,7 @@ function initialDrafts(
   for (const product of products) {
     drafts[product.id] =
       byProduct.get(product.id) ??
-      emptyProductionEntryLineDraft(planPriceWithVatForProduct(document, product.id, month));
+      emptyProductionEntryLineDraft();
   }
 
   return drafts;
@@ -160,14 +160,12 @@ function EntryForm({
         if (next[product.id]) {
           continue;
         }
-        next[product.id] = emptyProductionEntryLineDraft(
-          planPriceWithVatForProduct(journal.document, product.id, month),
-        );
+        next[product.id] = emptyProductionEntryLineDraft();
         changed = true;
       }
       return changed ? next : current;
     });
-  }, [journal.document, month, products]);
+  }, [products]);
 
   function setLine(productId: string, field: ProductionEntryLineField, raw: string) {
     setDrafts((current) => {
