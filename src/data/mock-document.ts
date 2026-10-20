@@ -67,19 +67,7 @@ const burger: Product = {
   deletedAt: null,
 };
 
-/**
- * Фактическая себестоимость 1 шт с НДС в моке записей выпуска, копейки.
- * Совпадает с себестоимостью товара, чтобы факт мока не обнулялся.
- * Новая запись в форме начинается с 0.
- */
-const productionUnitCostWithVat = {
-  'product-caesar': caesar.unitCostWithVat,
-  'product-olivier': olivier.unitCostWithVat,
-  'product-goulash': goulash.unitCostWithVat,
-  'product-burger': burger.unitCostWithVat,
-} as const;
-
-/** Плановая цена с НДС, копейки. Салаты — мок, гуляш `Svod!F31`, гамбургер `Svod!F63`. */
+/** Плановая цена с НДС и расчётная цена выпуска, копейки. Салаты — мок, гуляш `Svod!F31`, гамбургер `Svod!F63`. */
 const priceWithVat = {
   'product-caesar': 9_640,
   'product-olivier': 6_850,
@@ -145,19 +133,12 @@ const normPieces = {
   'product-burger': { minPieces: 0, maxPieces: 80 },
 } as const satisfies Record<CatalogProductId, { minPieces: number; maxPieces: number }>;
 
-/** Инвентаризация на начало месяца, шт. */
-const openingInventorySeptember = {
-  'product-caesar': 40,
-  'product-olivier': 50,
-  'product-goulash': 70,
-  'product-burger': 120,
-} as const satisfies Record<CatalogProductId, number>;
-
 /**
- * На начало октября. Расчётный перенос с сентября: 140, 200, 220 и 20 шт.
- * Ниже переноса — недостача в «Откл.»; у Оливье излишек +10.
+ * Инвентаризация на конец сентября 2026, шт.
+ * Расчётный остаток на конец сентября: 140, 200, 220 и 20 шт.
+ * Ниже расчёта — недостача в «Откл.»; у Оливье излишек +10.
  */
-const openingInventoryOctober = {
+const closingInventorySeptember = {
   'product-caesar': 125,
   'product-olivier': 210,
   'product-goulash': 195,
@@ -417,7 +398,7 @@ function productionFromOrders(drafts: readonly OrderDraft[]): ProductionEntry[] 
       id: `${order.id.replace('sale-', 'output-')}-${line.productId.slice('product-'.length)}`,
       productId: line.productId,
       pieces: line.pieces,
-      unitCostWithVat: productionUnitCostWithVat[line.productId],
+      priceWithVat: priceWithVat[line.productId],
     })),
   }));
 }
@@ -425,10 +406,7 @@ function productionFromOrders(drafts: readonly OrderDraft[]): ProductionEntry[] 
 const salesPlans: SalesPlan[] = [salesPlan('2026-09'), salesPlan('2026-10')];
 const productionPlans: ProductionPlan[] = [productionPlan('2026-09'), productionPlan('2026-10')];
 const finishedGoodsNorms: FinishedGoodsNorm[] = [finishedGoodsNorm('2026-09'), finishedGoodsNorm('2026-10')];
-const finishedGoodsOpenings: FinishedGoodsOpening[] = [
-  finishedGoodsOpening('2026-09', openingInventorySeptember),
-  finishedGoodsOpening('2026-10', openingInventoryOctober),
-];
+const finishedGoodsOpenings: FinishedGoodsOpening[] = [finishedGoodsOpening('2026-09', closingInventorySeptember)];
 
 export const mockDocument: PrototypeDocument = {
   schemaVersion: SCHEMA_VERSION,

@@ -3,7 +3,7 @@ export const SALES_SECTION_TITLE = 'Продажи';
 
 export const SALES_FACT_TITLE = 'Отчет подневный';
 
-export const SALES_JOURNAL_TITLE = 'Ввод продаж';
+export const SALES_JOURNAL_TITLE = 'Ввод факта';
 
 export const NEW_SALE_TITLE = 'Новая продажа';
 

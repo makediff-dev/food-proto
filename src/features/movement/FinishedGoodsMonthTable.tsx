@@ -30,11 +30,8 @@ import {
 } from '@/features/table';
 
 type ColumnKey =
-  | 'bookOpening'
-  | 'inventory'
-  | 'openingDeviation'
+  | 'openingFact'
   | 'openingPrice'
-  | 'openingDeviationValue'
   | 'openingValue'
   | 'salesPieces'
   | 'salesPrice'
@@ -42,7 +39,10 @@ type ColumnKey =
   | 'productionPieces'
   | 'productionPrice'
   | 'productionValue'
-  | 'closing'
+  | 'bookClosing'
+  | 'inventoryClosing'
+  | 'closingInventoryDeviation'
+  | 'closingInventoryDeviationValue'
   | 'min'
   | 'max'
   | 'normDeviation'
@@ -53,11 +53,8 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
   {
     label: 'Остаток на начало',
     columns: [
-      { key: 'bookOpening', label: 'План' },
-      { key: 'inventory', label: 'Факт' },
-      { key: 'openingDeviation', label: 'Откл.' },
+      { key: 'openingFact', label: 'Факт' },
       { key: 'openingPrice', label: 'Цена' },
-      { key: 'openingDeviationValue', label: 'Стоимость отклонения' },
       { key: 'openingValue', label: 'Стоимость' },
     ],
   },
@@ -73,14 +70,17 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
     label: 'Производство',
     columns: [
       { key: 'productionPieces', label: 'Объём' },
-      { key: 'productionPrice', label: 'Себест.' },
+      { key: 'productionPrice', label: 'Цена' },
       { key: 'productionValue', label: 'Стоимость' },
     ],
   },
   {
     label: 'Остаток на конец',
     columns: [
-      { key: 'closing', label: 'Остаток' },
+      { key: 'bookClosing', label: 'План' },
+      { key: 'inventoryClosing', label: 'Факт' },
+      { key: 'closingInventoryDeviation', label: 'Откл.' },
+      { key: 'closingInventoryDeviationValue', label: 'Стоимость отклонения' },
       { key: 'min', label: 'Мин.' },
       { key: 'max', label: 'Макс.' },
       { key: 'normDeviation', label: 'Откл.' },
@@ -236,16 +236,10 @@ function ProductRow({ row, index }: { row: FinishedGoodsRow; index: number }) {
 
 function RowCell({ column, row }: { column: ColumnKey; row: FinishedGoodsRow }) {
   switch (column) {
-    case 'bookOpening':
-      return <TableNumber value={row.bookOpeningPieces}>{formatPieces(row.bookOpeningPieces)} шт</TableNumber>;
-    case 'inventory':
+    case 'openingFact':
       return <TableNumber value={row.openingPieces}>{formatPieces(row.openingPieces)} шт</TableNumber>;
-    case 'openingDeviation':
-      return <IntegerCell value={row.openingDeviationPieces} unit="шт" signed />;
     case 'openingPrice':
       return <VatMoneyCell withVat={row.openingPriceWithVat} exVat={row.openingPriceExVat} />;
-    case 'openingDeviationValue':
-      return <VatMoneyCell withVat={row.openingDeviationValueWithVat} exVat={row.openingDeviationValueExVat} signed />;
     case 'openingValue':
       return <VatMoneyCell withVat={row.openingValueWithVat} exVat={row.openingValueExVat} />;
     case 'salesPieces':
@@ -266,8 +260,22 @@ function RowCell({ column, row }: { column: ColumnKey; row: FinishedGoodsRow }) 
       return <VatMoneyCell withVat={row.productionPriceWithVat} exVat={row.productionPriceExVat} />;
     case 'productionValue':
       return <VatMoneyCell withVat={row.productionValueWithVat} exVat={row.productionValueExVat} />;
-    case 'closing':
-      return <IntegerCell value={row.closingPieces} unit="шт" signed />;
+    case 'bookClosing':
+      return <TableNumber value={row.bookClosingPieces}>{formatPieces(row.bookClosingPieces)} шт</TableNumber>;
+    case 'inventoryClosing':
+      return (
+        <TableNumber value={row.inventoryClosingPieces}>{formatPieces(row.inventoryClosingPieces)} шт</TableNumber>
+      );
+    case 'closingInventoryDeviation':
+      return <IntegerCell value={row.closingInventoryDeviationPieces} unit="шт" signed />;
+    case 'closingInventoryDeviationValue':
+      return (
+        <VatMoneyCell
+          withVat={row.closingInventoryDeviationValueWithVat}
+          exVat={row.closingInventoryDeviationValueExVat}
+          signed
+        />
+      );
     case 'min':
       return <TableNumber value={row.minPieces}>{formatPieces(row.minPieces)} шт</TableNumber>;
     case 'max':
@@ -283,18 +291,10 @@ function RowCell({ column, row }: { column: ColumnKey; row: FinishedGoodsRow }) 
 
 function TotalsCell({ column, totals }: { column: ColumnKey; totals: FinishedGoodsTotals }) {
   switch (column) {
-    case 'bookOpening':
-      return <TableNumber value={totals.bookOpeningPieces}>{formatPieces(totals.bookOpeningPieces)} шт</TableNumber>;
-    case 'inventory':
+    case 'openingFact':
       return <TableNumber value={totals.openingPieces}>{formatPieces(totals.openingPieces)} шт</TableNumber>;
-    case 'openingDeviation':
-      return <IntegerCell value={totals.openingDeviationPieces} unit="шт" signed />;
     case 'openingPrice':
       return <VatMoneyCell withVat={totals.openingPriceWithVat} exVat={totals.openingPriceExVat} />;
-    case 'openingDeviationValue':
-      return (
-        <VatMoneyCell withVat={totals.openingDeviationValueWithVat} exVat={totals.openingDeviationValueExVat} signed />
-      );
     case 'openingValue':
       return <VatMoneyCell withVat={totals.openingValueWithVat} exVat={totals.openingValueExVat} />;
     case 'salesPieces':
@@ -315,8 +315,24 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: FinishedGoo
       return <VatMoneyCell withVat={totals.productionPriceWithVat} exVat={totals.productionPriceExVat} />;
     case 'productionValue':
       return <VatMoneyCell withVat={totals.productionValueWithVat} exVat={totals.productionValueExVat} />;
-    case 'closing':
-      return <IntegerCell value={totals.closingPieces} unit="шт" signed />;
+    case 'bookClosing':
+      return <TableNumber value={totals.bookClosingPieces}>{formatPieces(totals.bookClosingPieces)} шт</TableNumber>;
+    case 'inventoryClosing':
+      return (
+        <TableNumber value={totals.inventoryClosingPieces}>
+          {formatPieces(totals.inventoryClosingPieces)} шт
+        </TableNumber>
+      );
+    case 'closingInventoryDeviation':
+      return <IntegerCell value={totals.closingInventoryDeviationPieces} unit="шт" signed />;
+    case 'closingInventoryDeviationValue':
+      return (
+        <VatMoneyCell
+          withVat={totals.closingInventoryDeviationValueWithVat}
+          exVat={totals.closingInventoryDeviationValueExVat}
+          signed
+        />
+      );
     case 'min':
       return <TableNumber value={totals.minPieces}>{formatPieces(totals.minPieces)} шт</TableNumber>;
     case 'max':

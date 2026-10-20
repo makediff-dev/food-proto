@@ -10,7 +10,8 @@ import { defaultSalesFactDay, monthDates, salesFactGridProducts, salesFactMonth 
 import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { lastHorizonMonth } from '@/domain/summary';
 import { monthFieldClassName } from '@/features/sales/fields';
-import { SALES_FACT_TITLE, type SalesFactView, salesFactHref } from '@/features/sales-fact/paths';
+import { formatMonth } from '@/features/sales/text';
+import { type SalesFactView, salesFactHref } from '@/features/sales-fact/paths';
 import { SalesFactTable } from '@/features/sales-fact/SalesFactTable';
 import { formatSalesFactDay } from '@/features/sales-fact/text';
 import { IconEye, IconFullscreen, IconFullscreenExit, IconPlan } from '@/features/shell/Icons';
@@ -93,7 +94,7 @@ function Workspace({
 
   return (
     <>
-      <PageFrame title={SALES_FACT_TITLE} full fill>
+      <PageFrame title={salesFactPageTitle(view, month, selectedDay)} full fill>
         <div className="flex min-h-0 flex-1 flex-col gap-4">
           <div className="shrink-0 border border-line bg-sheet">
             <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-end lg:justify-between">
@@ -344,4 +345,12 @@ function viewLinkClass(selected: boolean): string {
   return `inline-flex h-11 items-center justify-center gap-2 border px-3 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink ${
     selected ? 'border-ink bg-ink text-white' : 'border-line bg-sheet text-ink hover:border-ink'
   }`;
+}
+
+function salesFactPageTitle(view: SalesFactView, month: string, day: string): string {
+  if (view === 'day') {
+    return `Продажи на ${formatSalesFactDay(day)}`;
+  }
+
+  return `Продажи за ${formatMonth(month)}`;
 }

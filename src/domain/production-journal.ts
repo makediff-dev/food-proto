@@ -1,10 +1,10 @@
-import { costExVat } from '@/domain/cost';
 import {
   isOccurredOn,
   type ProductionEntry,
   type ProductionEntryLine,
   type PrototypeDocument,
 } from '@/domain/document';
+import { amountExVat } from '@/domain/money';
 import { productAllowedInPeriodSale } from '@/domain/period-grid';
 import { daysInMonth, monthKeyFromDate, PLAN_HORIZON_MONTHS, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { MAX_PRICE_KOPECKS } from '@/domain/units';
@@ -17,12 +17,12 @@ export type ProductionEntryRejection =
   | 'product'
   | 'duplicate-line'
   | 'pieces'
-  | 'cost'
+  | 'price'
   | 'locked';
 
-/** Себестоимость штуки строки. Нет поля или мусор — 0. */
-export function productionEntryLineCostWithVat(line: ProductionEntryLine): number {
-  const value = line.unitCostWithVat;
+/** Цена штуки строки. Нет поля или мусор — 0. */
+export function productionEntryLinePriceWithVat(line: ProductionEntryLine): number {
+  const value = line.priceWithVat;
   if (!Number.isInteger(value) || value < 0 || value > MAX_PRICE_KOPECKS) {
     return 0;
   }
@@ -30,18 +30,18 @@ export function productionEntryLineCostWithVat(line: ProductionEntryLine): numbe
   return value;
 }
 
-function isLineCost(value: number): boolean {
+function isLinePrice(value: number): boolean {
   return Number.isInteger(value) && value >= 0 && value <= MAX_PRICE_KOPECKS;
 }
 
-/** Сумма строки с НДС, копейки. Себестоимость штуки × штуки. */
-export function productionLineAmountWithVat(unitCostWithVat: number, pieces: number): number {
-  return unitCostWithVat * pieces;
+/** Сумма строки с НДС, копейки. Цена × штуки. */
+export function productionLineAmountWithVat(priceWithVat: number, pieces: number): number {
+  return priceWithVat * pieces;
 }
 
-/** Сумма строки без НДС, копейки. Округлённая себестоимость штуки без НДС × штуки. */
-export function productionLineAmountExVat(unitCostWithVat: number, pieces: number, vatPercent: number): number | null {
-  const exVat = costExVat(unitCostWithVat, vatPercent);
+/** Сумма строки без НДС, копейки. Округлённая цена без НДС × штуки. */
+export function productionLineAmountExVat(priceWithVat: number, pieces: number, vatPercent: number): number | null {
+  const exVat = amountExVat(priceWithVat, vatPercent);
   if (exVat === null) {
     return null;
   }
@@ -49,10 +49,10 @@ export function productionLineAmountExVat(unitCostWithVat: number, pieces: numbe
   return exVat * pieces;
 }
 
-/** Факт выпуска товара: штуки и суммы строк журнала. */
+/** Факт выпуска товара: штуки и стоимость строк журнала. */
 export interface ProductionProductSpend {
   pieces: number;
-  /** Копейки с НДС. Сумма строк. */
+  /** Копейки с НДС. Сумма строк (цена × штуки). */
   costWithVat: number;
   /** Копейки без НДС. Сумма строк. */
   costExVat: number;
@@ -76,15 +76,15 @@ export function productionSpendByProduct(
         complete: true,
       };
       const vatPercent = vatByProduct.get(line.productId);
-      const unitCostWithVat = productionEntryLineCostWithVat(line);
-      const amountExVat =
-        vatPercent === undefined ? null : productionLineAmountExVat(unitCostWithVat, line.pieces, vatPercent);
+      const priceWithVat = productionEntryLinePriceWithVat(line);
+      const amountEx =
+        vatPercent === undefined ? null : productionLineAmountExVat(priceWithVat, line.pieces, vatPercent);
       map.set(line.productId, {
         pieces: current.pieces + line.pieces,
         costWithVat:
-          current.costWithVat + (amountExVat === null ? 0 : productionLineAmountWithVat(unitCostWithVat, line.pieces)),
-        costExVat: current.costExVat + (amountExVat ?? 0),
-        complete: current.complete && amountExVat !== null,
+          current.costWithVat + (amountEx === null ? 0 : productionLineAmountWithVat(priceWithVat, line.pieces)),
+        costExVat: current.costExVat + (amountEx ?? 0),
+        complete: current.complete && amountEx !== null,
       });
     }
   }
@@ -150,8 +150,8 @@ function lineRejection(
     if (!Number.isInteger(line.pieces) || line.pieces < 1) {
       return 'pieces';
     }
-    if (!isLineCost(line.unitCostWithVat)) {
-      return 'cost';
+    if (!isLinePrice(line.priceWithVat)) {
+      return 'price';
     }
 
     seenProducts.add(line.productId);

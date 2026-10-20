@@ -6,11 +6,13 @@ import {
   type PrototypeDocument,
 } from '@/domain/document';
 import {
-  bookOpeningPiecesForProduct,
+  bookClosingPiecesForProduct,
+  closingInventoryDeviationPieces,
   closingStockPieces,
   finishedGoodsGridProducts,
-  openingDeviationPieces,
+  hasStoredInventoryLine,
   openingPiecesForProduct,
+  storedInventoryPiecesForProduct,
 } from '@/domain/finished-goods';
 import { periodGridCategories } from '@/domain/period-grid';
 import { productionEntryDayPieces } from '@/domain/production-journal-fact';
@@ -23,12 +25,12 @@ export type FinishedGoodsNormRejection = 'month' | 'closed' | 'product' | 'locke
 
 /** Показатели строки / итога планирования движения. */
 export interface MovementPlanTotals {
-  /** Расчётный перенос с конца прошлого месяца. */
-  bookOpeningPieces: number;
-  /** Инвентаризация на начало месяца. Нет записи — 0. */
-  openingPieces: number;
-  /** Инвентаризация − расчётный перенос. */
-  openingDeviationPieces: number;
+  /** Расчётный остаток на конец месяца. */
+  bookClosingPieces: number;
+  /** Факт инвентаризации на конец месяца. Нет строки — 0. */
+  inventoryClosingPieces: number;
+  /** Факт − расчётный остаток на конец. */
+  closingInventoryDeviationPieces: number;
   /** Остаток на конец на своде месяца — с ним сравнивают мин/макс. */
   stockPieces: number;
   minPieces: number;
@@ -118,18 +120,14 @@ export function movementPlanGridProducts(document: PrototypeDocument, month: str
 }
 
 /**
- * Запас для сравнения с нормативом: тот же остаток на конец, что на своде месяца.
- * Инвентаризация + выпуск факта − продажи факта (итог книги без РЦ).
+ * Запас для сравнения с нормативом: остаток на конец на своде месяца.
+ * Если введена инвентаризация — её факт, иначе расчётный конец.
  */
 export function stockPiecesForProduct(document: PrototypeDocument, month: string, productId: string): number {
-  const opening = openingPiecesForProduct(document, month, productId);
-  let salesPieces = 0;
-  let productionPieces = 0;
-  for (const day of monthDates(month)) {
-    salesPieces += saleDayProduct(document, day, productId).pieces;
-    productionPieces += productionEntryDayPieces(document, day, productId);
+  if (hasStoredInventoryLine(document, month, productId)) {
+    return storedInventoryPiecesForProduct(document, month, productId);
   }
-  return closingStockPieces(opening, productionPieces, salesPieces);
+  return bookClosingPiecesForProduct(document, month, productId);
 }
 
 /**
@@ -207,9 +205,9 @@ export function recommendedVolumeByDay(
 
 function emptyTotals(): MovementPlanTotals {
   return {
-    bookOpeningPieces: 0,
-    openingPieces: 0,
-    openingDeviationPieces: 0,
+    bookClosingPieces: 0,
+    inventoryClosingPieces: 0,
+    closingInventoryDeviationPieces: 0,
     stockPieces: 0,
     minPieces: 0,
     maxPieces: 0,
@@ -220,9 +218,9 @@ function emptyTotals(): MovementPlanTotals {
 }
 
 function sumRows(rows: readonly MovementPlanRow[]): MovementPlanTotals {
-  let bookOpeningPieces = 0;
-  let openingPieces = 0;
-  let openingDeviation = 0;
+  let bookClosingPieces = 0;
+  let inventoryClosingPieces = 0;
+  let closingInventoryDeviation = 0;
   let stockPieces = 0;
   let minPieces = 0;
   let maxPieces = 0;
@@ -231,9 +229,9 @@ function sumRows(rows: readonly MovementPlanRow[]): MovementPlanTotals {
   let recommendedPieces = 0;
 
   for (const row of rows) {
-    bookOpeningPieces += row.bookOpeningPieces;
-    openingPieces += row.openingPieces;
-    openingDeviation += row.openingDeviationPieces;
+    bookClosingPieces += row.bookClosingPieces;
+    inventoryClosingPieces += row.inventoryClosingPieces;
+    closingInventoryDeviation += row.closingInventoryDeviationPieces;
     stockPieces += row.stockPieces;
     minPieces += row.minPieces;
     maxPieces += row.maxPieces;
@@ -243,9 +241,9 @@ function sumRows(rows: readonly MovementPlanRow[]): MovementPlanTotals {
   }
 
   return {
-    bookOpeningPieces,
-    openingPieces,
-    openingDeviationPieces: openingDeviation,
+    bookClosingPieces,
+    inventoryClosingPieces,
+    closingInventoryDeviationPieces: closingInventoryDeviation,
     stockPieces,
     minPieces,
     maxPieces,
@@ -257,17 +255,18 @@ function sumRows(rows: readonly MovementPlanRow[]): MovementPlanTotals {
 
 function buildRow(document: PrototypeDocument, month: string, product: Product): MovementPlanRow {
   const norm = normForProduct(document, month, product.id);
-  const bookOpening = bookOpeningPiecesForProduct(document, month, product.id);
-  const inventory = openingPiecesForProduct(document, month, product.id);
+  const bookClosing = bookClosingPiecesForProduct(document, month, product.id);
+  const inventory = storedInventoryPiecesForProduct(document, month, product.id);
+  const hasInventoryLine = hasStoredInventoryLine(document, month, product.id);
   const stockPieces = stockPiecesForProduct(document, month, product.id);
   const metrics = movementPlanMetrics(stockPieces, norm.minPieces, norm.maxPieces);
   return {
     productId: product.id,
     name: product.name,
     deleted: product.deletedAt !== null,
-    bookOpeningPieces: bookOpening,
-    openingPieces: inventory,
-    openingDeviationPieces: openingDeviationPieces(inventory, bookOpening),
+    bookClosingPieces: bookClosing,
+    inventoryClosingPieces: inventory,
+    closingInventoryDeviationPieces: hasInventoryLine ? closingInventoryDeviationPieces(inventory, bookClosing) : 0,
     stockPieces,
     minPieces: norm.minPieces,
     maxPieces: norm.maxPieces,

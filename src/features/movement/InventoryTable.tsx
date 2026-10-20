@@ -28,12 +28,12 @@ import {
   totalValueClassName,
 } from '@/features/table';
 
-type ColumnKey = 'bookOpening' | 'inventory' | 'openingDeviation';
+type ColumnKey = 'bookClosing' | 'inventory' | 'closingDeviation';
 
 const COLUMNS: { key: ColumnKey; label: string }[] = [
-  { key: 'bookOpening', label: 'План' },
+  { key: 'bookClosing', label: 'План' },
   { key: 'inventory', label: 'Факт' },
-  { key: 'openingDeviation', label: 'Откл.' },
+  { key: 'closingDeviation', label: 'Откл.' },
 ];
 
 export function InventoryTable({
@@ -52,12 +52,12 @@ export function InventoryTable({
   return (
     <div className={expanded ? tableFrameExpandedClassName : tableFrameClassName}>
       <table className={tableClassName}>
-        <caption className="sr-only">Инвентаризация: остаток на начало</caption>
+        <caption className="sr-only">Инвентаризация: остаток на конец</caption>
         <thead className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             <th colSpan={COLUMNS.length} scope="colgroup" className={blockHeadingClassName}>
-              {keepWithNext('Остаток на начало')}
+              {keepWithNext('Остаток на конец')}
             </th>
           </tr>
           <tr>
@@ -238,35 +238,41 @@ function RowCell({
   onOpeningAction: (productId: string, pieces: number) => string | null;
 }) {
   switch (column) {
-    case 'bookOpening':
-      return <TableNumber value={row.bookOpeningPieces}>{formatPieces(row.bookOpeningPieces)} шт</TableNumber>;
+    case 'bookClosing':
+      return <TableNumber value={row.bookClosingPieces}>{formatPieces(row.bookClosingPieces)} шт</TableNumber>;
     case 'inventory':
       if (!editable) {
-        return <TableNumber value={row.openingPieces}>{formatPieces(row.openingPieces)} шт</TableNumber>;
+        return (
+          <TableNumber value={row.inventoryClosingPieces}>{formatPieces(row.inventoryClosingPieces)} шт</TableNumber>
+        );
       }
       return (
         <IntegerCell
-          label={`Остаток на начало (факт), ${row.name}`}
-          value={row.openingPieces}
+          label={`Остаток на конец (факт), ${row.name}`}
+          value={row.inventoryClosingPieces}
           unit="шт"
           allowNegative
-          invalidMessage="Укажите остаток на начало (факт) целым числом штук."
+          invalidMessage="Укажите остаток на конец (факт) целым числом штук."
           onChange={(next) => onOpeningAction(row.productId, next)}
         />
       );
-    case 'openingDeviation':
-      return <IntegerCell value={row.openingDeviationPieces} unit="шт" signed />;
+    case 'closingDeviation':
+      return <IntegerCell value={row.closingInventoryDeviationPieces} unit="шт" signed />;
   }
 }
 
 function TotalsCell({ column, totals }: { column: ColumnKey; totals: MovementPlanTotals }) {
   switch (column) {
-    case 'bookOpening':
-      return <TableNumber value={totals.bookOpeningPieces}>{formatPieces(totals.bookOpeningPieces)} шт</TableNumber>;
+    case 'bookClosing':
+      return <TableNumber value={totals.bookClosingPieces}>{formatPieces(totals.bookClosingPieces)} шт</TableNumber>;
     case 'inventory':
-      return <TableNumber value={totals.openingPieces}>{formatPieces(totals.openingPieces)} шт</TableNumber>;
-    case 'openingDeviation':
-      return <IntegerCell value={totals.openingDeviationPieces} unit="шт" signed />;
+      return (
+        <TableNumber value={totals.inventoryClosingPieces}>
+          {formatPieces(totals.inventoryClosingPieces)} шт
+        </TableNumber>
+      );
+    case 'closingDeviation':
+      return <IntegerCell value={totals.closingInventoryDeviationPieces} unit="шт" signed />;
   }
 }
 

@@ -16,7 +16,7 @@ import { lastHorizonMonth } from '@/domain/summary';
 import { ProductionPlanTable } from '@/features/production/ProductionPlanTable';
 import { PRODUCTION_PLAN_TITLE, productionPlanHref } from '@/features/production/paths';
 import { useProductionPlan } from '@/features/production/use-production-plan';
-import { FIELD_ERROR, monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
+import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { IconFullscreen, IconFullscreenExit, IconPlus } from '@/features/shell/Icons';
 import { MonthStep } from '@/features/shell/MonthStep';
 import { PageFrame } from '@/features/shell/PageFrame';
@@ -51,7 +51,6 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
   const products = activeProducts(production.document);
   const categories = activeCategories(production.document);
   const planEditable = production.hydrated && products.length > 0;
-  const costEditable = production.hydrated;
   const missing = planEditable && storedPlan ? missingProductionPlanProducts(production.document, storedPlan) : [];
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
@@ -169,7 +168,6 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
                 recommendedByProduct={recommendedByProduct}
                 recommendedTotal={recommendedTotal}
                 editable={planEditable}
-                costEditable={costEditable}
                 expanded={tableExpanded}
                 onVolumeAction={(lineId, volumePieces) => {
                   const rejection = production.updateProductionVolume(month, lineId, volumePieces);
@@ -186,10 +184,6 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
                     return 'Запись не найдена.';
                   }
                   return null;
-                }}
-                onProductCostAction={(productId, unitCostWithVat) => {
-                  const rejection = production.updateProductCost(productId, unitCostWithVat);
-                  return rejection ? FIELD_ERROR[rejection] : null;
                 }}
               />
             </section>

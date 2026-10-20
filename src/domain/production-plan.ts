@@ -1,29 +1,30 @@
-import { type UnitCost, unitCost } from '@/domain/cost';
 import { type Product, type ProductionPlan, type ProductionPlanLine, type PrototypeDocument } from '@/domain/document';
-import { averageAmount } from '@/domain/money';
+import { amountExVat, averageAmount } from '@/domain/money';
 import { periodGridCategories, periodGridProducts } from '@/domain/period-grid';
 import { activeProducts } from '@/domain/products';
-import { planMonthOpen } from '@/domain/sales-plan';
+import { planMonthOpen, planPriceWithVatForProduct, revenueExVat, revenueWithVat } from '@/domain/sales-plan';
 
 export type ProductionPlanRejection = 'missing' | 'month' | 'taken' | 'products' | 'volume' | 'closed';
 
 export interface ProductionPlanLineMetrics {
-  unitCost: UnitCost | null;
-  /** Копейки. Себестоимость единицы с НДС × объём. */
-  volumeCostWithVat: number | null;
-  /** Копейки. Себестоимость единицы без НДС × объём. */
-  volumeCostExVat: number | null;
+  /** Расчётная цена месяца (план продаж), копейки. */
+  priceWithVat: number;
+  priceExVat: number | null;
+  /** Копейки. Цена с НДС × объём. */
+  valueWithVat: number | null;
+  /** Копейки. Выручка без НДС от этой цены и объёма. */
+  valueExVat: number | null;
 }
 
 export interface ProductionPlanTotals {
   volumePieces: number;
-  volumeCostWithVat: number;
-  volumeCostExVat: number;
-  /** Есть строка с объёмом, у которой себестоимость не считается. */
-  costComplete: boolean;
-  /** Себестоимость объёма / объём, копейки. Только если себестоимость полная. */
-  averageCostWithVat: number | null;
-  averageCostExVat: number | null;
+  valueWithVat: number;
+  valueExVat: number;
+  /** Есть строка с объёмом, у которой цена без НДС не считается. */
+  priceComplete: boolean;
+  /** Стоимость / объём, копейки. Только если цена полная. */
+  averagePriceWithVat: number | null;
+  averagePriceExVat: number | null;
   lineCount: number;
 }
 
@@ -114,13 +115,18 @@ export function missingProductionPlanProducts(document: PrototypeDocument, plan:
 
 export function productionPlanLineMetrics(
   document: PrototypeDocument,
+  month: string,
   line: ProductionPlanLine,
 ): ProductionPlanLineMetrics {
-  const cost = unitCost(document, line.productId);
+  const product = document.products.find((item) => item.id === line.productId);
+  const priceWithVat = planPriceWithVatForProduct(document, line.productId, month);
+  const priceExVat = product ? amountExVat(priceWithVat, product.vatPercent) : null;
+  const valueExVat = product ? revenueExVat(priceWithVat, product.vatPercent, line.volumePieces) : null;
   return {
-    unitCost: cost,
-    volumeCostWithVat: cost === null ? null : cost.withVat * line.volumePieces,
-    volumeCostExVat: cost === null ? null : cost.exVat * line.volumePieces,
+    priceWithVat,
+    priceExVat,
+    valueWithVat: valueExVat === null ? null : revenueWithVat(priceWithVat, line.volumePieces),
+    valueExVat,
   };
 }
 
@@ -131,9 +137,9 @@ export function productionPlanTotals(
 ): ProductionPlanTotals {
   const allowed = productIds ?? new Set(document.products.map((item) => item.id));
   let volume = 0;
-  let costWith = 0;
-  let costEx = 0;
-  let costComplete = true;
+  let valueWith = 0;
+  let valueEx = 0;
+  let priceComplete = true;
   let lineCount = 0;
 
   for (const line of plan.lines) {
@@ -141,28 +147,28 @@ export function productionPlanTotals(
       continue;
     }
     lineCount += 1;
-    const metrics = productionPlanLineMetrics(document, line);
+    const metrics = productionPlanLineMetrics(document, plan.month, line);
     volume += line.volumePieces;
 
-    if (line.volumePieces > 0 && metrics.volumeCostExVat === null) {
-      costComplete = false;
+    if (line.volumePieces > 0 && metrics.valueExVat === null) {
+      priceComplete = false;
     }
 
-    if (metrics.volumeCostWithVat !== null) {
-      costWith += metrics.volumeCostWithVat;
+    if (metrics.valueWithVat !== null) {
+      valueWith += metrics.valueWithVat;
     }
-    if (metrics.volumeCostExVat !== null) {
-      costEx += metrics.volumeCostExVat;
+    if (metrics.valueExVat !== null) {
+      valueEx += metrics.valueExVat;
     }
   }
 
   return {
     volumePieces: volume,
-    volumeCostWithVat: costWith,
-    volumeCostExVat: costEx,
-    costComplete,
-    averageCostWithVat: costComplete ? averageAmount(costWith, volume) : null,
-    averageCostExVat: costComplete ? averageAmount(costEx, volume) : null,
+    valueWithVat: valueWith,
+    valueExVat: valueEx,
+    priceComplete,
+    averagePriceWithVat: priceComplete ? averageAmount(valueWith, volume) : null,
+    averagePriceExVat: priceComplete ? averageAmount(valueEx, volume) : null,
     lineCount,
   };
 }
@@ -170,42 +176,42 @@ export function productionPlanTotals(
 function emptyTotals(): ProductionPlanTotals {
   return {
     volumePieces: 0,
-    volumeCostWithVat: 0,
-    volumeCostExVat: 0,
-    costComplete: true,
-    averageCostWithVat: null,
-    averageCostExVat: null,
+    valueWithVat: 0,
+    valueExVat: 0,
+    priceComplete: true,
+    averagePriceWithVat: null,
+    averagePriceExVat: null,
     lineCount: 0,
   };
 }
 
 function totalsFromRows(rows: readonly ProductionPlanRow[]): ProductionPlanTotals {
   let volume = 0;
-  let costWith = 0;
-  let costEx = 0;
-  let costComplete = true;
+  let valueWith = 0;
+  let valueEx = 0;
+  let priceComplete = true;
 
   for (const row of rows) {
     const pieces = row.volumePieces ?? 0;
     volume += pieces;
-    if (pieces > 0 && row.metrics.volumeCostExVat === null) {
-      costComplete = false;
+    if (pieces > 0 && row.metrics.valueExVat === null) {
+      priceComplete = false;
     }
-    if (row.metrics.volumeCostWithVat !== null) {
-      costWith += row.metrics.volumeCostWithVat;
+    if (row.metrics.valueWithVat !== null) {
+      valueWith += row.metrics.valueWithVat;
     }
-    if (row.metrics.volumeCostExVat !== null) {
-      costEx += row.metrics.volumeCostExVat;
+    if (row.metrics.valueExVat !== null) {
+      valueEx += row.metrics.valueExVat;
     }
   }
 
   return {
     volumePieces: volume,
-    volumeCostWithVat: costWith,
-    volumeCostExVat: costEx,
-    costComplete,
-    averageCostWithVat: costComplete ? averageAmount(costWith, volume) : null,
-    averageCostExVat: costComplete ? averageAmount(costEx, volume) : null,
+    valueWithVat: valueWith,
+    valueExVat: valueEx,
+    priceComplete,
+    averagePriceWithVat: priceComplete ? averageAmount(valueWith, volume) : null,
+    averagePriceExVat: priceComplete ? averageAmount(valueEx, volume) : null,
     lineCount: rows.length,
   };
 }
@@ -220,8 +226,12 @@ export function productionPlanMonthView(document: PrototypeDocument, month: stri
   for (const product of products) {
     const line = lineByProduct.get(product.id) ?? null;
     const metrics = line
-      ? productionPlanLineMetrics(document, line)
-      : { unitCost: unitCost(document, product.id), volumeCostWithVat: 0, volumeCostExVat: 0 };
+      ? productionPlanLineMetrics(document, month, line)
+      : productionPlanLineMetrics(document, month, {
+          id: `production-plan-line:${month}:${product.id}`,
+          productId: product.id,
+          volumePieces: 0,
+        });
 
     rowByProduct.set(product.id, {
       productId: product.id,
