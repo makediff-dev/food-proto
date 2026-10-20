@@ -23,10 +23,14 @@ import {
 type ColumnKey =
   | 'opening'
   | 'planReceipt'
+  | 'planReceiptPrice'
+  | 'planReceiptCost'
   | 'factReceipt'
+  | 'factReceiptPrice'
+  | 'factReceiptCost'
   | 'receiptDeviation'
-  | 'receiptPrice'
-  | 'receiptCost'
+  | 'receiptDeviationPrice'
+  | 'receiptDeviationCost'
   | 'planConsumption'
   | 'factConsumption'
   | 'consumptionDeviation'
@@ -49,10 +53,14 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
     label: 'Приход от поставщика',
     columns: [
       { key: 'planReceipt', label: 'План' },
+      { key: 'planReceiptPrice', label: 'Цена' },
+      { key: 'planReceiptCost', label: 'Стоимость' },
       { key: 'factReceipt', label: 'Факт' },
+      { key: 'factReceiptPrice', label: 'Цена' },
+      { key: 'factReceiptCost', label: 'Стоимость' },
       { key: 'receiptDeviation', label: 'Откл.' },
-      { key: 'receiptPrice', label: 'Цена' },
-      { key: 'receiptCost', label: 'Стоимость' },
+      { key: 'receiptDeviationPrice', label: 'Откл.' },
+      { key: 'receiptDeviationCost', label: 'Откл.' },
     ],
   },
   {
@@ -200,22 +208,52 @@ function RowCell({
       return <QuantityRead value={row.openingQuantity} unit={unit} />;
     case 'planReceipt':
       return <QuantityRead value={row.planReceiptQuantity} unit={unit} />;
+    case 'planReceiptPrice':
+      return <VatMoneyCell label="Плановая цена прихода" withVat={row.planPrice.withVat} exVat={row.planPrice.exVat} />;
+    case 'planReceiptCost':
+      return (
+        <VatMoneyCell
+          label="Плановая стоимость прихода"
+          withVat={row.planReceiptCost.withVat}
+          exVat={row.planReceiptCost.exVat}
+        />
+      );
     case 'factReceipt':
       return <QuantityRead value={row.factReceiptQuantity} unit={unit} />;
-    case 'receiptDeviation':
-      return <QuantityRead value={row.receiptDeviationQuantity} unit={unit} signed />;
-    case 'receiptPrice':
+    case 'factReceiptPrice':
       return row.factReceiptPrice ? (
         <VatMoneyCell label="Цена прихода" withVat={row.factReceiptPrice.withVat} exVat={row.factReceiptPrice.exVat} />
       ) : (
         <span className="text-muted">—</span>
       );
-    case 'receiptCost':
+    case 'factReceiptCost':
       return (
         <VatMoneyCell
           label="Стоимость прихода"
           withVat={row.factReceiptCost.withVat}
           exVat={row.factReceiptCost.exVat}
+        />
+      );
+    case 'receiptDeviation':
+      return <QuantityRead value={row.receiptDeviationQuantity} unit={unit} signed />;
+    case 'receiptDeviationPrice':
+      return row.receiptDeviationPrice ? (
+        <VatMoneyCell
+          label="Отклонение цены прихода"
+          withVat={row.receiptDeviationPrice.withVat}
+          exVat={row.receiptDeviationPrice.exVat}
+          signed
+        />
+      ) : (
+        <span className="text-muted">—</span>
+      );
+    case 'receiptDeviationCost':
+      return (
+        <VatMoneyCell
+          label="Отклонение стоимости прихода"
+          withVat={row.receiptDeviationCost.withVat}
+          exVat={row.receiptDeviationCost.exVat}
+          signed
         />
       );
     case 'planConsumption':
@@ -295,19 +333,38 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: MaterialMov
       return <QuantityRead value={totals.openingQuantity} unit={unit} />;
     case 'planReceipt':
       return <QuantityRead value={totals.planReceiptQuantity} unit={unit} />;
-    case 'factReceipt':
-      return <QuantityRead value={totals.factReceiptQuantity} unit={unit} />;
-    case 'receiptDeviation':
-      return <QuantityRead value={totals.receiptDeviationQuantity} unit={unit} signed />;
-    case 'receiptPrice':
+    case 'planReceiptPrice':
+    case 'factReceiptPrice':
+    case 'receiptDeviationPrice':
     case 'consumptionPrice':
       return <span className="text-muted">—</span>;
-    case 'receiptCost':
+    case 'planReceiptCost':
+      return (
+        <VatMoneyCell
+          label="Плановая стоимость прихода"
+          withVat={totals.planReceiptCost.withVat}
+          exVat={totals.planReceiptCost.exVat}
+        />
+      );
+    case 'factReceipt':
+      return <QuantityRead value={totals.factReceiptQuantity} unit={unit} />;
+    case 'factReceiptCost':
       return (
         <VatMoneyCell
           label="Стоимость прихода"
           withVat={totals.factReceiptCost.withVat}
           exVat={totals.factReceiptCost.exVat}
+        />
+      );
+    case 'receiptDeviation':
+      return <QuantityRead value={totals.receiptDeviationQuantity} unit={unit} signed />;
+    case 'receiptDeviationCost':
+      return (
+        <VatMoneyCell
+          label="Отклонение стоимости прихода"
+          withVat={totals.receiptDeviationCost.withVat}
+          exVat={totals.receiptDeviationCost.exVat}
+          signed
         />
       );
     case 'planConsumption':
