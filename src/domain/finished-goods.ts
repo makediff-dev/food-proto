@@ -18,10 +18,9 @@ import { monthDates, saleDayProduct } from '@/domain/sales-fact';
 import {
   monthKeyFromDate,
   planMonthOpen,
+  planPriceWithVatForProduct,
   priceExVatTenThousandths,
-  salesPlanForMonth,
   shiftMonth,
-  suggestedPriceWithVat,
 } from '@/domain/sales-plan';
 import { monthsInRange, normalizeMonthRange } from '@/domain/summary';
 
@@ -60,12 +59,12 @@ export interface FinishedGoodsTotals {
   salesRevenueExVat: number | null;
   productionPieces: number;
   /**
-   * Себестоимость 1 шт выпуска: сумма строк журнала / штуки.
-   * Не цена продаж и не цена остатка. Выпуска не было — 0. Себестоимость не считается — пусто.
+   * Цена выпуска: стоимость / штуки.
+   * Стоимость = расчётная цена × объём, как у продаж. Выпуска не было — 0. Цены нет — пусто.
    */
   productionPriceWithVat: number | null;
   productionPriceExVat: number | null;
-  /** Сумма себестоимостей строк журнала выпуска. Выпуска не было — 0. */
+  /** Стоимость выпуска: сумма строк журнала (цена × штуки). Выпуска не было — 0. */
   productionValueWithVat: number | null;
   productionValueExVat: number | null;
   closingPieces: number;
@@ -233,21 +232,12 @@ export function finishedGoodsGridProducts(document: PrototypeDocument, month: st
   return [...active, ...archived];
 }
 
-function planPriceWithVatForProduct(document: PrototypeDocument, month: string, productId: string): number {
-  const plan = salesPlanForMonth(document, month);
-  const line = plan.lines.find((item) => item.productId === productId);
-  if (line) {
-    return line.priceWithVat;
-  }
-  return suggestedPriceWithVat(document, productId, month);
-}
-
 function planOpeningPrice(
   document: PrototypeDocument,
   month: string,
   product: Product,
 ): { withVat: number; exVat: number | null } {
-  const withVat = planPriceWithVatForProduct(document, month, product.id);
+  const withVat = planPriceWithVatForProduct(document, product.id, month);
   return { withVat, exVat: amountExVat(withVat, product.vatPercent) };
 }
 
@@ -360,7 +350,7 @@ function productionSpendOn(
   );
 }
 
-/** Штуки и себестоимость выпуска. Нет выпуска — нули. */
+/** Штуки и стоимость выпуска по расчётной цене. Нет выпуска — нули. */
 function productionAmounts(spend: ProductionProductSpend | undefined): {
   pieces: number;
   costWithVat: number | null;

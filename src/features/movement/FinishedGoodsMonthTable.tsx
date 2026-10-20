@@ -70,7 +70,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
     label: 'Производство',
     columns: [
       { key: 'productionPieces', label: 'Объём' },
-      { key: 'productionPrice', label: 'Себест.' },
+      { key: 'productionPrice', label: 'Цена' },
       { key: 'productionValue', label: 'Стоимость' },
     ],
   },

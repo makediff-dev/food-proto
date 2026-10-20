@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     default: 'Учёт — прототип',
     template: '%s — учёт',
   },
-  description: 'Прототип финансового и товарного учёта мясного производства',
+  description: 'Прототип финансового и товарного учёта готовой еды',
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {

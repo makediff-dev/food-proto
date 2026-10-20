@@ -9,7 +9,7 @@ export const PRODUCTION_FACT_TITLE = 'Отчет подневный';
 
 export const PRODUCTION_PLAN_TITLE = 'Ввод плана';
 
-export const PRODUCTION_JOURNAL_TITLE = 'Ввод производства';
+export const PRODUCTION_JOURNAL_TITLE = 'Ввод факта';
 
 export const NEW_PRODUCTION_ENTRY_TITLE = 'Новая запись';
 

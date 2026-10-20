@@ -178,6 +178,16 @@ export function suggestedPriceWithVat(document: PrototypeDocument, productId: st
   return 0;
 }
 
+/** Расчётная цена месяца: строка плана продаж, иначе цена более раннего плана. */
+export function planPriceWithVatForProduct(document: PrototypeDocument, productId: string, month: string): number {
+  const plan = salesPlanForMonth(document, month);
+  const line = plan.lines.find((item) => item.productId === productId);
+  if (line) {
+    return line.priceWithVat;
+  }
+  return suggestedPriceWithVat(document, productId, month);
+}
+
 export function missingPlanProducts(document: PrototypeDocument, plan: SalesPlan): Product[] {
   const present = new Set(plan.lines.map((line) => line.productId));
   return activeProducts(document).filter((item) => !present.has(item.id));

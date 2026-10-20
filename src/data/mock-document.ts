@@ -66,19 +66,7 @@ const burger: Product = {
   deletedAt: null,
 };
 
-/**
- * Фактическая себестоимость 1 шт с НДС в моке записей выпуска, копейки.
- * Совпадает с себестоимостью товара, чтобы факт мока не обнулялся.
- * Новая запись в форме начинается с 0.
- */
-const productionUnitCostWithVat = {
-  'product-caesar': caesar.unitCostWithVat,
-  'product-olivier': olivier.unitCostWithVat,
-  'product-goulash': goulash.unitCostWithVat,
-  'product-burger': burger.unitCostWithVat,
-} as const;
-
-/** Плановая цена с НДС, копейки. Салаты — мок, гуляш `Svod!F31`, гамбургер `Svod!F63`. */
+/** Плановая цена с НДС и расчётная цена выпуска, копейки. Салаты — мок, гуляш `Svod!F31`, гамбургер `Svod!F63`. */
 const priceWithVat = {
   'product-caesar': 9_640,
   'product-olivier': 6_850,
@@ -409,7 +397,7 @@ function productionFromOrders(drafts: readonly OrderDraft[]): ProductionEntry[] 
       id: `${order.id.replace('sale-', 'output-')}-${line.productId.slice('product-'.length)}`,
       productId: line.productId,
       pieces: line.pieces,
-      unitCostWithVat: productionUnitCostWithVat[line.productId],
+      priceWithVat: priceWithVat[line.productId],
     })),
   }));
 }

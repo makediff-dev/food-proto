@@ -17,12 +17,9 @@ import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan
 import { lastHorizonMonth } from '@/domain/summary';
 import { planningHref } from '@/features/planning/paths';
 import { ProductionJournalFactTable } from '@/features/production/ProductionJournalFactTable';
-import {
-  PRODUCTION_FACT_TITLE,
-  type ProductionJournalFactView,
-  productionJournalFactHref,
-} from '@/features/production/paths';
+import { type ProductionJournalFactView, productionJournalFactHref } from '@/features/production/paths';
 import { monthFieldClassName } from '@/features/sales/fields';
+import { formatMonth } from '@/features/sales/text';
 import { formatSalesFactDay } from '@/features/sales-fact/text';
 import { IconEye, IconFullscreen, IconFullscreenExit, IconPlan } from '@/features/shell/Icons';
 import { MonthStep } from '@/features/shell/MonthStep';
@@ -124,7 +121,7 @@ function Workspace({
 
   return (
     <>
-      <PageFrame title={PRODUCTION_FACT_TITLE} full fill>
+      <PageFrame title={productionJournalFactPageTitle(view, month, selectedDay)} full fill>
         <div className="flex min-h-0 flex-1 flex-col gap-4">
           <div className="shrink-0 border border-line bg-sheet">
             <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-end lg:justify-between">
@@ -229,6 +226,14 @@ function FullscreenToggle({ active, onToggle }: { active: boolean; onToggle: () 
       {active ? <IconFullscreenExit /> : <IconFullscreen />}
     </button>
   );
+}
+
+function productionJournalFactPageTitle(view: ProductionJournalFactView, month: string, day: string): string {
+  if (view === 'day') {
+    return `Выпуск на ${formatSalesFactDay(day)}`;
+  }
+
+  return `Выпуск за ${formatMonth(month)}`;
 }
 
 function resolveMonth(month: string, today: Date): string {

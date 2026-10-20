@@ -5,7 +5,7 @@ import { useState } from 'react';
 import type { Product, ProductCategory } from '@/domain/document';
 import { amountExVat, averageAmount } from '@/domain/money';
 import { productionLineAmountExVat, productionLineAmountWithVat } from '@/domain/production-journal';
-import { parseProductionEntryCost, parseProductionEntryPieces } from '@/features/production/text';
+import { parseProductionEntryPieces, parseProductionEntryPrice } from '@/features/production/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
@@ -35,16 +35,16 @@ import { formatMoneyDraft, sanitizeDraft } from '@/features/table/format';
 export interface ProductionEntryLineDraft {
   id: string;
   pieces: string;
-  cost: string;
+  price: string;
 }
 
-export type ProductionEntryLineField = 'pieces' | 'cost';
+export type ProductionEntryLineField = 'pieces' | 'price';
 
 interface EntryFormRow {
   product: Product;
   draft: ProductionEntryLineDraft;
-  costWithVat: number | null;
-  costExVat: number | null;
+  priceWithVat: number | null;
+  priceExVat: number | null;
   pieces: number | null;
   amountWithVat: number | null;
   amountExVat: number | null;
@@ -53,8 +53,8 @@ interface EntryFormRow {
 
 interface EntryFormTotals {
   pieces: number | null;
-  costWithVat: number | null;
-  costExVat: number | null;
+  priceWithVat: number | null;
+  priceExVat: number | null;
   amountWithVat: number | null;
   amountExVat: number | null;
 }
@@ -66,7 +66,7 @@ interface EntryFormGroup {
 }
 
 const COLUMNS = [
-  { key: 'cost', label: 'Себест.' },
+  { key: 'price', label: 'Цена' },
   { key: 'pieces', label: 'Шт' },
   { key: 'amount', label: 'Сумма' },
 ] as const;
@@ -74,25 +74,25 @@ const COLUMNS = [
 type ColumnKey = (typeof COLUMNS)[number]['key'];
 
 function rowMetrics(product: Product, draft: ProductionEntryLineDraft): EntryFormRow {
-  const costWithVat = parseProductionEntryCost(draft.cost);
+  const priceWithVat = parseProductionEntryPrice(draft.price);
   const pieces = parseProductionEntryPieces(draft.pieces);
   const displayPieces = piecesForAmount(draft.pieces);
   const lineAmountWithVat =
-    costWithVat === null || displayPieces === null ? null : productionLineAmountWithVat(costWithVat, displayPieces);
+    priceWithVat === null || displayPieces === null ? null : productionLineAmountWithVat(priceWithVat, displayPieces);
   const lineAmountExVat =
-    costWithVat === null || displayPieces === null
+    priceWithVat === null || displayPieces === null
       ? null
-      : productionLineAmountExVat(costWithVat, displayPieces, product.vatPercent);
+      : productionLineAmountExVat(priceWithVat, displayPieces, product.vatPercent);
 
   return {
     product,
     draft,
-    costWithVat,
-    costExVat: costWithVat === null ? null : amountExVat(costWithVat, product.vatPercent),
+    priceWithVat,
+    priceExVat: priceWithVat === null ? null : amountExVat(priceWithVat, product.vatPercent),
     pieces,
     amountWithVat: lineAmountWithVat,
     amountExVat: lineAmountExVat,
-    filled: pieces !== null && costWithVat !== null,
+    filled: pieces !== null && priceWithVat !== null,
   };
 }
 
@@ -135,8 +135,8 @@ function groupTotals(rows: readonly EntryFormRow[]): EntryFormTotals {
   if (filledCount === 0) {
     return {
       pieces: null,
-      costWithVat: null,
-      costExVat: null,
+      priceWithVat: null,
+      priceExVat: null,
       amountWithVat: null,
       amountExVat: null,
     };
@@ -147,16 +147,16 @@ function groupTotals(rows: readonly EntryFormRow[]): EntryFormTotals {
     pieces,
     amountWithVat: amountWith,
     amountExVat: amountExVatValue,
-    costWithVat: averageAmount(amountWith, pieces),
-    costExVat: averageAmount(amountExVatValue, pieces),
+    priceWithVat: averageAmount(amountWith, pieces),
+    priceExVat: averageAmount(amountExVatValue, pieces),
   };
 }
 
-export function emptyProductionEntryLineDraft(): ProductionEntryLineDraft {
+export function emptyProductionEntryLineDraft(priceWithVat = 0): ProductionEntryLineDraft {
   return {
     id: `production-entry-line:${crypto.randomUUID()}`,
     pieces: '0',
-    cost: formatMoneyDraft(0),
+    price: formatMoneyDraft(priceWithVat),
   };
 }
 
@@ -362,7 +362,7 @@ function RowCell({
   row: EntryFormRow;
   onChange: (field: ProductionEntryLineField, raw: string) => void;
 }) {
-  if (column === 'cost') {
+  if (column === 'price') {
     return (
       <StackedPair
         topHighlighted
@@ -370,15 +370,15 @@ function RowCell({
         bottomLabel="без НДС"
         top={
           <GridInput
-            label={`Себест. с НДС, ${row.product.name}`}
-            value={row.draft.cost}
+            label={`Цена с НДС, ${row.product.name}`}
+            value={row.draft.price}
             inputMode="decimal"
             unit="₽"
-            format={formatKopecks(parseProductionEntryCost)}
-            onChange={(raw) => onChange('cost', raw)}
+            format={formatKopecks(parseProductionEntryPrice)}
+            onChange={(raw) => onChange('price', raw)}
           />
         }
-        bottom={row.costExVat === null ? <Empty /> : <MoneyAmount amount={row.costExVat} />}
+        bottom={row.priceExVat === null ? <Empty /> : <MoneyAmount amount={row.priceExVat} />}
       />
     );
   }
@@ -401,8 +401,8 @@ function RowCell({
 }
 
 function TotalCell({ column, totals }: { column: ColumnKey; totals: EntryFormTotals }) {
-  if (column === 'cost') {
-    return <VatMoneyCell label="Себестоимость" withVat={totals.costWithVat} exVat={totals.costExVat} />;
+  if (column === 'price') {
+    return <VatMoneyCell label="Цена" withVat={totals.priceWithVat} exVat={totals.priceExVat} />;
   }
 
   if (column === 'pieces') {

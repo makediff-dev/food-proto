@@ -9,7 +9,6 @@ import {
   updateProductionPlanLineRejection,
   workingProductionPlan,
 } from '@/domain/production-plan';
-import { type FieldRejection, productUnitCostRejection, setProductUnitCost } from '@/domain/products';
 
 export function useProductionPlan() {
   const { document, hydrated, updateDocument } = useDocumentStore();
@@ -56,14 +55,6 @@ export function useProductionPlan() {
         (current) => addMissingProductionPlanLines(current, planId, lines, today),
         (current) => addMissingProductionPlanLinesRejection(current, planId, lines, today),
       );
-    },
-    updateProductCost(id: string, unitCostWithVat: number): FieldRejection | null {
-      const rejection = productUnitCostRejection(document, id, unitCostWithVat);
-      if (rejection) {
-        return rejection;
-      }
-      updateDocument((current) => setProductUnitCost(current, id, unitCostWithVat));
-      return null;
     },
   };
 }
