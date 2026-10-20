@@ -25,7 +25,7 @@ export function MaterialsSummaryScreen({ month }: { month: string }) {
     [materials.document, selectedMonth],
   );
 
-  function factConsumptionError(
+  function consumptionError(
     warehouseId: MaterialWarehouseId,
     materialId: string,
     field: MaterialPlanField,
@@ -39,7 +39,7 @@ export function MaterialsSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={MATERIALS_SUMMARY_TITLE}
       full
-      lede="Остаток на начало — конец прошлого месяца по инвентаризации. План конца: начало + приход − расход. Факт конца — инвентаризация. Факт расхода вводят в колонке «Факт». Склад 1 и склад 2 здесь не складываются."
+      lede="Остаток на начало — конец прошлого месяца по инвентаризации. План конца: начало + приход − расход. Факт конца — инвентаризация. План и факт расхода вводят в колонках «План» и «Факт». Склад 1 и склад 2 здесь не складываются."
       intro={
         <MaterialMonthBar
           month={selectedMonth}
@@ -56,8 +56,8 @@ export function MaterialsSummaryScreen({ month }: { month: string }) {
             rows={warehouse.rows}
             totals={warehouse.totals}
             editable={materials.hydrated}
-            onFactConsumption={(materialId, field, value) =>
-              factConsumptionError(warehouse.warehouseId, materialId, field, value)
+            onConsumption={(materialId, field, value) =>
+              consumptionError(warehouse.warehouseId, materialId, field, value)
             }
           />
         )}

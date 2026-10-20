@@ -22,23 +22,12 @@ import {
   VatMoneyCell,
 } from '@/features/table';
 
-type ColumnKey =
-  | 'price'
-  | 'planReceipt'
-  | 'planReceiptCost'
-  | 'planConsumption'
-  | 'planConsumptionCost'
-  | 'min'
-  | 'max'
-  | 'normDeviation'
-  | 'recommended';
+type ColumnKey = 'price' | 'planReceipt' | 'planReceiptCost' | 'min' | 'max' | 'normDeviation' | 'recommended';
 
 const COLUMNS: { key: ColumnKey; label: string; editable: boolean }[] = [
   { key: 'price', label: 'Цена', editable: true },
   { key: 'planReceipt', label: 'Приход', editable: true },
   { key: 'planReceiptCost', label: 'Стоимость прихода', editable: false },
-  { key: 'planConsumption', label: 'Расход', editable: true },
-  { key: 'planConsumptionCost', label: 'Стоимость расхода', editable: false },
   { key: 'min', label: 'Мин.', editable: true },
   { key: 'max', label: 'Макс.', editable: true },
   { key: 'normDeviation', label: 'Откл.', editable: false },
@@ -187,26 +176,6 @@ function PlanCell({
           exVat={row.planReceiptCost.exVat}
         />
       );
-    case 'planConsumption':
-      if (!editable) {
-        return <QuantityRead value={row.planConsumptionQuantity} unit={unit} />;
-      }
-      return (
-        <QuantityCell
-          label={`План расхода ${row.name}`}
-          value={row.planConsumptionQuantity}
-          unit={unit}
-          onChange={(value) => onField(row.materialId, 'consumptionQuantity', value)}
-        />
-      );
-    case 'planConsumptionCost':
-      return (
-        <VatMoneyCell
-          label="Стоимость расхода"
-          withVat={row.planConsumptionCost.withVat}
-          exVat={row.planConsumptionCost.exVat}
-        />
-      );
     case 'min':
       return editable ? (
         <QuantityCell
@@ -259,16 +228,6 @@ function PlanTotal({ column, totals }: { column: ColumnKey; totals: MaterialMove
           label="Стоимость прихода"
           withVat={totals.planReceiptCost.withVat}
           exVat={totals.planReceiptCost.exVat}
-        />
-      );
-    case 'planConsumption':
-      return <QuantityRead value={totals.planConsumptionQuantity} unit={unit} />;
-    case 'planConsumptionCost':
-      return (
-        <VatMoneyCell
-          label="Стоимость расхода"
-          withVat={totals.planConsumptionCost.withVat}
-          exVat={totals.planConsumptionCost.exVat}
         />
       );
     case 'min':

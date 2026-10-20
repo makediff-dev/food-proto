@@ -731,7 +731,7 @@ function consumptionQuantity(
   planConsumption: number,
   factConsumption: number,
 ): number {
-  // Временно: и сырьё, и вспомогательные — план и факт из строки плана, без нормы на выпуск.
+  // Временно: план и факт расхода вводят в отчёте (пока нет связи с планом выпуска), без нормы.
   return mode === 'plan' ? planConsumption : factConsumption;
 }
 

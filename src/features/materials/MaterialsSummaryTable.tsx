@@ -82,8 +82,12 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
 const COLUMNS = COLUMN_GROUPS.flatMap((group) => group.columns);
 const GROUP_END_KEYS = new Set(COLUMN_GROUPS.slice(0, -1).map((group) => group.columns[group.columns.length - 1]?.key));
 
-function factConsumptionEditable(editable: boolean, row: MaterialMovementRow): boolean {
+function consumptionEditable(editable: boolean, row: MaterialMovementRow): boolean {
   return editable && !row.deleted;
+}
+
+function isConsumptionColumn(key: ColumnKey): boolean {
+  return key === 'planConsumption' || key === 'factConsumption';
 }
 
 function groupEndClass(key: ColumnKey): string {
@@ -95,13 +99,13 @@ export function MaterialsSummaryTable({
   rows,
   totals,
   editable = false,
-  onFactConsumption,
+  onConsumption,
 }: {
   caption: string;
   rows: MaterialMovementRow[];
   totals: MaterialMovementTotals;
   editable?: boolean;
-  onFactConsumption?: (materialId: string, field: MaterialPlanField, value: number) => string | null;
+  onConsumption?: (materialId: string, field: MaterialPlanField, value: number) => string | null;
 }) {
   return (
     <div className={tableFrameClassName}>
@@ -150,16 +154,14 @@ export function MaterialsSummaryTable({
                 <td
                   key={column.key}
                   className={`border-b border-b-line px-2 py-2 text-right align-middle ${groupEndClass(column.key)} ${
-                    column.key === 'factConsumption' && factConsumptionEditable(editable, row)
-                      ? editableCellClassName
-                      : ''
+                    isConsumptionColumn(column.key) && consumptionEditable(editable, row) ? editableCellClassName : ''
                   }`}
                 >
                   <RowCell
                     column={column.key}
                     row={row}
-                    editable={factConsumptionEditable(editable, row)}
-                    onFactConsumption={onFactConsumption}
+                    editable={consumptionEditable(editable, row)}
+                    onConsumption={onConsumption}
                   />
                 </td>
               ))}
@@ -185,12 +187,12 @@ function RowCell({
   column,
   row,
   editable,
-  onFactConsumption,
+  onConsumption,
 }: {
   column: ColumnKey;
   row: MaterialMovementRow;
   editable: boolean;
-  onFactConsumption?: (materialId: string, field: MaterialPlanField, value: number) => string | null;
+  onConsumption?: (materialId: string, field: MaterialPlanField, value: number) => string | null;
 }) {
   const unit = row.unit;
   switch (column) {
@@ -217,9 +219,19 @@ function RowCell({
         />
       );
     case 'planConsumption':
-      return <QuantityRead value={row.planConsumptionQuantity} unit={unit} />;
+      if (!editable || !onConsumption) {
+        return <QuantityRead value={row.planConsumptionQuantity} unit={unit} />;
+      }
+      return (
+        <QuantityCell
+          label={`План расхода ${row.name}`}
+          value={row.planConsumptionQuantity}
+          unit={unit}
+          onChange={(value) => onConsumption(row.materialId, 'consumptionQuantity', value)}
+        />
+      );
     case 'factConsumption':
-      if (!editable || !onFactConsumption) {
+      if (!editable || !onConsumption) {
         return <QuantityRead value={row.factConsumptionQuantity} unit={unit} />;
       }
       return (
@@ -227,7 +239,7 @@ function RowCell({
           label={`Факт расхода ${row.name}`}
           value={row.factConsumptionQuantity}
           unit={unit}
-          onChange={(value) => onFactConsumption(row.materialId, 'factConsumptionQuantity', value)}
+          onChange={(value) => onConsumption(row.materialId, 'factConsumptionQuantity', value)}
         />
       );
     case 'consumptionDeviation':
