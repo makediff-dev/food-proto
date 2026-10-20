@@ -14,8 +14,6 @@ import {
   columnDividerClassName,
   columnHeadingClassName,
   Empty,
-  editableCellClassName,
-  IntegerCell,
   keepWithNext,
   Muted,
   nameHeadingClassName,
@@ -45,17 +43,13 @@ export function ProductionPlanTable({
   totals,
   recommendedByProduct,
   recommendedTotal,
-  editable,
   expanded = false,
-  onVolumeAction,
 }: {
   groups: ProductionPlanGroup[];
   totals: ProductionPlanTotals;
   recommendedByProduct: ReadonlyMap<string, number>;
   recommendedTotal: number;
-  editable: boolean;
   expanded?: boolean;
-  onVolumeAction: (lineId: string, volumePieces: number) => string | null;
 }) {
   return (
     <div className={expanded ? tableFrameExpandedClassName : tableFrameClassName}>
@@ -85,13 +79,7 @@ export function ProductionPlanTable({
         </thead>
         <tbody>
           {groups.map((group) => (
-            <CategoryBlock
-              key={group.categoryId}
-              group={group}
-              recommendedByProduct={recommendedByProduct}
-              editable={editable}
-              onVolumeAction={onVolumeAction}
-            />
+            <CategoryBlock key={group.categoryId} group={group} recommendedByProduct={recommendedByProduct} />
           ))}
           <tr>
             <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
@@ -112,13 +100,9 @@ export function ProductionPlanTable({
 function CategoryBlock({
   group,
   recommendedByProduct,
-  editable,
-  onVolumeAction,
 }: {
   group: ProductionPlanGroup;
   recommendedByProduct: ReadonlyMap<string, number>;
-  editable: boolean;
-  onVolumeAction: (lineId: string, volumePieces: number) => string | null;
 }) {
   const [open, setOpen] = useState(true);
   const productCount = group.rows.length;
@@ -166,8 +150,6 @@ function CategoryBlock({
               row={row}
               index={index + 1}
               recommendedPieces={recommendedByProduct.get(row.productId) ?? 0}
-              editable={editable}
-              onVolumeAction={onVolumeAction}
             />
           ))
         : null}
@@ -179,14 +161,10 @@ function ProductRow({
   row,
   index,
   recommendedPieces,
-  editable,
-  onVolumeAction,
 }: {
   row: ProductionPlanRow;
   index: number;
   recommendedPieces: number;
-  editable: boolean;
-  onVolumeAction: (lineId: string, volumePieces: number) => string | null;
 }) {
   return (
     <tr>
@@ -200,52 +178,14 @@ function ProductRow({
           {row.deleted ? <span className="text-sm text-muted">(архив)</span> : null}
         </div>
       </th>
-      {COLUMNS.map((column) => {
-        const canEdit = editable && row.planLineId !== null && column.key === 'volume';
-        return (
-          <td
-            key={`row:${column.key}`}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName} ${
-              canEdit ? editableCellClassName : ''
-            }`}
-            onClick={(event) => {
-              if (!canEdit) {
-                return;
-              }
-              if (event.target instanceof HTMLInputElement) {
-                return;
-              }
-              const field = editableFieldNear(event.target, event.currentTarget);
-              if (field instanceof HTMLInputElement && document.activeElement !== field) {
-                field.focus();
-              }
-            }}
-            onKeyDown={(event) => {
-              if (!canEdit) {
-                return;
-              }
-              if (event.key !== 'Enter' && event.key !== ' ') {
-                return;
-              }
-              if (event.target instanceof HTMLInputElement) {
-                return;
-              }
-              const field = editableFieldNear(event.target, event.currentTarget);
-              if (field instanceof HTMLInputElement) {
-                field.focus();
-              }
-            }}
-          >
-            <RowCell
-              column={column.key}
-              row={row}
-              recommendedPieces={recommendedPieces}
-              editable={editable}
-              onVolumeAction={onVolumeAction}
-            />
-          </td>
-        );
-      })}
+      {COLUMNS.map((column) => (
+        <td
+          key={`row:${column.key}`}
+          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`}
+        >
+          <RowCell column={column.key} row={row} recommendedPieces={recommendedPieces} />
+        </td>
+      ))}
     </tr>
   );
 }
@@ -254,36 +194,20 @@ function RowCell({
   column,
   row,
   recommendedPieces,
-  editable,
-  onVolumeAction,
 }: {
   column: ColumnKey;
   row: ProductionPlanRow;
   recommendedPieces: number;
-  editable: boolean;
-  onVolumeAction: (lineId: string, volumePieces: number) => string | null;
 }) {
   if (column === 'recommended') {
     return <TableNumber value={recommendedPieces}>{formatPieces(recommendedPieces)} шт</TableNumber>;
   }
 
   if (column === 'volume') {
-    if (!editable || row.planLineId === null || row.volumePieces === null) {
-      return row.volumePieces === null ? (
-        <Empty />
-      ) : (
-        <TableNumber value={row.volumePieces}>{formatPieces(row.volumePieces)} шт</TableNumber>
-      );
-    }
-
-    return (
-      <IntegerCell
-        label={`Объём выпуска, ${row.name}`}
-        value={row.volumePieces}
-        unit="шт"
-        invalidMessage="Укажите объём целым числом штук."
-        onChange={(next) => onVolumeAction(row.planLineId ?? '', next)}
-      />
+    return row.volumePieces === null ? (
+      <Empty />
+    ) : (
+      <TableNumber value={row.volumePieces}>{formatPieces(row.volumePieces)} шт</TableNumber>
     );
   }
 
@@ -326,11 +250,4 @@ function TotalsCell({
       }
       return <VatMoneyCell whole withVat={totals.valueWithVat} exVat={totals.valueExVat} />;
   }
-}
-
-function editableFieldNear(target: EventTarget | null, cell: HTMLElement): HTMLInputElement | null {
-  if (target instanceof HTMLInputElement) {
-    return target;
-  }
-  return cell.querySelector('input');
 }

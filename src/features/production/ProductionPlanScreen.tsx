@@ -167,24 +167,7 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
                 totals={view.totals}
                 recommendedByProduct={recommendedByProduct}
                 recommendedTotal={recommendedTotal}
-                editable={planEditable}
                 expanded={tableExpanded}
-                onVolumeAction={(lineId, volumePieces) => {
-                  const rejection = production.updateProductionVolume(month, lineId, volumePieces);
-                  if (rejection === 'volume') {
-                    return 'Укажите объём целым числом штук.';
-                  }
-                  if (rejection === 'month') {
-                    return 'Этот месяц выбрать нельзя.';
-                  }
-                  if (rejection === 'closed') {
-                    return 'Этот план сейчас нельзя править.';
-                  }
-                  if (rejection) {
-                    return 'Запись не найдена.';
-                  }
-                  return null;
-                }}
               />
             </section>
           ) : (

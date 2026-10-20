@@ -1,4 +1,5 @@
 import { type Product, type ProductionPlan, type ProductionPlanLine, type PrototypeDocument } from '@/domain/document';
+import { plannedProductionVolumePieces } from '@/domain/finished-goods';
 import { amountExVat, averageAmount } from '@/domain/money';
 import { periodGridCategories, periodGridProducts } from '@/domain/period-grid';
 import { activeProducts } from '@/domain/products';
@@ -118,14 +119,15 @@ export function productionPlanLineMetrics(
   month: string,
   line: ProductionPlanLine,
 ): ProductionPlanLineMetrics {
+  const volumePieces = plannedProductionVolumePieces(document, month, line.productId);
   const product = document.products.find((item) => item.id === line.productId);
   const priceWithVat = planPriceWithVatForProduct(document, line.productId, month);
   const priceExVat = product ? amountExVat(priceWithVat, product.vatPercent) : null;
-  const valueExVat = product ? revenueExVat(priceWithVat, product.vatPercent, line.volumePieces) : null;
+  const valueExVat = product ? revenueExVat(priceWithVat, product.vatPercent, volumePieces) : null;
   return {
     priceWithVat,
     priceExVat,
-    valueWithVat: valueExVat === null ? null : revenueWithVat(priceWithVat, line.volumePieces),
+    valueWithVat: valueExVat === null ? null : revenueWithVat(priceWithVat, volumePieces),
     valueExVat,
   };
 }
@@ -147,10 +149,11 @@ export function productionPlanTotals(
       continue;
     }
     lineCount += 1;
+    const volumePieces = plannedProductionVolumePieces(document, plan.month, line.productId);
     const metrics = productionPlanLineMetrics(document, plan.month, line);
-    volume += line.volumePieces;
+    volume += volumePieces;
 
-    if (line.volumePieces > 0 && metrics.valueExVat === null) {
+    if (volumePieces > 0 && metrics.valueExVat === null) {
       priceComplete = false;
     }
 
@@ -230,15 +233,16 @@ export function productionPlanMonthView(document: PrototypeDocument, month: stri
       : productionPlanLineMetrics(document, month, {
           id: `production-plan-line:${month}:${product.id}`,
           productId: product.id,
-          volumePieces: 0,
+          volumePieces: plannedProductionVolumePieces(document, month, product.id),
         });
 
+    const volumePieces = plannedProductionVolumePieces(document, month, product.id);
     rowByProduct.set(product.id, {
       productId: product.id,
       name: product.name,
       deleted: product.deletedAt !== null,
       planLineId: line?.id ?? null,
-      volumePieces: line?.volumePieces ?? null,
+      volumePieces,
       vatPercent: product.vatPercent,
       metrics,
     });

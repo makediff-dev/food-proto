@@ -1,8 +1,8 @@
 import { type Product, type PrototypeDocument } from '@/domain/document';
+import { plannedProductionVolumePieces } from '@/domain/finished-goods';
 import { amountExVat, averageAmount, ratioRound } from '@/domain/money';
 import { periodGridCategories, periodReferencedProductIds } from '@/domain/period-grid';
 import { type ProductionProductSpend, productionSpendByProduct } from '@/domain/production-journal';
-import { productionPlanForMonth } from '@/domain/production-plan';
 import { activeProducts } from '@/domain/products';
 import {
   daysInMonth,
@@ -249,14 +249,12 @@ function factSpendByProduct(document: PrototypeDocument, month: string): Map<str
  * В документ ничего не пишется.
  */
 export function monthProductionFact(document: PrototypeDocument, month: string): ProductionFactView {
-  const plan = productionPlanForMonth(document, month);
   const products = productionFactGridProducts(document, month);
   const factByProduct = factSpendByProduct(document, month);
-  const lineByProduct = new Map(plan.lines.map((line) => [line.productId, line]));
   const rowByProduct = new Map<string, ProductionFactRow>();
 
   for (const product of products) {
-    const planVolumePieces = lineByProduct.get(product.id)?.volumePieces ?? 0;
+    const planVolumePieces = plannedProductionVolumePieces(document, month, product.id);
     rowByProduct.set(
       product.id,
       factRow(
