@@ -3,10 +3,11 @@
 import type { SummaryHeadline as Headline, OperatingExpenseSide, SummaryLens } from '@/domain/summary';
 import { OPERATING_EXPENSE_ERROR, parseOperatingExpense } from '@/features/sales/text';
 import {
+  type CellKind,
   ColumnLabel,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
-  editableCellClassName,
   MoneyAmount,
   MoneyCell,
   nameHeadingClassName,
@@ -23,6 +24,16 @@ const labelCellClassName =
 const valueCellClassName = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
 
 type HeadlineRowId = 'revenue' | 'contribution' | 'opex' | 'profit' | 'tax' | 'net' | 'rentability';
+
+function headlineKind(id: HeadlineRowId, side: 'plan' | 'fact' | 'variance', opexAssigned: boolean): CellKind {
+  if (side === 'variance' || id !== 'opex') {
+    return 'computed';
+  }
+  if (opexAssigned) {
+    return 'assigned';
+  }
+  return side === 'plan' ? 'repeated' : 'computed';
+}
 
 const ROWS: { id: HeadlineRowId; label: string }[] = [
   { id: 'revenue', label: 'Выручка с НДС' },
@@ -91,7 +102,10 @@ export function SummaryHeadlineTable({
               {planLabel}
             </th>
             {ROWS.map((row) => (
-              <td key={row.id} className={valueCellClassName}>
+              <td
+                key={row.id}
+                className={`${valueCellClassName} ${cellKindClassName[headlineKind(row.id, 'plan', false)]}`}
+              >
                 <HeadlineValue
                   row={row.id}
                   side="plan"
@@ -109,7 +123,7 @@ export function SummaryHeadlineTable({
             {ROWS.map((row) => (
               <td
                 key={row.id}
-                className={`${valueCellClassName} ${row.id === 'opex' && factOpexEditable ? editableCellClassName : ''}`}
+                className={`${valueCellClassName} ${cellKindClassName[headlineKind(row.id, 'fact', factOpexEditable)]}`}
               >
                 <HeadlineValue
                   row={row.id}
@@ -131,7 +145,7 @@ export function SummaryHeadlineTable({
               Откл.
             </th>
             {ROWS.map((row) => (
-              <td key={row.id} className={valueCellClassName}>
+              <td key={row.id} className={`${valueCellClassName} ${cellKindClassName.computed}`}>
                 <VarianceValue row={row.id} headline={headline} />
               </td>
             ))}
@@ -254,7 +268,7 @@ export function PlanHeadlineTable({
             {ROWS.map((row) => (
               <td
                 key={row.id}
-                className={`${valueCellClassName} ${row.id === 'opex' && editable ? editableCellClassName : ''}`}
+                className={`${valueCellClassName} ${cellKindClassName[headlineKind(row.id, 'plan', editable)]}`}
               >
                 <HeadlineValue
                   row={row.id}

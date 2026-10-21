@@ -5,9 +5,9 @@ import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
 import {
   blockCornerClassName,
   blockHeadingClassName,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
-  editableCellClassName,
   keepWithNext,
   nameHeadingClassName,
   stickyHeadClassName,
@@ -69,13 +69,13 @@ export function MaterialsInventoryTable({
                 {row.name}
                 {row.deleted ? <span className="text-muted"> (архив)</span> : null}
               </th>
-              <td className={`border-b border-b-line px-2 py-2 text-right ${columnDividerClassName}`}>
+              <td
+                className={`border-b border-b-line px-2 py-2 text-right ${columnDividerClassName} ${cellKindClassName.computed}`}
+              >
                 <QuantityRead value={row.bookClosingQuantity} unit={row.unit} signed />
               </td>
               <td
-                className={`border-b border-b-line px-2 py-2 text-right ${columnDividerClassName} ${
-                  editable && !row.deleted ? editableCellClassName : ''
-                }`}
+                className={`border-b border-b-line px-2 py-2 text-right ${columnDividerClassName} ${cellKindClassName.assigned}`}
               >
                 {editable && !row.deleted ? (
                   <QuantityCell
@@ -89,7 +89,9 @@ export function MaterialsInventoryTable({
                   <QuantityRead value={row.closingQuantity} unit={row.unit} signed />
                 )}
               </td>
-              <td className={`border-b border-b-line px-2 py-2 text-right ${columnDividerClassName}`}>
+              <td
+                className={`border-b border-b-line px-2 py-2 text-right ${columnDividerClassName} ${cellKindClassName.computed}`}
+              >
                 <QuantityRead value={row.closingDeviationQuantity} unit={row.unit} signed />
               </td>
             </tr>
@@ -98,13 +100,13 @@ export function MaterialsInventoryTable({
             <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
               {totals.unit ? 'Всего' : 'Сумма'}
             </th>
-            <td className={`${totalValueClassName} ${columnDividerClassName}`}>
+            <td className={`${totalValueClassName} ${columnDividerClassName} ${cellKindClassName.computed}`}>
               <QuantityRead value={totals.bookClosingQuantity} unit={totals.unit ?? undefined} signed />
             </td>
-            <td className={`${totalValueClassName} ${columnDividerClassName}`}>
+            <td className={`${totalValueClassName} ${columnDividerClassName} ${cellKindClassName.assigned}`}>
               <QuantityRead value={totals.closingQuantity} unit={totals.unit ?? undefined} signed />
             </td>
-            <td className={`${totalValueClassName} ${columnDividerClassName}`}>
+            <td className={`${totalValueClassName} ${columnDividerClassName} ${cellKindClassName.computed}`}>
               <QuantityRead value={totals.closingDeviationQuantity} unit={totals.unit ?? undefined} signed />
             </td>
           </tr>

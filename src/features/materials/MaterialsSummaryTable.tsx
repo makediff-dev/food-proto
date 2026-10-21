@@ -6,9 +6,10 @@ import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
 import {
   blockCornerClassName,
   blockHeadingClassName,
+  type CellKind,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
-  editableCellClassName,
   keepWithNext,
   nameHeadingClassName,
   stickyHeadClassName,
@@ -90,12 +91,33 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
 const COLUMNS = COLUMN_GROUPS.flatMap((group) => group.columns);
 const GROUP_END_KEYS = new Set(COLUMN_GROUPS.slice(0, -1).map((group) => group.columns[group.columns.length - 1]?.key));
 
+const COLUMN_KIND: Record<ColumnKey, CellKind> = {
+  opening: 'repeated',
+  planReceipt: 'repeated',
+  planReceiptPrice: 'repeated',
+  planReceiptCost: 'repeated',
+  factReceipt: 'computed',
+  factReceiptPrice: 'computed',
+  factReceiptCost: 'computed',
+  receiptDeviation: 'computed',
+  receiptDeviationPrice: 'computed',
+  receiptDeviationCost: 'computed',
+  planConsumption: 'assigned',
+  factConsumption: 'assigned',
+  consumptionDeviation: 'computed',
+  consumptionPrice: 'repeated',
+  consumptionCost: 'computed',
+  bookClosing: 'computed',
+  closing: 'repeated',
+  closingDeviation: 'computed',
+  min: 'repeated',
+  max: 'repeated',
+  normDeviation: 'computed',
+  closingCost: 'computed',
+};
+
 function consumptionEditable(editable: boolean, row: MaterialMovementRow): boolean {
   return editable && !row.deleted;
-}
-
-function isConsumptionColumn(key: ColumnKey): boolean {
-  return key === 'planConsumption' || key === 'factConsumption';
 }
 
 function groupEndClass(key: ColumnKey): string {
@@ -161,9 +183,7 @@ export function MaterialsSummaryTable({
               {COLUMNS.map((column) => (
                 <td
                   key={column.key}
-                  className={`border-b border-b-line px-2 py-2 text-right align-middle ${groupEndClass(column.key)} ${
-                    isConsumptionColumn(column.key) && consumptionEditable(editable, row) ? editableCellClassName : ''
-                  }`}
+                  className={`border-b border-b-line px-2 py-2 text-right align-middle ${groupEndClass(column.key)} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
                 >
                   <RowCell
                     column={column.key}
@@ -180,7 +200,10 @@ export function MaterialsSummaryTable({
               {totals.unit ? 'Всего' : 'Сумма'}
             </th>
             {COLUMNS.map((column) => (
-              <td key={column.key} className={`${totalValueClassName} ${groupEndClass(column.key)}`}>
+              <td
+                key={column.key}
+                className={`${totalValueClassName} ${groupEndClass(column.key)} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
+              >
                 <TotalsCell column={column.key} totals={totals} />
               </td>
             ))}

@@ -12,13 +12,14 @@ import { IconChevronDown, IconChevronRight, IconPlus, IconTrash } from '@/featur
 import {
   blockCornerClassName,
   blockHeadingClassName,
+  type CellKind,
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
   Empty,
-  editableCellClassName,
   gridNameClassName,
   IntegerCell,
   keepWithNext,
@@ -72,6 +73,20 @@ const VARIANCE_COLUMNS: { key: VarianceKey; label: string }[] = [
 
 const LAST_PLAN_KEY = SIDE_COLUMNS.at(-1)?.key;
 const LAST_FACT_KEY = SIDE_COLUMNS.at(-1)?.key;
+
+const PLAN_ASSIGNED = new Set<SideKey>(['unitCost', 'price', 'volume', 'vat']);
+const FACT_REPEATED = new Set<SideKey>(['unitCost', 'vat']);
+
+function planColumnKind(column: SideKey, part: 'full' | 'plan'): CellKind {
+  if (part === 'full') {
+    return 'repeated';
+  }
+  return PLAN_ASSIGNED.has(column) ? 'assigned' : 'computed';
+}
+
+function factColumnKind(column: SideKey): CellKind {
+  return FACT_REPEATED.has(column) ? 'repeated' : 'computed';
+}
 
 function sectionRightClass(kind: 'plan' | 'fact' | 'variance', key: string, part: 'full' | 'plan'): string {
   if (part === 'plan') {
@@ -218,7 +233,7 @@ export function SummaryTable({
             {SIDE_COLUMNS.map((column) => (
               <td
                 key={`plan-total:${column.key}`}
-                className={`${totalValueClassName} last:border-r-0 ${sectionRightClass('plan', column.key, part)}`}
+                className={`${totalValueClassName} last:border-r-0 ${sectionRightClass('plan', column.key, part)} ${cellKindClassName[planColumnKind(column.key, part)]}`}
               >
                 {planTotals ? <SideCell column={column.key} side={planTotals} kind="total" /> : <Empty />}
               </td>
@@ -227,7 +242,7 @@ export function SummaryTable({
               ? SIDE_COLUMNS.map((column) => (
                   <td
                     key={`fact-total:${column.key}`}
-                    className={`${totalValueClassName} last:border-r-0 ${sectionRightClass('fact', column.key, part)}`}
+                    className={`${totalValueClassName} last:border-r-0 ${sectionRightClass('fact', column.key, part)} ${cellKindClassName[factColumnKind(column.key)]}`}
                   >
                     <SideCell column={column.key} side={factTotals} kind="total" />
                   </td>
@@ -235,7 +250,10 @@ export function SummaryTable({
               : null}
             {showFact
               ? VARIANCE_COLUMNS.map((column) => (
-                  <td key={`var-total:${column.key}`} className={`${totalValueClassName} ${columnDividerClassName}`}>
+                  <td
+                    key={`var-total:${column.key}`}
+                    className={`${totalValueClassName} ${columnDividerClassName} ${cellKindClassName.computed}`}
+                  >
                     <VarianceCell column={column.key} variance={variance} />
                   </td>
                 ))
@@ -413,9 +431,7 @@ function ProductRow({
         return (
           <td
             key={`plan:${column.key}`}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('plan', column.key, part)} ${
-              canEdit && (column.key === 'volume' || column.key === 'vat') ? editableCellClassName : ''
-            }`}
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('plan', column.key, part)} ${cellKindClassName[planColumnKind(column.key, part)]}`}
             onClick={(event) => {
               if (!canEdit) {
                 return;
@@ -452,7 +468,7 @@ function ProductRow({
         ? SIDE_COLUMNS.map((column) => (
             <td
               key={`fact:${column.key}`}
-              className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('fact', column.key, part)}`}
+              className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('fact', column.key, part)} ${cellKindClassName[factColumnKind(column.key)]}`}
             >
               <SideCell column={column.key} side={row.fact} kind="row" />
             </td>
@@ -462,7 +478,7 @@ function ProductRow({
         ? VARIANCE_COLUMNS.map((column) => (
             <td
               key={`var:${column.key}`}
-              className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`}
+              className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName} ${cellKindClassName.computed}`}
             >
               <VarianceCell column={column.key} variance={row.variance} />
             </td>

@@ -14,12 +14,13 @@ import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
   blockHeadingClassName,
+  type CellKind,
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
-  editableCellClassName,
   IntegerCell,
   keepWithNext,
   nameHeadingClassName,
@@ -44,6 +45,13 @@ const COLUMNS: { key: ColumnKey; label: string }[] = [
 ];
 
 const EDITABLE_COLUMNS = new Set<ColumnKey>(['min', 'max']);
+
+const COLUMN_KIND: Record<ColumnKey, CellKind> = {
+  min: 'assigned',
+  max: 'assigned',
+  normDeviation: 'computed',
+  recommended: 'computed',
+};
 
 export function movementPlanNormRangeInvalid(minPieces: number, maxPieces: number): boolean {
   return minPieces > maxPieces;
@@ -97,7 +105,10 @@ export function MovementPlanTable({
               Всего
             </th>
             {COLUMNS.map((column) => (
-              <td key={`total:${column.key}`} className={`${totalValueClassName} ${columnDividerClassName}`}>
+              <td
+                key={`total:${column.key}`}
+                className={`${totalValueClassName} ${columnDividerClassName} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
+              >
                 <TotalsCell column={column.key} totals={totals} />
               </td>
             ))}
@@ -202,9 +213,7 @@ function ProductRow({
         return (
           <td
             key={`row:${column.key}`}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName} ${
-              cellEditable ? editableCellClassName : ''
-            } ${normCellInvalid ? 'bg-caution/15 ring-1 ring-inset ring-caution/50' : ''}`}
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName} ${cellKindClassName[COLUMN_KIND[column.key]]} ${normCellInvalid ? 'bg-caution/15 ring-1 ring-inset ring-caution/50' : ''}`}
             onClick={(event) => {
               if (!cellEditable) {
                 return;

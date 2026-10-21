@@ -9,8 +9,8 @@ import { MATERIAL_NORM_ERROR } from '@/features/materials/text';
 import { useMaterials } from '@/features/materials/use-materials';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
+  cellKindClassName,
   columnHeadingClassName,
-  editableCellClassName,
   nameHeadingClassName,
   stickyHeadClassName,
   tableBorder,
@@ -71,7 +71,7 @@ export function MaterialsNormsScreen() {
                         return (
                           <td
                             key={product.id}
-                            className={`border-b border-b-line px-2 py-2 text-right ${tableBorder.rightThin} ${editableCellClassName}`}
+                            className={`border-b border-b-line px-2 py-2 text-right ${tableBorder.rightThin} ${cellKindClassName.assigned}`}
                           >
                             <NormCell
                               label={`Норма ${material.name} на ${product.name}, ${warehouse.name}`}

@@ -10,9 +10,11 @@ import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
   blockHeadingClassName,
+  type CellKind,
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
   Empty,
@@ -72,6 +74,12 @@ const COLUMNS = [
 ] as const;
 
 type ColumnKey = (typeof COLUMNS)[number]['key'];
+
+const COLUMN_KIND: Record<ColumnKey, CellKind> = {
+  price: 'assigned',
+  pieces: 'assigned',
+  amount: 'computed',
+};
 
 function rowMetrics(product: Product, draft: ProductionEntryLineDraft): EntryFormRow {
   const priceWithVat = parseProductionEntryPrice(draft.price);
@@ -214,7 +222,7 @@ export function ProductionEntryFormTable({
             {COLUMNS.map((column) => (
               <td
                 key={column.key}
-                className={`w-px border-y-[3px] border-y-muted bg-sheet text-right align-middle text-sm font-bold ${columnDividerClassName} ${
+                className={`w-px border-y-[3px] border-y-muted text-right align-middle text-sm font-bold ${columnDividerClassName} ${cellKindClassName.computed} ${
                   column.key === 'pieces' ? 'h-px p-0' : 'px-1.5 py-2'
                 }`}
               >
@@ -342,7 +350,7 @@ function ProductRow({
       {COLUMNS.map((column) => (
         <td
           key={column.key}
-          className={`w-px border-b border-b-line text-right align-middle ${columnDividerClassName} ${
+          className={`w-px border-b border-b-line text-right align-middle ${columnDividerClassName} ${cellKindClassName[COLUMN_KIND[column.key]]} ${
             column.key === 'pieces' ? 'h-px p-0' : 'px-1.5 py-2'
           }`}
         >
@@ -365,7 +373,8 @@ function RowCell({
   if (column === 'price') {
     return (
       <StackedPair
-        topHighlighted
+        topKind="assigned"
+        bottomKind="computed"
         topLabel="с НДС"
         bottomLabel="без НДС"
         top={
@@ -385,7 +394,7 @@ function RowCell({
 
   if (column === 'pieces') {
     return (
-      <MergedTwoStory highlighted>
+      <MergedTwoStory kind="assigned">
         <GridInput
           label={`Штуки, ${row.product.name}`}
           value={row.draft.pieces}

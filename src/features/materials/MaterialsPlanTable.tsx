@@ -8,9 +8,10 @@ import { IconTrash } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
   blockHeadingClassName,
+  type CellKind,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
-  editableCellClassName,
   keepWithNext,
   nameHeadingClassName,
   stickyHeadClassName,
@@ -33,6 +34,10 @@ const COLUMNS: { key: ColumnKey; label: string; editable: boolean }[] = [
   { key: 'normDeviation', label: 'Откл.', editable: false },
   { key: 'recommended', label: 'Рекомендуемый приход', editable: false },
 ];
+
+function planColumnKind(column: (typeof COLUMNS)[number]): CellKind {
+  return column.editable ? 'assigned' : 'computed';
+}
 
 export function MaterialsPlanTable({
   caption,
@@ -99,9 +104,7 @@ export function MaterialsPlanTable({
               {COLUMNS.map((column) => (
                 <td
                   key={column.key}
-                  className={`border-b border-b-line px-2 py-2 text-right align-middle ${columnDividerClassName} ${
-                    editable && !row.deleted && column.editable ? editableCellClassName : ''
-                  }`}
+                  className={`border-b border-b-line px-2 py-2 text-right align-middle ${columnDividerClassName} ${cellKindClassName[planColumnKind(column)]}`}
                 >
                   <PlanCell column={column.key} row={row} editable={editable && !row.deleted} onField={onField} />
                 </td>
@@ -113,7 +116,10 @@ export function MaterialsPlanTable({
               {totals.unit ? 'Всего' : 'Сумма'}
             </th>
             {COLUMNS.map((column) => (
-              <td key={column.key} className={`${totalValueClassName} ${columnDividerClassName}`}>
+              <td
+                key={column.key}
+                className={`${totalValueClassName} ${columnDividerClassName} ${cellKindClassName[planColumnKind(column)]}`}
+              >
                 <PlanTotal column={column.key} totals={totals} />
               </td>
             ))}

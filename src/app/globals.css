@@ -7,6 +7,10 @@
   --muted: #5e5e5e;
   --line: #deded8;
   --band: #c4c4be;
+  /* Типы ячеек — единственное место настройки заливки. */
+  --cell-assigned: #ffffff;
+  --cell-computed: #e4e4e0;
+  --cell-repeated: linear-gradient(135deg, var(--cell-computed) 30%, var(--cell-assigned) 100%);
   --sidebar: #1a1a1a;
   --sidebar-muted: #a8a8a2;
   --sidebar-line: #343432;
@@ -44,4 +48,16 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-onest), sans-serif;
+}
+
+.cell-assigned {
+  background: var(--cell-assigned);
+}
+
+.cell-computed {
+  background: var(--cell-computed);
+}
+
+.cell-repeated {
+  background: var(--cell-repeated);
 }

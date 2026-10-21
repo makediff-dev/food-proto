@@ -8,12 +8,13 @@ import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
   blockHeadingClassName,
+  type CellKind,
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
-  editableCellClassName,
   IntegerCell,
   keepWithNext,
   nameHeadingClassName,
@@ -35,6 +36,12 @@ const COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: 'inventory', label: 'Факт' },
   { key: 'closingDeviation', label: 'Откл.' },
 ];
+
+const COLUMN_KIND: Record<ColumnKey, CellKind> = {
+  bookClosing: 'computed',
+  inventory: 'assigned',
+  closingDeviation: 'computed',
+};
 
 export function InventoryTable({
   groups,
@@ -84,7 +91,10 @@ export function InventoryTable({
               Всего
             </th>
             {COLUMNS.map((column) => (
-              <td key={`total:${column.key}`} className={`${totalValueClassName} ${columnDividerClassName}`}>
+              <td
+                key={`total:${column.key}`}
+                className={`${totalValueClassName} ${columnDividerClassName} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
+              >
                 <TotalsCell column={column.key} totals={totals} />
               </td>
             ))}
@@ -187,9 +197,7 @@ function ProductRow({
         return (
           <td
             key={`row:${column.key}`}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName} ${
-              cellEditable ? editableCellClassName : ''
-            }`}
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
             onClick={(event) => {
               if (!cellEditable) {
                 return;

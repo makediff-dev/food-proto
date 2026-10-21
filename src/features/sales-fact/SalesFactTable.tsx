@@ -14,9 +14,11 @@ import { IconChevronDown, IconChevronRight, IconChevronUp } from '@/features/she
 import {
   blockCornerClassName,
   blockHeadingClassName,
+  type CellKind,
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
   dayDateColumnClassName,
@@ -62,6 +64,17 @@ const COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: 'salesVolumeCost', label: 'Себест. объёма' },
   { key: 'vat', label: 'НДС' },
 ];
+
+const COLUMN_KIND: Record<ColumnKey, CellKind> = {
+  salesUnitCost: 'repeated',
+  profitability: 'computed',
+  price: 'computed',
+  salesPieces: 'computed',
+  revenue: 'computed',
+  contribution: 'computed',
+  salesVolumeCost: 'computed',
+  vat: 'repeated',
+};
 
 export function SalesFactTable({
   days,
@@ -142,7 +155,10 @@ export function SalesFactTable({
                   Всего
                 </th>
                 {COLUMNS.map((column) => (
-                  <td key={column.key} className={`${totalValueClassName} ${columnDividerClassName}`}>
+                  <td
+                    key={column.key}
+                    className={`${totalValueClassName} ${columnDividerClassName} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
+                  >
                     <TotalCell column={column.key} totals={day.totals} />
                   </td>
                 ))}
@@ -230,7 +246,7 @@ function ProductRow({ row, index }: { row: SalesFactRow; index: number }) {
       {COLUMNS.map((column) => (
         <td
           key={column.key}
-          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`}
+          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
         >
           <RowCell column={column.key} row={row} />
         </td>

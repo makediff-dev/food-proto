@@ -12,11 +12,13 @@ export {
 export { ColumnLabel, keepWithNext } from '@/features/table/ColumnLabel';
 export { ProductIndex } from '@/features/table/ProductIndex';
 export { MergedTwoStory, StackedPair } from '@/features/table/StackedPair';
+export type { CellKind } from '@/features/table/styles';
 export {
   blockCornerClassName,
   blockHeadingClassName,
   categoryBandClassName,
   categoryNameClassName,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
   dayDateColumnClassName,
@@ -25,7 +27,6 @@ export {
   dayFactSpacerHeadClassName,
   dayFactSpacerTotalClassName,
   dayFactTableClassName,
-  editableCellClassName,
   gridFieldClassName,
   gridNameClassName,
   nameHeadingClassName,

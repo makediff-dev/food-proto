@@ -260,9 +260,19 @@ export function IntegerCell({
   );
 }
 
+function vatHalfKind(thisHalf: boolean, otherHalf: boolean): 'assigned' | 'computed' | undefined {
+  if (thisHalf) {
+    return 'assigned';
+  }
+  if (otherHalf) {
+    return 'computed';
+  }
+  return undefined;
+}
+
 /**
  * Двойная ячейка «с НДС» / «без НДС».
- * Хендлер на половину делает её редактируемой и подсвечивает фон.
+ * Хендлер на половину делает её назначаемой; парная без хендлера — вычисляемая.
  */
 export function VatMoneyCell({
   label = 'Сумма',
@@ -294,8 +304,8 @@ export function VatMoneyCell({
     <StackedPair
       topLabel="с НДС"
       bottomLabel="без НДС"
-      topHighlighted={Boolean(onChangeWithVat)}
-      bottomHighlighted={Boolean(onChangeExVat)}
+      topKind={vatHalfKind(Boolean(onChangeWithVat), Boolean(onChangeExVat))}
+      bottomKind={vatHalfKind(Boolean(onChangeExVat), Boolean(onChangeWithVat))}
       top={
         <MoneyCell
           label={`${label} с НДС`}

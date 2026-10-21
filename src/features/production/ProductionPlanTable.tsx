@@ -8,9 +8,11 @@ import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
   blockHeadingClassName,
+  type CellKind,
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
   Empty,
@@ -37,6 +39,13 @@ const COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: 'price', label: 'Цена' },
   { key: 'value', label: 'Стоимость' },
 ];
+
+const COLUMN_KIND: Record<ColumnKey, CellKind> = {
+  volume: 'computed',
+  recommended: 'repeated',
+  price: 'repeated',
+  value: 'computed',
+};
 
 export function ProductionPlanTable({
   groups,
@@ -86,7 +95,10 @@ export function ProductionPlanTable({
               Всего
             </th>
             {COLUMNS.map((column) => (
-              <td key={`total:${column.key}`} className={`${totalValueClassName} ${columnDividerClassName}`}>
+              <td
+                key={`total:${column.key}`}
+                className={`${totalValueClassName} ${columnDividerClassName} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
+              >
                 <TotalsCell column={column.key} totals={totals} recommendedPieces={recommendedTotal} />
               </td>
             ))}
@@ -181,7 +193,7 @@ function ProductRow({
       {COLUMNS.map((column) => (
         <td
           key={`row:${column.key}`}
-          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`}
+          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
         >
           <RowCell column={column.key} row={row} recommendedPieces={recommendedPieces} />
         </td>

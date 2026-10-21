@@ -6,8 +6,17 @@ export const tableBorder = {
   bottomThick: 'border-b-[3px] border-b-muted',
 } as const;
 
-/** Фон ячейки, которую можно править. */
-export const editableCellClassName = 'bg-[#e4e4e0]';
+/**
+ * Три типа ячеек сетки. Цвета — `--cell-assigned`, `--cell-computed`, `--cell-repeated` в `globals.css`.
+ * assigned — вводят на этом экране; computed — формула; repeated — значение из другой таблицы.
+ */
+export type CellKind = 'assigned' | 'computed' | 'repeated';
+
+export const cellKindClassName: Record<CellKind, string> = {
+  assigned: 'cell-assigned',
+  computed: 'cell-computed',
+  repeated: 'cell-repeated',
+};
 
 /** Прозрачное поле внутри числовой ячейки сетки (цвет текста задаёт вызывающий). */
 export const gridFieldClassName =
@@ -69,7 +78,7 @@ export const totalNameClassName =
   'w-px max-w-max whitespace-nowrap border-y-[3px] border-y-muted border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle text-sm font-bold text-ink';
 
 export const totalValueClassName =
-  'w-px border-y-[3px] border-y-muted bg-sheet px-1.5 py-2 text-right align-middle text-sm font-bold';
+  'w-px border-y-[3px] border-y-muted px-1.5 py-2 text-right align-middle text-sm font-bold';
 
 /** Тонкая линия между столбцами. У крайней колонки её закрывает рамка таблицы. */
 export const columnDividerClassName = `${tableBorder.rightThin} last:border-r-0`;

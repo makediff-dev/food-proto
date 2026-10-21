@@ -15,9 +15,11 @@ import { IconChevronDown, IconChevronRight, IconChevronUp } from '@/features/she
 import {
   blockCornerClassName,
   blockHeadingClassName,
+  type CellKind,
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
   dayDateColumnClassName,
@@ -49,6 +51,13 @@ const COLUMNS: { key: ColumnKey; label: string }[] = [
   { key: 'price', label: 'Цена' },
   { key: 'value', label: 'Стоимость' },
 ];
+
+const COLUMN_KIND: Record<ColumnKey, CellKind> = {
+  volume: 'computed',
+  recommended: 'repeated',
+  price: 'computed',
+  value: 'computed',
+};
 
 export function ProductionJournalFactTable({
   days,
@@ -128,7 +137,10 @@ export function ProductionJournalFactTable({
                   Всего
                 </th>
                 {COLUMNS.map((column) => (
-                  <td key={column.key} className={`${totalValueClassName} ${columnDividerClassName}`}>
+                  <td
+                    key={column.key}
+                    className={`${totalValueClassName} ${columnDividerClassName} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
+                  >
                     <TotalCell column={column.key} totals={day.totals} />
                   </td>
                 ))}
@@ -220,7 +232,7 @@ function ProductRow({ row, index }: { row: ProductionJournalFactRow; index: numb
       {COLUMNS.map((column) => (
         <td
           key={column.key}
-          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`}
+          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
         >
           <RowCell column={column.key} row={row} />
         </td>

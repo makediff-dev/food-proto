@@ -10,8 +10,10 @@ import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
   blockHeadingClassName,
+  type CellKind,
   categoryBandClassName,
   categoryNameClassName,
+  cellKindClassName,
   columnDividerClassName,
   IntegerCell,
   keepWithNext,
@@ -98,6 +100,30 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
 
 const COLUMNS = COLUMN_GROUPS.flatMap((group) => group.columns);
 
+const COLUMN_KIND: Record<ColumnKey, CellKind> = {
+  openingFact: 'repeated',
+  openingPrice: 'repeated',
+  openingValue: 'computed',
+  salesPieces: 'repeated',
+  salesPrice: 'repeated',
+  salesRevenue: 'repeated',
+  productionPieces: 'repeated',
+  productionPrice: 'repeated',
+  productionValue: 'repeated',
+  bookClosing: 'computed',
+  inventoryClosing: 'repeated',
+  closingInventoryDeviation: 'computed',
+  closingInventoryDeviationValue: 'computed',
+  currentClosing: 'computed',
+  currentClosingDeviation: 'computed',
+  currentClosingDeviationValue: 'computed',
+  min: 'repeated',
+  max: 'repeated',
+  normDeviation: 'computed',
+  factPrice: 'repeated',
+  closingValue: 'computed',
+};
+
 const GROUP_END_KEYS = new Set(COLUMN_GROUPS.slice(0, -1).map((group) => group.columns[group.columns.length - 1].key));
 
 function groupEndClass(key: ColumnKey): string {
@@ -159,7 +185,7 @@ export function FinishedGoodsMonthTable({
             {COLUMNS.map((column) => (
               <td
                 key={`total:${column.key}`}
-                className={`${totalValueClassName} last:border-r-0 ${groupEndClass(column.key)}`}
+                className={`${totalValueClassName} last:border-r-0 ${groupEndClass(column.key)} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
               >
                 <TotalsCell column={column.key} totals={totals} />
               </td>
@@ -231,7 +257,7 @@ function ProductRow({ row, index }: { row: FinishedGoodsRow; index: number }) {
       {COLUMNS.map((column) => (
         <td
           key={`row:${column.key}`}
-          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${groupEndClass(column.key)}`}
+          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${groupEndClass(column.key)} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
         >
           <RowCell column={column.key} row={row} />
         </td>

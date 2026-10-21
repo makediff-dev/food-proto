@@ -15,8 +15,10 @@ import { IconChevronDown, IconChevronRight, IconChevronUp } from '@/features/she
 import {
   blockCornerClassName,
   blockHeadingClassName,
+  type CellKind,
   categoryBandClassName,
   categoryNameClassName,
+  cellKindClassName,
   columnDividerClassName,
   dayDateColumnClassName,
   dayFactSpacerBandClassName,
@@ -95,6 +97,24 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
 ];
 
 const COLUMNS = COLUMN_GROUPS.flatMap((group) => group.columns);
+
+const COLUMN_KIND: Record<ColumnKey, CellKind> = {
+  opening: 'computed',
+  planPrice: 'repeated',
+  openingValue: 'computed',
+  salesPieces: 'repeated',
+  salesPrice: 'repeated',
+  salesRevenue: 'repeated',
+  productionPieces: 'repeated',
+  productionPrice: 'repeated',
+  productionValue: 'repeated',
+  closing: 'computed',
+  min: 'repeated',
+  max: 'repeated',
+  normDeviation: 'computed',
+  factPrice: 'repeated',
+  closingValue: 'computed',
+};
 
 const GROUP_END_KEYS = new Set(COLUMN_GROUPS.slice(0, -1).map((group) => group.columns[group.columns.length - 1].key));
 
@@ -189,7 +209,10 @@ export function FinishedGoodsFactTable({
                   Всего
                 </th>
                 {COLUMNS.map((column) => (
-                  <td key={column.key} className={`${totalValueClassName} ${groupEndClass(column.key)}`}>
+                  <td
+                    key={column.key}
+                    className={`${totalValueClassName} ${groupEndClass(column.key)} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
+                  >
                     <MetricCell column={column.key} metrics={day.totals} />
                   </td>
                 ))}
@@ -296,7 +319,7 @@ function ProductRow({ row, index, dayBreak }: { row: FinishedGoodsRow; index: nu
       {COLUMNS.map((column) => (
         <td
           key={column.key}
-          className={`w-px ${bottom} px-1.5 py-2 text-right align-middle ${groupEndClass(column.key)}`}
+          className={`w-px ${bottom} px-1.5 py-2 text-right align-middle ${groupEndClass(column.key)} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
         >
           <MetricCell column={column.key} metrics={row} />
         </td>

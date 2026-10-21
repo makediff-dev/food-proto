@@ -17,6 +17,7 @@ import {
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
+  cellKindClassName,
   columnHeadingClassName,
   Empty,
   keepWithNext,
@@ -388,15 +389,16 @@ function MetricCell({
   sheet?: boolean;
   children: ReactNode;
 }) {
+  const fill = kind === 'plan' ? cellKindClassName.repeated : cellKindClassName.computed;
   const tone = total
     ? totalValueClassName
     : sheet
-      ? 'border-b border-b-line bg-sheet'
+      ? 'border-b border-b-line'
       : `border-b border-b-line ${categoryBandClassName}`;
 
   return (
     <td
-      className={`w-px px-1.5 py-2 text-right align-middle last:border-r-0 ${tone} ${sectionRightClass(kind, column)}`}
+      className={`w-px px-1.5 py-2 text-right align-middle last:border-r-0 ${tone} ${sheet || total ? fill : ''} ${sectionRightClass(kind, column)}`}
     >
       {children}
     </td>
