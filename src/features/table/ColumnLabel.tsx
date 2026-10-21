@@ -43,15 +43,31 @@ export function keepWithNext(text: string): string {
   return line;
 }
 
-export function ColumnLabel({ label }: { label: string }) {
+const columnHeadingHintClassName =
+  'pointer-events-none absolute left-1/2 top-full z-50 mt-1.5 hidden w-max max-w-[14rem] -translate-x-1/2 rounded border border-line bg-paper px-2 py-1 text-left text-xs font-normal normal-case leading-snug text-ink shadow-sm group-hover:block';
+
+export function ColumnLabel({ label, hint }: { label: string; hint?: string }) {
   const chunks = keepWithNext(label).split(' ');
-  return (
-    <span className="mx-auto block w-min text-center">
+  const labelContent = (
+    <span className={`mx-auto block w-min text-center ${hint ? 'border-b border-dotted border-muted' : ''}`}>
       {chunks.map((chunk) => (
         <span key={chunk} className="block whitespace-nowrap">
           {chunk}
         </span>
       ))}
+    </span>
+  );
+
+  if (!hint) {
+    return labelContent;
+  }
+
+  return (
+    <span className="group relative mx-auto block w-min cursor-help">
+      {labelContent}
+      <span role="tooltip" className={columnHeadingHintClassName}>
+        {keepWithNext(hint)}
+      </span>
     </span>
   );
 }

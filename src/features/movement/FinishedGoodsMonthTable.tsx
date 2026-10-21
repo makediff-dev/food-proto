@@ -43,13 +43,16 @@ type ColumnKey =
   | 'inventoryClosing'
   | 'closingInventoryDeviation'
   | 'closingInventoryDeviationValue'
+  | 'currentClosing'
+  | 'currentClosingDeviation'
+  | 'currentClosingDeviationValue'
   | 'min'
   | 'max'
   | 'normDeviation'
   | 'factPrice'
   | 'closingValue';
 
-const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }[] }[] = [
+const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; hint?: string }[] }[] = [
   {
     label: 'Остаток на начало',
     columns: [
@@ -78,9 +81,12 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
     label: 'Остаток на конец',
     columns: [
       { key: 'bookClosing', label: 'План' },
-      { key: 'inventoryClosing', label: 'Факт' },
+      { key: 'currentClosing', label: 'Факт' },
+      { key: 'currentClosingDeviation', label: 'Откл.' },
+      { key: 'currentClosingDeviationValue', label: 'Стоим. откл.' },
+      { key: 'inventoryClosing', label: 'Факт', hint: 'по данным инвентаризации' },
       { key: 'closingInventoryDeviation', label: 'Откл.' },
-      { key: 'closingInventoryDeviationValue', label: 'Стоимость отклонения' },
+      { key: 'closingInventoryDeviationValue', label: 'Стоим. откл.' },
       { key: 'min', label: 'Мин.' },
       { key: 'max', label: 'Макс.' },
       { key: 'normDeviation', label: 'Откл.' },
@@ -276,6 +282,21 @@ function RowCell({ column, row }: { column: ColumnKey; row: FinishedGoodsRow }) 
           signed
         />
       );
+    case 'currentClosing':
+      return <TableNumber value={row.currentClosingPieces}>{formatPieces(row.currentClosingPieces)} шт</TableNumber>;
+    case 'currentClosingDeviation':
+      return <IntegerCell value={row.currentClosingDeviationPieces} unit="шт" signed />;
+    case 'currentClosingDeviationValue':
+      if (!row.revenueComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return (
+        <VatMoneyCell
+          withVat={row.currentClosingDeviationValueWithVat}
+          exVat={row.currentClosingDeviationValueExVat}
+          signed
+        />
+      );
     case 'min':
       return <TableNumber value={row.minPieces}>{formatPieces(row.minPieces)} шт</TableNumber>;
     case 'max':
@@ -330,6 +351,23 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: FinishedGoo
         <VatMoneyCell
           withVat={totals.closingInventoryDeviationValueWithVat}
           exVat={totals.closingInventoryDeviationValueExVat}
+          signed
+        />
+      );
+    case 'currentClosing':
+      return (
+        <TableNumber value={totals.currentClosingPieces}>{formatPieces(totals.currentClosingPieces)} шт</TableNumber>
+      );
+    case 'currentClosingDeviation':
+      return <IntegerCell value={totals.currentClosingDeviationPieces} unit="шт" signed />;
+    case 'currentClosingDeviationValue':
+      if (!totals.revenueComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return (
+        <VatMoneyCell
+          withVat={totals.currentClosingDeviationValueWithVat}
+          exVat={totals.currentClosingDeviationValueExVat}
           signed
         />
       );

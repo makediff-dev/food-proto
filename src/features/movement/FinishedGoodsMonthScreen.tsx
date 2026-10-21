@@ -54,7 +54,10 @@ function Workspace({ from, to, today }: { from: string; to: string; today: Date 
   const toFieldId = useId();
   const [fullscreen, setFullscreen] = useState(false);
   const currentMonth = lastSummaryMonth(today) ?? from;
-  const view = useMemo(() => finishedGoodsRangeView(prototypeDocument, from, to), [prototypeDocument, from, to]);
+  const view = useMemo(
+    () => finishedGoodsRangeView(prototypeDocument, from, to, today),
+    [prototypeDocument, from, to, today],
+  );
   const categories = activeCategories(prototypeDocument);
   const hasTable = view.groups.length > 0;
   const tableExpanded = fullscreen && hasTable;

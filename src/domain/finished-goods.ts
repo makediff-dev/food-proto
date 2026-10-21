@@ -2,6 +2,7 @@ import {
   type FinishedGoodsOpening,
   type FinishedGoodsOpeningLine,
   isMonthKey,
+  isOccurredOn,
   type Product,
   type PrototypeDocument,
 } from '@/domain/document';
@@ -16,6 +17,7 @@ import { productionEntryDayPieces } from '@/domain/production-journal-fact';
 import { activeProducts } from '@/domain/products';
 import { monthDates, saleDayProduct } from '@/domain/sales-fact';
 import {
+  daysInMonth,
   monthKeyFromDate,
   planMonthOpen,
   planPriceWithVatForProduct,
@@ -55,6 +57,12 @@ export interface FinishedGoodsTotals {
   closingInventoryDeviationPieces: number;
   closingInventoryDeviationValueWithVat: number | null;
   closingInventoryDeviationValueExVat: number | null;
+  /** Расчётный остаток на дату свода: журнал с начала интервала по сегодня или конец последнего месяца. */
+  currentClosingPieces: number;
+  /** Текущий остаток − план на конец последнего месяца интервала. */
+  currentClosingDeviationPieces: number;
+  currentClosingDeviationValueWithVat: number | null;
+  currentClosingDeviationValueExVat: number | null;
   salesPieces: number;
   salesRevenueWithVat: number | null;
   salesRevenueExVat: number | null;
@@ -192,6 +200,65 @@ export function closingInventoryDeviationPieces(inventoryPieces: number, bookClo
   return inventoryPieces - bookClosingPieces;
 }
 
+/** Дата «текущего» остатка на своде: сегодня в последнем месяце интервала, иначе последний день месяца. */
+export function finishedGoodsSummaryAsOfDate(lastMonth: string, today: Date): string {
+  if (!isMonthKey(lastMonth)) {
+    return '2000-01-01';
+  }
+  const lastDay = String(daysInMonth(lastMonth)).padStart(2, '0');
+  const monthEnd = `${lastMonth}-${lastDay}`;
+  const currentMonth = lastSummaryMonth(today);
+  if (!currentMonth || lastMonth < currentMonth) {
+    return monthEnd;
+  }
+  if (lastMonth > currentMonth) {
+    return monthEnd;
+  }
+  const todayKey = `${lastMonth}-${String(today.getDate()).padStart(2, '0')}`;
+  return isOccurredOn(todayKey) ? todayKey : monthEnd;
+}
+
+/**
+ * Расчётный остаток по журналу на дату: начало первого месяца интервала + выпуск − продажи по дням до asOf включительно.
+ */
+export function factualClosingPiecesThrough(
+  document: PrototypeDocument,
+  fromMonth: string,
+  asOf: string,
+  productId: string,
+): number {
+  if (!isMonthKey(fromMonth) || !isOccurredOn(asOf)) {
+    return 0;
+  }
+  const asOfMonth = asOf.slice(0, 7);
+  if (!isMonthKey(asOfMonth) || asOfMonth < fromMonth) {
+    return openingPiecesForProduct(document, fromMonth, productId);
+  }
+
+  let pieces = openingPiecesForProduct(document, fromMonth, productId);
+  let month = fromMonth;
+  while (true) {
+    for (const day of monthDates(month)) {
+      if (day > asOf) {
+        return pieces;
+      }
+      pieces = closingStockPieces(
+        pieces,
+        productionEntryDayPieces(document, day, productId),
+        saleDayProduct(document, day, productId).pieces,
+      );
+    }
+    if (month >= asOfMonth) {
+      return pieces;
+    }
+    const nextMonth = shiftMonth(month, 1);
+    if (!isMonthKey(nextMonth)) {
+      return pieces;
+    }
+    month = nextMonth;
+  }
+}
+
 export function openingDeviationPieces(inventoryPieces: number, bookOpeningPieces: number): number {
   return closingInventoryDeviationPieces(inventoryPieces, bookOpeningPieces);
 }
@@ -307,6 +374,10 @@ function emptyTotals(): FinishedGoodsTotals {
     closingInventoryDeviationPieces: 0,
     closingInventoryDeviationValueWithVat: null,
     closingInventoryDeviationValueExVat: null,
+    currentClosingPieces: 0,
+    currentClosingDeviationPieces: 0,
+    currentClosingDeviationValueWithVat: null,
+    currentClosingDeviationValueExVat: null,
     salesPieces: 0,
     salesRevenueWithVat: 0,
     salesRevenueExVat: 0,
@@ -404,6 +475,7 @@ function rowFromParts(
     inventoryClosingPieces?: number;
     hasInventoryLine?: boolean;
     closingPieces?: number;
+    currentClosingPieces?: number;
   } = {},
 ): FinishedGoodsRow {
   const vat = product.vatPercent;
@@ -425,6 +497,11 @@ function rowFromParts(
     hasInventoryLine && factPriceWith !== null ? closingInventoryDeviation * factPriceWith : null;
   const closingInventoryDeviationValueEx =
     hasInventoryLine && factPriceEx !== null ? closingInventoryDeviation * factPriceEx : null;
+
+  const currentClosingPieces = options.currentClosingPieces ?? bookClosingPieces;
+  const currentClosingDeviation = currentClosingPieces - bookClosingPieces;
+  const currentClosingDeviationValueWith = factPriceWith !== null ? currentClosingDeviation * factPriceWith : null;
+  const currentClosingDeviationValueEx = factPriceEx !== null ? currentClosingDeviation * factPriceEx : null;
 
   const closingPieces = options.closingPieces ?? (hasInventoryLine ? inventoryClosingPieces : bookClosingPieces);
 
@@ -454,6 +531,10 @@ function rowFromParts(
     closingInventoryDeviationPieces: closingInventoryDeviation,
     closingInventoryDeviationValueWithVat: closingInventoryDeviationValueWith,
     closingInventoryDeviationValueExVat: closingInventoryDeviationValueEx,
+    currentClosingPieces,
+    currentClosingDeviationPieces: currentClosingDeviation,
+    currentClosingDeviationValueWithVat: currentClosingDeviationValueWith,
+    currentClosingDeviationValueExVat: currentClosingDeviationValueEx,
     salesPieces,
     salesRevenueWithVat: revenueComplete ? salesRevenueWithVat : null,
     salesRevenueExVat: revenueComplete ? salesRevenueExVat : null,
@@ -502,6 +583,12 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
   let closingInventoryDeviationValueEx = 0;
   let closingInventoryDeviationValueWithComplete = true;
   let closingInventoryDeviationValueExComplete = true;
+  let currentClosingPieces = 0;
+  let currentClosingDeviationPiecesSum = 0;
+  let currentClosingDeviationValueWith = 0;
+  let currentClosingDeviationValueEx = 0;
+  let currentClosingDeviationValueWithComplete = true;
+  let currentClosingDeviationValueExComplete = true;
   let closingPieces = 0;
   let closingValueWith = 0;
   let closingValueEx = 0;
@@ -582,6 +669,23 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
       closingInventoryDeviationValueEx += row.closingInventoryDeviationValueExVat;
     }
 
+    currentClosingPieces += row.currentClosingPieces;
+    currentClosingDeviationPiecesSum += row.currentClosingDeviationPieces;
+    if (row.currentClosingDeviationValueWithVat === null) {
+      if (row.currentClosingDeviationPieces !== 0) {
+        currentClosingDeviationValueWithComplete = false;
+      }
+    } else {
+      currentClosingDeviationValueWith += row.currentClosingDeviationValueWithVat;
+    }
+    if (row.currentClosingDeviationValueExVat === null) {
+      if (row.currentClosingDeviationPieces !== 0) {
+        currentClosingDeviationValueExComplete = false;
+      }
+    } else {
+      currentClosingDeviationValueEx += row.currentClosingDeviationValueExVat;
+    }
+
     closingPieces += row.closingPieces;
     minPieces += row.minPieces;
     maxPieces += row.maxPieces;
@@ -630,6 +734,12 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
     closingInventoryDeviationValueExVat: closingInventoryDeviationValueExComplete
       ? closingInventoryDeviationValueEx
       : null,
+    currentClosingPieces,
+    currentClosingDeviationPieces: currentClosingDeviationPiecesSum,
+    currentClosingDeviationValueWithVat: currentClosingDeviationValueWithComplete
+      ? currentClosingDeviationValueWith
+      : null,
+    currentClosingDeviationValueExVat: currentClosingDeviationValueExComplete ? currentClosingDeviationValueEx : null,
     salesPieces,
     salesRevenueWithVat,
     salesRevenueExVat,
@@ -818,7 +928,12 @@ function emptyRangeView(from: string, to: string): FinishedGoodsRangeView {
  * Свод интервала по текущий месяц включительно.
  * Начало — первый месяц. Продажи и выпуск — сумма. Конец и норматив — последний месяц.
  */
-export function finishedGoodsRangeView(document: PrototypeDocument, from: string, to: string): FinishedGoodsRangeView {
+export function finishedGoodsRangeView(
+  document: PrototypeDocument,
+  from: string,
+  to: string,
+  today: Date,
+): FinishedGoodsRangeView {
   if (!isMonthKey(from) || !isMonthKey(to)) {
     return emptyRangeView(from, to);
   }
@@ -838,6 +953,7 @@ export function finishedGoodsRangeView(document: PrototypeDocument, from: string
     }
   }
   const producedByProduct = productionSpendOn(document, dates);
+  const asOf = finishedGoodsSummaryAsOfDate(lastMonth, today);
   const rows = products.map((product) => {
     const openingPrice = monthOpeningPrice(document, firstMonth, product);
     const sales = rangeSales(document, months, product.id);
@@ -845,6 +961,7 @@ export function finishedGoodsRangeView(document: PrototypeDocument, from: string
     const bookClosingPieces = bookClosingPiecesForProduct(document, lastMonth, product.id);
     const inventoryClosingPieces = storedInventoryPiecesForProduct(document, lastMonth, product.id);
     const hasInventoryLine = hasStoredInventoryLine(document, lastMonth, product.id);
+    const currentClosingPieces = factualClosingPiecesThrough(document, firstMonth, asOf, product.id);
     return rowFromParts(
       product,
       openingPiecesForProduct(document, firstMonth, product.id),
@@ -862,6 +979,7 @@ export function finishedGoodsRangeView(document: PrototypeDocument, from: string
         bookClosingPieces,
         inventoryClosingPieces,
         hasInventoryLine,
+        currentClosingPieces,
       },
     );
   });
@@ -878,8 +996,12 @@ export function finishedGoodsRangeView(document: PrototypeDocument, from: string
 }
 
 /** Свод одного месяца. Тот же расчёт, что интервал из этого месяца. */
-export function finishedGoodsMonthView(document: PrototypeDocument, month: string): FinishedGoodsMonthView {
-  const range = finishedGoodsRangeView(document, month, month);
+export function finishedGoodsMonthView(
+  document: PrototypeDocument,
+  month: string,
+  today: Date,
+): FinishedGoodsMonthView {
+  const range = finishedGoodsRangeView(document, month, month, today);
   return {
     month,
     groups: range.groups,
