@@ -209,8 +209,8 @@ export type MaterialGroupId = (typeof MATERIAL_GROUPS)[number]['id'];
  * Склад готовой продукции общий и здесь не делится.
  */
 export const MATERIAL_WAREHOUSES = [
-  { id: 'warehouse-1', name: 'Склад 1', productionName: 'Производство 1' },
-  { id: 'warehouse-2', name: 'Склад 2', productionName: 'Производство 2' },
+  { id: 'warehouse-1', name: 'Склад 1' },
+  { id: 'warehouse-2', name: 'Склад 2' },
 ] as const;
 
 export type MaterialWarehouseId = (typeof MATERIAL_WAREHOUSES)[number]['id'];

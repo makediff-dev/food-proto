@@ -3,7 +3,9 @@ import type { ReactNode } from 'react';
 import { ColumnLabel, keepWithNext } from '@/features/table/ColumnLabel';
 import { columnHeadingClassName, tableBorder } from '@/features/table/styles';
 
-const SUB_BANNER_GROUPS: { label: string; keys: readonly string[] }[] = [
+export type ReportSubBannerGroup = { label: string; keys: readonly string[] };
+
+export const FINISHED_GOODS_CLOSING_SUB_BANNERS: ReportSubBannerGroup[] = [
   {
     label: 'текущий',
     keys: ['currentClosing', 'currentClosingDeviation', 'currentClosingDeviationValue'],
@@ -18,7 +20,20 @@ const SUB_BANNER_GROUPS: { label: string; keys: readonly string[] }[] = [
   },
 ];
 
-const SUB_BANNER_KEYS = new Set(SUB_BANNER_GROUPS.flatMap((group) => group.keys));
+export const MATERIALS_CLOSING_SUB_BANNERS: ReportSubBannerGroup[] = [
+  {
+    label: 'текущий',
+    keys: ['currentClosing', 'currentClosingDeviation', 'currentClosingDeviationCost'],
+  },
+  {
+    label: 'инвентаризация',
+    keys: ['inventoryClosing', 'closingInventoryDeviation', 'closingInventoryDeviationCost'],
+  },
+  {
+    label: 'нормативный',
+    keys: ['min', 'max', 'normDeviation'],
+  },
+];
 
 const subBannerHeadingClassName =
   'w-px whitespace-normal border-t-[3px] border-t-muted border-b border-b-line bg-paper px-1.5 py-1 text-center align-middle text-sm font-normal uppercase leading-5 text-ink';
@@ -26,30 +41,36 @@ const subBannerHeadingClassName =
 const subBannerSubHeadingClassName =
   'w-px whitespace-normal border-b-[3px] border-b-muted bg-paper px-1.5 py-1 text-center align-middle text-sm font-normal leading-5 text-ink';
 
-function subBannerGroupForKey<K extends string>(key: K): { label: string; keys: readonly string[] } | undefined {
-  return SUB_BANNER_GROUPS.find((group) => group.keys.includes(key));
+function subBannerGroupForKey<K extends string>(
+  key: K,
+  subBannerGroups: readonly ReportSubBannerGroup[],
+): ReportSubBannerGroup | undefined {
+  return subBannerGroups.find((group) => group.keys.includes(key));
 }
 
 function subBannerLastKey(keys: readonly string[]): string {
   return keys[keys.length - 1] ?? '';
 }
 
-export function FinishedGoodsReportColumnHeaders<K extends string>({
+export function ReportSubBannerColumnHeaders<K extends string>({
   row,
   columns,
+  subBannerGroups,
   groupEndClass,
   lastColumnExtraClassName = '',
 }: {
   row: 'primary' | 'secondary';
   columns: readonly { key: K; label: string; hint?: string }[];
+  subBannerGroups: readonly ReportSubBannerGroup[];
   groupEndClass: (key: K) => string;
   lastColumnExtraClassName?: string;
 }): ReactNode {
-  const subBannerColumns = columns.filter((column) => SUB_BANNER_KEYS.has(column.key));
+  const subBannerKeys = new Set(subBannerGroups.flatMap((group) => group.keys));
+  const subBannerColumns = columns.filter((column) => subBannerKeys.has(column.key));
 
   if (row === 'secondary') {
     return subBannerColumns.map((column) => {
-      const group = subBannerGroupForKey(column.key);
+      const group = subBannerGroupForKey(column.key, subBannerGroups);
       const lastKey = group ? subBannerLastKey(group.keys) : column.key;
       return (
         <th
@@ -66,7 +87,7 @@ export function FinishedGoodsReportColumnHeaders<K extends string>({
   }
 
   return columns.map((column) => {
-    const group = subBannerGroupForKey(column.key);
+    const group = subBannerGroupForKey(column.key, subBannerGroups);
     if (group) {
       if (column.key !== group.keys[0]) {
         return null;
@@ -94,4 +115,26 @@ export function FinishedGoodsReportColumnHeaders<K extends string>({
       </th>
     );
   });
+}
+
+export function FinishedGoodsReportColumnHeaders<K extends string>({
+  row,
+  columns,
+  groupEndClass,
+  lastColumnExtraClassName = '',
+}: {
+  row: 'primary' | 'secondary';
+  columns: readonly { key: K; label: string; hint?: string }[];
+  groupEndClass: (key: K) => string;
+  lastColumnExtraClassName?: string;
+}): ReactNode {
+  return (
+    <ReportSubBannerColumnHeaders
+      row={row}
+      columns={columns}
+      subBannerGroups={FINISHED_GOODS_CLOSING_SUB_BANNERS}
+      groupEndClass={groupEndClass}
+      lastColumnExtraClassName={lastColumnExtraClassName}
+    />
+  );
 }

@@ -21,10 +21,7 @@ export function MaterialsWarehouseBlocks({
           </div>
           {group.warehouses.map((warehouse) => (
             <section key={warehouse.warehouseId} className="flex flex-col gap-2">
-              <h3 className="text-sm text-ink">
-                {warehouse.name}
-                <span className="text-muted"> · {warehouse.productionName}</span>
-              </h3>
+              <h3 className="text-sm text-ink">{warehouse.name}</h3>
               {warehouse.rows.length === 0 ? (
                 <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
                   В этой группе позиций нет. Добавьте наименование во вводе плана.

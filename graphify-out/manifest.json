@@ -120,9 +120,9 @@
     "semantic_hash": "724f33ff464c09fb3fcdf0af0a576d9d"
   },
   "src/domain/document.ts": {
-    "mtime": 1792567087.400837,
-    "seen": 1792567846.6235266,
-    "ast_hash": "2a7e1c505ae4b869b92f92954898e1dc",
+    "mtime": 1792576046.061587,
+    "seen": 1792576078.3763978,
+    "ast_hash": "821c853e0c05cc498b63048a20c5178c",
     "semantic_hash": ""
   },
   "src/domain/money.ts": {
@@ -274,9 +274,9 @@
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1792567087.374796,
-    "seen": 1792567846.6235266,
-    "ast_hash": "921e0ac23fbd65da65cf6bb6401d73a8",
+    "mtime": 1792576054.6387076,
+    "seen": 1792576078.3763978,
+    "ast_hash": "d6fb53cedab5ad65e3eb7991726b6ef3",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
@@ -621,9 +621,9 @@
     "semantic_hash": ""
   },
   "src/features/movement/FinishedGoodsMonthTable.tsx": {
-    "mtime": 1792573440.1811247,
-    "seen": 1792573497.5195386,
-    "ast_hash": "81dfcb5a897bb914d64ea3f505745918",
+    "mtime": 1792576821.0347812,
+    "seen": 1792576828.2211533,
+    "ast_hash": "7341e1445ef4fd8558caae612d5a2c37",
     "semantic_hash": ""
   },
   "src/features/movement/paths.ts": {
@@ -699,9 +699,9 @@
     "semantic_hash": ""
   },
   "src/features/movement/FinishedGoodsNormativeColumnHeading.tsx": {
-    "mtime": 1792571419.5208492,
-    "seen": 1792573497.5195386,
-    "ast_hash": "90ccd2fa09bc44208630ba86888939aa",
+    "mtime": 1792575148.361172,
+    "seen": 1792575196.026713,
+    "ast_hash": "e1ef33404792435a04574b1c1c6616ce",
     "semantic_hash": ""
   },
   "docs/flow.md": {
@@ -831,15 +831,15 @@
     "semantic_hash": ""
   },
   "src/data/mock-materials.ts": {
-    "mtime": 1792567087.3997598,
-    "seen": 1792567846.6235266,
-    "ast_hash": "047361b65d57a811386bf32d87f230e4",
+    "mtime": 1792574849.1124618,
+    "seen": 1792574857.3830314,
+    "ast_hash": "a32c0150bc3e5cc31f6d103925d2b198",
     "semantic_hash": ""
   },
   "src/domain/materials.ts": {
-    "mtime": 1792567087.4018588,
-    "seen": 1792567846.6235266,
-    "ast_hash": "c094894ab6d6a31771364bf57e277037",
+    "mtime": 1792576047.4845603,
+    "seen": 1792576078.3763978,
+    "ast_hash": "dc23355aba37cbfec502ab7f4a17c10e",
     "semantic_hash": ""
   },
   "src/domain/quantity.ts": {
@@ -849,15 +849,15 @@
     "semantic_hash": ""
   },
   "src/features/materials/MaterialDocumentScreen.tsx": {
-    "mtime": 1792567087.4070508,
-    "seen": 1792567846.6235266,
-    "ast_hash": "8852459e8adca2525af61c61fe2e78f8",
+    "mtime": 1792576050.0848224,
+    "seen": 1792576078.3763978,
+    "ast_hash": "9545816919c83874cb62b747b05112be",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialJournalScreen.tsx": {
-    "mtime": 1792567087.4070508,
-    "seen": 1792567846.6235266,
-    "ast_hash": "8ef4c347ab8169d2602b6df4c6881104",
+    "mtime": 1792576050.414508,
+    "seen": 1792576078.3763978,
+    "ast_hash": "39c7730dd2ced9a237463aa3d93f233b",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialMonthBar.tsx": {
@@ -879,9 +879,9 @@
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsInventoryScreen.tsx": {
-    "mtime": 1792567087.4107735,
-    "seen": 1792567846.6235266,
-    "ast_hash": "de778ce6da58f500efb1d1315137b7d3",
+    "mtime": 1792576051.3907204,
+    "seen": 1792576078.3763978,
+    "ast_hash": "ed0fe7c1778741f19df420cc20bac112",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsInventoryTable.tsx": {
@@ -891,9 +891,9 @@
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsNormsScreen.tsx": {
-    "mtime": 1792572903.2459512,
-    "seen": 1792573497.5195386,
-    "ast_hash": "abb7dfa6c050eb9100451a47d0249123",
+    "mtime": 1792576049.2068627,
+    "seen": 1792576078.3763978,
+    "ast_hash": "1bab940b847eff5c44adf5a81023aad6",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsPlanScreen.tsx": {
@@ -903,9 +903,9 @@
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsPlanTable.tsx": {
-    "mtime": 1792572900.8678303,
-    "seen": 1792573497.5195386,
-    "ast_hash": "a9118c58e6c6e44a86a54b41a4bd76a5",
+    "mtime": 1792576982.3897724,
+    "seen": 1792576996.3658195,
+    "ast_hash": "ce21901c01afeebfedb5dc6179c9ff62",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsSummaryScreen.tsx": {
@@ -915,15 +915,15 @@
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsSummaryTable.tsx": {
-    "mtime": 1792573242.2739525,
-    "seen": 1792573497.5195386,
-    "ast_hash": "ee74f4cad0c8745bea8c57e6390a0378",
+    "mtime": 1792576735.3416617,
+    "seen": 1792576750.8663583,
+    "ast_hash": "5db04dacf66303f9b387b794f4c154cf",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsWarehouseBlocks.tsx": {
-    "mtime": 1792567087.4168131,
-    "seen": 1792567846.6235266,
-    "ast_hash": "155359d1d6a90644b51f2c03a5459feb",
+    "mtime": 1792576048.3345082,
+    "seen": 1792576078.3763978,
+    "ast_hash": "5a3b3c128878e673347db96ca087012b",
     "semantic_hash": ""
   },
   "src/features/materials/QuantityCell.tsx": {
@@ -951,9 +951,9 @@
     "semantic_hash": ""
   },
   "docs/tables/materials-summary.md": {
-    "mtime": 1792567087.378659,
-    "seen": 1792567846.6235266,
-    "ast_hash": "318ff797d2a901ee022a42fa605e7606",
+    "mtime": 1792576052.5827148,
+    "seen": 1792576078.3763978,
+    "ast_hash": "ebb52a03302aef1b2698514c9cadd87d",
     "semantic_hash": ""
   }
 }

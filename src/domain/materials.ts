@@ -95,11 +95,17 @@ export interface MaterialMovementRow {
   factConsumptionCost: MaterialMoney;
   /** Цена расхода: цена прихода, если приход был, иначе плановая цена. `DSM Meat!R8`. */
   consumptionPrice: MaterialMoney;
-  /** План конца: начало + приход − расход. */
+  /** План конца: начало + план прихода − план расхода. */
   bookClosingQuantity: number;
+  /** Текущий расчёт: начало + факт прихода − факт расхода. */
+  currentClosingQuantity: number;
+  currentClosingDeviationQuantity: number;
+  currentClosingDeviationCost: MaterialMoney;
   /** Факт конца: инвентаризация. */
   closingQuantity: number;
   closingDeviationQuantity: number;
+  /** Нет строки инвентаризации — пусто, как отклонение на своде ДГП. */
+  closingInventoryDeviationCost: MaterialMoney | null;
   minQuantity: number;
   maxQuantity: number;
   belowMinQuantity: number;
@@ -125,8 +131,12 @@ export interface MaterialMovementTotals {
   planConsumptionCost: MaterialMoney;
   factConsumptionCost: MaterialMoney;
   bookClosingQuantity: number | null;
+  currentClosingQuantity: number | null;
+  currentClosingDeviationQuantity: number | null;
+  currentClosingDeviationCost: MaterialMoney;
   closingQuantity: number | null;
   closingDeviationQuantity: number | null;
+  closingInventoryDeviationCost: MaterialMoney | null;
   minQuantity: number | null;
   maxQuantity: number | null;
   belowMinQuantity: number | null;
@@ -138,7 +148,6 @@ export interface MaterialMovementTotals {
 export interface MaterialWarehouseMovement {
   warehouseId: MaterialWarehouseId;
   name: string;
-  productionName: string;
   rows: MaterialMovementRow[];
   totals: MaterialMovementTotals;
 }
@@ -565,6 +574,15 @@ export function inventoryQuantityFor(
   return openingFor(document, month, warehouseId)?.lines.find((item) => item.materialId === materialId)?.quantity ?? 0;
 }
 
+export function hasStoredMaterialInventoryLine(
+  document: PrototypeDocument,
+  month: string,
+  warehouseId: MaterialWarehouseId,
+  materialId: string,
+): boolean {
+  return openingFor(document, month, warehouseId)?.lines.some((item) => item.materialId === materialId) ?? false;
+}
+
 /**
  * Остаток на начало: инвентаризация конца прошлого месяца того же склада.
  * Нет прошлого месяца или записи — 0.
@@ -683,8 +701,25 @@ function addMoney(left: MaterialMoney, right: MaterialMoney): MaterialMoney {
   return { withVat: left.withVat + right.withVat, exVat: left.exVat + right.exVat };
 }
 
+function addMoneyNullable(left: MaterialMoney | null, right: MaterialMoney | null): MaterialMoney | null {
+  if (right === null) {
+    return left;
+  }
+  if (left === null) {
+    return right;
+  }
+  return addMoney(left, right);
+}
+
 function subtractMoney(left: MaterialMoney, right: MaterialMoney): MaterialMoney {
   return { withVat: left.withVat - right.withVat, exVat: left.exVat - right.exVat };
+}
+
+function deviationCostMoney(quantity: number, price: MaterialMoney): MaterialMoney {
+  return {
+    withVat: ratioRound(price.withVat * quantity, QUANTITY_SCALE) ?? 0,
+    exVat: ratioRound(price.exVat * quantity, QUANTITY_SCALE) ?? 0,
+  };
 }
 
 function productionPieces(document: PrototypeDocument, month: string, mode: 'plan' | 'fact'): Map<string, number> {
@@ -818,13 +853,20 @@ function movementRow(
     planLine?.consumptionQuantity ?? 0,
     planLine?.factConsumptionQuantity ?? 0,
   );
-  const bookClosing = closingMaterialQuantity(openingQuantity, receipt.quantity, factConsumptionQuantity);
+  const bookClosing = closingMaterialQuantity(openingQuantity, planReceiptQuantity, planConsumptionQuantity);
+  const currentClosing = closingMaterialQuantity(openingQuantity, receipt.quantity, factConsumptionQuantity);
+  const currentClosingDeviation = currentClosing - bookClosing;
   const closingQuantity = inventoryQuantityFor(document, month, warehouseId, material.id);
+  const hasInventoryLine = hasStoredMaterialInventoryLine(document, month, warehouseId, material.id);
   const valuation =
     receipt.quantity === 0 ? priceWithVat : (ratioRound(receipt.cost.withVat * QUANTITY_SCALE, receipt.quantity) ?? 0);
+  const consumptionPrice = priceOf(valuation, material.vatPercent);
   const minQuantity = planLine?.minQuantity ?? 0;
   const maxQuantity = planLine?.maxQuantity ?? 0;
-  const metrics = movementMetrics(closingQuantity, minQuantity, maxQuantity);
+  const stockForNorm = hasInventoryLine ? closingQuantity : bookClosing;
+  const metrics = movementMetrics(stockForNorm, minQuantity, maxQuantity);
+  const closingDeviation = hasInventoryLine ? closingQuantity - bookClosing : 0;
+  const stockForClosingCost = hasInventoryLine ? closingQuantity : bookClosing;
   const factReceiptPrice =
     receipt.quantity === 0
       ? null
@@ -860,14 +902,18 @@ function movementRow(
     consumptionDeviationQuantity: factConsumptionQuantity - planConsumptionQuantity,
     planConsumptionCost: moneyOf(priceWithVat, planConsumptionQuantity, material.vatPercent),
     factConsumptionCost: moneyOf(valuation, factConsumptionQuantity, material.vatPercent),
-    consumptionPrice: priceOf(valuation, material.vatPercent),
+    consumptionPrice,
     bookClosingQuantity: bookClosing,
+    currentClosingQuantity: currentClosing,
+    currentClosingDeviationQuantity: currentClosingDeviation,
+    currentClosingDeviationCost: deviationCostMoney(currentClosingDeviation, consumptionPrice),
     closingQuantity,
-    closingDeviationQuantity: closingQuantity - bookClosing,
+    closingDeviationQuantity: closingDeviation,
+    closingInventoryDeviationCost: hasInventoryLine ? deviationCostMoney(closingDeviation, consumptionPrice) : null,
     minQuantity,
     maxQuantity,
     ...metrics,
-    closingCost: moneyOf(valuation, closingQuantity, material.vatPercent),
+    closingCost: moneyOf(valuation, stockForClosingCost, material.vatPercent),
   };
 }
 
@@ -942,8 +988,12 @@ function emptyTotals(): MaterialMovementTotals {
     planConsumptionCost: ZERO_MONEY,
     factConsumptionCost: ZERO_MONEY,
     bookClosingQuantity: null,
+    currentClosingQuantity: null,
+    currentClosingDeviationQuantity: null,
+    currentClosingDeviationCost: ZERO_MONEY,
     closingQuantity: null,
     closingDeviationQuantity: null,
+    closingInventoryDeviationCost: null,
     minQuantity: null,
     maxQuantity: null,
     belowMinQuantity: null,
@@ -963,6 +1013,11 @@ function sumRows(rows: readonly MaterialMovementRow[]): MaterialMovementTotals {
       receiptDeviationCost: addMoney(total.receiptDeviationCost, row.receiptDeviationCost),
       planConsumptionCost: addMoney(total.planConsumptionCost, row.planConsumptionCost),
       factConsumptionCost: addMoney(total.factConsumptionCost, row.factConsumptionCost),
+      currentClosingDeviationCost: addMoney(total.currentClosingDeviationCost, row.currentClosingDeviationCost),
+      closingInventoryDeviationCost: addMoneyNullable(
+        total.closingInventoryDeviationCost,
+        row.closingInventoryDeviationCost,
+      ),
       closingCost: addMoney(total.closingCost, row.closingCost),
     }),
     {
@@ -972,6 +1027,8 @@ function sumRows(rows: readonly MaterialMovementRow[]): MaterialMovementTotals {
       receiptDeviationCost: ZERO_MONEY,
       planConsumptionCost: ZERO_MONEY,
       factConsumptionCost: ZERO_MONEY,
+      currentClosingDeviationCost: ZERO_MONEY,
+      closingInventoryDeviationCost: null,
       closingCost: ZERO_MONEY,
     },
   );
@@ -993,6 +1050,8 @@ function sumRows(rows: readonly MaterialMovementRow[]): MaterialMovementTotals {
     factConsumptionQuantity: sum((row) => row.factConsumptionQuantity),
     consumptionDeviationQuantity: sum((row) => row.consumptionDeviationQuantity),
     bookClosingQuantity: sum((row) => row.bookClosingQuantity),
+    currentClosingQuantity: sum((row) => row.currentClosingQuantity),
+    currentClosingDeviationQuantity: sum((row) => row.currentClosingDeviationQuantity),
     closingQuantity: sum((row) => row.closingQuantity),
     closingDeviationQuantity: sum((row) => row.closingDeviationQuantity),
     minQuantity: sum((row) => row.minQuantity),
@@ -1021,7 +1080,6 @@ export function materialMovementMonth(document: PrototypeDocument, month: string
         return {
           warehouseId: warehouse.id,
           name: warehouse.name,
-          productionName: warehouse.productionName,
           rows,
           totals: rows.length === 0 ? emptyTotals() : sumRows(rows),
         };

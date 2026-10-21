@@ -72,7 +72,7 @@ export function MaterialJournalScreen({ month }: { month: string }) {
                     <span className="text-sm text-ink">
                       {formatProductionEntryDate(item.occurredOn)}
                       {' · '}
-                      {warehouse?.name} · {warehouse?.productionName}
+                      {warehouse?.name}
                       {` · ${item.supplierName}`}
                     </span>
                     <span className="text-sm text-muted">{composition}</span>

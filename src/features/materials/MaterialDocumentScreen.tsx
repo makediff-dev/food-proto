@@ -191,7 +191,7 @@ function DocumentForm({
                 >
                   {MATERIAL_WAREHOUSES.map((warehouse) => (
                     <option key={warehouse.id} value={warehouse.id}>
-                      {warehouse.name} · {warehouse.productionName}
+                      {warehouse.name}
                     </option>
                   ))}
                 </select>

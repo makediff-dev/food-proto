@@ -4,12 +4,15 @@ import type { MaterialMovementRow, MaterialMovementTotals, MaterialPlanField } f
 import { MaterialNormDeviation } from '@/features/materials/MaterialNormDeviation';
 import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
 import {
+  MATERIALS_CLOSING_SUB_BANNERS,
+  ReportSubBannerColumnHeaders,
+} from '@/features/movement/FinishedGoodsNormativeColumnHeading';
+import {
   blockCornerClassName,
   blockHeadingClassName,
   type CellKind,
   cellKindClassName,
   columnDividerClassName,
-  columnHeadingClassName,
   keepWithNext,
   nameHeadingClassName,
   stickyHeadClassName,
@@ -38,14 +41,18 @@ type ColumnKey =
   | 'consumptionPrice'
   | 'consumptionCost'
   | 'bookClosing'
-  | 'closing'
-  | 'closingDeviation'
+  | 'currentClosing'
+  | 'currentClosingDeviation'
+  | 'currentClosingDeviationCost'
+  | 'inventoryClosing'
+  | 'closingInventoryDeviation'
+  | 'closingInventoryDeviationCost'
   | 'min'
   | 'max'
   | 'normDeviation'
   | 'closingCost';
 
-const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }[] }[] = [
+const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; hint?: string }[] }[] = [
   {
     label: 'Остаток на начало',
     columns: [{ key: 'opening', label: 'Остаток' }],
@@ -60,8 +67,8 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
       { key: 'factReceiptPrice', label: 'Цена' },
       { key: 'factReceiptCost', label: 'Стоимость' },
       { key: 'receiptDeviation', label: 'Откл.' },
-      { key: 'receiptDeviationPrice', label: 'Откл.' },
-      { key: 'receiptDeviationCost', label: 'Откл.' },
+      { key: 'receiptDeviationPrice', label: 'Откл. цены' },
+      { key: 'receiptDeviationCost', label: 'Стоим. откл.' },
     ],
   },
   {
@@ -77,12 +84,24 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }
   {
     label: 'Остаток на конец',
     columns: [
-      { key: 'bookClosing', label: 'План' },
-      { key: 'closing', label: 'Факт' },
-      { key: 'closingDeviation', label: 'Откл.' },
+      {
+        key: 'bookClosing',
+        label: 'План',
+        hint: 'остаток на начало + план прихода − план расхода',
+      },
+      { key: 'currentClosing', label: 'Факт' },
+      { key: 'currentClosingDeviation', label: 'Откл.' },
+      { key: 'currentClosingDeviationCost', label: 'Стоим. откл.' },
+      {
+        key: 'inventoryClosing',
+        label: 'Факт',
+        hint: 'по данным инвентаризации',
+      },
+      { key: 'closingInventoryDeviation', label: 'Откл.' },
+      { key: 'closingInventoryDeviationCost', label: 'Стоим. откл.' },
       { key: 'min', label: 'Мин.' },
       { key: 'max', label: 'Макс.' },
-      { key: 'normDeviation', label: 'Откл. от норм.' },
+      { key: 'normDeviation', label: 'Откл.' },
       { key: 'closingCost', label: 'Стоимость' },
     ],
   },
@@ -108,8 +127,12 @@ const COLUMN_KIND: Record<ColumnKey, CellKind> = {
   consumptionPrice: 'repeated',
   consumptionCost: 'computed',
   bookClosing: 'computed',
-  closing: 'repeated',
-  closingDeviation: 'computed',
+  currentClosing: 'computed',
+  currentClosingDeviation: 'computed',
+  currentClosingDeviationCost: 'computed',
+  inventoryClosing: 'repeated',
+  closingInventoryDeviation: 'computed',
+  closingInventoryDeviationCost: 'computed',
   min: 'repeated',
   max: 'repeated',
   normDeviation: 'computed',
@@ -156,18 +179,24 @@ export function MaterialsSummaryTable({
             ))}
           </tr>
           <tr>
-            <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+            <th rowSpan={2} scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               Наименование
             </th>
-            {COLUMNS.map((column) => (
-              <th
-                key={column.key}
-                scope="col"
-                className={`${columnHeadingClassName} last:border-r-0 ${groupEndClass(column.key)}`}
-              >
-                {keepWithNext(column.label)}
-              </th>
-            ))}
+            <ReportSubBannerColumnHeaders
+              row="primary"
+              columns={COLUMNS}
+              subBannerGroups={MATERIALS_CLOSING_SUB_BANNERS}
+              groupEndClass={groupEndClass}
+              lastColumnExtraClassName="last:border-r-0"
+            />
+          </tr>
+          <tr>
+            <ReportSubBannerColumnHeaders
+              row="secondary"
+              columns={COLUMNS}
+              subBannerGroups={MATERIALS_CLOSING_SUB_BANNERS}
+              groupEndClass={groupEndClass}
+            />
           </tr>
         </thead>
         <tbody>
@@ -266,6 +295,7 @@ function RowCell({
           withVat={row.receiptDeviationPrice.withVat}
           exVat={row.receiptDeviationPrice.exVat}
           signed
+          sense="cost"
         />
       ) : (
         <span className="text-muted">—</span>
@@ -277,6 +307,7 @@ function RowCell({
           withVat={row.receiptDeviationCost.withVat}
           exVat={row.receiptDeviationCost.exVat}
           signed
+          sense="cost"
         />
       );
     case 'planConsumption':
@@ -319,10 +350,32 @@ function RowCell({
       );
     case 'bookClosing':
       return <QuantityRead value={row.bookClosingQuantity} unit={unit} signed />;
-    case 'closing':
+    case 'currentClosing':
+      return <QuantityRead value={row.currentClosingQuantity} unit={unit} signed />;
+    case 'currentClosingDeviation':
+      return <QuantityRead value={row.currentClosingDeviationQuantity} unit={unit} signed />;
+    case 'currentClosingDeviationCost':
+      return (
+        <VatMoneyCell
+          label="Стоимость отклонения текущего остатка"
+          withVat={row.currentClosingDeviationCost.withVat}
+          exVat={row.currentClosingDeviationCost.exVat}
+          signed
+        />
+      );
+    case 'inventoryClosing':
       return <QuantityRead value={row.closingQuantity} unit={unit} signed />;
-    case 'closingDeviation':
+    case 'closingInventoryDeviation':
       return <QuantityRead value={row.closingDeviationQuantity} unit={unit} signed />;
+    case 'closingInventoryDeviationCost':
+      return (
+        <VatMoneyCell
+          label="Стоимость отклонения инвентаризации"
+          withVat={row.closingInventoryDeviationCost?.withVat ?? null}
+          exVat={row.closingInventoryDeviationCost?.exVat ?? null}
+          signed
+        />
+      );
     case 'min':
       return <QuantityRead value={row.minQuantity} unit={unit} />;
     case 'max':
@@ -388,6 +441,7 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: MaterialMov
           withVat={totals.receiptDeviationCost.withVat}
           exVat={totals.receiptDeviationCost.exVat}
           signed
+          sense="cost"
         />
       );
     case 'planConsumption':
@@ -406,10 +460,32 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: MaterialMov
       );
     case 'bookClosing':
       return <QuantityRead value={totals.bookClosingQuantity} unit={unit} signed />;
-    case 'closing':
+    case 'currentClosing':
+      return <QuantityRead value={totals.currentClosingQuantity} unit={unit} signed />;
+    case 'currentClosingDeviation':
+      return <QuantityRead value={totals.currentClosingDeviationQuantity} unit={unit} signed />;
+    case 'currentClosingDeviationCost':
+      return (
+        <VatMoneyCell
+          label="Стоимость отклонения текущего остатка"
+          withVat={totals.currentClosingDeviationCost.withVat}
+          exVat={totals.currentClosingDeviationCost.exVat}
+          signed
+        />
+      );
+    case 'inventoryClosing':
       return <QuantityRead value={totals.closingQuantity} unit={unit} signed />;
-    case 'closingDeviation':
+    case 'closingInventoryDeviation':
       return <QuantityRead value={totals.closingDeviationQuantity} unit={unit} signed />;
+    case 'closingInventoryDeviationCost':
+      return (
+        <VatMoneyCell
+          label="Стоимость отклонения инвентаризации"
+          withVat={totals.closingInventoryDeviationCost?.withVat ?? null}
+          exVat={totals.closingInventoryDeviationCost?.exVat ?? null}
+          signed
+        />
+      );
     case 'min':
       return <QuantityRead value={totals.minQuantity} unit={unit} />;
     case 'max':

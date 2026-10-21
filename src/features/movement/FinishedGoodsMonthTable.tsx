@@ -82,7 +82,11 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
   {
     label: 'Остаток на конец',
     columns: [
-      { key: 'bookClosing', label: 'План' },
+      {
+        key: 'bookClosing',
+        label: 'План',
+        hint: 'половина между мин и макс',
+      },
       { key: 'currentClosing', label: 'Факт' },
       { key: 'currentClosingDeviation', label: 'Откл.' },
       { key: 'currentClosingDeviationValue', label: 'Стоим. откл.' },

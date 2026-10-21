@@ -3,6 +3,7 @@
 import { costWithVat } from '@/domain/cost';
 import type { MaterialMovementRow, MaterialMovementTotals, MaterialPlanField } from '@/domain/materials';
 import { MaterialNormDeviation } from '@/features/materials/MaterialNormDeviation';
+import { MATERIALS_RECEIPTS_TITLE } from '@/features/materials/paths';
 import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
 import { IconTrash } from '@/features/shell/Icons';
 import {
@@ -27,7 +28,7 @@ type ColumnKey = 'price' | 'planReceipt' | 'planReceiptCost' | 'min' | 'max' | '
 
 const COLUMNS: { key: ColumnKey; label: string; editable: boolean }[] = [
   { key: 'price', label: 'Цена', editable: true },
-  { key: 'planReceipt', label: 'Приход', editable: true },
+  { key: 'planReceipt', label: MATERIALS_RECEIPTS_TITLE, editable: true },
   { key: 'planReceiptCost', label: 'Стоимость прихода', editable: false },
   { key: 'min', label: 'Мин.', editable: true },
   { key: 'max', label: 'Макс.', editable: true },

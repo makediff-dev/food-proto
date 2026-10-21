@@ -34,7 +34,7 @@ export function MaterialsInventoryScreen({ month }: { month: string }) {
     <PageFrame
       title={MATERIALS_INVENTORY_TITLE}
       full
-      lede="Факт остатка на конец каждого склада. Отклонение показывает недостачу или излишек именно этого склада и производства. Этот факт — остаток на начало следующего месяца."
+      lede="Факт остатка на конец каждого склада. Отклонение показывает недостачу или излишек именно этого склада. Этот факт — остаток на начало следующего месяца."
       intro={
         <MaterialMonthBar
           month={selectedMonth}

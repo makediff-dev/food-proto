@@ -10,8 +10,9 @@ import type {
 
 /**
  * Мок сырья двух складов.
- * Инвентаризация — на конец месяца. Сентябрь и октябрь: на складе 1 недостача говядины 30 кг
- * на конец, на складе 2 излишек 30 кг. Сумма отклонений складов нулевая — объединённый остаток недостачу прячет.
+ * Инвентаризация — на конец месяца. В моке факт только за закрытые месяцы (август и сентябрь 2026);
+ * октябрь ещё идёт — как у готовой продукции. На конец сентября: склад 1 — недостача говядины 30 кг,
+ * склад 2 — излишек 30 кг; сумма отклонений нулевая — объединённый остаток недостачу прячет.
  * Ножи и лезвия склада 1 и склада 2: план и факт расхода вводят в отчёте.
  * Оболочка в книге стоит на `DSM Meat`, в прототипе — в упаковке и вспомогательных, как на задаче.
  */
@@ -323,29 +324,6 @@ export const mockMaterials = {
     }),
     materialOpening('2026-09', 'warehouse-2', {
       'material-beef': q(105),
-      'material-flour': q(5),
-      'material-yeast': q(3),
-      'material-ketchup': q(4),
-      'material-salt': q(1),
-      'material-label': q(300),
-      'material-knives': q(4),
-    }),
-    materialOpening('2026-10', 'warehouse-1', {
-      'material-beef': q(95),
-      'material-chicken': q(8),
-      'material-nitrite': q(2),
-      'material-flour': q(20),
-      'material-yeast': q(5),
-      'material-ketchup': q(4),
-      'material-oil': q(6),
-      'material-salt': q(4),
-      'material-label': q(1_000),
-      'material-tray': q(400),
-      'material-knives': q(5.15),
-      'material-blades': q(3.3),
-    }),
-    materialOpening('2026-10', 'warehouse-2', {
-      'material-beef': q(135),
       'material-flour': q(5),
       'material-yeast': q(3),
       'material-ketchup': q(4),

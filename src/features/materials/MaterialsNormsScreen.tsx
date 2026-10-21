@@ -32,10 +32,7 @@ export function MaterialsNormsScreen() {
       <div className="flex flex-col gap-8">
         {MATERIAL_WAREHOUSES.map((warehouse) => (
           <section key={warehouse.id} className="flex flex-col gap-2">
-            <h2 className="text-sm text-ink">
-              {warehouse.name}
-              <span className="text-muted"> · {warehouse.productionName}</span>
-            </h2>
+            <h2 className="text-sm text-ink">{warehouse.name}</h2>
             <div className={tableFrameClassName}>
               <table className={tableClassName}>
                 <caption className="sr-only">Нормы {warehouse.name}</caption>
