@@ -1003,9 +1003,22 @@ function emptyTotals(): MaterialMovementTotals {
   };
 }
 
+type MaterialMovementMoneyTotals = Pick<
+  MaterialMovementTotals,
+  | 'openingCost'
+  | 'planReceiptCost'
+  | 'factReceiptCost'
+  | 'receiptDeviationCost'
+  | 'planConsumptionCost'
+  | 'factConsumptionCost'
+  | 'currentClosingDeviationCost'
+  | 'closingInventoryDeviationCost'
+  | 'closingCost'
+>;
+
 function sumRows(rows: readonly MaterialMovementRow[]): MaterialMovementTotals {
   const unit = rows.length > 0 && rows.every((row) => row.unit === rows[0]?.unit) ? rows[0].unit : null;
-  const money = rows.reduce(
+  const money = rows.reduce<MaterialMovementMoneyTotals>(
     (total, row) => ({
       openingCost: addMoney(total.openingCost, row.openingCost),
       planReceiptCost: addMoney(total.planReceiptCost, row.planReceiptCost),
@@ -1028,7 +1041,7 @@ function sumRows(rows: readonly MaterialMovementRow[]): MaterialMovementTotals {
       planConsumptionCost: ZERO_MONEY,
       factConsumptionCost: ZERO_MONEY,
       currentClosingDeviationCost: ZERO_MONEY,
-      closingInventoryDeviationCost: null,
+      closingInventoryDeviationCost: null as MaterialMoney | null,
       closingCost: ZERO_MONEY,
     },
   );
@@ -1041,6 +1054,8 @@ function sumRows(rows: readonly MaterialMovementRow[]): MaterialMovementTotals {
   const below = sum((row) => row.belowMinQuantity);
   const above = sum((row) => row.aboveMaxQuantity);
   return {
+    ...emptyTotals(),
+    ...money,
     unit,
     openingQuantity: sum((row) => row.openingQuantity),
     planReceiptQuantity: sum((row) => row.planReceiptQuantity),
@@ -1059,7 +1074,6 @@ function sumRows(rows: readonly MaterialMovementRow[]): MaterialMovementTotals {
     belowMinQuantity: below !== 0 ? below : 0,
     aboveMaxQuantity: below !== 0 ? 0 : above,
     recommendedReceiptQuantity: sum((row) => row.recommendedReceiptQuantity),
-    ...money,
   };
 }
 

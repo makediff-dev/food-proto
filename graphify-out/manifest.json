@@ -837,9 +837,9 @@
     "semantic_hash": ""
   },
   "src/domain/materials.ts": {
-    "mtime": 1792576047.4845603,
-    "seen": 1792576078.3763978,
-    "ast_hash": "dc23355aba37cbfec502ab7f4a17c10e",
+    "mtime": 1792578408.0176234,
+    "seen": 1792578452.4886754,
+    "ast_hash": "7cb9b47597b0401669277a6969cbb0f5",
     "semantic_hash": ""
   },
   "src/domain/quantity.ts": {
