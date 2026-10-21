@@ -4,7 +4,7 @@ import type { MaterialMovementRow, MaterialMovementTotals, MaterialPlanField } f
 import { MaterialNormDeviation } from '@/features/materials/MaterialNormDeviation';
 import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
 import {
-  MATERIALS_CLOSING_SUB_BANNERS,
+  MATERIALS_SUMMARY_SUB_BANNERS,
   ReportSubBannerColumnHeaders,
 } from '@/features/movement/FinishedGoodsNormativeColumnHeading';
 import {
@@ -36,10 +36,14 @@ type ColumnKey =
   | 'receiptDeviationPrice'
   | 'receiptDeviationCost'
   | 'planConsumption'
+  | 'planConsumptionPrice'
+  | 'planConsumptionCost'
   | 'factConsumption'
+  | 'factConsumptionPrice'
+  | 'factConsumptionCost'
   | 'consumptionDeviation'
-  | 'consumptionPrice'
-  | 'consumptionCost'
+  | 'consumptionDeviationPrice'
+  | 'consumptionDeviationCost'
   | 'bookClosing'
   | 'currentClosing'
   | 'currentClosingDeviation'
@@ -60,25 +64,29 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
   {
     label: 'Приход от поставщика',
     columns: [
-      { key: 'planReceipt', label: 'План' },
+      { key: 'planReceipt', label: 'Кол-во' },
       { key: 'planReceiptPrice', label: 'Цена' },
       { key: 'planReceiptCost', label: 'Стоимость' },
-      { key: 'factReceipt', label: 'Факт' },
+      { key: 'factReceipt', label: 'Кол-во' },
       { key: 'factReceiptPrice', label: 'Цена' },
       { key: 'factReceiptCost', label: 'Стоимость' },
-      { key: 'receiptDeviation', label: 'Откл.' },
-      { key: 'receiptDeviationPrice', label: 'Откл. цены' },
-      { key: 'receiptDeviationCost', label: 'Стоим. откл.' },
+      { key: 'receiptDeviation', label: 'Кол-во' },
+      { key: 'receiptDeviationPrice', label: 'Цена' },
+      { key: 'receiptDeviationCost', label: 'Стоимость' },
     ],
   },
   {
     label: 'Расход в производстве',
     columns: [
-      { key: 'planConsumption', label: 'План' },
-      { key: 'factConsumption', label: 'Факт' },
-      { key: 'consumptionDeviation', label: 'Откл.' },
-      { key: 'consumptionPrice', label: 'Цена' },
-      { key: 'consumptionCost', label: 'Стоимость' },
+      { key: 'planConsumption', label: 'Кол-во' },
+      { key: 'planConsumptionPrice', label: 'Цена' },
+      { key: 'planConsumptionCost', label: 'Стоимость' },
+      { key: 'factConsumption', label: 'Кол-во' },
+      { key: 'factConsumptionPrice', label: 'Цена' },
+      { key: 'factConsumptionCost', label: 'Стоимость' },
+      { key: 'consumptionDeviation', label: 'Кол-во' },
+      { key: 'consumptionDeviationPrice', label: 'Цена' },
+      { key: 'consumptionDeviationCost', label: 'Стоимость' },
     ],
   },
   {
@@ -122,10 +130,14 @@ const COLUMN_KIND: Record<ColumnKey, CellKind> = {
   receiptDeviationPrice: 'computed',
   receiptDeviationCost: 'computed',
   planConsumption: 'assigned',
+  planConsumptionPrice: 'repeated',
+  planConsumptionCost: 'computed',
   factConsumption: 'assigned',
+  factConsumptionPrice: 'computed',
+  factConsumptionCost: 'computed',
   consumptionDeviation: 'computed',
-  consumptionPrice: 'repeated',
-  consumptionCost: 'computed',
+  consumptionDeviationPrice: 'computed',
+  consumptionDeviationCost: 'computed',
   bookClosing: 'computed',
   currentClosing: 'computed',
   currentClosingDeviation: 'computed',
@@ -185,7 +197,7 @@ export function MaterialsSummaryTable({
             <ReportSubBannerColumnHeaders
               row="primary"
               columns={COLUMNS}
-              subBannerGroups={MATERIALS_CLOSING_SUB_BANNERS}
+              subBannerGroups={MATERIALS_SUMMARY_SUB_BANNERS}
               groupEndClass={groupEndClass}
               lastColumnExtraClassName="last:border-r-0"
             />
@@ -194,7 +206,7 @@ export function MaterialsSummaryTable({
             <ReportSubBannerColumnHeaders
               row="secondary"
               columns={COLUMNS}
-              subBannerGroups={MATERIALS_CLOSING_SUB_BANNERS}
+              subBannerGroups={MATERIALS_SUMMARY_SUB_BANNERS}
               groupEndClass={groupEndClass}
             />
           </tr>
@@ -334,18 +346,48 @@ function RowCell({
           onChange={(value) => onConsumption(row.materialId, 'factConsumptionQuantity', value)}
         />
       );
-    case 'consumptionDeviation':
-      return <QuantityRead value={row.consumptionDeviationQuantity} unit={unit} signed />;
-    case 'consumptionPrice':
+    case 'planConsumptionPrice':
+      return <VatMoneyCell label="Плановая цена расхода" withVat={row.planPrice.withVat} exVat={row.planPrice.exVat} />;
+    case 'planConsumptionCost':
+      return (
+        <VatMoneyCell
+          label="Плановая стоимость расхода"
+          withVat={row.planConsumptionCost.withVat}
+          exVat={row.planConsumptionCost.exVat}
+        />
+      );
+    case 'factConsumptionPrice':
       return (
         <VatMoneyCell label="Цена расхода" withVat={row.consumptionPrice.withVat} exVat={row.consumptionPrice.exVat} />
       );
-    case 'consumptionCost':
+    case 'factConsumptionCost':
       return (
         <VatMoneyCell
           label="Стоимость расхода"
           withVat={row.factConsumptionCost.withVat}
           exVat={row.factConsumptionCost.exVat}
+        />
+      );
+    case 'consumptionDeviation':
+      return <QuantityRead value={row.consumptionDeviationQuantity} unit={unit} signed />;
+    case 'consumptionDeviationPrice':
+      return (
+        <VatMoneyCell
+          label="Отклонение цены расхода"
+          withVat={row.consumptionDeviationPrice.withVat}
+          exVat={row.consumptionDeviationPrice.exVat}
+          signed
+          sense="cost"
+        />
+      );
+    case 'consumptionDeviationCost':
+      return (
+        <VatMoneyCell
+          label="Отклонение стоимости расхода"
+          withVat={row.consumptionDeviationCost.withVat}
+          exVat={row.consumptionDeviationCost.exVat}
+          signed
+          sense="cost"
         />
       );
     case 'bookClosing':
@@ -412,7 +454,9 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: MaterialMov
     case 'planReceiptPrice':
     case 'factReceiptPrice':
     case 'receiptDeviationPrice':
-    case 'consumptionPrice':
+    case 'planConsumptionPrice':
+    case 'factConsumptionPrice':
+    case 'consumptionDeviationPrice':
       return <span className="text-muted">—</span>;
     case 'planReceiptCost':
       return (
@@ -448,14 +492,32 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: MaterialMov
       return <QuantityRead value={totals.planConsumptionQuantity} unit={unit} />;
     case 'factConsumption':
       return <QuantityRead value={totals.factConsumptionQuantity} unit={unit} />;
+    case 'planConsumptionCost':
+      return (
+        <VatMoneyCell
+          label="Плановая стоимость расхода"
+          withVat={totals.planConsumptionCost.withVat}
+          exVat={totals.planConsumptionCost.exVat}
+        />
+      );
     case 'consumptionDeviation':
       return <QuantityRead value={totals.consumptionDeviationQuantity} unit={unit} signed />;
-    case 'consumptionCost':
+    case 'factConsumptionCost':
       return (
         <VatMoneyCell
           label="Стоимость расхода"
           withVat={totals.factConsumptionCost.withVat}
           exVat={totals.factConsumptionCost.exVat}
+        />
+      );
+    case 'consumptionDeviationCost':
+      return (
+        <VatMoneyCell
+          label="Отклонение стоимости расхода"
+          withVat={totals.consumptionDeviationCost.withVat}
+          exVat={totals.consumptionDeviationCost.exVat}
+          signed
+          sense="cost"
         />
       );
     case 'bookClosing':

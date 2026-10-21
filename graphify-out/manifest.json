@@ -699,9 +699,9 @@
     "semantic_hash": ""
   },
   "src/features/movement/FinishedGoodsNormativeColumnHeading.tsx": {
-    "mtime": 1792575148.361172,
-    "seen": 1792575196.026713,
-    "ast_hash": "e1ef33404792435a04574b1c1c6616ce",
+    "mtime": 1792588852.342735,
+    "seen": 1792588862.0959382,
+    "ast_hash": "c69b533f6257f4929385eec0af29c422",
     "semantic_hash": ""
   },
   "docs/flow.md": {
@@ -837,9 +837,9 @@
     "semantic_hash": ""
   },
   "src/domain/materials.ts": {
-    "mtime": 1792578408.0176234,
-    "seen": 1792578452.4886754,
-    "ast_hash": "7cb9b47597b0401669277a6969cbb0f5",
+    "mtime": 1792588644.1403325,
+    "seen": 1792588686.3948119,
+    "ast_hash": "28e0eab474d05fcaefbad83639d9d53f",
     "semantic_hash": ""
   },
   "src/domain/quantity.ts": {
@@ -915,9 +915,9 @@
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsSummaryTable.tsx": {
-    "mtime": 1792576735.3416617,
-    "seen": 1792576750.8663583,
-    "ast_hash": "5db04dacf66303f9b387b794f4c154cf",
+    "mtime": 1792588680.2656374,
+    "seen": 1792588686.3948119,
+    "ast_hash": "d962da5de903e977bf0056347140e9d4",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsWarehouseBlocks.tsx": {
@@ -951,9 +951,9 @@
     "semantic_hash": ""
   },
   "docs/tables/materials-summary.md": {
-    "mtime": 1792576052.5827148,
-    "seen": 1792576078.3763978,
-    "ast_hash": "ebb52a03302aef1b2698514c9cadd87d",
+    "mtime": 1792588672.7779138,
+    "seen": 1792588686.3948119,
+    "ast_hash": "f6085cf051d8cf41bfd8b75d4807292d",
     "semantic_hash": ""
   }
 }

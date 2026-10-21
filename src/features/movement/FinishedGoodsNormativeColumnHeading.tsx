@@ -7,7 +7,7 @@ export type ReportSubBannerGroup = { label: string; keys: readonly string[] };
 
 export const FINISHED_GOODS_CLOSING_SUB_BANNERS: ReportSubBannerGroup[] = [
   {
-    label: 'текущий',
+    label: 'расчетный',
     keys: ['currentClosing', 'currentClosingDeviation', 'currentClosingDeviationValue'],
   },
   {
@@ -20,9 +20,39 @@ export const FINISHED_GOODS_CLOSING_SUB_BANNERS: ReportSubBannerGroup[] = [
   },
 ];
 
+export const MATERIALS_RECEIPT_SUB_BANNERS: ReportSubBannerGroup[] = [
+  {
+    label: 'план',
+    keys: ['planReceipt', 'planReceiptPrice', 'planReceiptCost'],
+  },
+  {
+    label: 'факт',
+    keys: ['factReceipt', 'factReceiptPrice', 'factReceiptCost'],
+  },
+  {
+    label: 'отклонение',
+    keys: ['receiptDeviation', 'receiptDeviationPrice', 'receiptDeviationCost'],
+  },
+];
+
+export const MATERIALS_CONSUMPTION_SUB_BANNERS: ReportSubBannerGroup[] = [
+  {
+    label: 'план',
+    keys: ['planConsumption', 'planConsumptionPrice', 'planConsumptionCost'],
+  },
+  {
+    label: 'факт',
+    keys: ['factConsumption', 'factConsumptionPrice', 'factConsumptionCost'],
+  },
+  {
+    label: 'отклонение',
+    keys: ['consumptionDeviation', 'consumptionDeviationPrice', 'consumptionDeviationCost'],
+  },
+];
+
 export const MATERIALS_CLOSING_SUB_BANNERS: ReportSubBannerGroup[] = [
   {
-    label: 'текущий',
+    label: 'расчетный',
     keys: ['currentClosing', 'currentClosingDeviation', 'currentClosingDeviationCost'],
   },
   {
@@ -33,6 +63,12 @@ export const MATERIALS_CLOSING_SUB_BANNERS: ReportSubBannerGroup[] = [
     label: 'нормативный',
     keys: ['min', 'max', 'normDeviation'],
   },
+];
+
+export const MATERIALS_SUMMARY_SUB_BANNERS: ReportSubBannerGroup[] = [
+  ...MATERIALS_RECEIPT_SUB_BANNERS,
+  ...MATERIALS_CONSUMPTION_SUB_BANNERS,
+  ...MATERIALS_CLOSING_SUB_BANNERS,
 ];
 
 const subBannerHeadingClassName =
@@ -50,6 +86,18 @@ function subBannerGroupForKey<K extends string>(
 
 function subBannerLastKey(keys: readonly string[]): string {
   return keys[keys.length - 1] ?? '';
+}
+
+function subBannerColumnBorderClass<K extends string>(
+  columnKey: K,
+  lastKeyInSubBanner: string,
+  groupEndClass: (key: K) => string,
+): string {
+  const groupEnd = groupEndClass(columnKey);
+  if (columnKey === lastKeyInSubBanner && groupEnd !== tableBorder.rightThick) {
+    return tableBorder.rightThin;
+  }
+  return groupEnd;
 }
 
 export function ReportSubBannerColumnHeaders<K extends string>({
@@ -76,9 +124,7 @@ export function ReportSubBannerColumnHeaders<K extends string>({
         <th
           key={column.key}
           scope="col"
-          className={`${subBannerSubHeadingClassName} ${
-            column.key === lastKey ? tableBorder.rightThin : groupEndClass(column.key)
-          }`}
+          className={`${subBannerSubHeadingClassName} ${subBannerColumnBorderClass(column.key, lastKey, groupEndClass)}`}
         >
           <ColumnLabel label={column.label} hint={column.hint} />
         </th>
@@ -92,12 +138,13 @@ export function ReportSubBannerColumnHeaders<K extends string>({
       if (column.key !== group.keys[0]) {
         return null;
       }
+      const bannerLastKey = subBannerLastKey(group.keys) as K;
       return (
         <th
-          key={`banner:${group.label}`}
+          key={`banner:${bannerLastKey}`}
           colSpan={group.keys.length}
           scope="colgroup"
-          className={`${subBannerHeadingClassName} ${groupEndClass(column.key)}`}
+          className={`${subBannerHeadingClassName} ${groupEndClass(bannerLastKey)}`}
         >
           {keepWithNext(group.label)}
         </th>

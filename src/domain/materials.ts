@@ -95,6 +95,10 @@ export interface MaterialMovementRow {
   factConsumptionCost: MaterialMoney;
   /** Цена расхода: цена прихода, если приход был, иначе плановая цена. `DSM Meat!R8`. */
   consumptionPrice: MaterialMoney;
+  /** Отклонение цены расхода: факт − план. */
+  consumptionDeviationPrice: MaterialMoney;
+  /** Отклонение стоимости расхода: факт − план. */
+  consumptionDeviationCost: MaterialMoney;
   /** План конца: начало + план прихода − план расхода. */
   bookClosingQuantity: number;
   /** Текущий расчёт: начало + факт прихода − факт расхода. */
@@ -130,6 +134,7 @@ export interface MaterialMovementTotals {
   consumptionDeviationQuantity: number | null;
   planConsumptionCost: MaterialMoney;
   factConsumptionCost: MaterialMoney;
+  consumptionDeviationCost: MaterialMoney;
   bookClosingQuantity: number | null;
   currentClosingQuantity: number | null;
   currentClosingDeviationQuantity: number | null;
@@ -878,6 +883,8 @@ function movementRow(
     factReceiptPrice === null
       ? null
       : { withVat: factReceiptPrice.withVat - planPrice.withVat, exVat: factReceiptPrice.exVat - planPrice.exVat };
+  const planConsumptionCost = moneyOf(priceWithVat, planConsumptionQuantity, material.vatPercent);
+  const factConsumptionCost = moneyOf(valuation, factConsumptionQuantity, material.vatPercent);
 
   return {
     materialId: material.id,
@@ -900,9 +907,14 @@ function movementRow(
     planConsumptionQuantity,
     factConsumptionQuantity,
     consumptionDeviationQuantity: factConsumptionQuantity - planConsumptionQuantity,
-    planConsumptionCost: moneyOf(priceWithVat, planConsumptionQuantity, material.vatPercent),
-    factConsumptionCost: moneyOf(valuation, factConsumptionQuantity, material.vatPercent),
+    planConsumptionCost,
+    factConsumptionCost,
     consumptionPrice,
+    consumptionDeviationPrice: {
+      withVat: consumptionPrice.withVat - planPrice.withVat,
+      exVat: consumptionPrice.exVat - planPrice.exVat,
+    },
+    consumptionDeviationCost: subtractMoney(factConsumptionCost, planConsumptionCost),
     bookClosingQuantity: bookClosing,
     currentClosingQuantity: currentClosing,
     currentClosingDeviationQuantity: currentClosingDeviation,
@@ -987,6 +999,7 @@ function emptyTotals(): MaterialMovementTotals {
     consumptionDeviationQuantity: null,
     planConsumptionCost: ZERO_MONEY,
     factConsumptionCost: ZERO_MONEY,
+    consumptionDeviationCost: ZERO_MONEY,
     bookClosingQuantity: null,
     currentClosingQuantity: null,
     currentClosingDeviationQuantity: null,
@@ -1011,6 +1024,7 @@ type MaterialMovementMoneyTotals = Pick<
   | 'receiptDeviationCost'
   | 'planConsumptionCost'
   | 'factConsumptionCost'
+  | 'consumptionDeviationCost'
   | 'currentClosingDeviationCost'
   | 'closingInventoryDeviationCost'
   | 'closingCost'
@@ -1026,6 +1040,7 @@ function sumRows(rows: readonly MaterialMovementRow[]): MaterialMovementTotals {
       receiptDeviationCost: addMoney(total.receiptDeviationCost, row.receiptDeviationCost),
       planConsumptionCost: addMoney(total.planConsumptionCost, row.planConsumptionCost),
       factConsumptionCost: addMoney(total.factConsumptionCost, row.factConsumptionCost),
+      consumptionDeviationCost: addMoney(total.consumptionDeviationCost, row.consumptionDeviationCost),
       currentClosingDeviationCost: addMoney(total.currentClosingDeviationCost, row.currentClosingDeviationCost),
       closingInventoryDeviationCost: addMoneyNullable(
         total.closingInventoryDeviationCost,
@@ -1040,6 +1055,7 @@ function sumRows(rows: readonly MaterialMovementRow[]): MaterialMovementTotals {
       receiptDeviationCost: ZERO_MONEY,
       planConsumptionCost: ZERO_MONEY,
       factConsumptionCost: ZERO_MONEY,
+      consumptionDeviationCost: ZERO_MONEY,
       currentClosingDeviationCost: ZERO_MONEY,
       closingInventoryDeviationCost: null as MaterialMoney | null,
       closingCost: ZERO_MONEY,
