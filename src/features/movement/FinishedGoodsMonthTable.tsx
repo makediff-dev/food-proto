@@ -13,8 +13,10 @@ import {
   type CellKind,
   categoryBandClassName,
   categoryNameClassName,
+  categoryNameRowClassName,
   cellKindClassName,
   columnDividerClassName,
+  entityNameRowClassName,
   IntegerCell,
   keepWithNext,
   Muted,
@@ -189,7 +191,7 @@ export function FinishedGoodsMonthTable({
             {COLUMNS.map((column) => (
               <td
                 key={`total:${column.key}`}
-                className={`${totalValueClassName} last:border-r-0 ${groupEndClass(column.key)} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
+                className={`${totalValueClassName} last:border-r-0 ${groupEndClass(column.key)}`}
               >
                 <TotalsCell column={column.key} totals={totals} />
               </td>
@@ -208,10 +210,7 @@ function CategoryBlock({ group }: { group: FinishedGoodsGroup }) {
   return (
     <>
       <tr>
-        <th
-          scope="row"
-          className={`sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted px-3 py-2 text-left align-middle font-normal text-ink ${categoryBandClassName}`}
-        >
+        <th scope="row" className={categoryNameRowClassName(false)}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -248,10 +247,7 @@ function CategoryBlock({ group }: { group: FinishedGoodsGroup }) {
 function ProductRow({ row, index }: { row: FinishedGoodsRow; index: number }) {
   return (
     <tr>
-      <th
-        scope="row"
-        className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle font-normal"
-      >
+      <th scope="row" className={entityNameRowClassName('repeated')}>
         <div className="flex items-center gap-2">
           <ProductIndex index={index} />
           <span className="flex h-8 min-w-max items-center text-sm leading-none text-ink">{row.name}</span>

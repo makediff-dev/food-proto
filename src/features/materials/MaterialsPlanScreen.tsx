@@ -16,7 +16,7 @@ import { MaterialMonthBar, resolveMaterialMonth } from '@/features/materials/Mat
 import { MaterialsPlanTable } from '@/features/materials/MaterialsPlanTable';
 import { MaterialsWarehouseBlocks } from '@/features/materials/MaterialsWarehouseBlocks';
 import { MATERIALS_PLAN_TITLE, materialsPlanHref } from '@/features/materials/paths';
-import { MATERIAL_PLAN_ERROR } from '@/features/materials/text';
+import { MATERIAL_NAME_ERROR, MATERIAL_PLAN_ERROR } from '@/features/materials/text';
 import { useMaterials } from '@/features/materials/use-materials';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { Dialog } from '@/features/shell/Dialog';
@@ -75,6 +75,10 @@ export function MaterialsPlanScreen({ month }: { month: string }) {
               totals={warehouse.totals}
               editable={materials.hydrated}
               onField={(materialId, field, value) => fieldError(warehouse.warehouseId, materialId, field, value)}
+              onRename={(materialId, name) => {
+                const rejection = materials.rename(materialId, name);
+                return rejection ? MATERIAL_NAME_ERROR[rejection] : null;
+              }}
               onDelete={(materialId, name) => {
                 const confirmed = window.confirm(
                   `Удалить «${name}»? Позиция пропадёт из рабочего списка. Вернуть можно здесь, если имя свободно.`,

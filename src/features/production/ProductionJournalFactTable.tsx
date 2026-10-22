@@ -19,6 +19,7 @@ import {
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
+  categoryNameRowDayFactClassName,
   cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
@@ -29,6 +30,7 @@ import {
   dayFactSpacerTotalClassName,
   dayFactTableClassName,
   Empty,
+  entityNameRowDayFactClassName,
   keepWithNext,
   Muted,
   nameHeadingClassName,
@@ -137,10 +139,7 @@ export function ProductionJournalFactTable({
                   Всего
                 </th>
                 {COLUMNS.map((column) => (
-                  <td
-                    key={column.key}
-                    className={`${totalValueClassName} ${columnDividerClassName} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
-                  >
+                  <td key={column.key} className={`${totalValueClassName} ${columnDividerClassName}`}>
                     <TotalCell column={column.key} totals={day.totals} />
                   </td>
                 ))}
@@ -178,10 +177,7 @@ function CategoryBlock({
     <>
       <tr>
         {dateCell}
-        <th
-          scope="row"
-          className={`sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted px-3 py-2 text-left align-middle font-normal text-ink ${categoryBandClassName}`}
-        >
+        <th scope="row" className={categoryNameRowDayFactClassName(false)}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -219,10 +215,7 @@ function CategoryBlock({
 function ProductRow({ row, index }: { row: ProductionJournalFactRow; index: number }) {
   return (
     <tr>
-      <th
-        scope="row"
-        className="sticky left-10 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle font-normal"
-      >
+      <th scope="row" className={entityNameRowDayFactClassName('repeated')}>
         <div className="flex items-center gap-2">
           <ProductIndex index={index} />
           <span className="text-sm text-ink">{row.name}</span>

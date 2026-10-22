@@ -18,6 +18,7 @@ import {
   type CellKind,
   categoryBandClassName,
   categoryNameClassName,
+  categoryNameRowDayFactClassName,
   cellKindClassName,
   columnDividerClassName,
   dayDateColumnClassName,
@@ -26,6 +27,7 @@ import {
   dayFactSpacerHeadClassName,
   dayFactSpacerTotalClassName,
   dayFactTableClassName,
+  entityNameRowDayFactClassName,
   IntegerCell,
   keepWithNext,
   Muted,
@@ -209,10 +211,7 @@ export function FinishedGoodsFactTable({
                   Всего
                 </th>
                 {COLUMNS.map((column) => (
-                  <td
-                    key={column.key}
-                    className={`${totalValueClassName} ${groupEndClass(column.key)} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
-                  >
+                  <td key={column.key} className={`${totalValueClassName} ${groupEndClass(column.key)}`}>
                     <MetricCell column={column.key} metrics={day.totals} />
                   </td>
                 ))}
@@ -250,10 +249,7 @@ function CategoryBlock({
     <>
       <tr>
         {dateCell}
-        <th
-          scope="row"
-          className={`sticky left-10 z-10 w-px max-w-max whitespace-nowrap ${bottom} border-r-[1.5px] border-r-muted px-3 py-2 text-left align-middle font-normal text-ink ${categoryBandClassName}`}
-        >
+        <th scope="row" className={categoryNameRowDayFactClassName(false, { bottomBorder: bottom })}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -306,10 +302,7 @@ function ProductRow({ row, index, dayBreak }: { row: FinishedGoodsRow; index: nu
   const bottom = dayBreak ? 'border-b-[3px] border-b-muted' : 'border-b border-b-line';
   return (
     <tr>
-      <th
-        scope="row"
-        className={`sticky left-10 z-10 w-px max-w-max whitespace-nowrap ${bottom} border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle font-normal`}
-      >
+      <th scope="row" className={entityNameRowDayFactClassName('repeated', { bottomBorder: bottom })}>
         <div className="flex items-center gap-2">
           <ProductIndex index={index} />
           <span className="flex h-8 min-w-max flex-1 items-center text-sm leading-none text-ink">{row.name}</span>

@@ -78,7 +78,7 @@ const materials: Material[] = [
     id: 'material-casing',
     name: 'Оболочка сосисочная',
     groupId: 'packaging',
-    unit: 'пм',
+    unit: 'м',
     vatPercent: 20,
     deletedAt: null,
   },
@@ -117,7 +117,7 @@ function defaultMax(material: Material): number {
   if (material.unit === 'шт') {
     return q(100_000);
   }
-  if (material.unit === 'пм') {
+  if (material.unit === 'м') {
     return q(10_000);
   }
   return q(1_000);

@@ -13,7 +13,10 @@ import {
   cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
+  entityNameRowClassName,
+  GridText,
   keepWithNext,
+  nameCellKind,
   nameHeadingClassName,
   stickyHeadClassName,
   tableBorder,
@@ -46,6 +49,7 @@ export function MaterialsPlanTable({
   totals,
   editable,
   onField,
+  onRename,
   onDelete,
 }: {
   caption: string;
@@ -53,6 +57,7 @@ export function MaterialsPlanTable({
   totals: MaterialMovementTotals;
   editable: boolean;
   onField: (materialId: string, field: MaterialPlanField, value: number) => string | null;
+  onRename: (materialId: string, name: string) => string | null;
   onDelete: (materialId: string, name: string) => void;
 }) {
   return (
@@ -80,15 +85,25 @@ export function MaterialsPlanTable({
         <tbody>
           {rows.map((row) => (
             <tr key={row.materialId}>
-              <th
-                scope="row"
-                className="sticky left-0 z-10 whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left font-normal text-ink"
-              >
+              <th scope="row" className={entityNameRowClassName(nameCellKind(editable && !row.deleted))}>
                 <span className="inline-flex items-center gap-2">
-                  <span>
-                    {row.name}
-                    {row.deleted ? <span className="text-muted"> (архив)</span> : null}
-                  </span>
+                  {row.deleted || !editable ? (
+                    <span>
+                      {row.name}
+                      {row.deleted ? <span className="text-muted"> (архив)</span> : null}
+                      <span className="text-muted"> · {row.unit}</span>
+                    </span>
+                  ) : (
+                    <>
+                      <GridText
+                        label={`Наименование, ${row.name}`}
+                        value={row.name}
+                        invalidMessage="Укажите название."
+                        onCommit={(next) => onRename(row.materialId, next)}
+                      />
+                      <span className="text-sm text-muted">· {row.unit}</span>
+                    </>
+                  )}
                   {editable && !row.deleted ? (
                     <button
                       type="button"
@@ -117,10 +132,7 @@ export function MaterialsPlanTable({
               {totals.unit ? 'Всего' : 'Сумма'}
             </th>
             {COLUMNS.map((column) => (
-              <td
-                key={column.key}
-                className={`${totalValueClassName} ${columnDividerClassName} ${cellKindClassName[planColumnKind(column)]}`}
-              >
+              <td key={column.key} className={`${totalValueClassName} ${columnDividerClassName}`}>
                 <PlanTotal column={column.key} totals={totals} />
               </td>
             ))}

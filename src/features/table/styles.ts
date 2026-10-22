@@ -18,6 +18,59 @@ export const cellKindClassName: Record<CellKind, string> = {
   repeated: 'cell-repeated',
 };
 
+/** Колонка названия: assigned — справочник правят на этом экране; repeated — из другой таблицы. */
+export type NameCellKind = 'assigned' | 'repeated';
+
+export function nameCellKind(editable: boolean): NameCellKind {
+  return editable ? 'assigned' : 'repeated';
+}
+
+const entityNameRowBaseClassName =
+  'z-10 w-px max-w-max whitespace-nowrap border-r-[1.5px] border-r-muted px-3 py-2 text-left align-middle font-normal text-ink';
+
+type EntityNameRowOptions = {
+  variant?: 'default' | 'dayFact';
+  bottomBorder?: string;
+};
+
+function entityNameRowClassNameInternal(kind: NameCellKind, options?: EntityNameRowOptions): string {
+  const sticky = options?.variant === 'dayFact' ? 'sticky left-10' : 'sticky left-0';
+  const bottom = options?.bottomBorder ?? 'border-b border-b-line';
+  return `${sticky} ${entityNameRowBaseClassName} ${bottom} ${cellKindClassName[kind]}`;
+}
+
+/** Sticky-ячейка названия товара, категории или сырья в обычной сетке. */
+export function entityNameRowClassName(kind: NameCellKind, options?: Omit<EntityNameRowOptions, 'variant'>): string {
+  return entityNameRowClassNameInternal(kind, options);
+}
+
+/** То же в подневной сетке со столбцом даты (sticky left-10). */
+export function entityNameRowDayFactClassName(
+  kind: NameCellKind,
+  options?: Omit<EntityNameRowOptions, 'variant'>,
+): string {
+  return entityNameRowClassNameInternal(kind, { ...options, variant: 'dayFact' });
+}
+
+function categoryNameRowClassNameInternal(editable: boolean, options?: EntityNameRowOptions): string {
+  const sticky = options?.variant === 'dayFact' ? 'sticky left-10' : 'sticky left-0';
+  const bottom = options?.bottomBorder ?? 'border-b border-b-line';
+  const fill = editable ? cellKindClassName.assigned : categoryBandClassName;
+  return `${sticky} ${entityNameRowBaseClassName} ${bottom} ${fill}`;
+}
+
+/** Название категории: band, пока не редактируют справочник на этом экране. */
+export function categoryNameRowClassName(editable: boolean, options?: Omit<EntityNameRowOptions, 'variant'>): string {
+  return categoryNameRowClassNameInternal(editable, options);
+}
+
+export function categoryNameRowDayFactClassName(
+  editable: boolean,
+  options?: Omit<EntityNameRowOptions, 'variant'>,
+): string {
+  return categoryNameRowClassNameInternal(editable, { ...options, variant: 'dayFact' });
+}
+
 /** Прозрачное поле внутри числовой ячейки сетки (цвет текста задаёт вызывающий). */
 export const gridFieldClassName =
   'w-full min-w-0 cursor-text appearance-none border-0 bg-transparent p-0 text-right text-sm shadow-none outline-none';
@@ -73,12 +126,12 @@ export const columnHeadingClassName =
 export const nameHeadingClassName =
   'w-px max-w-max whitespace-nowrap border-y-[3px] border-y-muted border-r-[1.5px] border-r-muted bg-paper px-3 py-2 text-center align-middle text-sm font-normal text-ink';
 
-/** «Всего»: жирная подпись, толстая черта сверху и снизу, без заливки. */
+/** «Всего»: как строка категории — band и жирная подпись, толстая черта сверху и снизу. */
 export const totalNameClassName =
-  'w-px max-w-max whitespace-nowrap border-y-[3px] border-y-muted border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle text-sm font-bold text-ink';
+  'w-px max-w-max whitespace-nowrap border-y-[3px] border-y-muted border-r-[1.5px] border-r-muted bg-band px-3 py-2 text-left align-middle text-sm font-bold text-ink';
 
 export const totalValueClassName =
-  'w-px border-y-[3px] border-y-muted px-1.5 py-2 text-right align-middle text-sm font-bold';
+  'w-px border-y-[3px] border-y-muted bg-band px-1.5 py-2 text-right align-middle text-sm font-bold';
 
 /** Тонкая линия между столбцами. У крайней колонки её закрывает рамка таблицы. */
 export const columnDividerClassName = `${tableBorder.rightThin} last:border-r-0`;

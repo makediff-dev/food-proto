@@ -1,5 +1,24 @@
-import { type FinishedGoodsOpening, isMonthKey, type PrototypeDocument, SCHEMA_VERSION } from '@/domain/document';
+import {
+  type FinishedGoodsOpening,
+  isMonthKey,
+  type MaterialUnit,
+  type PrototypeDocument,
+  SCHEMA_VERSION,
+} from '@/domain/document';
 import { shiftMonth } from '@/domain/sales-plan';
+
+/** Раньше в прототипе была единица `пм`; в интерфейсе — `м`. */
+function normalizeMaterialUnits(document: PrototypeDocument): PrototypeDocument {
+  let changed = false;
+  const materials = document.materials.map((material) => {
+    if ((material as { unit: string }).unit !== 'пм') {
+      return material;
+    }
+    changed = true;
+    return { ...material, unit: 'м' as MaterialUnit };
+  });
+  return changed ? { ...document, materials } : document;
+}
 
 const LEGACY_OPENING_SCHEMA = 41 as const;
 
@@ -8,15 +27,17 @@ const LEGACY_OPENING_SCHEMA = 41 as const;
  * Старые записи месяца M хранили остаток на начало M → переносим в конец M−1.
  */
 export function migrateDocument(document: PrototypeDocument): PrototypeDocument {
-  if (document.schemaVersion === SCHEMA_VERSION) {
-    return document;
+  const normalizedUnits = normalizeMaterialUnits(document);
+
+  if (normalizedUnits.schemaVersion === SCHEMA_VERSION) {
+    return normalizedUnits;
   }
 
-  if (document.schemaVersion !== LEGACY_OPENING_SCHEMA) {
-    return document;
+  if (normalizedUnits.schemaVersion !== LEGACY_OPENING_SCHEMA) {
+    return normalizedUnits;
   }
 
-  const legacyOpenings = document.finishedGoodsOpenings ?? [];
+  const legacyOpenings = normalizedUnits.finishedGoodsOpenings ?? [];
   const endByMonth = new Map<string, Map<string, number>>();
 
   for (const opening of legacyOpenings) {
@@ -47,9 +68,9 @@ export function migrateDocument(document: PrototypeDocument): PrototypeDocument 
     });
   }
 
-  return {
-    ...document,
+  return normalizeMaterialUnits({
+    ...normalizedUnits,
     schemaVersion: SCHEMA_VERSION,
     finishedGoodsOpenings,
-  };
+  });
 }

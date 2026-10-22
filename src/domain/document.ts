@@ -215,8 +215,8 @@ export const MATERIAL_WAREHOUSES = [
 
 export type MaterialWarehouseId = (typeof MATERIAL_WAREHOUSES)[number]['id'];
 
-/** Единицы листов `DSM`: кг, шт, л, пм. */
-export const MATERIAL_UNITS = ['кг', 'шт', 'л', 'пм'] as const;
+/** Единицы листов `DSM`: кг, шт, л, м (в книге оболочка — погонные метры, в интерфейсе — м). */
+export const MATERIAL_UNITS = ['кг', 'шт', 'л', 'м'] as const;
 
 export type MaterialUnit = (typeof MATERIAL_UNITS)[number];
 

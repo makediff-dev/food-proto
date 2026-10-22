@@ -1,5 +1,6 @@
 import type {
   MaterialDocumentRejection,
+  MaterialNameRejection,
   MaterialNormRejection,
   MaterialOpeningRejection,
   MaterialPlanRejection,
@@ -47,6 +48,14 @@ export function parseQuantityInput(raw: string, allowNegative: boolean): number 
   }
   return negative ? -thousandths : thousandths;
 }
+
+export const MATERIAL_NAME_ERROR: Record<MaterialNameRejection, string> = {
+  empty: 'Укажите название.',
+  'too-long': 'Слишком длинное название.',
+  duplicate: 'Такое название уже есть.',
+  missing: 'Позиция не найдена.',
+  locked: 'Удалённую позицию не переименовывают.',
+};
 
 export const MATERIAL_PLAN_ERROR: Record<MaterialPlanRejection, string> = {
   month: 'Этот месяц выбрать нельзя.',

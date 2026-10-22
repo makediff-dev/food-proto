@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useState } from 'react';
 
 import { costWithVat, type UnitCost } from '@/domain/cost';
 import { amountExVat } from '@/domain/money';
@@ -16,16 +16,19 @@ import {
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
+  categoryNameRowClassName,
   cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
   Empty,
-  gridNameClassName,
+  entityNameRowClassName,
+  GridText,
   IntegerCell,
   keepWithNext,
   MoneyAmount,
   MoneyCell,
   Muted,
+  nameCellKind,
   nameHeadingClassName,
   PercentCell,
   ProductIndex,
@@ -233,7 +236,7 @@ export function SummaryTable({
             {SIDE_COLUMNS.map((column) => (
               <td
                 key={`plan-total:${column.key}`}
-                className={`${totalValueClassName} last:border-r-0 ${sectionRightClass('plan', column.key, part)} ${cellKindClassName[planColumnKind(column.key, part)]}`}
+                className={`${totalValueClassName} last:border-r-0 ${sectionRightClass('plan', column.key, part)}`}
               >
                 {planTotals ? <SideCell column={column.key} side={planTotals} kind="total" /> : <Empty />}
               </td>
@@ -242,7 +245,7 @@ export function SummaryTable({
               ? SIDE_COLUMNS.map((column) => (
                   <td
                     key={`fact-total:${column.key}`}
-                    className={`${totalValueClassName} last:border-r-0 ${sectionRightClass('fact', column.key, part)} ${cellKindClassName[factColumnKind(column.key)]}`}
+                    className={`${totalValueClassName} last:border-r-0 ${sectionRightClass('fact', column.key, part)}`}
                   >
                     <SideCell column={column.key} side={factTotals} kind="total" />
                   </td>
@@ -250,10 +253,7 @@ export function SummaryTable({
               : null}
             {showFact
               ? VARIANCE_COLUMNS.map((column) => (
-                  <td
-                    key={`var-total:${column.key}`}
-                    className={`${totalValueClassName} ${columnDividerClassName} ${cellKindClassName.computed}`}
-                  >
+                  <td key={`var-total:${column.key}`} className={`${totalValueClassName} ${columnDividerClassName}`}>
                     <VarianceCell column={column.key} variance={variance} />
                   </td>
                 ))
@@ -275,10 +275,7 @@ function CategoryBlock({ group, part, edit }: { group: SummaryGroup; part: 'full
   return (
     <>
       <tr>
-        <th
-          scope="row"
-          className={`sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted px-3 py-2 text-left align-middle font-normal text-ink ${header}`}
-        >
+        <th scope="row" className={categoryNameRowClassName(catalogEditable && Boolean(edit) && !group.deleted)}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -395,7 +392,7 @@ function ProductRow({
     <tr>
       <th
         scope="row"
-        className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle font-normal"
+        className={entityNameRowClassName(nameCellKind(catalogEditable && Boolean(edit) && !row.deleted))}
       >
         <div className="flex items-center gap-2">
           <ProductIndex index={index} />
@@ -690,89 +687,6 @@ function UnitCostValue({ cost }: { cost: UnitCost | null }) {
   }
 
   return <VatMoneyCell withVat={cost.withVat} exVat={cost.exVat} />;
-}
-
-function GridText({
-  label,
-  value,
-  disabled = false,
-  caps = false,
-  invalidMessage,
-  onCommit,
-}: {
-  label: string;
-  value: string;
-  disabled?: boolean;
-  caps?: boolean;
-  invalidMessage: string;
-  onCommit: (value: string) => string | null;
-}) {
-  const inputId = useId();
-  const errorId = useId();
-  const [draft, setDraft] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const shown = draft ?? value;
-
-  function commit(raw: string) {
-    if (raw.trim().length === 0) {
-      setError(invalidMessage);
-      setDraft(raw);
-      return;
-    }
-
-    const rejection = onCommit(raw);
-    if (rejection) {
-      setError(rejection);
-      setDraft(raw);
-      return;
-    }
-
-    setDraft(null);
-    setError(null);
-  }
-
-  return (
-    <div className="min-w-max flex-1">
-      <label htmlFor={inputId} className="sr-only">
-        {label}
-      </label>
-      <div className="relative min-w-max flex-1">
-        <span
-          className={`invisible flex h-8 items-center whitespace-nowrap text-sm leading-none ${caps ? 'uppercase' : ''}`}
-          aria-hidden
-        >
-          {shown.length > 0 ? shown : '\u00a0'}
-        </span>
-        <input
-          id={inputId}
-          value={shown}
-          autoComplete="off"
-          disabled={disabled}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? errorId : undefined}
-          onFocus={() => {
-            setDraft(value);
-            setError(null);
-          }}
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={(event) => commit(event.currentTarget.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.preventDefault();
-              event.stopPropagation();
-              event.currentTarget.blur();
-            }
-          }}
-          className={`${gridNameClassName} ${caps ? 'uppercase' : ''}`}
-        />
-      </div>
-      {error ? (
-        <p id={errorId} className="mt-1 text-sm text-ink">
-          {error}
-        </p>
-      ) : null}
-    </div>
-  );
 }
 
 function editableFieldNear(target: EventTarget | null, cell: HTMLElement): HTMLInputElement | null {

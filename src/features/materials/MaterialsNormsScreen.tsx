@@ -11,6 +11,7 @@ import { PageFrame } from '@/features/shell/PageFrame';
 import {
   cellKindClassName,
   columnHeadingClassName,
+  entityNameRowClassName,
   nameHeadingClassName,
   stickyHeadClassName,
   tableBorder,
@@ -51,10 +52,7 @@ export function MaterialsNormsScreen() {
                 <tbody>
                   {rows.map((material) => (
                     <tr key={material.id}>
-                      <th
-                        scope="row"
-                        className="sticky left-0 z-10 whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left font-normal text-ink"
-                      >
+                      <th scope="row" className={entityNameRowClassName('repeated')}>
                         {material.name}
                         <span className="text-muted"> · {material.unit}/шт</span>
                       </th>

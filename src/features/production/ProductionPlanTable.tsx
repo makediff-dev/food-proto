@@ -12,10 +12,12 @@ import {
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
+  categoryNameRowClassName,
   cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
   Empty,
+  entityNameRowClassName,
   keepWithNext,
   Muted,
   nameHeadingClassName,
@@ -95,10 +97,7 @@ export function ProductionPlanTable({
               Всего
             </th>
             {COLUMNS.map((column) => (
-              <td
-                key={`total:${column.key}`}
-                className={`${totalValueClassName} ${columnDividerClassName} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
-              >
+              <td key={`total:${column.key}`} className={`${totalValueClassName} ${columnDividerClassName}`}>
                 <TotalsCell column={column.key} totals={totals} recommendedPieces={recommendedTotal} />
               </td>
             ))}
@@ -123,10 +122,7 @@ function CategoryBlock({
   return (
     <>
       <tr>
-        <th
-          scope="row"
-          className={`sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted px-3 py-2 text-left align-middle font-normal text-ink ${categoryBandClassName}`}
-        >
+        <th scope="row" className={categoryNameRowClassName(false)}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -180,10 +176,7 @@ function ProductRow({
 }) {
   return (
     <tr>
-      <th
-        scope="row"
-        className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle font-normal"
-      >
+      <th scope="row" className={entityNameRowClassName('repeated')}>
         <div className="flex items-center gap-2">
           <ProductIndex index={index} />
           <span className="flex h-8 min-w-max items-center text-sm leading-none text-ink">{row.name}</span>

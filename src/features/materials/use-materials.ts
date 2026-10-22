@@ -78,7 +78,12 @@ export function useMaterials() {
       return null;
     },
     rename(id: string, name: string) {
+      const rejection = materialNameRejection(store.document, name, id);
+      if (rejection) {
+        return rejection;
+      }
       store.updateDocument((current) => renameMaterial(current, id, name));
+      return null;
     },
     setVat(id: string, vatPercent: number) {
       store.updateDocument((current) => setMaterialVat(current, id, vatPercent));

@@ -13,6 +13,7 @@ import {
   type CellKind,
   cellKindClassName,
   columnDividerClassName,
+  entityNameRowClassName,
   keepWithNext,
   nameHeadingClassName,
   stickyHeadClassName,
@@ -214,10 +215,7 @@ export function MaterialsSummaryTable({
         <tbody>
           {rows.map((row) => (
             <tr key={row.materialId}>
-              <th
-                scope="row"
-                className="sticky left-0 z-10 whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left font-normal text-ink"
-              >
+              <th scope="row" className={entityNameRowClassName('repeated')}>
                 {row.name}
                 {row.deleted ? <span className="text-muted"> (архив)</span> : null}
               </th>
@@ -241,10 +239,7 @@ export function MaterialsSummaryTable({
               {totals.unit ? 'Всего' : 'Сумма'}
             </th>
             {COLUMNS.map((column) => (
-              <td
-                key={column.key}
-                className={`${totalValueClassName} ${groupEndClass(column.key)} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
-              >
+              <td key={column.key} className={`${totalValueClassName} ${groupEndClass(column.key)}`}>
                 <TotalsCell column={column.key} totals={totals} />
               </td>
             ))}

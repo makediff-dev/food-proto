@@ -17,9 +17,11 @@ import {
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
+  categoryNameRowClassName,
   cellKindClassName,
   columnHeadingClassName,
   Empty,
+  entityNameRowClassName,
   keepWithNext,
   Muted,
   nameHeadingClassName,
@@ -149,10 +151,7 @@ function CategoryBlock({
   return (
     <>
       <tr>
-        <th
-          scope="row"
-          className={`sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted px-3 py-2 text-left align-middle font-normal text-ink ${categoryBandClassName}`}
-        >
+        <th scope="row" className={categoryNameRowClassName(false)}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -201,10 +200,7 @@ function ProductRow({
 }) {
   return (
     <tr>
-      <th
-        scope="row"
-        className="sticky left-0 z-10 w-px max-w-max whitespace-nowrap border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle font-normal"
-      >
+      <th scope="row" className={entityNameRowClassName('repeated')}>
         <div className="flex items-center gap-2">
           <ProductIndex index={index} />
           <span className="flex h-8 min-w-max flex-1 items-center text-sm leading-none text-ink">{row.name}</span>
@@ -398,7 +394,7 @@ function MetricCell({
 
   return (
     <td
-      className={`w-px px-1.5 py-2 text-right align-middle last:border-r-0 ${tone} ${sheet || total ? fill : ''} ${sectionRightClass(kind, column)}`}
+      className={`w-px px-1.5 py-2 text-right align-middle last:border-r-0 ${tone} ${sheet ? fill : ''} ${sectionRightClass(kind, column)}`}
     >
       {children}
     </td>
