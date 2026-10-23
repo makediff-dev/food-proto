@@ -77,25 +77,37 @@ function DocumentForm({
     receipt?.occurredOn ?? `${currentMonth}-${String(today.getDate()).padStart(2, '0')}`,
   );
   const [supplierName, setSupplierName] = useState(receipt?.supplierName ?? '');
-  const [drafts, setDrafts] = useState<Record<string, MaterialReceiptLineDraft>>(() => {
+  const rows = activeMaterials(materials.document, warehouseId);
+
+  function draftsForWarehouse(nextWarehouseId: MaterialWarehouseId): Record<string, MaterialReceiptLineDraft> {
     const next: Record<string, MaterialReceiptLineDraft> = {};
-    for (const material of activeMaterials(materials.document)) {
-      const receiptLine = receipt?.lines.find((item) => item.materialId === material.id);
+    const sameWarehouse = receipt?.warehouseId === nextWarehouseId;
+    for (const material of activeMaterials(materials.document, nextWarehouseId)) {
+      const receiptLine = sameWarehouse ? receipt?.lines.find((item) => item.materialId === material.id) : undefined;
       next[material.id] = {
         quantity: receiptLine === undefined ? '' : formatQuantityDraft(receiptLine.quantity),
         price: receiptLine ? formatMoneyDraft(receiptLine.priceWithVat) : '',
       };
     }
     return next;
-  });
+  }
+
+  const [drafts, setDrafts] = useState<Record<string, MaterialReceiptLineDraft>>(() =>
+    draftsForWarehouse(receipt?.warehouseId ?? 'warehouse-1'),
+  );
   const [error, setError] = useState<string | null>(null);
-  const rows = activeMaterials(materials.document);
 
   function setLine(materialId: string, field: MaterialReceiptLineField, raw: string) {
     setDrafts((current) => {
       const line = current[materialId] ?? emptyMaterialReceiptLineDraft();
       return { ...current, [materialId]: { ...line, [field]: raw } };
     });
+  }
+
+  function changeWarehouse(nextWarehouseId: MaterialWarehouseId) {
+    setWarehouseId(nextWarehouseId);
+    setDrafts(draftsForWarehouse(nextWarehouseId));
+    setError(null);
   }
 
   function save() {
@@ -186,7 +198,7 @@ function DocumentForm({
                 <select
                   aria-label="Склад"
                   value={warehouseId}
-                  onChange={(event) => setWarehouseId(event.target.value as MaterialWarehouseId)}
+                  onChange={(event) => changeWarehouse(event.target.value as MaterialWarehouseId)}
                   className={`mt-2 ${fieldClassName}`}
                 >
                   {MATERIAL_WAREHOUSES.map((warehouse) => (

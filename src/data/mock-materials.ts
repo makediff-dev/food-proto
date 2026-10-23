@@ -10,6 +10,7 @@ import type {
 
 /**
  * Мок сырья двух складов.
+ * Позиции индивидуальны для склада: одинаковые имена — разные id.
  * Инвентаризация — на конец месяца. В моке факт только за закрытые месяцы (август и сентябрь 2026);
  * октябрь ещё идёт — как у готовой продукции. На конец сентября: склад 1 — недостача говядины 30 кг,
  * склад 2 — излишек 30 кг; сумма отклонений нулевая — объединённый остаток недостачу прячет.
@@ -19,73 +20,84 @@ import type {
 
 const q = (units: number) => Math.round(units * 1000);
 
-const materials: Material[] = [
-  { id: 'material-beef', name: 'Говядина 1 с зам', groupId: 'meat', unit: 'кг', vatPercent: 10, deletedAt: null },
+type MaterialSeed = Omit<Material, 'id' | 'warehouseId' | 'deletedAt'> & { baseId: string };
+
+const materialSeeds: MaterialSeed[] = [
+  { baseId: 'material-beef', name: 'Говядина 1 с зам', groupId: 'meat', unit: 'кг', vatPercent: 10 },
   {
-    id: 'material-chicken',
+    baseId: 'material-chicken',
     name: 'Филе грудки куриное зам',
     groupId: 'meat',
     unit: 'кг',
     vatPercent: 10,
-    deletedAt: null,
   },
-  { id: 'material-nitrite', name: 'Соль нитритная', groupId: 'meat', unit: 'кг', vatPercent: 10, deletedAt: null },
-  { id: 'material-flour', name: 'Мука пшеничная в/с', groupId: 'bakery', unit: 'кг', vatPercent: 10, deletedAt: null },
+  { baseId: 'material-nitrite', name: 'Соль нитритная', groupId: 'meat', unit: 'кг', vatPercent: 10 },
+  { baseId: 'material-flour', name: 'Мука пшеничная в/с', groupId: 'bakery', unit: 'кг', vatPercent: 10 },
   {
-    id: 'material-yeast',
+    baseId: 'material-yeast',
     name: 'Дрожжи сухие быстродействующие',
     groupId: 'bakery',
     unit: 'кг',
     vatPercent: 20,
-    deletedAt: null,
   },
   {
-    id: 'material-ketchup',
+    baseId: 'material-ketchup',
     name: 'Кетчуп томатный Хайнц',
     groupId: 'sauces',
     unit: 'кг',
     vatPercent: 20,
-    deletedAt: null,
   },
-  { id: 'material-oil', name: 'Масло подсолнечное', groupId: 'sauces', unit: 'кг', vatPercent: 10, deletedAt: null },
+  { baseId: 'material-oil', name: 'Масло подсолнечное', groupId: 'sauces', unit: 'кг', vatPercent: 10 },
   {
-    id: 'material-salt',
+    baseId: 'material-salt',
     name: 'Соль пищевая мелк помола',
     groupId: 'sauces',
     unit: 'кг',
     vatPercent: 10,
-    deletedAt: null,
   },
   {
-    id: 'material-label',
+    baseId: 'material-label',
     name: 'Этикетка Гамбургер 110х100',
     groupId: 'packaging',
     unit: 'шт',
     vatPercent: 20,
-    deletedAt: null,
   },
   {
-    id: 'material-tray',
+    baseId: 'material-tray',
     name: 'Лоток 142х142х53 прозрач',
     groupId: 'packaging',
     unit: 'шт',
     vatPercent: 20,
-    deletedAt: null,
   },
-  { id: 'material-knives', name: 'Ножи', groupId: 'packaging', unit: 'шт', vatPercent: 20, deletedAt: null },
-  { id: 'material-blades', name: 'Лезвия', groupId: 'packaging', unit: 'шт', vatPercent: 20, deletedAt: null },
+  { baseId: 'material-knives', name: 'Ножи', groupId: 'packaging', unit: 'шт', vatPercent: 20 },
+  { baseId: 'material-blades', name: 'Лезвия', groupId: 'packaging', unit: 'шт', vatPercent: 20 },
   {
-    id: 'material-casing',
+    baseId: 'material-casing',
     name: 'Оболочка сосисочная',
     groupId: 'packaging',
     unit: 'м',
     vatPercent: 20,
-    deletedAt: null,
   },
 ];
 
-/** Копейки за единицу с НДС. Круглые цены рядом с `DSM`. */
-const priceWithVat: Record<string, number> = {
+function materialId(baseId: string, warehouseId: MaterialWarehouseId): string {
+  return warehouseId === 'warehouse-1' ? baseId : `${baseId}-w2`;
+}
+
+const materials: Material[] = (['warehouse-1', 'warehouse-2'] as const).flatMap((warehouseId) =>
+  materialSeeds.map((seed) => ({
+    id: materialId(seed.baseId, warehouseId),
+    name: seed.name,
+    groupId: seed.groupId,
+    warehouseId,
+    unit: seed.unit,
+    vatPercent: seed.vatPercent,
+    deletedAt: null,
+  })),
+);
+
+/** Копейки за единицу с НДС. Круглые цены рядом с `DSM`. Ключ — baseId без суффикса склада. */
+const priceWithVatByBase: Record<string, number> = {
   'material-beef': 70_000,
   'material-chicken': 33_000,
   'material-nitrite': 8_000,
@@ -100,6 +112,11 @@ const priceWithVat: Record<string, number> = {
   'material-blades': 4_000,
   'material-casing': 1_200,
 };
+
+function priceFor(materialIdValue: string): number {
+  const baseId = materialIdValue.endsWith('-w2') ? materialIdValue.slice(0, -3) : materialIdValue;
+  return priceWithVatByBase[baseId] ?? 0;
+}
 
 type LineOverride = Partial<
   Pick<
@@ -123,6 +140,11 @@ function defaultMax(material: Material): number {
   return q(1_000);
 }
 
+function materialsForWarehouse(warehouseId: MaterialWarehouseId): Material[] {
+  return materials.filter((item) => item.warehouseId === warehouseId);
+}
+
+/** Overrides keyed by baseId (без суффикса склада). */
 function materialPlan(
   month: string,
   warehouseId: MaterialWarehouseId,
@@ -132,15 +154,16 @@ function materialPlan(
     id: `material-plan:${month}:${warehouseId}`,
     month,
     warehouseId,
-    lines: materials.map((material) => {
-      const override = overrides[material.id] ?? {};
+    lines: materialsForWarehouse(warehouseId).map((material) => {
+      const baseId = material.id.endsWith('-w2') ? material.id.slice(0, -3) : material.id;
+      const override = overrides[baseId] ?? {};
       return {
         id: `material-plan-line:${month}:${warehouseId}:${material.id}`,
         materialId: material.id,
         receiptQuantity: override.receiptQuantity ?? 0,
         consumptionQuantity: override.consumptionQuantity ?? 0,
         factConsumptionQuantity: override.factConsumptionQuantity ?? 0,
-        priceWithVat: override.priceWithVat ?? priceWithVat[material.id] ?? 0,
+        priceWithVat: override.priceWithVat ?? priceFor(material.id),
         minQuantity: override.minQuantity ?? 0,
         maxQuantity: override.maxQuantity ?? defaultMax(material),
       };
@@ -148,6 +171,7 @@ function materialPlan(
   };
 }
 
+/** Quantities keyed by baseId. */
 function materialOpening(
   month: string,
   warehouseId: MaterialWarehouseId,
@@ -157,11 +181,14 @@ function materialOpening(
     id: `material-opening:${month}:${warehouseId}`,
     month,
     warehouseId,
-    lines: Object.entries(quantities).map(([materialId, quantity]) => ({
-      id: `material-opening-line:${month}:${warehouseId}:${materialId}`,
-      materialId,
-      quantity,
-    })),
+    lines: Object.entries(quantities).map(([baseId, quantity]) => {
+      const id = materialId(baseId, warehouseId);
+      return {
+        id: `material-opening-line:${month}:${warehouseId}:${id}`,
+        materialId: id,
+        quantity,
+      };
+    }),
   };
 }
 
@@ -249,19 +276,22 @@ function receipt(
   warehouseId: MaterialWarehouseId,
   supplierName: string,
   occurredOn: string,
-  lines: Array<{ materialId: string; quantity: number }>,
+  lines: Array<{ baseId: string; quantity: number }>,
 ): MaterialReceipt {
   return {
     id,
     warehouseId,
     supplierName,
     occurredOn,
-    lines: lines.map((line) => ({
-      id: `${id}:${line.materialId}`,
-      materialId: line.materialId,
-      quantity: line.quantity,
-      priceWithVat: priceWithVat[line.materialId] ?? 0,
-    })),
+    lines: lines.map((line) => {
+      const materialIdValue = materialId(line.baseId, warehouseId);
+      return {
+        id: `${id}:${materialIdValue}`,
+        materialId: materialIdValue,
+        quantity: line.quantity,
+        priceWithVat: priceFor(materialIdValue),
+      };
+    }),
   };
 }
 
@@ -334,47 +364,47 @@ export const mockMaterials = {
   ],
   materialReceipts: [
     receipt('material-receipt:2026-08-12:w1', 'warehouse-1', 'Велес', '2026-08-12', [
-      { materialId: 'material-beef', quantity: q(200) },
-      { materialId: 'material-knives', quantity: q(30) },
-      { materialId: 'material-blades', quantity: q(25) },
+      { baseId: 'material-beef', quantity: q(200) },
+      { baseId: 'material-knives', quantity: q(30) },
+      { baseId: 'material-blades', quantity: q(25) },
     ]),
     receipt('material-receipt:2026-08-12:w2', 'warehouse-2', 'Велес', '2026-08-12', [
-      { materialId: 'material-beef', quantity: q(80) },
-      { materialId: 'material-knives', quantity: q(8) },
+      { baseId: 'material-beef', quantity: q(80) },
+      { baseId: 'material-knives', quantity: q(8) },
     ]),
     receipt('material-receipt:2026-09-08:w1', 'warehouse-1', 'Велес', '2026-09-08', [
-      { materialId: 'material-beef', quantity: q(40) },
-      { materialId: 'material-chicken', quantity: q(20) },
-      { materialId: 'material-nitrite', quantity: q(3) },
-      { materialId: 'material-knives', quantity: q(10) },
-      { materialId: 'material-blades', quantity: q(8) },
+      { baseId: 'material-beef', quantity: q(40) },
+      { baseId: 'material-chicken', quantity: q(20) },
+      { baseId: 'material-nitrite', quantity: q(3) },
+      { baseId: 'material-knives', quantity: q(10) },
+      { baseId: 'material-blades', quantity: q(8) },
     ]),
     receipt('material-receipt:2026-09-08:w2', 'warehouse-2', 'Дзержинский', '2026-09-08', [
-      { materialId: 'material-beef', quantity: q(20) },
+      { baseId: 'material-beef', quantity: q(20) },
     ]),
     receipt('material-receipt:2026-09-11:w1', 'warehouse-1', 'Волга Милл', '2026-09-11', [
-      { materialId: 'material-flour', quantity: q(50) },
-      { materialId: 'material-yeast', quantity: q(8) },
+      { baseId: 'material-flour', quantity: q(50) },
+      { baseId: 'material-yeast', quantity: q(8) },
     ]),
     receipt('material-receipt:2026-09-11:w2', 'warehouse-2', 'Волга Милл', '2026-09-11', [
-      { materialId: 'material-flour', quantity: q(15) },
-      { materialId: 'material-yeast', quantity: q(4) },
+      { baseId: 'material-flour', quantity: q(15) },
+      { baseId: 'material-yeast', quantity: q(4) },
     ]),
     receipt('material-receipt:2026-09-15:w1', 'warehouse-1', 'Хайнц', '2026-09-15', [
-      { materialId: 'material-ketchup', quantity: q(12) },
-      { materialId: 'material-oil', quantity: q(10) },
-      { materialId: 'material-salt', quantity: q(5) },
+      { baseId: 'material-ketchup', quantity: q(12) },
+      { baseId: 'material-oil', quantity: q(10) },
+      { baseId: 'material-salt', quantity: q(5) },
     ]),
     receipt('material-receipt:2026-09-15:w2', 'warehouse-2', 'Хайнц', '2026-09-15', [
-      { materialId: 'material-ketchup', quantity: q(6) },
-      { materialId: 'material-salt', quantity: q(2) },
+      { baseId: 'material-ketchup', quantity: q(6) },
+      { baseId: 'material-salt', quantity: q(2) },
     ]),
     receipt('material-receipt:2026-09-18:w1', 'warehouse-1', 'МЛ Принт Реклама', '2026-09-18', [
-      { materialId: 'material-label', quantity: q(2_000) },
-      { materialId: 'material-tray', quantity: q(800) },
+      { baseId: 'material-label', quantity: q(2_000) },
+      { baseId: 'material-tray', quantity: q(800) },
     ]),
     receipt('material-receipt:2026-09-18:w2', 'warehouse-2', 'МЛ Принт Реклама', '2026-09-18', [
-      { materialId: 'material-label', quantity: q(500) },
+      { baseId: 'material-label', quantity: q(500) },
     ]),
   ],
 };

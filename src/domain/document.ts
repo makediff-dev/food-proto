@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 44 as const;
+export const SCHEMA_VERSION = 45 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -226,9 +226,14 @@ export type MaterialUnit = (typeof MATERIAL_UNITS)[number];
  */
 export const NORMED_MATERIAL_GROUP_ID: MaterialGroupId = 'packaging';
 
-/** Позиция сырья или материалов. Группу после создания не меняют. */
+/**
+ * Позиция сырья или материалов одного склада.
+ * Группу и склад после создания не меняют. Одинаковые имена на разных складах — разные записи.
+ */
 export interface Material extends DeletableRecord {
   groupId: MaterialGroupId;
+  /** Склад, которому принадлежит позиция. Общих позиций нет. */
+  warehouseId: MaterialWarehouseId;
   unit: MaterialUnit;
   /** НДС закупки, целые проценты. `DSM Meat!F`. */
   vatPercent: number;

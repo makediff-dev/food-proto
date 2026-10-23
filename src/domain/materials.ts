@@ -190,8 +190,10 @@ export function materialReceiptsList(document: PrototypeDocument): MaterialRecei
   return document.materialReceipts ?? [];
 }
 
-export function activeMaterials(document: PrototypeDocument): Material[] {
-  return materialsList(document).filter((item) => item.deletedAt === null);
+export function activeMaterials(document: PrototypeDocument, warehouseId?: MaterialWarehouseId): Material[] {
+  return materialsList(document).filter(
+    (item) => item.deletedAt === null && (warehouseId === undefined || item.warehouseId === warehouseId),
+  );
 }
 
 export function deletedMaterials(document: PrototypeDocument): Material[] {
@@ -233,16 +235,27 @@ function isPrice(value: number): boolean {
 export function materialNameRejection(
   document: PrototypeDocument,
   name: string,
+  warehouseId: MaterialWarehouseId,
   exceptId?: string,
 ): MaterialNameRejection | null {
-  return rejectName(name, materialsList(document), exceptId);
+  if (!isMaterialWarehouseId(warehouseId)) {
+    return 'missing';
+  }
+  return rejectName(
+    name,
+    materialsList(document).filter((item) => item.warehouseId === warehouseId),
+    exceptId,
+  );
 }
 
 export function addMaterial(
   document: PrototypeDocument,
-  material: Pick<Material, 'id' | 'name' | 'groupId' | 'unit' | 'vatPercent'>,
+  material: Pick<Material, 'id' | 'name' | 'groupId' | 'warehouseId' | 'unit' | 'vatPercent'>,
 ): PrototypeDocument {
-  if (materialNameRejection(document, material.name)) {
+  if (!isMaterialWarehouseId(material.warehouseId)) {
+    return document;
+  }
+  if (materialNameRejection(document, material.name, material.warehouseId)) {
     return document;
   }
   if (!isMaterialGroupId(material.groupId) || !isMaterialUnit(material.unit) || !isVatPercent(material.vatPercent)) {
@@ -253,6 +266,7 @@ export function addMaterial(
     id: material.id,
     name: material.name.trim(),
     groupId: material.groupId,
+    warehouseId: material.warehouseId,
     unit: material.unit,
     vatPercent: material.vatPercent,
     deletedAt: null,
@@ -266,7 +280,7 @@ export function addMaterial(
 
 export function renameMaterial(document: PrototypeDocument, id: string, name: string): PrototypeDocument {
   const current = materialsList(document).find((item) => item.id === id && item.deletedAt === null);
-  if (!current || materialNameRejection(document, name, id)) {
+  if (!current || materialNameRejection(document, name, current.warehouseId, id)) {
     return document;
   }
 
@@ -319,7 +333,7 @@ export function deleteMaterial(document: PrototypeDocument, id: string, deletedA
 
 export function restoreMaterial(document: PrototypeDocument, id: string): PrototypeDocument {
   const current = materialsList(document).find((item) => item.id === id && item.deletedAt !== null);
-  if (!current || materialNameRejection(document, current.name, id)) {
+  if (!current || materialNameRejection(document, current.name, current.warehouseId, id)) {
     return document;
   }
 
@@ -364,7 +378,7 @@ export function setMaterialNormRejection(
     return 'warehouse';
   }
   const material = materialById(document, materialId);
-  if (!material) {
+  if (!material || material.warehouseId !== warehouseId) {
     return 'material';
   }
   if (material.groupId !== NORMED_MATERIAL_GROUP_ID) {
@@ -491,7 +505,7 @@ export function setMaterialPlanRejection(
     return month < '2000-01' || !isMonthKey(month) ? 'month' : 'closed';
   }
   const material = materialById(document, materialId);
-  if (!material) {
+  if (!material || material.warehouseId !== warehouseId) {
     return 'material';
   }
   if (material.deletedAt !== null) {
@@ -623,7 +637,7 @@ export function setMaterialOpeningRejection(
     return month < '2000-01' || !isMonthKey(month) ? 'month' : 'closed';
   }
   const material = materialById(document, materialId);
-  if (!material) {
+  if (!material || material.warehouseId !== warehouseId) {
     return 'material';
   }
   if (material.deletedAt !== null) {
@@ -963,7 +977,9 @@ function gridMaterials(
   warehouseId: MaterialWarehouseId,
   month: string,
 ): Material[] {
-  const materials = materialsList(document).filter((item) => item.groupId === groupId);
+  const materials = materialsList(document).filter(
+    (item) => item.groupId === groupId && item.warehouseId === warehouseId,
+  );
   const active = materials.filter((item) => item.deletedAt === null);
   const activeIds = new Set(active.map((item) => item.id));
   const referenced = referencedMaterialIds(document, month, warehouseId);
@@ -1167,7 +1183,7 @@ export function materialReceiptRejection(
   }
   for (const line of lines) {
     const material = materialById(document, line.materialId);
-    if (!material) {
+    if (!material || material.warehouseId !== draft.warehouseId) {
       return 'material';
     }
     if (material.deletedAt !== null) {

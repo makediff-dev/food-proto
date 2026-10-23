@@ -6,6 +6,7 @@ import { useMemo, useState } from 'react';
 import {
   MATERIAL_GROUPS,
   MATERIAL_UNITS,
+  MATERIAL_WAREHOUSES,
   type MaterialGroupId,
   type MaterialUnit,
   type MaterialWarehouseId,
@@ -33,7 +34,7 @@ export function MaterialsPlanScreen({ month }: { month: string }) {
     () => materialMovementMonth(materials.document, selectedMonth),
     [materials.document, selectedMonth],
   );
-  const [addingGroup, setAddingGroup] = useState<MaterialGroupId | null>(null);
+  const [adding, setAdding] = useState<{ groupId: MaterialGroupId; warehouseId: MaterialWarehouseId } | null>(null);
   const deleted = deletedMaterials(materials.document);
 
   function fieldError(
@@ -62,8 +63,12 @@ export function MaterialsPlanScreen({ month }: { month: string }) {
       <div className="flex flex-col gap-8">
         <MaterialsWarehouseBlocks
           groups={view.groups}
-          renderHeadingExtra={(group) => (
-            <button type="button" onClick={() => setAddingGroup(group.groupId)} className={primaryButtonClassName}>
+          renderWarehouseExtra={(group, warehouse) => (
+            <button
+              type="button"
+              onClick={() => setAdding({ groupId: group.groupId, warehouseId: warehouse.warehouseId })}
+              className={primaryButtonClassName}
+            >
               <IconPlus />
               Добавить
             </button>
@@ -105,7 +110,8 @@ export function MaterialsPlanScreen({ month }: { month: string }) {
                     {item.name}
                     <span className="text-muted">
                       {' '}
-                      · {MATERIAL_GROUPS.find((group) => group.id === item.groupId)?.name} · {item.unit}
+                      · {MATERIAL_WAREHOUSES.find((warehouse) => warehouse.id === item.warehouseId)?.name} ·{' '}
+                      {MATERIAL_GROUPS.find((group) => group.id === item.groupId)?.name} · {item.unit}
                     </span>
                   </span>
                   <button
@@ -128,15 +134,17 @@ export function MaterialsPlanScreen({ month }: { month: string }) {
           )}
         </section>
       </div>
-      {addingGroup ? (
+      {adding ? (
         <AddMaterialDialog
-          groupId={addingGroup}
-          onClose={() => setAddingGroup(null)}
+          groupId={adding.groupId}
+          warehouseId={adding.warehouseId}
+          onClose={() => setAdding(null)}
           onSubmit={(name, unit, vatPercent) => {
             const rejection = materials.addMaterial({
               id: `material:${crypto.randomUUID()}`,
               name,
-              groupId: addingGroup,
+              groupId: adding.groupId,
+              warehouseId: adding.warehouseId,
               unit,
               vatPercent,
             });
@@ -156,10 +164,12 @@ export function MaterialsPlanScreen({ month }: { month: string }) {
 
 function AddMaterialDialog({
   groupId,
+  warehouseId,
   onClose,
   onSubmit,
 }: {
   groupId: MaterialGroupId;
+  warehouseId: MaterialWarehouseId;
   onClose: () => void;
   onSubmit: (name: string, unit: MaterialUnit, vatPercent: number) => string | null;
 }) {
@@ -168,9 +178,10 @@ function AddMaterialDialog({
   const [vat, setVat] = useState('20');
   const [error, setError] = useState<string | null>(null);
   const groupName = MATERIAL_GROUPS.find((item) => item.id === groupId)?.name ?? '';
+  const warehouseName = MATERIAL_WAREHOUSES.find((item) => item.id === warehouseId)?.name ?? '';
 
   return (
-    <Dialog title={`Новая позиция · ${groupName}`} onClose={onClose}>
+    <Dialog title={`Новая позиция · ${warehouseName} · ${groupName}`} onClose={onClose}>
       <form
         className="flex flex-col gap-4"
         onSubmit={(event) => {

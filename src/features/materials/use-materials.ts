@@ -69,8 +69,8 @@ export function useMaterials() {
       );
       return null;
     },
-    addMaterial(material: Pick<Material, 'id' | 'name' | 'groupId' | 'unit' | 'vatPercent'>) {
-      const rejection = materialNameRejection(store.document, material.name);
+    addMaterial(material: Pick<Material, 'id' | 'name' | 'groupId' | 'warehouseId' | 'unit' | 'vatPercent'>) {
+      const rejection = materialNameRejection(store.document, material.name, material.warehouseId);
       if (rejection) {
         return rejection;
       }
@@ -78,11 +78,15 @@ export function useMaterials() {
       return null;
     },
     rename(id: string, name: string) {
-      const rejection = materialNameRejection(store.document, name, id);
+      const current = store.document.materials.find((item) => item.id === id && item.deletedAt === null);
+      if (!current) {
+        return 'missing' as const;
+      }
+      const rejection = materialNameRejection(store.document, name, current.warehouseId, id);
       if (rejection) {
         return rejection;
       }
-      store.updateDocument((current) => renameMaterial(current, id, name));
+      store.updateDocument((document) => renameMaterial(document, id, name));
       return null;
     },
     setVat(id: string, vatPercent: number) {
@@ -99,7 +103,7 @@ export function useMaterials() {
       if (!current || current.deletedAt === null) {
         return 'missing' as const;
       }
-      const rejection = materialNameRejection(store.document, current.name, id);
+      const rejection = materialNameRejection(store.document, current.name, current.warehouseId, id);
       if (rejection) {
         return rejection;
       }
