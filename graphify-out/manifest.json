@@ -345,8 +345,8 @@
     "semantic_hash": ""
   },
   "src/features/production/paths.ts": {
-    "mtime": 1792567087.4314651,
-    "seen": 1792567846.6235266,
+    "mtime": 1792762398.2935417,
+    "seen": 1792762430.4980009,
     "ast_hash": "925730d29a7aa12f6effed7b901e5ab5",
     "semantic_hash": ""
   },
@@ -537,9 +537,9 @@
     "semantic_hash": ""
   },
   "src/features/shell/AppShell.tsx": {
-    "mtime": 1792567087.4407313,
-    "seen": 1792567846.6235266,
-    "ast_hash": "db410195031d54d92dcd45d42e88a10d",
+    "mtime": 1792762396.930254,
+    "seen": 1792762430.4980009,
+    "ast_hash": "16ecbb1f895107220adef7af7e2fab01",
     "semantic_hash": ""
   },
   "src/features/shell/Dialog.tsx": {
@@ -960,6 +960,42 @@
     "mtime": 1792661618.014077,
     "seen": 1792661781.5944958,
     "ast_hash": "dc1c97a4053e4fec51d96857908fdac6",
+    "semantic_hash": ""
+  },
+  "src/app/recipes/finished/page.tsx": {
+    "mtime": 1792762375.1204565,
+    "seen": 1792762430.4980009,
+    "ast_hash": "19cfb29a0590eb42eeb78445e668b3dc",
+    "semantic_hash": ""
+  },
+  "src/app/recipes/page.tsx": {
+    "mtime": 1792762373.1780384,
+    "seen": 1792762430.4980009,
+    "ast_hash": "851ea41118490dea55feb3e4da7397db",
+    "semantic_hash": ""
+  },
+  "src/features/recipes/RecipeJournalsScreen.tsx": {
+    "mtime": 1792762370.9310367,
+    "seen": 1792762430.4980009,
+    "ast_hash": "5b6f5bb1dfd7e785e0405efdd21a8186",
+    "semantic_hash": ""
+  },
+  "src/features/recipes/RecipeJournalsTable.tsx": {
+    "mtime": 1792762419.526507,
+    "seen": 1792762430.4980009,
+    "ast_hash": "c99b690dc04163a1b0b9b3fc0404f85d",
+    "semantic_hash": ""
+  },
+  "src/features/recipes/mock-sections.ts": {
+    "mtime": 1792762357.3209822,
+    "seen": 1792762430.4980009,
+    "ast_hash": "550e5f0e3cb815961447639715ea5c6e",
+    "semantic_hash": ""
+  },
+  "src/features/recipes/paths.ts": {
+    "mtime": 1792762347.5293357,
+    "seen": 1792762430.4980009,
+    "ast_hash": "7167ddf3eefbd196663f1691180f05b3",
     "semantic_hash": ""
   }
 }

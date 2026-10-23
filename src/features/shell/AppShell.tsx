@@ -27,6 +27,13 @@ import {
   PRODUCTION_SECTION_TITLE,
   PRODUCTION_SUMMARY_TITLE,
 } from '@/features/production/paths';
+import {
+  RECIPES_DERIVATIVES_HREF,
+  RECIPES_DERIVATIVES_TITLE,
+  RECIPES_FINISHED_HREF,
+  RECIPES_FINISHED_TITLE,
+  RECIPES_SECTION_TITLE,
+} from '@/features/recipes/paths';
 import { SUMMARY_SECTION_TITLE } from '@/features/sales/paths';
 import { SALES_FACT_TITLE, SALES_JOURNAL_TITLE, SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
 import { IconChevronDown, IconChevronRight, IconMenu, IconUndo } from '@/features/shell/Icons';
@@ -54,6 +61,11 @@ const PRODUCTION_NAV: readonly NavItem[] = [
   { href: '/production/fact', label: PRODUCTION_FACT_TITLE, navKind: 'report' },
   { href: '/production/plan', label: PRODUCTION_PLAN_TITLE, navKind: 'input' },
   { href: '/production/journal', label: PRODUCTION_JOURNAL_TITLE, navKind: 'input' },
+];
+
+const RECIPES_NAV: readonly NavItem[] = [
+  { href: RECIPES_DERIVATIVES_HREF, label: RECIPES_DERIVATIVES_TITLE, exact: true, navKind: 'input' },
+  { href: RECIPES_FINISHED_HREF, label: RECIPES_FINISHED_TITLE, navKind: 'input' },
 ];
 
 const MOVEMENT_NAV: readonly NavItem[] = [
@@ -118,6 +130,12 @@ function currentNavLabel(pathname: string): string | undefined {
   }
 
   for (const item of PRODUCTION_NAV) {
+    if (navItemIsCurrent(pathname, item)) {
+      return item.label;
+    }
+  }
+
+  for (const item of RECIPES_NAV) {
     if (navItemIsCurrent(pathname, item)) {
       return item.label;
     }
@@ -190,17 +208,23 @@ function NavGroup({
       </button>
       {collapsed ? null : (
         <div className="flex flex-col gap-0.5">
-          <div className="flex flex-col">
-            {reportItems.map((item) => (
-              <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
-            ))}
-          </div>
-          <div className="mx-3 border-t border-sidebar-line/90" aria-hidden="true" />
-          <div className="flex flex-col">
-            {inputItems.map((item) => (
-              <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
-            ))}
-          </div>
+          {reportItems.length > 0 ? (
+            <div className="flex flex-col">
+              {reportItems.map((item) => (
+                <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
+              ))}
+            </div>
+          ) : null}
+          {reportItems.length > 0 && inputItems.length > 0 ? (
+            <div className="mx-3 border-t border-sidebar-line/90" aria-hidden="true" />
+          ) : null}
+          {inputItems.length > 0 ? (
+            <div className="flex flex-col">
+              {inputItems.map((item) => (
+                <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
+              ))}
+            </div>
+          ) : null}
         </div>
       )}
     </div>
@@ -273,6 +297,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             pathname={pathname}
             onNavigate={closeMenu}
           />
+          <NavGroup title={RECIPES_SECTION_TITLE} items={RECIPES_NAV} pathname={pathname} onNavigate={closeMenu} />
           <NavGroup title={MOVEMENT_SECTION_TITLE} items={MOVEMENT_NAV} pathname={pathname} onNavigate={closeMenu} />
           <NavGroup title={MATERIALS_SECTION_TITLE} items={MATERIALS_NAV} pathname={pathname} onNavigate={closeMenu} />
         </nav>
