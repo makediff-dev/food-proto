@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 import { useDocumentStore } from '@/data/DocumentProvider';
 import { derivativeCompositionLines, derivativeSections } from '@/domain/derivatives';
-import { derivativeNewHref, RECIPES_DERIVATIVES_TITLE } from '@/features/recipes/paths';
+import { derivativeHref, derivativeNewHref, RECIPES_DERIVATIVES_TITLE } from '@/features/recipes/paths';
 import { RecipeJournalsScreen } from '@/features/recipes/RecipeJournalsScreen';
 import { primaryButtonClassName } from '@/features/sales/fields';
 import { IconPlus } from '@/features/shell/Icons';
@@ -18,7 +18,7 @@ export function DerivativesScreen() {
     items: section.items.map((item) => ({
       id: item.id,
       name: item.name,
-      unit: item.unit,
+      href: derivativeHref(item.id),
       components: derivativeCompositionLines(store.document, item).map((line) => ({
         id: line.id,
         name: line.name,

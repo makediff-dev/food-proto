@@ -21,6 +21,14 @@ export function derivativeNewHref(workshopId?: DerivativeWorkshopId): string {
   return `/recipes/new?workshop=${encodeURIComponent(workshopId)}`;
 }
 
+export function derivativeHref(id: string): string {
+  return `/recipes/${encodeURIComponent(id)}`;
+}
+
+export function finishedProductHref(id: string): string {
+  return `/recipes/finished/${encodeURIComponent(id)}`;
+}
+
 export function parseDerivativeWorkshopQuery(value: string | undefined): DerivativeWorkshopId | null {
   if (!value || !isDerivativeWorkshopId(value)) {
     return null;

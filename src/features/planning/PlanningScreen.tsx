@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useId, useMemo, useState } from 'react';
 
 import { activeCategories, deletedCategories } from '@/domain/categories';
+import { MATERIAL_WAREHOUSES, type MaterialWarehouseId } from '@/domain/document';
+import { isMaterialWarehouseId } from '@/domain/materials';
 import { activeProducts, deletedProducts } from '@/domain/products';
 import {
   missingPlanProducts,
@@ -263,8 +265,8 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
           categories={categories}
           initialCategoryId={addCategoryId}
           onClose={() => setAddOpen(false)}
-          onSubmit={(name, categoryId) => {
-            const rejection = sales.addProduct(name, categoryId);
+          onSubmit={(name, categoryId, warehouseId) => {
+            const rejection = sales.addProduct(name, categoryId, warehouseId);
             if (rejection) {
               return FIELD_ERROR[rejection];
             }
@@ -304,14 +306,16 @@ function AddProductDialog({
   categories: readonly { id: string; name: string }[];
   initialCategoryId: string | null;
   onClose: () => void;
-  onSubmit: (name: string, categoryId: string) => string | null;
+  onSubmit: (name: string, categoryId: string, warehouseId: MaterialWarehouseId) => string | null;
 }) {
   const nameId = useId();
   const categoryFieldId = useId();
+  const warehouseFieldId = useId();
   const errorId = useId();
   const [name, setName] = useState('');
   const lockedCategory = categories.find((item) => item.id === initialCategoryId);
   const [categoryId, setCategoryId] = useState(lockedCategory?.id ?? categories[0]?.id ?? '');
+  const [warehouseId, setWarehouseId] = useState<MaterialWarehouseId>('warehouse-1');
   const [error, setError] = useState<string | null>(null);
 
   function submit() {
@@ -323,8 +327,12 @@ function AddProductDialog({
       setError(FIELD_ERROR.category);
       return;
     }
+    if (!isMaterialWarehouseId(warehouseId)) {
+      setError(FIELD_ERROR.warehouse);
+      return;
+    }
 
-    const rejection = onSubmit(name, categoryId);
+    const rejection = onSubmit(name, categoryId, warehouseId);
     if (rejection) {
       setError(rejection);
     }
@@ -384,6 +392,29 @@ function AddProductDialog({
               </select>
             </>
           )}
+        </div>
+        <div>
+          <label htmlFor={warehouseFieldId} className="text-sm text-muted">
+            Склад
+          </label>
+          <select
+            id={warehouseFieldId}
+            value={warehouseId}
+            onChange={(event) => {
+              const next = event.target.value;
+              if (isMaterialWarehouseId(next)) {
+                setWarehouseId(next);
+              }
+              setError(null);
+            }}
+            className={`mt-2 ${fieldClassName}`}
+          >
+            {MATERIAL_WAREHOUSES.map((warehouse) => (
+              <option key={warehouse.id} value={warehouse.id}>
+                {warehouse.name}
+              </option>
+            ))}
+          </select>
           {error ? (
             <p id={errorId} className="mt-2 text-sm text-ink">
               {error}

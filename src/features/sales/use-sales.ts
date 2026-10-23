@@ -9,6 +9,7 @@ import {
   renameCategory,
   restoreCategory,
 } from '@/domain/categories';
+import type { MaterialWarehouseId } from '@/domain/document';
 import {
   addProduct,
   deleteProduct,
@@ -17,6 +18,7 @@ import {
   productNameRejection,
   productUnitCostRejection,
   productVatRejection,
+  productWarehouseRejection,
   renameProduct,
   restoreProduct,
   setProductUnitCost,
@@ -107,9 +109,12 @@ export function useSales() {
       updateDocument((next) => restoreCategory(next, id));
       return null;
     },
-    addProduct(name: string, categoryId: string): FieldRejection | null {
+    addProduct(name: string, categoryId: string, warehouseId: MaterialWarehouseId): FieldRejection | null {
       const id = `product:${crypto.randomUUID()}`;
-      const rejection = productNameRejection(document, name) ?? productCategoryRejection(document, categoryId);
+      const rejection =
+        productNameRejection(document, name) ??
+        productCategoryRejection(document, categoryId) ??
+        productWarehouseRejection(warehouseId);
       if (rejection) {
         return rejection;
       }
@@ -118,8 +123,10 @@ export function useSales() {
           id,
           name,
           categoryId,
+          warehouseId,
           vatPercent: 20,
           unitCostWithVat: 0,
+          lines: [],
           deletedAt: null,
         }),
       );

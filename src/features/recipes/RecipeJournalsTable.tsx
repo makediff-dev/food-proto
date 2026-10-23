@@ -5,7 +5,7 @@ import { Fragment, type RefObject, useLayoutEffect, useMemo, useRef, useState } 
 
 import { formatQuantity } from '@/features/materials/text';
 import { IconChevronDown, IconChevronRight, IconPlus } from '@/features/shell/Icons';
-import { categoryBandClassName, cellKindClassName, ProductIndex, TableNumber, tableBorder } from '@/features/table';
+import { categoryBandClassName, cellKindClassName, ProductIndex, tableBorder } from '@/features/table';
 
 export type RecipeListComponent = {
   id: string;
@@ -18,11 +18,10 @@ export type RecipeListComponent = {
 export type RecipeListItem = {
   id: string;
   name: string;
-  unit: string;
-  /** Готовая продукция (макет): число + единица в правой колонке. */
-  quantity?: number;
-  /** Производные: состав одной строкой «имя количество + …». */
+  /** Состав одной строкой «имя количество + …». Без состава правая колонка пустая. */
   components?: readonly RecipeListComponent[];
+  /** Открыть запись на своей странице. */
+  href?: string;
 };
 
 export type RecipeListSection = {
@@ -34,10 +33,6 @@ export type RecipeListSection = {
 };
 
 const frameClassName = 'relative contain-paint overflow-x-hidden border border-line bg-sheet';
-
-function formatQuantityValue(quantity: number): string {
-  return Number.isInteger(quantity) ? String(quantity) : quantity.toLocaleString('ru-RU', { maximumFractionDigits: 2 });
-}
 
 function componentLabel(component: RecipeListComponent): string {
   return `${component.name} ${formatQuantity(component.quantity, component.unit)}`;
@@ -145,10 +140,9 @@ function SectionBlock({ section, nameColumnWidth }: { section: RecipeListSection
 function ItemRow({ item, index, nameColumnWidth }: { item: RecipeListItem; index: number; nameColumnWidth: number }) {
   const components = item.components ?? [];
   const hasComponents = components.length > 0;
-  const hasQuantity = item.quantity !== undefined;
 
-  return (
-    <div className={`flex min-w-0 border-b border-b-line ${cellKindClassName.repeated}`}>
+  const body = (
+    <>
       <div
         className={`relative z-10 box-border flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-2 ${tableBorder.rightThick} ${cellKindClassName.repeated}`}
         style={nameColumnWidth > 0 ? { width: nameColumnWidth, minWidth: nameColumnWidth } : undefined}
@@ -157,31 +151,25 @@ function ItemRow({ item, index, nameColumnWidth }: { item: RecipeListItem; index
         <span className="text-sm leading-none text-ink">{item.name}</span>
       </div>
       <div className="min-w-0 flex-1 overflow-hidden">
-        {hasComponents ? (
-          <CompositionLine components={components} />
-        ) : hasQuantity ? (
-          <div className="flex w-max flex-col">
-            <div
-              className={`flex h-8 items-center justify-end whitespace-nowrap border-b border-line px-1.5 text-sm leading-none text-ink ${cellKindClassName.repeated}`}
-            >
-              {item.name}
-            </div>
-            <div className={`flex h-8 items-center justify-end whitespace-nowrap px-1.5 ${cellKindClassName.repeated}`}>
-              <TableNumber value={item.quantity ?? 0}>
-                {formatQuantityValue(item.quantity ?? 0)} {item.unit}
-              </TableNumber>
-            </div>
-          </div>
-        ) : (
-          <div
-            className={`flex h-8 w-max items-center justify-end whitespace-nowrap px-1.5 text-sm leading-none text-ink ${cellKindClassName.repeated}`}
-          >
-            {item.unit}
-          </div>
-        )}
+        {hasComponents ? <CompositionLine components={components} /> : null}
       </div>
-    </div>
+    </>
   );
+
+  const rowClassName = `flex min-w-0 border-b border-b-line ${cellKindClassName.repeated}`;
+
+  if (item.href) {
+    return (
+      <Link
+        href={item.href}
+        className={`${rowClassName} outline-none hover:bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink`}
+      >
+        {body}
+      </Link>
+    );
+  }
+
+  return <div className={rowClassName}>{body}</div>;
 }
 
 /**

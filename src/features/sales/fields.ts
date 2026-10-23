@@ -17,6 +17,7 @@ export const FIELD_ERROR: Record<FieldRejection, string> = {
   cost: 'Укажите себестоимость.',
   missing: 'Запись не найдена.',
   category: 'Выберите категорию.',
+  warehouse: 'Выберите склад.',
 };
 
 export const VAT_PARSE_ERROR = 'Укажите НДС целым числом.';

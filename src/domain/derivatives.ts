@@ -126,6 +126,36 @@ function validateLines(
   return null;
 }
 
+export function derivativeByIdOrNull(document: PrototypeDocument, id: string): Derivative | null {
+  return derivativesList(document).find((item) => item.id === id) ?? null;
+}
+
+function writeRejection(
+  document: PrototypeDocument,
+  input: {
+    name: string;
+    workshopId: DerivativeWorkshopId;
+    unit: DerivativeUnit;
+    lines: readonly DerivativeLine[];
+  },
+  options?: { exceptId?: string },
+): DerivativeAddRejection | null {
+  if (!isDerivativeWorkshopId(input.workshopId)) {
+    return 'workshop';
+  }
+  if (!isDerivativeUnit(input.unit)) {
+    return 'unit';
+  }
+
+  const warehouseId = warehouseIdForWorkshop(input.workshopId);
+  const nameRejection = derivativeNameRejection(document, input.name, warehouseId, options?.exceptId);
+  if (nameRejection) {
+    return nameRejection;
+  }
+
+  return validateLines(document, warehouseId, input.lines, options?.exceptId);
+}
+
 export function addDerivative(
   document: PrototypeDocument,
   input: {
@@ -136,22 +166,9 @@ export function addDerivative(
     lines: readonly DerivativeLine[];
   },
 ): { document: PrototypeDocument; rejection: DerivativeAddRejection | null } {
-  if (!isDerivativeWorkshopId(input.workshopId)) {
-    return { document, rejection: 'workshop' };
-  }
-  if (!isDerivativeUnit(input.unit)) {
-    return { document, rejection: 'unit' };
-  }
-
-  const warehouseId = warehouseIdForWorkshop(input.workshopId);
-  const nameRejection = derivativeNameRejection(document, input.name, warehouseId);
-  if (nameRejection) {
-    return { document, rejection: nameRejection };
-  }
-
-  const linesRejection = validateLines(document, warehouseId, input.lines);
-  if (linesRejection) {
-    return { document, rejection: linesRejection };
+  const rejection = writeRejection(document, input);
+  if (rejection) {
+    return { document, rejection };
   }
 
   const next: Derivative = {
@@ -167,6 +184,45 @@ export function addDerivative(
     document: {
       ...document,
       derivatives: [...derivativesList(document), next],
+    },
+    rejection: null,
+  };
+}
+
+export function updateDerivative(
+  document: PrototypeDocument,
+  id: string,
+  input: {
+    name: string;
+    workshopId: DerivativeWorkshopId;
+    unit: DerivativeUnit;
+    lines: readonly DerivativeLine[];
+  },
+): { document: PrototypeDocument; rejection: DerivativeAddRejection | null } {
+  const current = derivativeByIdOrNull(document, id);
+  if (!current || current.deletedAt !== null) {
+    return { document, rejection: 'missing' };
+  }
+
+  const rejection = writeRejection(document, input, { exceptId: id });
+  if (rejection) {
+    return { document, rejection };
+  }
+
+  return {
+    document: {
+      ...document,
+      derivatives: derivativesList(document).map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              name: input.name.trim(),
+              workshopId: input.workshopId,
+              unit: input.unit,
+              lines: input.lines.map((line) => ({ ...line })),
+            }
+          : item,
+      ),
     },
     rejection: null,
   };

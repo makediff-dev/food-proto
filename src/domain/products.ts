@@ -1,25 +1,56 @@
 import { type NameRejection, rejectName } from '@/domain/directory';
 import {
+  DERIVATIVE_WORKSHOPS,
   isDeletionMark,
+  MATERIAL_WAREHOUSES,
+  type MaterialWarehouseId,
   type Product,
   type ProductionPlanLine,
+  type ProductRecipeLine,
   type PrototypeDocument,
   type SalesPlanLine,
 } from '@/domain/document';
+import { isQuantityThousandths } from '@/domain/quantity';
 import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
-export type FieldRejection = NameRejection | 'cost' | 'missing' | 'category';
+export type FieldRejection = NameRejection | 'cost' | 'missing' | 'category' | 'warehouse';
+
+export type ProductRecipeRejection = 'missing' | 'quantity' | 'component' | 'warehouse';
 
 function isUnitCost(value: number): boolean {
   return Number.isInteger(value) && value >= 0 && value <= MAX_PRICE_KOPECKS;
 }
 
-export function activeProducts(document: PrototypeDocument): Product[] {
-  return document.products.filter((item) => item.deletedAt === null);
+function isWarehouseId(value: string): value is MaterialWarehouseId {
+  return MATERIAL_WAREHOUSES.some((item) => item.id === value);
+}
+
+function warehouseIdForDerivativeWorkshop(workshopId: string): MaterialWarehouseId | null {
+  const workshop = DERIVATIVE_WORKSHOPS.find((item) => item.id === workshopId);
+  return workshop?.warehouseId ?? null;
+}
+
+export function activeProducts(
+  document: PrototypeDocument,
+  options?: { warehouseId?: MaterialWarehouseId },
+): Product[] {
+  return document.products.filter((item) => {
+    if (item.deletedAt !== null) {
+      return false;
+    }
+    if (options?.warehouseId !== undefined && item.warehouseId !== options.warehouseId) {
+      return false;
+    }
+    return true;
+  });
 }
 
 export function deletedProducts(document: PrototypeDocument): Product[] {
   return document.products.filter((item) => item.deletedAt !== null);
+}
+
+export function productByIdOrNull(document: PrototypeDocument, id: string): Product | null {
+  return document.products.find((item) => item.id === id) ?? null;
 }
 
 function suggestedPriceWithVat(document: PrototypeDocument, productId: string, month: string): number {
@@ -75,6 +106,10 @@ export function productCategoryRejection(document: PrototypeDocument, categoryId
   return category ? null : 'category';
 }
 
+export function productWarehouseRejection(warehouseId: string): FieldRejection | null {
+  return isWarehouseId(warehouseId) ? null : 'warehouse';
+}
+
 export function productNameRejection(
   document: PrototypeDocument,
   name: string,
@@ -104,6 +139,49 @@ export function productUnitCostRejection(
   return null;
 }
 
+function lineKey(kind: ProductRecipeLine['componentKind'], id: string): string {
+  return `${kind}:${id}`;
+}
+
+function validateRecipeLines(
+  document: PrototypeDocument,
+  warehouseId: MaterialWarehouseId,
+  lines: readonly ProductRecipeLine[],
+): ProductRecipeRejection | null {
+  const seen = new Set<string>();
+  const materials = document.materials ?? [];
+  const derivatives = document.derivatives ?? [];
+
+  for (const line of lines) {
+    if (!line.id || !isQuantityThousandths(line.quantity, false) || line.quantity <= 0) {
+      return 'quantity';
+    }
+
+    const key = lineKey(line.componentKind, line.componentId);
+    if (seen.has(key)) {
+      return 'component';
+    }
+    seen.add(key);
+
+    if (line.componentKind === 'material') {
+      const material = materials.find((item) => item.id === line.componentId);
+      if (!material || material.deletedAt !== null || material.warehouseId !== warehouseId) {
+        return 'component';
+      }
+    } else if (line.componentKind === 'derivative') {
+      const derivative = derivatives.find((item) => item.id === line.componentId);
+      const derivativeWarehouse = derivative ? warehouseIdForDerivativeWorkshop(derivative.workshopId) : null;
+      if (!derivative || derivative.deletedAt !== null || derivativeWarehouse !== warehouseId) {
+        return 'component';
+      }
+    } else {
+      return 'component';
+    }
+  }
+
+  return null;
+}
+
 export function addProduct(document: PrototypeDocument, product: Product): PrototypeDocument {
   if (productNameRejection(document, product.name)) {
     return document;
@@ -115,15 +193,24 @@ export function addProduct(document: PrototypeDocument, product: Product): Proto
   if (!category || !isUnitCost(unitCostWithVat)) {
     return document;
   }
+  if (!isWarehouseId(product.warehouseId)) {
+    return document;
+  }
 
   const next: Product = {
     id: product.id,
     name: product.name.trim(),
     categoryId: product.categoryId,
+    warehouseId: product.warehouseId,
     vatPercent,
     unitCostWithVat,
+    lines: (product.lines ?? []).map((line) => ({ ...line })),
     deletedAt: null,
   };
+
+  if (validateRecipeLines(document, next.warehouseId, next.lines)) {
+    return document;
+  }
 
   const withProduct: PrototypeDocument = {
     ...document,
@@ -135,6 +222,94 @@ export function addProduct(document: PrototypeDocument, product: Product): Proto
     salesPlans: appendSalesPlanLines(withProduct, next.id),
     productionPlans: appendProductionPlanLines(withProduct, next.id),
   };
+}
+
+export function updateProductRecipe(
+  document: PrototypeDocument,
+  id: string,
+  lines: readonly ProductRecipeLine[],
+): { document: PrototypeDocument; rejection: ProductRecipeRejection | null } {
+  const current = productByIdOrNull(document, id);
+  if (!current || current.deletedAt !== null) {
+    return { document, rejection: 'missing' };
+  }
+  if (!isWarehouseId(current.warehouseId)) {
+    return { document, rejection: 'warehouse' };
+  }
+
+  const rejection = validateRecipeLines(document, current.warehouseId, lines);
+  if (rejection) {
+    return { document, rejection };
+  }
+
+  return {
+    document: {
+      ...document,
+      products: document.products.map((item) =>
+        item.id === id ? { ...item, lines: lines.map((line) => ({ ...line })) } : item,
+      ),
+    },
+    rejection: null,
+  };
+}
+
+/** Секции журнала готовой продукции: завод 1 и завод 2, внутри — рабочие товары склада. */
+export function productRecipeSections(document: PrototypeDocument): {
+  warehouseId: MaterialWarehouseId;
+  name: string;
+  items: Product[];
+}[] {
+  return MATERIAL_WAREHOUSES.map((warehouse) => ({
+    warehouseId: warehouse.id,
+    name: `Готовая продукция завода ${warehouse.id === 'warehouse-1' ? '1' : '2'}`,
+    items: activeProducts(document, { warehouseId: warehouse.id }).sort((left, right) =>
+      left.name.localeCompare(right.name, 'ru'),
+    ),
+  }));
+}
+
+export type ProductCompositionLineView = {
+  id: string;
+  name: string;
+  unit: string;
+  /** Тысячные доли единицы. */
+  quantity: number;
+};
+
+/** Строки состава для списка: имя и единица компонента (сырьё или производная). */
+export function productCompositionLines(document: PrototypeDocument, product: Product): ProductCompositionLineView[] {
+  const result: ProductCompositionLineView[] = [];
+  const materials = document.materials ?? [];
+  const derivatives = document.derivatives ?? [];
+
+  for (const line of product.lines) {
+    if (line.componentKind === 'material') {
+      const material = materials.find((item) => item.id === line.componentId);
+      if (!material) {
+        continue;
+      }
+      result.push({
+        id: line.id,
+        name: material.name,
+        unit: material.unit,
+        quantity: line.quantity,
+      });
+      continue;
+    }
+
+    const component = derivatives.find((item) => item.id === line.componentId);
+    if (!component) {
+      continue;
+    }
+    result.push({
+      id: line.id,
+      name: component.name,
+      unit: component.unit,
+      quantity: line.quantity,
+    });
+  }
+
+  return result;
 }
 
 export function renameProduct(document: PrototypeDocument, id: string, name: string): PrototypeDocument {

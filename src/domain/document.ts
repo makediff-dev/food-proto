@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 46 as const;
+export const SCHEMA_VERSION = 47 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -29,14 +29,39 @@ export function catalogCategories(): ProductCategory[] {
   return PRODUCT_CATEGORIES.map((item) => ({ ...item }));
 }
 
-/** Конечный товар. Себестоимость единицы с НДС вводится во «Вводе плана» продаж. */
+/**
+ * Строка состава рецепта готовой продукции: сырьё или производная того же склада.
+ * Другие готовые товары в состав нельзя.
+ */
+export interface ProductRecipeLine {
+  id: string;
+  componentKind: 'material' | 'derivative';
+  componentId: string;
+  /** Количество закладки, тысячные доли единицы. Больше нуля. */
+  quantity: number;
+}
+
+/**
+ * Конечный товар. Себестоимость единицы с НДС вводится во «Вводе плана» продаж.
+ * Склад производства задают при создании и не меняют. Рецепт правят в журнале готовой продукции.
+ */
 export interface Product extends DeletableRecord {
   /** Категория ассортимента. Ссылка живёт и после удаления категории. */
   categoryId: string;
+  /**
+   * Склад производства (завод 1/2). После создания не меняют.
+   * Остатки готовой продукции в движении по-прежнему общие.
+   */
+  warehouseId: MaterialWarehouseId;
   /** НДС продажи, целые проценты. `Svod!N`. */
   vatPercent: number;
   /** Ручная себестоимость 1 шт с НДС, копейки. */
   unitCostWithVat: number;
+  /**
+   * Состав рецепта. Пустой — рецепт ещё не задан.
+   * Выход и себестоимость из состава пока не считаются.
+   */
+  lines: ProductRecipeLine[];
 }
 
 /** Строка плана продаж. Цена без НДС, выручка и Т-проток в документ не пишутся. */
@@ -205,8 +230,9 @@ export const MATERIAL_GROUPS = [
 export type MaterialGroupId = (typeof MATERIAL_GROUPS)[number]['id'];
 
 /**
- * Два склада сырья и материалов двух производств.
- * Склад готовой продукции общий и здесь не делится.
+ * Два склада двух производств (завод 1 / завод 2).
+ * У сырья, норм и производных — позиции склада. У конечного товара — склад выпуска и рецепта.
+ * Остатки готовой продукции в «Движении» по-прежнему общие, без разреза по складам.
  */
 export const MATERIAL_WAREHOUSES = [
   { id: 'warehouse-1', name: 'Склад 1' },

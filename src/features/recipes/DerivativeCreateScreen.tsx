@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useId, useMemo, useState } from 'react';
 import {
   activeDerivatives,
+  derivativeByIdOrNull,
   isDerivativeUnit,
   isDerivativeWorkshopId,
   warehouseIdForWorkshop,
@@ -12,13 +13,15 @@ import {
 import {
   DERIVATIVE_UNITS,
   DERIVATIVE_WORKSHOPS,
+  type Derivative,
   type DerivativeLine,
   type DerivativeUnit,
   type DerivativeWorkshopId,
 } from '@/domain/document';
 import { activeMaterials } from '@/domain/materials';
-import { parseQuantityInput } from '@/features/materials/text';
+import { formatQuantityDraft, parseQuantityInput } from '@/features/materials/text';
 import {
+  componentDraftKey,
   DerivativeFormEmpty,
   DerivativeFormNoCandidates,
   DerivativeFormTable,
@@ -26,7 +29,7 @@ import {
   emptyDerivativeLineDraft,
   parseComponentDraftKey,
 } from '@/features/recipes/DerivativeFormTable';
-import { NEW_DERIVATIVE_TITLE, RECIPES_DERIVATIVES_HREF } from '@/features/recipes/paths';
+import { NEW_DERIVATIVE_TITLE, RECIPES_DERIVATIVES_HREF, RECIPES_DERIVATIVES_TITLE } from '@/features/recipes/paths';
 import { DERIVATIVE_ADD_ERROR } from '@/features/recipes/text';
 import { useDerivatives } from '@/features/recipes/use-derivatives';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
@@ -35,20 +38,66 @@ import { PageFrame } from '@/features/shell/PageFrame';
 
 export function DerivativeCreateScreen({ workshopQuery }: { workshopQuery: string }) {
   const initialWorkshop = isDerivativeWorkshopId(workshopQuery) ? workshopQuery : '';
-  return <CreateForm initialWorkshopId={initialWorkshop} />;
+  return <DerivativeForm initialWorkshopId={initialWorkshop} existing={null} />;
 }
 
-function CreateForm({ initialWorkshopId }: { initialWorkshopId: DerivativeWorkshopId | '' }) {
+export function DerivativeEditScreen({ derivativeId }: { derivativeId: string }) {
+  const journal = useDerivatives();
+  const existing = derivativeByIdOrNull(journal.document, derivativeId);
+
+  if (!existing || existing.deletedAt !== null) {
+    return (
+      <PageFrame
+        title={RECIPES_DERIVATIVES_TITLE}
+        full
+        back={
+          <Link
+            href={RECIPES_DERIVATIVES_HREF}
+            aria-label="Назад"
+            className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            <IconArrowLeft />
+          </Link>
+        }
+      >
+        <p className="border border-line bg-sheet px-4 py-4 text-sm text-ink">Запись не найдена.</p>
+      </PageFrame>
+    );
+  }
+
+  return <DerivativeForm initialWorkshopId={existing.workshopId} existing={existing} />;
+}
+
+function draftsFromLines(lines: readonly DerivativeLine[]): Record<string, DerivativeLineDraft> {
+  const drafts: Record<string, DerivativeLineDraft> = {};
+  for (const line of lines) {
+    drafts[componentDraftKey(line.componentKind, line.componentId)] = {
+      quantity: formatQuantityDraft(line.quantity),
+    };
+  }
+  return drafts;
+}
+
+function DerivativeForm({
+  initialWorkshopId,
+  existing,
+}: {
+  initialWorkshopId: DerivativeWorkshopId | '';
+  existing: Derivative | null;
+}) {
   const journal = useDerivatives();
   const router = useRouter();
   const workshopFieldId = useId();
   const nameFieldId = useId();
   const unitFieldId = useId();
+  const editingId = existing?.id ?? null;
 
   const [workshopId, setWorkshopId] = useState<DerivativeWorkshopId | ''>(initialWorkshopId);
-  const [name, setName] = useState('');
-  const [unit, setUnit] = useState<DerivativeUnit>('кг');
-  const [drafts, setDrafts] = useState<Record<string, DerivativeLineDraft>>({});
+  const [name, setName] = useState(existing?.name ?? '');
+  const [unit, setUnit] = useState<DerivativeUnit>(existing?.unit ?? 'кг');
+  const [drafts, setDrafts] = useState<Record<string, DerivativeLineDraft>>(() =>
+    existing ? draftsFromLines(existing.lines) : {},
+  );
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const warehouseId = workshopId ? warehouseIdForWorkshop(workshopId) : null;
@@ -59,8 +108,9 @@ function CreateForm({ initialWorkshopId }: { initialWorkshopId: DerivativeWorksh
   );
 
   const derivatives = useMemo(
-    () => (warehouseId ? activeDerivatives(journal.document, { warehouseId }) : []),
-    [journal.document, warehouseId],
+    () =>
+      warehouseId ? activeDerivatives(journal.document, { warehouseId }).filter((item) => item.id !== editingId) : [],
+    [journal.document, warehouseId, editingId],
   );
 
   const hasCandidates = materials.length > 0 || derivatives.length > 0;
@@ -73,6 +123,9 @@ function CreateForm({ initialWorkshopId }: { initialWorkshopId: DerivativeWorksh
   }
 
   function parsedLines(): DerivativeLine[] | null {
+    const existingByKey = new Map(
+      (existing?.lines ?? []).map((line) => [`${line.componentKind}:${line.componentId}`, line.id] as const),
+    );
     const result: DerivativeLine[] = [];
 
     for (const [key, draft] of Object.entries(drafts)) {
@@ -96,7 +149,7 @@ function CreateForm({ initialWorkshopId }: { initialWorkshopId: DerivativeWorksh
       }
 
       result.push({
-        id: `derivative-line:${crypto.randomUUID()}`,
+        id: existingByKey.get(`${parsed.kind}:${parsed.id}`) ?? `derivative-line:${crypto.randomUUID()}`,
         componentKind: parsed.kind,
         componentId: parsed.id,
         quantity,
@@ -128,13 +181,19 @@ function CreateForm({ initialWorkshopId }: { initialWorkshopId: DerivativeWorksh
       return;
     }
 
-    const rejection = journal.add({
-      id: `derivative:${crypto.randomUUID()}`,
+    const input = {
       name,
       workshopId,
       unit,
       lines,
-    });
+    };
+
+    const rejection = editingId
+      ? journal.update(editingId, input)
+      : journal.add({
+          id: `derivative:${crypto.randomUUID()}`,
+          ...input,
+        });
 
     if (rejection) {
       setSaveError(DERIVATIVE_ADD_ERROR[rejection]);
@@ -146,7 +205,7 @@ function CreateForm({ initialWorkshopId }: { initialWorkshopId: DerivativeWorksh
 
   return (
     <PageFrame
-      title={NEW_DERIVATIVE_TITLE}
+      title={editingId ? RECIPES_DERIVATIVES_TITLE : NEW_DERIVATIVE_TITLE}
       full
       back={
         <Link

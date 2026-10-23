@@ -14,9 +14,9 @@ import {
 } from '@/domain/document';
 
 /**
- * Мок: два салата, одно горячее и гамбургер.
+ * Мок: два салата, одно горячее, гамбургер и сэндвич без рецепта.
  * Себестоимость 1 шт с НДС округлена до целых десятков рублей.
- * План продаж и план выпуска сентября и октября 2026 одинаковые: 500, 600, 800 и 1 000 шт.
+ * План продаж и план выпуска сентября и октября 2026 одинаковые: 500, 600, 800 и 1 000 шт (сэндвич — 0).
  * Факт продаж сентября чуть выше плана: 550, 650, 900 и 1 100.
  * Выпуск сентября чуть выше продаж у салатов и гуляша (650, 800, 1 050) — расчётный перенос на октябрь 140, 200 и 220 шт.
  * У гамбургера выпуск 1 000 при продажах 1 100 — расчётный перенос 20 шт. Инвентаризация октября: недостача у Цезаря, гуляша и гамбургера, излишек у Оливье.
@@ -28,13 +28,37 @@ import {
  * НДС у всех товаров 20%. В книге у горячих `Svod!N31` 10%, у роллов `Svod!N63` 20%.
  * Объёмы книги (4 000, 5 000, 6 000, 20 000) в мок не переносятся: на экране нужны лёгкие сотни.
  */
+/** Тысячные доли единицы закладки рецепта. */
+const q = (units: number) => Math.round(units * 1000);
+
 const caesar: Product = {
   id: 'product-caesar',
   name: 'Цезарь с курицей',
   categoryId: 'category-salads',
+  warehouseId: 'warehouse-1',
   vatPercent: 20,
   /** 40 ₽. В книге строки салата нет. */
   unitCostWithVat: 4_000,
+  lines: [
+    {
+      id: 'product-line-caesar-chicken',
+      componentKind: 'material',
+      componentId: 'material-chicken',
+      quantity: q(0.08),
+    },
+    {
+      id: 'product-line-caesar-oil',
+      componentKind: 'material',
+      componentId: 'material-oil',
+      quantity: q(0.015),
+    },
+    {
+      id: 'product-line-caesar-tray',
+      componentKind: 'material',
+      componentId: 'material-tray',
+      quantity: q(1),
+    },
+  ],
   deletedAt: null,
 };
 
@@ -42,9 +66,30 @@ const olivier: Product = {
   id: 'product-olivier',
   name: 'Оливье',
   categoryId: 'category-salads',
+  warehouseId: 'warehouse-2',
   vatPercent: 20,
   /** 30 ₽. В книге строки салата нет. */
   unitCostWithVat: 3_000,
+  lines: [
+    {
+      id: 'product-line-olivier-oil',
+      componentKind: 'material',
+      componentId: 'material-oil-w2',
+      quantity: q(0.02),
+    },
+    {
+      id: 'product-line-olivier-salt',
+      componentKind: 'material',
+      componentId: 'material-salt-w2',
+      quantity: q(0.005),
+    },
+    {
+      id: 'product-line-olivier-tray',
+      componentKind: 'material',
+      componentId: 'material-tray-w2',
+      quantity: q(1),
+    },
+  ],
   deletedAt: null,
 };
 
@@ -52,9 +97,30 @@ const goulash: Product = {
   id: 'product-goulash',
   name: 'Гуляш из курицы с рисом',
   categoryId: 'category-hot',
+  warehouseId: 'warehouse-1',
   vatPercent: 20,
   /** 50 ₽. `Svod!D31` в файле 0. */
   unitCostWithVat: 5_000,
+  lines: [
+    {
+      id: 'product-line-goulash-broth',
+      componentKind: 'derivative',
+      componentId: 'derivative-broth',
+      quantity: q(0.15),
+    },
+    {
+      id: 'product-line-goulash-chicken',
+      componentKind: 'material',
+      componentId: 'material-chicken',
+      quantity: q(0.12),
+    },
+    {
+      id: 'product-line-goulash-tray',
+      componentKind: 'material',
+      componentId: 'material-tray',
+      quantity: q(1),
+    },
+  ],
   deletedAt: null,
 };
 
@@ -62,9 +128,49 @@ const burger: Product = {
   id: 'product-burger',
   name: 'Гамбургер',
   categoryId: 'category-rolls',
+  warehouseId: 'warehouse-1',
   vatPercent: 20,
   /** 40 ₽. */
   unitCostWithVat: 4_000,
+  lines: [
+    {
+      id: 'product-line-burger-cutlet',
+      componentKind: 'derivative',
+      componentId: 'derivative-cutlet',
+      quantity: q(1),
+    },
+    {
+      id: 'product-line-burger-bun',
+      componentKind: 'derivative',
+      componentId: 'derivative-bun',
+      quantity: q(1),
+    },
+    {
+      id: 'product-line-burger-ketchup',
+      componentKind: 'material',
+      componentId: 'material-ketchup',
+      quantity: q(0.02),
+    },
+    {
+      id: 'product-line-burger-label',
+      componentKind: 'material',
+      componentId: 'material-label',
+      quantity: q(1),
+    },
+  ],
+  deletedAt: null,
+};
+
+/** Рецепт пустой — для журнала готовой продукции без состава. */
+const sandwich: Product = {
+  id: 'product-sandwich',
+  name: 'Сэндвич с курицей',
+  categoryId: 'category-rolls',
+  warehouseId: 'warehouse-2',
+  vatPercent: 20,
+  /** 35 ₽. */
+  unitCostWithVat: 3_500,
+  lines: [],
   deletedAt: null,
 };
 
@@ -74,6 +180,7 @@ const priceWithVat = {
   'product-olivier': 6_850,
   'product-goulash': 9_914,
   'product-burger': 8_513,
+  'product-sandwich': 7_500,
 } as const;
 
 /**
@@ -85,6 +192,7 @@ const factPriceWithVat = {
   'product-olivier': 7_000,
   'product-goulash': 10_000,
   'product-burger': 8_500,
+  'product-sandwich': 7_500,
 } as const;
 
 type CatalogProductId = keyof typeof priceWithVat;
@@ -95,6 +203,7 @@ const planPieces = {
   'product-olivier': 600,
   'product-goulash': 800,
   'product-burger': 1_000,
+  'product-sandwich': 0,
 } as const;
 
 const catalogProductIds = Object.keys(planPieces) as CatalogProductId[];
@@ -132,18 +241,21 @@ const normPieces = {
   'product-olivier': { minPieces: 100, maxPieces: 220 },
   'product-goulash': { minPieces: 120, maxPieces: 250 },
   'product-burger': { minPieces: 0, maxPieces: 80 },
+  'product-sandwich': { minPieces: 0, maxPieces: 0 },
 } as const satisfies Record<CatalogProductId, { minPieces: number; maxPieces: number }>;
 
 /**
  * Инвентаризация на конец сентября 2026, шт.
  * Расчётный остаток на конец сентября: 140, 200, 220 и 20 шт.
  * Ниже расчёта — недостача в «Откл.»; у Оливье излишек +10.
+ * Сэндвич без продаж и выпуска — 0.
  */
 const closingInventorySeptember = {
   'product-caesar': 125,
   'product-olivier': 210,
   'product-goulash': 195,
   'product-burger': 12,
+  'product-sandwich': 0,
 } as const satisfies Record<CatalogProductId, number>;
 
 function finishedGoodsOpening(month: string, piecesByProduct: Record<CatalogProductId, number>): FinishedGoodsOpening {
@@ -409,9 +521,6 @@ const productionPlans: ProductionPlan[] = [productionPlan('2026-09'), production
 const finishedGoodsNorms: FinishedGoodsNorm[] = [finishedGoodsNorm('2026-09'), finishedGoodsNorm('2026-10')];
 const finishedGoodsOpenings: FinishedGoodsOpening[] = [finishedGoodsOpening('2026-09', closingInventorySeptember)];
 
-/** Тысячные доли единицы сырья / производной в закладке. */
-const q = (units: number) => Math.round(units * 1000);
-
 /** Имена с макета рецептурных журналов. Выход рецепта пока не задаём. */
 const mockDerivatives: Derivative[] = [
   {
@@ -560,7 +669,7 @@ const mockDerivatives: Derivative[] = [
 export const mockDocument: PrototypeDocument = {
   schemaVersion: SCHEMA_VERSION,
   categories: catalogCategories(),
-  products: [caesar, olivier, goulash, burger],
+  products: [caesar, olivier, goulash, burger, sandwich],
   salesPlans,
   productionPlans,
   sales: salesFromOrders(orders),
@@ -580,7 +689,10 @@ export function createMockDocument(): PrototypeDocument {
   return {
     schemaVersion: mockDocument.schemaVersion,
     categories: mockDocument.categories.map((item) => ({ ...item })),
-    products: mockDocument.products.map((item) => ({ ...item })),
+    products: mockDocument.products.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
     salesPlans: mockDocument.salesPlans.map((item) => ({
       ...item,
       lines: item.lines.map((entry) => ({ ...entry })),
