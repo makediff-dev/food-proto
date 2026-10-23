@@ -39,6 +39,8 @@ const caesar: Product = {
   vatPercent: 20,
   /** 40 ₽. В книге строки салата нет. */
   unitCostWithVat: 4_000,
+  /** 0,08 + 0,015 + лоток 0 кг. */
+  outputKilogramThousandths: q(0.095),
   lines: [
     {
       id: 'product-line-caesar-chicken',
@@ -70,6 +72,8 @@ const olivier: Product = {
   vatPercent: 20,
   /** 30 ₽. В книге строки салата нет. */
   unitCostWithVat: 3_000,
+  /** 0,02 + 0,005 + лоток 0 кг. */
+  outputKilogramThousandths: q(0.025),
   lines: [
     {
       id: 'product-line-olivier-oil',
@@ -101,6 +105,8 @@ const goulash: Product = {
   vatPercent: 20,
   /** 50 ₽. `Svod!D31` в файле 0. */
   unitCostWithVat: 5_000,
+  /** 0,15 бульона + 0,12 курицы + лоток 0 кг. */
+  outputKilogramThousandths: q(0.27),
   lines: [
     {
       id: 'product-line-goulash-broth',
@@ -132,6 +138,8 @@ const burger: Product = {
   vatPercent: 20,
   /** 40 ₽. */
   unitCostWithVat: 4_000,
+  /** Котлета 0,097 + булочка 0,065 + кетчуп 0,02 + этикетка 0. */
+  outputKilogramThousandths: q(0.182),
   lines: [
     {
       id: 'product-line-burger-cutlet',
@@ -170,6 +178,7 @@ const sandwich: Product = {
   vatPercent: 20,
   /** 35 ₽. */
   unitCostWithVat: 3_500,
+  outputKilogramThousandths: 0,
   lines: [],
   deletedAt: null,
 };
@@ -521,13 +530,14 @@ const productionPlans: ProductionPlan[] = [productionPlan('2026-09'), production
 const finishedGoodsNorms: FinishedGoodsNorm[] = [finishedGoodsNorm('2026-09'), finishedGoodsNorm('2026-10')];
 const finishedGoodsOpenings: FinishedGoodsOpening[] = [finishedGoodsOpening('2026-09', closingInventorySeptember)];
 
-/** Имена с макета рецептурных журналов. Выход рецепта пока не задаём. */
+/** Имена с макета рецептурных журналов. Выход = сумма кг компонентов. */
 const mockDerivatives: Derivative[] = [
   {
     id: 'derivative-mince',
     name: 'Фарш говяжий',
     workshopId: 'meat-1',
     unit: 'кг',
+    outputKilogramThousandths: q(8.32),
     lines: [
       {
         id: 'derivative-line-mince-beef',
@@ -555,6 +565,7 @@ const mockDerivatives: Derivative[] = [
     name: 'Котлета сырая',
     workshopId: 'meat-1',
     unit: 'шт',
+    outputKilogramThousandths: q(0.097),
     lines: [
       {
         id: 'derivative-line-cutlet-mince',
@@ -588,6 +599,7 @@ const mockDerivatives: Derivative[] = [
     name: 'Бульон мясной',
     workshopId: 'meat-1',
     unit: 'кг',
+    outputKilogramThousandths: q(3.55),
     lines: [
       {
         id: 'derivative-line-broth-beef',
@@ -615,6 +627,7 @@ const mockDerivatives: Derivative[] = [
     name: 'Тесто дрожжевое',
     workshopId: 'bakery-1',
     unit: 'кг',
+    outputKilogramThousandths: q(5.33),
     lines: [
       {
         id: 'derivative-line-dough-flour',
@@ -648,6 +661,7 @@ const mockDerivatives: Derivative[] = [
     name: 'Булочка для сэндвича',
     workshopId: 'bakery-1',
     unit: 'шт',
+    outputKilogramThousandths: q(0.065),
     lines: [
       {
         id: 'derivative-line-bun-dough',

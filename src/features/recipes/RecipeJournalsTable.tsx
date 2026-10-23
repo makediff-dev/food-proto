@@ -18,11 +18,19 @@ export type RecipeListComponent = {
 export type RecipeListItem = {
   id: string;
   name: string;
+  /**
+   * Выход рецепта: «на X кг». Узкая колонка после названия.
+   * Пусто — ячейка без текста (нет заданного выхода).
+   */
+  batchLabel?: string;
   /** Состав одной строкой «имя количество + …». Без состава правая колонка пустая. */
   components?: readonly RecipeListComponent[];
   /** Открыть запись на своей странице. */
   href?: string;
 };
+
+/** Фиксированная ширина колонки «на X кг». */
+const BATCH_COLUMN_WIDTH_PX = 108;
 
 export type RecipeListSection = {
   id: string;
@@ -149,6 +157,12 @@ function ItemRow({ item, index, nameColumnWidth }: { item: RecipeListItem; index
       >
         <ProductIndex index={index} />
         <span className="text-sm leading-none text-ink">{item.name}</span>
+      </div>
+      <div
+        className={`box-border flex shrink-0 items-center whitespace-nowrap px-2 py-2 text-sm leading-none text-ink ${tableBorder.rightThick} ${cellKindClassName.repeated}`}
+        style={{ width: BATCH_COLUMN_WIDTH_PX, minWidth: BATCH_COLUMN_WIDTH_PX }}
+      >
+        {item.batchLabel ?? ''}
       </div>
       <div className="min-w-0 flex-1 overflow-hidden">
         {hasComponents ? <CompositionLine components={components} /> : null}

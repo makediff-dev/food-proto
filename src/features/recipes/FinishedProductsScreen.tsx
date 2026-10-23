@@ -4,6 +4,7 @@ import { useDocumentStore } from '@/data/DocumentProvider';
 import { productCompositionLines, productRecipeSections } from '@/domain/products';
 import { finishedProductHref, RECIPES_FINISHED_TITLE } from '@/features/recipes/paths';
 import { RecipeJournalsScreen } from '@/features/recipes/RecipeJournalsScreen';
+import { formatRecipeBatchLabel } from '@/features/recipes/text';
 
 export function FinishedProductsScreen() {
   const store = useDocumentStore();
@@ -14,6 +15,7 @@ export function FinishedProductsScreen() {
       id: item.id,
       name: item.name,
       href: finishedProductHref(item.id),
+      batchLabel: formatRecipeBatchLabel(item.outputKilogramThousandths),
       components: productCompositionLines(store.document, item).map((line) => ({
         id: line.id,
         name: line.name,

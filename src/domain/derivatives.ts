@@ -11,6 +11,7 @@ import {
 } from '@/domain/document';
 import { materialsList } from '@/domain/materials';
 import { isQuantityThousandths } from '@/domain/quantity';
+import { validateRecipeYield } from '@/domain/recipe-yield';
 
 export type DerivativeNameRejection = 'empty' | 'too-long' | 'duplicate' | 'missing';
 
@@ -21,7 +22,9 @@ export type DerivativeAddRejection =
   | 'lines'
   | 'quantity'
   | 'component'
-  | 'warehouse';
+  | 'warehouse'
+  | 'output'
+  | 'yield';
 
 export function derivativesList(document: PrototypeDocument): Derivative[] {
   return document.derivatives ?? [];
@@ -136,6 +139,7 @@ function writeRejection(
     name: string;
     workshopId: DerivativeWorkshopId;
     unit: DerivativeUnit;
+    outputKilogramThousandths: number;
     lines: readonly DerivativeLine[];
   },
   options?: { exceptId?: string },
@@ -153,7 +157,12 @@ function writeRejection(
     return nameRejection;
   }
 
-  return validateLines(document, warehouseId, input.lines, options?.exceptId);
+  const linesRejection = validateLines(document, warehouseId, input.lines, options?.exceptId);
+  if (linesRejection) {
+    return linesRejection;
+  }
+
+  return validateRecipeYield(document, input.outputKilogramThousandths, input.lines);
 }
 
 export function addDerivative(
@@ -163,6 +172,7 @@ export function addDerivative(
     name: string;
     workshopId: DerivativeWorkshopId;
     unit: DerivativeUnit;
+    outputKilogramThousandths: number;
     lines: readonly DerivativeLine[];
   },
 ): { document: PrototypeDocument; rejection: DerivativeAddRejection | null } {
@@ -176,6 +186,7 @@ export function addDerivative(
     name: input.name.trim(),
     workshopId: input.workshopId,
     unit: input.unit,
+    outputKilogramThousandths: input.outputKilogramThousandths,
     lines: input.lines.map((line) => ({ ...line })),
     deletedAt: null,
   };
@@ -196,6 +207,7 @@ export function updateDerivative(
     name: string;
     workshopId: DerivativeWorkshopId;
     unit: DerivativeUnit;
+    outputKilogramThousandths: number;
     lines: readonly DerivativeLine[];
   },
 ): { document: PrototypeDocument; rejection: DerivativeAddRejection | null } {
@@ -219,6 +231,7 @@ export function updateDerivative(
               name: input.name.trim(),
               workshopId: input.workshopId,
               unit: input.unit,
+              outputKilogramThousandths: input.outputKilogramThousandths,
               lines: input.lines.map((line) => ({ ...line })),
             }
           : item,

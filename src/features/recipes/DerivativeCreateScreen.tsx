@@ -19,7 +19,8 @@ import {
   type DerivativeWorkshopId,
 } from '@/domain/document';
 import { activeMaterials } from '@/domain/materials';
-import { formatQuantityDraft, parseQuantityInput } from '@/features/materials/text';
+import { recipeComponentsKilogramThousandths } from '@/domain/recipe-yield';
+import { formatQuantity, formatQuantityDraft, parseQuantityInput } from '@/features/materials/text';
 import {
   componentDraftKey,
   DerivativeFormEmpty,
@@ -90,11 +91,13 @@ function DerivativeForm({
   const workshopFieldId = useId();
   const nameFieldId = useId();
   const unitFieldId = useId();
+  const outputFieldId = useId();
   const editingId = existing?.id ?? null;
 
   const [workshopId, setWorkshopId] = useState<DerivativeWorkshopId | ''>(initialWorkshopId);
   const [name, setName] = useState(existing?.name ?? '');
   const [unit, setUnit] = useState<DerivativeUnit>(existing?.unit ?? 'кг');
+  const [outputDraft, setOutputDraft] = useState(() => formatQuantityDraft(existing?.outputKilogramThousandths ?? 0));
   const [drafts, setDrafts] = useState<Record<string, DerivativeLineDraft>>(() =>
     existing ? draftsFromLines(existing.lines) : {},
   );
@@ -114,6 +117,32 @@ function DerivativeForm({
   );
 
   const hasCandidates = materials.length > 0 || derivatives.length > 0;
+
+  const draftLines = useMemo(() => {
+    const result: DerivativeLine[] = [];
+    for (const [key, draft] of Object.entries(drafts)) {
+      const parsed = parseComponentDraftKey(key);
+      if (!parsed) {
+        continue;
+      }
+      const quantity = parseQuantityInput(draft.quantity, false);
+      if (quantity === null || quantity <= 0) {
+        continue;
+      }
+      result.push({
+        id: key,
+        componentKind: parsed.kind,
+        componentId: parsed.id,
+        quantity,
+      });
+    }
+    return result;
+  }, [drafts]);
+
+  const componentsKilograms = useMemo(
+    () => recipeComponentsKilogramThousandths(journal.document, draftLines),
+    [journal.document, draftLines],
+  );
 
   function setQuantity(key: string, raw: string) {
     setDrafts((current) => ({
@@ -176,6 +205,12 @@ function DerivativeForm({
       return;
     }
 
+    const outputKilogramThousandths = parseQuantityInput(outputDraft, false);
+    if (outputKilogramThousandths === null) {
+      setSaveError(DERIVATIVE_ADD_ERROR.output);
+      return;
+    }
+
     const lines = parsedLines();
     if (!lines) {
       return;
@@ -185,6 +220,7 @@ function DerivativeForm({
       name,
       workshopId,
       unit,
+      outputKilogramThousandths,
       lines,
     };
 
@@ -291,6 +327,25 @@ function DerivativeForm({
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label htmlFor={outputFieldId} className="text-sm text-muted">
+                Рассчитан на, кг
+              </label>
+              <input
+                id={outputFieldId}
+                value={outputDraft}
+                onChange={(event) => setOutputDraft(event.target.value)}
+                className={`mt-2 ${fieldClassName}`}
+                inputMode="decimal"
+                autoComplete="off"
+              />
+            </div>
+
+            <div>
+              <p className="text-sm text-muted">По компонентам</p>
+              <p className="mt-2 text-base text-ink">{formatQuantity(componentsKilograms, 'кг')}</p>
             </div>
 
             <button

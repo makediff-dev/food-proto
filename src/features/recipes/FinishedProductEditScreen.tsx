@@ -2,14 +2,15 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 
 import { activeDerivatives } from '@/domain/derivatives';
 import type { Product, ProductRecipeLine } from '@/domain/document';
 import { MATERIAL_WAREHOUSES } from '@/domain/document';
 import { activeMaterials } from '@/domain/materials';
 import { productByIdOrNull } from '@/domain/products';
-import { formatQuantityDraft, parseQuantityInput } from '@/features/materials/text';
+import { recipeComponentsKilogramThousandths } from '@/domain/recipe-yield';
+import { formatQuantity, formatQuantityDraft, parseQuantityInput } from '@/features/materials/text';
 import {
   componentDraftKey,
   DerivativeFormNoCandidates,
@@ -21,7 +22,7 @@ import {
 import { RECIPES_FINISHED_HREF, RECIPES_FINISHED_TITLE } from '@/features/recipes/paths';
 import { PRODUCT_RECIPE_ERROR } from '@/features/recipes/text';
 import { useFinishedRecipes } from '@/features/recipes/use-finished-recipes';
-import { primaryButtonClassName } from '@/features/sales/fields';
+import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { IconArrowLeft, IconCheck } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
 
@@ -69,7 +70,9 @@ export function FinishedProductEditScreen({ productId }: { productId: string }) 
 function FinishedProductRecipeForm({ product }: { product: Product }) {
   const journal = useFinishedRecipes();
   const router = useRouter();
+  const outputFieldId = useId();
   const [drafts, setDrafts] = useState<Record<string, DerivativeLineDraft>>(() => draftsFromLines(product.lines));
+  const [outputDraft, setOutputDraft] = useState(() => formatQuantityDraft(product.outputKilogramThousandths));
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const materials = useMemo(
@@ -83,6 +86,32 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
   );
 
   const hasCandidates = materials.length > 0 || derivatives.length > 0;
+
+  const draftLines = useMemo(() => {
+    const result: ProductRecipeLine[] = [];
+    for (const [key, draft] of Object.entries(drafts)) {
+      const parsed = parseComponentDraftKey(key);
+      if (!parsed) {
+        continue;
+      }
+      const quantity = parseQuantityInput(draft.quantity, false);
+      if (quantity === null || quantity <= 0) {
+        continue;
+      }
+      result.push({
+        id: key,
+        componentKind: parsed.kind,
+        componentId: parsed.id,
+        quantity,
+      });
+    }
+    return result;
+  }, [drafts]);
+
+  const componentsKilograms = useMemo(
+    () => recipeComponentsKilogramThousandths(journal.document, draftLines),
+    [journal.document, draftLines],
+  );
 
   function setQuantity(key: string, raw: string) {
     setDrafts((current) => ({
@@ -131,12 +160,18 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
   function save() {
     setSaveError(null);
 
+    const outputKilogramThousandths = parseQuantityInput(outputDraft, false);
+    if (outputKilogramThousandths === null) {
+      setSaveError(PRODUCT_RECIPE_ERROR.output);
+      return;
+    }
+
     const lines = parsedLines();
     if (!lines) {
       return;
     }
 
-    const rejection = journal.updateRecipe(product.id, lines);
+    const rejection = journal.updateRecipe(product.id, lines, outputKilogramThousandths);
     if (rejection) {
       setSaveError(PRODUCT_RECIPE_ERROR[rejection]);
       return;
@@ -181,6 +216,25 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
             <div>
               <p className="text-sm text-muted">Склад</p>
               <p className="mt-2 text-base text-ink">{warehouseLabel(product.warehouseId)}</p>
+            </div>
+
+            <div>
+              <label htmlFor={outputFieldId} className="text-sm text-muted">
+                Рассчитан на, кг
+              </label>
+              <input
+                id={outputFieldId}
+                value={outputDraft}
+                onChange={(event) => setOutputDraft(event.target.value)}
+                className={`mt-2 ${fieldClassName}`}
+                inputMode="decimal"
+                autoComplete="off"
+              />
+            </div>
+
+            <div>
+              <p className="text-sm text-muted">По компонентам</p>
+              <p className="mt-2 text-base text-ink">{formatQuantity(componentsKilograms, 'кг')}</p>
             </div>
 
             <button

@@ -11,11 +11,12 @@ import {
   type SalesPlanLine,
 } from '@/domain/document';
 import { isQuantityThousandths } from '@/domain/quantity';
+import { validateRecipeYield } from '@/domain/recipe-yield';
 import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
 export type FieldRejection = NameRejection | 'cost' | 'missing' | 'category' | 'warehouse';
 
-export type ProductRecipeRejection = 'missing' | 'quantity' | 'component' | 'warehouse';
+export type ProductRecipeRejection = 'missing' | 'quantity' | 'component' | 'warehouse' | 'output' | 'yield';
 
 function isUnitCost(value: number): boolean {
   return Number.isInteger(value) && value >= 0 && value <= MAX_PRICE_KOPECKS;
@@ -204,11 +205,15 @@ export function addProduct(document: PrototypeDocument, product: Product): Proto
     warehouseId: product.warehouseId,
     vatPercent,
     unitCostWithVat,
+    outputKilogramThousandths: product.outputKilogramThousandths ?? 0,
     lines: (product.lines ?? []).map((line) => ({ ...line })),
     deletedAt: null,
   };
 
   if (validateRecipeLines(document, next.warehouseId, next.lines)) {
+    return document;
+  }
+  if (validateRecipeYield(document, next.outputKilogramThousandths, next.lines)) {
     return document;
   }
 
@@ -228,6 +233,7 @@ export function updateProductRecipe(
   document: PrototypeDocument,
   id: string,
   lines: readonly ProductRecipeLine[],
+  outputKilogramThousandths: number,
 ): { document: PrototypeDocument; rejection: ProductRecipeRejection | null } {
   const current = productByIdOrNull(document, id);
   if (!current || current.deletedAt !== null) {
@@ -237,16 +243,27 @@ export function updateProductRecipe(
     return { document, rejection: 'warehouse' };
   }
 
-  const rejection = validateRecipeLines(document, current.warehouseId, lines);
-  if (rejection) {
-    return { document, rejection };
+  const linesRejection = validateRecipeLines(document, current.warehouseId, lines);
+  if (linesRejection) {
+    return { document, rejection: linesRejection };
+  }
+
+  const yieldRejection = validateRecipeYield(document, outputKilogramThousandths, lines);
+  if (yieldRejection) {
+    return { document, rejection: yieldRejection };
   }
 
   return {
     document: {
       ...document,
       products: document.products.map((item) =>
-        item.id === id ? { ...item, lines: lines.map((line) => ({ ...line })) } : item,
+        item.id === id
+          ? {
+              ...item,
+              outputKilogramThousandths,
+              lines: lines.map((line) => ({ ...line })),
+            }
+          : item,
       ),
     },
     rejection: null,

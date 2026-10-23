@@ -8,6 +8,7 @@ type DerivativeWriteInput = {
   name: string;
   workshopId: DerivativeWorkshopId;
   unit: DerivativeUnit;
+  outputKilogramThousandths: number;
   lines: readonly DerivativeLine[];
 };
 

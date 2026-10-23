@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 49 as const;
+export const SCHEMA_VERSION = 50 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -58,9 +58,12 @@ export interface Product extends DeletableRecord {
   /** Ручная себестоимость 1 шт с НДС, копейки. */
   unitCostWithVat: number;
   /**
-   * Состав рецепта. Пустой — рецепт ещё не задан.
-   * Выход и себестоимость из состава пока не считаются.
+   * На сколько кг рассчитан рецепт, тысячные доли кг.
+   * Должен совпадать с суммой кг компонентов с допуском 1 г.
+   * Пустой состав — 0. Себестоимость из состава пока не считают.
    */
+  outputKilogramThousandths: number;
+  /** Состав рецепта. Пустой — рецепт ещё не задан. */
   lines: ProductRecipeLine[];
 }
 
@@ -409,11 +412,17 @@ export interface DerivativeLine {
 
 /**
  * Производная цеха. Имя уникально в пределах склада.
- * Выход рецепта и себестоимость из состава пока не считаются.
+ * Себестоимость из состава пока не считают.
+ * У единицы «шт» рецепт на одну штуку: «рассчитан на» — её вес.
  */
 export interface Derivative extends DeletableRecord {
   workshopId: DerivativeWorkshopId;
   unit: DerivativeUnit;
+  /**
+   * На сколько кг рассчитан рецепт, тысячные доли кг.
+   * Должен совпадать с суммой кг компонентов с допуском 1 г.
+   */
+  outputKilogramThousandths: number;
   lines: DerivativeLine[];
 }
 

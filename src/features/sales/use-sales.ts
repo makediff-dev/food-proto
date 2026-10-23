@@ -126,6 +126,7 @@ export function useSales() {
           warehouseId,
           vatPercent: 20,
           unitCostWithVat: 0,
+          outputKilogramThousandths: 0,
           lines: [],
           deletedAt: null,
         }),
