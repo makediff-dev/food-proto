@@ -1,6 +1,7 @@
 import { mockMaterials } from '@/data/mock-materials';
 import {
   catalogCategories,
+  type Derivative,
   type FinishedGoodsNorm,
   type FinishedGoodsOpening,
   type Product,
@@ -408,6 +409,154 @@ const productionPlans: ProductionPlan[] = [productionPlan('2026-09'), production
 const finishedGoodsNorms: FinishedGoodsNorm[] = [finishedGoodsNorm('2026-09'), finishedGoodsNorm('2026-10')];
 const finishedGoodsOpenings: FinishedGoodsOpening[] = [finishedGoodsOpening('2026-09', closingInventorySeptember)];
 
+/** Тысячные доли единицы сырья / производной в закладке. */
+const q = (units: number) => Math.round(units * 1000);
+
+/** Имена с макета рецептурных журналов. Выход рецепта пока не задаём. */
+const mockDerivatives: Derivative[] = [
+  {
+    id: 'derivative-mince',
+    name: 'Фарш говяжий',
+    workshopId: 'meat-1',
+    unit: 'кг',
+    lines: [
+      {
+        id: 'derivative-line-mince-beef',
+        componentKind: 'material',
+        componentId: 'material-beef',
+        quantity: q(8),
+      },
+      {
+        id: 'derivative-line-mince-salt',
+        componentKind: 'material',
+        componentId: 'material-salt',
+        quantity: q(0.12),
+      },
+      {
+        id: 'derivative-line-mince-oil',
+        componentKind: 'material',
+        componentId: 'material-oil',
+        quantity: q(0.2),
+      },
+    ],
+    deletedAt: null,
+  },
+  {
+    id: 'derivative-cutlet',
+    name: 'Котлета сырая',
+    workshopId: 'meat-1',
+    unit: 'шт',
+    lines: [
+      {
+        id: 'derivative-line-cutlet-mince',
+        componentKind: 'derivative',
+        componentId: 'derivative-mince',
+        quantity: q(0.08),
+      },
+      {
+        id: 'derivative-line-cutlet-nitrite',
+        componentKind: 'material',
+        componentId: 'material-nitrite',
+        quantity: q(0.002),
+      },
+      {
+        id: 'derivative-line-cutlet-oil',
+        componentKind: 'material',
+        componentId: 'material-oil',
+        quantity: q(0.01),
+      },
+      {
+        id: 'derivative-line-cutlet-salt',
+        componentKind: 'material',
+        componentId: 'material-salt',
+        quantity: q(0.005),
+      },
+    ],
+    deletedAt: null,
+  },
+  {
+    id: 'derivative-broth',
+    name: 'Бульон мясной',
+    workshopId: 'meat-1',
+    unit: 'кг',
+    lines: [
+      {
+        id: 'derivative-line-broth-beef',
+        componentKind: 'material',
+        componentId: 'material-beef',
+        quantity: q(2),
+      },
+      {
+        id: 'derivative-line-broth-chicken',
+        componentKind: 'material',
+        componentId: 'material-chicken',
+        quantity: q(1.5),
+      },
+      {
+        id: 'derivative-line-broth-salt',
+        componentKind: 'material',
+        componentId: 'material-salt',
+        quantity: q(0.05),
+      },
+    ],
+    deletedAt: null,
+  },
+  {
+    id: 'derivative-dough',
+    name: 'Тесто дрожжевое',
+    workshopId: 'bakery-1',
+    unit: 'кг',
+    lines: [
+      {
+        id: 'derivative-line-dough-flour',
+        componentKind: 'material',
+        componentId: 'material-flour',
+        quantity: q(5),
+      },
+      {
+        id: 'derivative-line-dough-yeast',
+        componentKind: 'material',
+        componentId: 'material-yeast',
+        quantity: q(0.08),
+      },
+      {
+        id: 'derivative-line-dough-salt',
+        componentKind: 'material',
+        componentId: 'material-salt',
+        quantity: q(0.1),
+      },
+      {
+        id: 'derivative-line-dough-oil',
+        componentKind: 'material',
+        componentId: 'material-oil',
+        quantity: q(0.15),
+      },
+    ],
+    deletedAt: null,
+  },
+  {
+    id: 'derivative-bun',
+    name: 'Булочка для сэндвича',
+    workshopId: 'bakery-1',
+    unit: 'шт',
+    lines: [
+      {
+        id: 'derivative-line-bun-dough',
+        componentKind: 'derivative',
+        componentId: 'derivative-dough',
+        quantity: q(0.06),
+      },
+      {
+        id: 'derivative-line-bun-oil',
+        componentKind: 'material',
+        componentId: 'material-oil',
+        quantity: q(0.005),
+      },
+    ],
+    deletedAt: null,
+  },
+];
+
 export const mockDocument: PrototypeDocument = {
   schemaVersion: SCHEMA_VERSION,
   categories: catalogCategories(),
@@ -424,6 +573,7 @@ export const mockDocument: PrototypeDocument = {
   materialMonthPlans: mockMaterials.materialMonthPlans,
   materialOpenings: mockMaterials.materialOpenings,
   materialReceipts: mockMaterials.materialReceipts,
+  derivatives: mockDerivatives,
 };
 
 export function createMockDocument(): PrototypeDocument {
@@ -469,6 +619,10 @@ export function createMockDocument(): PrototypeDocument {
       lines: item.lines.map((line) => ({ ...line })),
     })),
     materialReceipts: mockDocument.materialReceipts.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    derivatives: mockDocument.derivatives.map((item) => ({
       ...item,
       lines: item.lines.map((line) => ({ ...line })),
     })),

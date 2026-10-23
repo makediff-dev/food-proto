@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 45 as const;
+export const SCHEMA_VERSION = 46 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -333,6 +333,49 @@ export interface MaterialReceipt {
 }
 
 /**
+ * Цех производных. Цифра в id совпадает со складом сырья: `*-1` → склад 1, `*-2` → склад 2.
+ * Справочник фиксирован; в документ не пишется.
+ */
+export const DERIVATIVE_WORKSHOPS = [
+  { id: 'meat-1', name: 'Производные мясного цеха 1', warehouseId: 'warehouse-1' },
+  { id: 'meat-2', name: 'Производные мясного цеха 2', warehouseId: 'warehouse-2' },
+  { id: 'bakery-1', name: 'Производные пекарни 1', warehouseId: 'warehouse-1' },
+  { id: 'bakery-2', name: 'Производные пекарни 2', warehouseId: 'warehouse-2' },
+  { id: 'veg-1', name: 'Производные овощного цеха 1', warehouseId: 'warehouse-1' },
+  { id: 'veg-2', name: 'Производные овощного цеха 2', warehouseId: 'warehouse-2' },
+  { id: 'soup-1', name: 'Производные цеха варки супов и каш 1', warehouseId: 'warehouse-1' },
+  { id: 'soup-2', name: 'Производные цеха варки супов и каш 2', warehouseId: 'warehouse-2' },
+  { id: 'side-1', name: 'Производные цеха гарниров 1', warehouseId: 'warehouse-1' },
+  { id: 'side-2', name: 'Производные цеха гарниров 2', warehouseId: 'warehouse-2' },
+] as const;
+
+export type DerivativeWorkshopId = (typeof DERIVATIVE_WORKSHOPS)[number]['id'];
+
+/** Единицы производной на этом этапе: шт и кг. */
+export const DERIVATIVE_UNITS = ['шт', 'кг'] as const;
+
+export type DerivativeUnit = (typeof DERIVATIVE_UNITS)[number];
+
+/** Строка состава производной: сырьё или другая производная того же склада. */
+export interface DerivativeLine {
+  id: string;
+  componentKind: 'material' | 'derivative';
+  componentId: string;
+  /** Количество закладки, тысячные доли единицы. Больше нуля. */
+  quantity: number;
+}
+
+/**
+ * Производная цеха. Имя уникально в пределах склада.
+ * Выход рецепта и себестоимость из состава пока не считаются.
+ */
+export interface Derivative extends DeletableRecord {
+  workshopId: DerivativeWorkshopId;
+  unit: DerivativeUnit;
+  lines: DerivativeLine[];
+}
+
+/**
  * Единственный сохраняемый документ прототипа.
  * Предметные разделы добавляются полями сюда. Производные суммы сюда не писать.
  */
@@ -368,6 +411,10 @@ export interface PrototypeDocument {
   materialOpenings: MaterialOpening[];
   /** Приходы от поставщика. Удаление вырезает запись. */
   materialReceipts: MaterialReceipt[];
+  /**
+   * Производные по цехам. Старый документ без поля читается как пустой массив.
+   */
+  derivatives: Derivative[];
 }
 
 /** Метка мягкого удаления, которую пишет экран через `Date.toISOString()`. */

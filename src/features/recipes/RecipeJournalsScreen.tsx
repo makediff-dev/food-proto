@@ -1,6 +1,7 @@
 'use client';
 
-import type { RecipeSection } from '@/features/recipes/mock-sections';
+import type { ReactNode } from 'react';
+import type { RecipeListSection } from '@/features/recipes/RecipeJournalsTable';
 import { RecipeJournalsTable } from '@/features/recipes/RecipeJournalsTable';
 import { PageFrame } from '@/features/shell/PageFrame';
 
@@ -8,13 +9,15 @@ export function RecipeJournalsScreen({
   title,
   sections,
   caption,
+  aside,
 }: {
   title: string;
-  sections: readonly RecipeSection[];
+  sections: readonly RecipeListSection[];
   caption: string;
+  aside?: ReactNode;
 }) {
   return (
-    <PageFrame title={title} wide>
+    <PageFrame title={title} wide aside={aside}>
       <RecipeJournalsTable sections={sections} caption={caption} />
     </PageFrame>
   );
