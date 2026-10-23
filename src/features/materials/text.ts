@@ -1,3 +1,4 @@
+import type { MaterialWeightPair } from '@/domain/document';
 import type {
   MaterialDocumentRejection,
   MaterialNameRejection,
@@ -16,6 +17,11 @@ export function formatQuantity(thousandths: number, unit?: string): string {
   const text = frac === 0 ? wholeText : `${wholeText},${String(frac).padStart(3, '0').replace(/0+$/, '')}`;
   const shown = `${sign}${text}`;
   return unit ? `${shown} ${unit}` : shown;
+}
+
+/** Пара без деления: `10 кг/30 шт`, `1 кг/50 м`. */
+export function formatMaterialWeightPair(weight: MaterialWeightPair, unit: string): string {
+  return `${formatQuantity(weight.kilogramThousandths, 'кг')}/${formatQuantity(weight.unitThousandths, unit)}`;
 }
 
 export function formatQuantityDraft(thousandths: number): string {

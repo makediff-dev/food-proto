@@ -120,9 +120,9 @@
     "semantic_hash": "724f33ff464c09fb3fcdf0af0a576d9d"
   },
   "src/domain/document.ts": {
-    "mtime": 1792772305.083912,
-    "seen": 1792772568.920581,
-    "ast_hash": "b27fbc820f407436788cde922d3f2698",
+    "mtime": 1792774145.6624973,
+    "seen": 1792774351.8077369,
+    "ast_hash": "694bc9f3bcb7af0982effff54f109a5b",
     "semantic_hash": ""
   },
   "src/domain/money.ts": {
@@ -268,15 +268,15 @@
     "semantic_hash": ""
   },
   "docs/architecture.md": {
-    "mtime": 1792772778.6582894,
-    "seen": 1792772786.8605287,
-    "ast_hash": "074e2b1c7c3a77a723645122a3add6ba",
+    "mtime": 1792774317.5681007,
+    "seen": 1792774351.8077369,
+    "ast_hash": "d978f3d99fc3dcd512b7a1c0b2438cc4",
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1792772916.4268384,
-    "seen": 1792772928.1054664,
-    "ast_hash": "6fab02c6275cb78396018b558b88063c",
+    "mtime": 1792774311.196858,
+    "seen": 1792774351.8077369,
+    "ast_hash": "fdbfcbe2e3ec4cdfc50ddaff62302742",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
@@ -831,15 +831,15 @@
     "semantic_hash": ""
   },
   "src/data/mock-materials.ts": {
-    "mtime": 1792742862.1412475,
-    "seen": 1792743010.5104587,
-    "ast_hash": "e24f8648311747476f36ce00bf8c97a0",
+    "mtime": 1792774249.4031234,
+    "seen": 1792774351.8077369,
+    "ast_hash": "d734bf39ed8acd293907284fdab271d8",
     "semantic_hash": ""
   },
   "src/domain/materials.ts": {
-    "mtime": 1792742814.7578914,
-    "seen": 1792743010.5104587,
-    "ast_hash": "7c34c1fa2176241843ba5ce061bc0ea3",
+    "mtime": 1792774168.838878,
+    "seen": 1792774351.8077369,
+    "ast_hash": "fcaf7932857f9aec340f39ae4b932284",
     "semantic_hash": ""
   },
   "src/domain/quantity.ts": {
@@ -897,15 +897,15 @@
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsPlanScreen.tsx": {
-    "mtime": 1792742894.5723424,
-    "seen": 1792743010.5104587,
-    "ast_hash": "334a34d87e340970b57720c951384eda",
+    "mtime": 1792774332.9481535,
+    "seen": 1792774351.8077369,
+    "ast_hash": "9c62e9b9ef79ac4ecf1c30b5f4c6e39c",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsPlanTable.tsx": {
-    "mtime": 1792663436.2035482,
-    "seen": 1792743010.5104587,
-    "ast_hash": "94ad97ab58cd78e401e80990dca93978",
+    "mtime": 1792774306.0103228,
+    "seen": 1792774351.8077369,
+    "ast_hash": "7b4dcf0395bef69b57f2d42cb5bd3fe7",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsSummaryScreen.tsx": {
@@ -939,15 +939,15 @@
     "semantic_hash": ""
   },
   "src/features/materials/text.ts": {
-    "mtime": 1792661650.321138,
-    "seen": 1792661781.5944958,
-    "ast_hash": "5059c3dcb8d6b8650334b6e33300310b",
+    "mtime": 1792774330.5638914,
+    "seen": 1792774351.8077369,
+    "ast_hash": "67b0248be5f860bf2375ebda11ec2e62",
     "semantic_hash": ""
   },
   "src/features/materials/use-materials.ts": {
-    "mtime": 1792742902.0143497,
-    "seen": 1792743010.5104587,
-    "ast_hash": "9ef1188ac83e3661cc8b6ff620657451",
+    "mtime": 1792774257.7892306,
+    "seen": 1792774351.8077369,
+    "ast_hash": "25b0f22ff1547941f507b54c631fd61c",
     "semantic_hash": ""
   },
   "docs/tables/materials-summary.md": {
@@ -1047,9 +1047,9 @@
     "semantic_hash": ""
   },
   "src/features/recipes/FinishedProductEditScreen.tsx": {
-    "mtime": 1792772486.410748,
-    "seen": 1792772568.920581,
-    "ast_hash": "edb15926bb96d997f1b0ddf7218b014b",
+    "mtime": 1792773026.7255456,
+    "seen": 1792773880.5238128,
+    "ast_hash": "4c17234822c91e5241f31fff22ce0d33",
     "semantic_hash": ""
   },
   "src/features/recipes/FinishedProductsScreen.tsx": {

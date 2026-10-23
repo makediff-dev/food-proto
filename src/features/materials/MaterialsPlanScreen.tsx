@@ -10,6 +10,7 @@ import {
   type MaterialGroupId,
   type MaterialUnit,
   type MaterialWarehouseId,
+  type MaterialWeightPair,
 } from '@/domain/document';
 import { deletedMaterials, materialMovementMonth } from '@/domain/materials';
 import { monthKeyFromDate } from '@/domain/sales-plan';
@@ -17,12 +18,24 @@ import { MaterialMonthBar, resolveMaterialMonth } from '@/features/materials/Mat
 import { MaterialsPlanTable } from '@/features/materials/MaterialsPlanTable';
 import { MaterialsWarehouseBlocks } from '@/features/materials/MaterialsWarehouseBlocks';
 import { MATERIALS_PLAN_TITLE, materialsPlanHref } from '@/features/materials/paths';
-import { MATERIAL_NAME_ERROR, MATERIAL_PLAN_ERROR } from '@/features/materials/text';
+import {
+  formatMaterialWeightPair,
+  MATERIAL_NAME_ERROR,
+  MATERIAL_PLAN_ERROR,
+  parseQuantityInput,
+} from '@/features/materials/text';
 import { useMaterials } from '@/features/materials/use-materials';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { Dialog } from '@/features/shell/Dialog';
 import { IconPlus, IconUndo } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
+
+function materialUnitHint(unit: MaterialUnit, weight: MaterialWeightPair | null): string {
+  if (weight === null) {
+    return unit;
+  }
+  return `${unit} · ${formatMaterialWeightPair(weight, unit)}`;
+}
 
 export function MaterialsPlanScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);
@@ -111,7 +124,8 @@ export function MaterialsPlanScreen({ month }: { month: string }) {
                     <span className="text-muted">
                       {' '}
                       · {MATERIAL_WAREHOUSES.find((warehouse) => warehouse.id === item.warehouseId)?.name} ·{' '}
-                      {MATERIAL_GROUPS.find((group) => group.id === item.groupId)?.name} · {item.unit}
+                      {MATERIAL_GROUPS.find((group) => group.id === item.groupId)?.name} ·{' '}
+                      {materialUnitHint(item.unit, item.weight)}
                     </span>
                   </span>
                   <button
@@ -139,13 +153,14 @@ export function MaterialsPlanScreen({ month }: { month: string }) {
           groupId={adding.groupId}
           warehouseId={adding.warehouseId}
           onClose={() => setAdding(null)}
-          onSubmit={(name, unit, vatPercent) => {
+          onSubmit={(name, unit, weight, vatPercent) => {
             const rejection = materials.addMaterial({
               id: `material:${crypto.randomUUID()}`,
               name,
               groupId: adding.groupId,
               warehouseId: adding.warehouseId,
               unit,
+              weight,
               vatPercent,
             });
             return rejection === 'duplicate'
@@ -171,10 +186,12 @@ function AddMaterialDialog({
   groupId: MaterialGroupId;
   warehouseId: MaterialWarehouseId;
   onClose: () => void;
-  onSubmit: (name: string, unit: MaterialUnit, vatPercent: number) => string | null;
+  onSubmit: (name: string, unit: MaterialUnit, weight: MaterialWeightPair | null, vatPercent: number) => string | null;
 }) {
   const [name, setName] = useState('');
   const [unit, setUnit] = useState<MaterialUnit>('кг');
+  const [weight, setWeight] = useState('0');
+  const [unitQuantity, setUnitQuantity] = useState('1');
   const [vat, setVat] = useState('20');
   const [error, setError] = useState<string | null>(null);
   const groupName = MATERIAL_GROUPS.find((item) => item.id === groupId)?.name ?? '';
@@ -191,7 +208,21 @@ function AddMaterialDialog({
             setError('Укажите НДС целым числом от 0 до 100.');
             return;
           }
-          const rejection = onSubmit(name, unit, vatPercent);
+          let weightPair: MaterialWeightPair | null = null;
+          if (unit !== 'кг') {
+            const kilogramThousandths = parseQuantityInput(weight, false);
+            if (kilogramThousandths === null) {
+              setError('Укажите вес в килограммах.');
+              return;
+            }
+            const unitThousandths = parseQuantityInput(unitQuantity, false);
+            if (unitThousandths === null || unitThousandths === 0) {
+              setError(`Укажите количество в ${unit} больше нуля.`);
+              return;
+            }
+            weightPair = { kilogramThousandths, unitThousandths };
+          }
+          const rejection = onSubmit(name, unit, weightPair, vatPercent);
           if (rejection) {
             setError(rejection);
             return;
@@ -217,6 +248,28 @@ function AddMaterialDialog({
             ))}
           </select>
         </label>
+        {unit !== 'кг' ? (
+          <>
+            <label className="flex flex-col gap-2 text-sm text-muted">
+              Вес, кг
+              <input
+                value={weight}
+                onChange={(event) => setWeight(event.target.value)}
+                inputMode="decimal"
+                className={fieldClassName}
+              />
+            </label>
+            <label className="flex flex-col gap-2 text-sm text-muted">
+              Количество, {unit}
+              <input
+                value={unitQuantity}
+                onChange={(event) => setUnitQuantity(event.target.value)}
+                inputMode="decimal"
+                className={fieldClassName}
+              />
+            </label>
+          </>
+        ) : null}
         <label className="flex flex-col gap-2 text-sm text-muted">
           НДС, %
           <input

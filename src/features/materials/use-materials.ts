@@ -1,7 +1,13 @@
 'use client';
 
 import { useDocumentStore } from '@/data/DocumentProvider';
-import type { Material, MaterialGroupId, MaterialUnit, MaterialWarehouseId } from '@/domain/document';
+import type {
+  Material,
+  MaterialGroupId,
+  MaterialUnit,
+  MaterialWarehouseId,
+  MaterialWeightPair,
+} from '@/domain/document';
 import {
   addMaterial,
   deleteMaterial,
@@ -20,6 +26,7 @@ import {
   setMaterialPlanRejection,
   setMaterialUnit,
   setMaterialVat,
+  setMaterialWeight,
 } from '@/domain/materials';
 
 export function useMaterials() {
@@ -69,7 +76,9 @@ export function useMaterials() {
       );
       return null;
     },
-    addMaterial(material: Pick<Material, 'id' | 'name' | 'groupId' | 'warehouseId' | 'unit' | 'vatPercent'>) {
+    addMaterial(
+      material: Pick<Material, 'id' | 'name' | 'groupId' | 'warehouseId' | 'unit' | 'weight' | 'vatPercent'>,
+    ) {
       const rejection = materialNameRejection(store.document, material.name, material.warehouseId);
       if (rejection) {
         return rejection;
@@ -94,6 +103,9 @@ export function useMaterials() {
     },
     setUnit(id: string, unit: MaterialUnit) {
       store.updateDocument((current) => setMaterialUnit(current, id, unit));
+    },
+    setWeight(id: string, weight: MaterialWeightPair | null) {
+      store.updateDocument((current) => setMaterialWeight(current, id, weight));
     },
     remove(id: string) {
       store.updateDocument((current) => deleteMaterial(current, id, new Date().toISOString()));

@@ -6,6 +6,7 @@ import type {
   MaterialOpening,
   MaterialReceipt,
   MaterialWarehouseId,
+  MaterialWeightPair,
 } from '@/domain/document';
 
 /**
@@ -20,24 +21,38 @@ import type {
 
 const q = (units: number) => Math.round(units * 1000);
 
+/** Нулевой вес на 1 штуку — пренебрегают. */
+const ZERO_PER_PIECE: MaterialWeightPair = { kilogramThousandths: 0, unitThousandths: q(1) };
+/** 1 кг на 50 м. */
+const KG_PER_50_M: MaterialWeightPair = { kilogramThousandths: q(1), unitThousandths: q(50) };
+
 type MaterialSeed = Omit<Material, 'id' | 'warehouseId' | 'deletedAt'> & { baseId: string };
 
 const materialSeeds: MaterialSeed[] = [
-  { baseId: 'material-beef', name: 'Говядина 1 с зам', groupId: 'meat', unit: 'кг', vatPercent: 10 },
+  { baseId: 'material-beef', name: 'Говядина 1 с зам', groupId: 'meat', unit: 'кг', weight: null, vatPercent: 10 },
   {
     baseId: 'material-chicken',
     name: 'Филе грудки куриное зам',
     groupId: 'meat',
     unit: 'кг',
+    weight: null,
     vatPercent: 10,
   },
-  { baseId: 'material-nitrite', name: 'Соль нитритная', groupId: 'meat', unit: 'кг', vatPercent: 10 },
-  { baseId: 'material-flour', name: 'Мука пшеничная в/с', groupId: 'bakery', unit: 'кг', vatPercent: 10 },
+  { baseId: 'material-nitrite', name: 'Соль нитритная', groupId: 'meat', unit: 'кг', weight: null, vatPercent: 10 },
+  {
+    baseId: 'material-flour',
+    name: 'Мука пшеничная в/с',
+    groupId: 'bakery',
+    unit: 'кг',
+    weight: null,
+    vatPercent: 10,
+  },
   {
     baseId: 'material-yeast',
     name: 'Дрожжи сухие быстродействующие',
     groupId: 'bakery',
     unit: 'кг',
+    weight: null,
     vatPercent: 20,
   },
   {
@@ -45,14 +60,23 @@ const materialSeeds: MaterialSeed[] = [
     name: 'Кетчуп томатный Хайнц',
     groupId: 'sauces',
     unit: 'кг',
+    weight: null,
     vatPercent: 20,
   },
-  { baseId: 'material-oil', name: 'Масло подсолнечное', groupId: 'sauces', unit: 'кг', vatPercent: 10 },
+  {
+    baseId: 'material-oil',
+    name: 'Масло подсолнечное',
+    groupId: 'sauces',
+    unit: 'кг',
+    weight: null,
+    vatPercent: 10,
+  },
   {
     baseId: 'material-salt',
     name: 'Соль пищевая мелк помола',
     groupId: 'sauces',
     unit: 'кг',
+    weight: null,
     vatPercent: 10,
   },
   {
@@ -60,6 +84,7 @@ const materialSeeds: MaterialSeed[] = [
     name: 'Этикетка Гамбургер 110х100',
     groupId: 'packaging',
     unit: 'шт',
+    weight: ZERO_PER_PIECE,
     vatPercent: 20,
   },
   {
@@ -67,15 +92,31 @@ const materialSeeds: MaterialSeed[] = [
     name: 'Лоток 142х142х53 прозрач',
     groupId: 'packaging',
     unit: 'шт',
+    weight: ZERO_PER_PIECE,
     vatPercent: 20,
   },
-  { baseId: 'material-knives', name: 'Ножи', groupId: 'packaging', unit: 'шт', vatPercent: 20 },
-  { baseId: 'material-blades', name: 'Лезвия', groupId: 'packaging', unit: 'шт', vatPercent: 20 },
+  {
+    baseId: 'material-knives',
+    name: 'Ножи',
+    groupId: 'packaging',
+    unit: 'шт',
+    weight: ZERO_PER_PIECE,
+    vatPercent: 20,
+  },
+  {
+    baseId: 'material-blades',
+    name: 'Лезвия',
+    groupId: 'packaging',
+    unit: 'шт',
+    weight: ZERO_PER_PIECE,
+    vatPercent: 20,
+  },
   {
     baseId: 'material-casing',
     name: 'Оболочка сосисочная',
     groupId: 'packaging',
     unit: 'м',
+    weight: KG_PER_50_M,
     vatPercent: 20,
   },
 ];
@@ -91,6 +132,7 @@ const materials: Material[] = (['warehouse-1', 'warehouse-2'] as const).flatMap(
     groupId: seed.groupId,
     warehouseId,
     unit: seed.unit,
+    weight: seed.weight,
     vatPercent: seed.vatPercent,
     deletedAt: null,
   })),

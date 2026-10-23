@@ -5,6 +5,7 @@ import type { MaterialMovementRow, MaterialMovementTotals, MaterialPlanField } f
 import { MaterialNormDeviation } from '@/features/materials/MaterialNormDeviation';
 import { MATERIALS_RECEIPTS_TITLE } from '@/features/materials/paths';
 import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
+import { formatMaterialWeightPair } from '@/features/materials/text';
 import { IconTrash } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
@@ -28,6 +29,13 @@ import {
 } from '@/features/table';
 
 type ColumnKey = 'price' | 'planReceipt' | 'planReceiptCost' | 'min' | 'max' | 'normDeviation' | 'recommended';
+
+function materialUnitHint(row: Pick<MaterialMovementRow, 'unit' | 'weight'>): string {
+  if (row.weight === null) {
+    return row.unit;
+  }
+  return `${row.unit} · ${formatMaterialWeightPair(row.weight, row.unit)}`;
+}
 
 const COLUMNS: { key: ColumnKey; label: string; editable: boolean }[] = [
   { key: 'price', label: 'Цена', editable: true },
@@ -91,7 +99,7 @@ export function MaterialsPlanTable({
                     <span>
                       {row.name}
                       {row.deleted ? <span className="text-muted"> (архив)</span> : null}
-                      <span className="text-muted"> · {row.unit}</span>
+                      <span className="text-muted"> · {materialUnitHint(row)}</span>
                     </span>
                   ) : (
                     <>
@@ -101,7 +109,7 @@ export function MaterialsPlanTable({
                         invalidMessage="Укажите название."
                         onCommit={(next) => onRename(row.materialId, next)}
                       />
-                      <span className="text-sm text-muted">· {row.unit}</span>
+                      <span className="text-sm text-muted">· {materialUnitHint(row)}</span>
                     </>
                   )}
                   {editable && !row.deleted ? (

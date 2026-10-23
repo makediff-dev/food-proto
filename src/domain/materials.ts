@@ -18,6 +18,7 @@ import {
   type MaterialReceiptLine,
   type MaterialUnit,
   type MaterialWarehouseId,
+  type MaterialWeightPair,
   NORMED_MATERIAL_GROUP_ID,
   type PrototypeDocument,
 } from '@/domain/document';
@@ -68,6 +69,8 @@ export interface MaterialMovementRow {
   materialId: string;
   name: string;
   unit: MaterialUnit;
+  /** Пара веса; `null`, если единица — кг. */
+  weight: MaterialWeightPair | null;
   vatPercent: number;
   deleted: boolean;
   /** Расход этого склада считается из нормы и выпуска, журнал расхода не входит в остаток. */
@@ -212,6 +215,20 @@ export function isMaterialUnit(value: string): value is MaterialUnit {
   return (MATERIAL_UNITS as readonly string[]).includes(value);
 }
 
+export function isMaterialWeightPair(value: MaterialWeightPair | null, unit: MaterialUnit): boolean {
+  if (unit === 'кг') {
+    return value === null;
+  }
+  if (value === null) {
+    return false;
+  }
+  return (
+    isQuantityThousandths(value.kilogramThousandths, false) &&
+    isQuantityThousandths(value.unitThousandths, false) &&
+    value.unitThousandths > 0
+  );
+}
+
 export function materialGroupName(groupId: MaterialGroupId): string {
   return MATERIAL_GROUPS.find((item) => item.id === groupId)?.name ?? groupId;
 }
@@ -250,7 +267,7 @@ export function materialNameRejection(
 
 export function addMaterial(
   document: PrototypeDocument,
-  material: Pick<Material, 'id' | 'name' | 'groupId' | 'warehouseId' | 'unit' | 'vatPercent'>,
+  material: Pick<Material, 'id' | 'name' | 'groupId' | 'warehouseId' | 'unit' | 'weight' | 'vatPercent'>,
 ): PrototypeDocument {
   if (!isMaterialWarehouseId(material.warehouseId)) {
     return document;
@@ -258,7 +275,12 @@ export function addMaterial(
   if (materialNameRejection(document, material.name, material.warehouseId)) {
     return document;
   }
-  if (!isMaterialGroupId(material.groupId) || !isMaterialUnit(material.unit) || !isVatPercent(material.vatPercent)) {
+  if (
+    !isMaterialGroupId(material.groupId) ||
+    !isMaterialUnit(material.unit) ||
+    !isMaterialWeightPair(material.weight, material.unit) ||
+    !isVatPercent(material.vatPercent)
+  ) {
     return document;
   }
 
@@ -268,6 +290,7 @@ export function addMaterial(
     groupId: material.groupId,
     warehouseId: material.warehouseId,
     unit: material.unit,
+    weight: material.weight,
     vatPercent: material.vatPercent,
     deletedAt: null,
   };
@@ -312,10 +335,36 @@ export function setMaterialUnit(document: PrototypeDocument, id: string, unit: M
   if (!current || !isMaterialUnit(unit) || current.unit === unit) {
     return document;
   }
+  const weight = unit === 'кг' ? null : current.weight;
+  if (!isMaterialWeightPair(weight, unit)) {
+    return document;
+  }
 
   return {
     ...document,
-    materials: materialsList(document).map((item) => (item.id === id ? { ...item, unit } : item)),
+    materials: materialsList(document).map((item) => (item.id === id ? { ...item, unit, weight } : item)),
+  };
+}
+
+export function setMaterialWeight(
+  document: PrototypeDocument,
+  id: string,
+  weight: MaterialWeightPair | null,
+): PrototypeDocument {
+  const current = materialsList(document).find((item) => item.id === id && item.deletedAt === null);
+  if (!current || !isMaterialWeightPair(weight, current.unit)) {
+    return document;
+  }
+  if (
+    current.weight?.kilogramThousandths === weight?.kilogramThousandths &&
+    current.weight?.unitThousandths === weight?.unitThousandths
+  ) {
+    return document;
+  }
+
+  return {
+    ...document,
+    materials: materialsList(document).map((item) => (item.id === id ? { ...item, weight } : item)),
   };
 }
 
@@ -904,6 +953,7 @@ function movementRow(
     materialId: material.id,
     name: material.name,
     unit: material.unit,
+    weight: material.weight,
     vatPercent: material.vatPercent,
     deleted: material.deletedAt !== null,
     normed,

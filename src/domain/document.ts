@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 47 as const;
+export const SCHEMA_VERSION = 49 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -247,6 +247,17 @@ export const MATERIAL_UNITS = ['кг', 'шт', 'л', 'м'] as const;
 export type MaterialUnit = (typeof MATERIAL_UNITS)[number];
 
 /**
+ * Пара веса для единицы, отличной от кг.
+ * Деление не хранят: на экране показывают как «10 кг/30 шт».
+ */
+export interface MaterialWeightPair {
+  /** Тысячные доли кг. 0 — весом пренебрегают. */
+  kilogramThousandths: number;
+  /** Тысячные доли единицы учёта. Больше нуля. */
+  unitThousandths: number;
+}
+
+/**
  * Группа, в которой расход можно нормировать на штуку продукции.
  * Ножи, лезвия, оболочка и остальная упаковка.
  */
@@ -261,6 +272,11 @@ export interface Material extends DeletableRecord {
   /** Склад, которому принадлежит позиция. Общих позиций нет. */
   warehouseId: MaterialWarehouseId;
   unit: MaterialUnit;
+  /**
+   * Пара «кг / количество в единице». `null`, если единица — кг (вес и есть учёт).
+   * Для шт, л, м обязательна. Нулевой вес допустим.
+   */
+  weight: MaterialWeightPair | null;
   /** НДС закупки, целые проценты. `DSM Meat!F`. */
   vatPercent: number;
 }
