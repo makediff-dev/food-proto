@@ -256,6 +256,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
   }, [menuOpen]);
 
+  if (pathname === '/feedback' || pathname.startsWith('/feedback/')) {
+    return children;
+  }
+
   function closeMenu() {
     setMenuOpen(false);
   }
