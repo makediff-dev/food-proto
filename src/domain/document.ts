@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 52 as const;
+export const SCHEMA_VERSION = 53 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -446,6 +446,51 @@ export interface Derivative extends DeletableRecord {
   lines: DerivativeLine[];
 }
 
+/** Строка инвентаризации производной на конец месяца. */
+export interface DerivativeOpeningLine {
+  id: string;
+  /** Производная. Ссылка живёт и после удаления. */
+  derivativeId: string;
+  /** Факт остатка на конец, тысячные доли единицы. Может быть отрицательным. */
+  quantity: number;
+}
+
+/**
+ * Инвентаризация производных на конец месяца.
+ * На один месяц — одна запись. Мягкого удаления нет.
+ * Расчётный остаток и отклонение в документ не пишутся.
+ * Остаток на начало следующего месяца — этот факт.
+ */
+export interface DerivativeOpening {
+  id: string;
+  /** `ГГГГ-ММ`. */
+  month: string;
+  lines: DerivativeOpeningLine[];
+}
+
+/** Строка норматива остатков производной. */
+export interface DerivativeNormLine {
+  id: string;
+  /** Производная. Ссылка живёт и после удаления. */
+  derivativeId: string;
+  /** Нормативный минимум, тысячные доли единицы. Может быть отрицательным. */
+  minQuantity: number;
+  /** Нормативный максимум, тысячные доли единицы. Может быть отрицательным. */
+  maxQuantity: number;
+}
+
+/**
+ * Нормативы остатков производных на месяц.
+ * На один месяц — одна запись. Мягкого удаления нет.
+ * Отклонения и рекомендуемый объём в документ не пишутся.
+ */
+export interface DerivativeNorm {
+  id: string;
+  /** `ГГГГ-ММ`. */
+  month: string;
+  lines: DerivativeNormLine[];
+}
+
 /**
  * Единственный сохраняемый документ прототипа.
  * Предметные разделы добавляются полями сюда. Производные суммы сюда не писать.
@@ -486,6 +531,16 @@ export interface PrototypeDocument {
    * Производные по цехам. Старый документ без поля читается как пустой массив.
    */
   derivatives: Derivative[];
+  /**
+   * Инвентаризация производных на конец месяца (факт, тысячные доли).
+   * Старый документ без поля читается как пустой массив.
+   */
+  derivativeOpenings: DerivativeOpening[];
+  /**
+   * Нормативы остатков производных месяца (мин/макс, тысячные доли).
+   * Старый документ без поля читается как пустой массив.
+   */
+  derivativeNorms: DerivativeNorm[];
 }
 
 /** Метка мягкого удаления, которую пишет экран через `Date.toISOString()`. */

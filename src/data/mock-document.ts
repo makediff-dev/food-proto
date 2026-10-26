@@ -720,6 +720,8 @@ export const mockDocument: PrototypeDocument = {
   materialOpenings: mockMaterials.materialOpenings,
   materialReceipts: mockMaterials.materialReceipts,
   derivatives: mockDerivatives,
+  derivativeOpenings: [],
+  derivativeNorms: [],
 };
 
 export function createMockDocument(): PrototypeDocument {
@@ -772,6 +774,14 @@ export function createMockDocument(): PrototypeDocument {
       lines: item.lines.map((line) => ({ ...line })),
     })),
     derivatives: mockDocument.derivatives.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    derivativeOpenings: mockDocument.derivativeOpenings.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    derivativeNorms: mockDocument.derivativeNorms.map((item) => ({
       ...item,
       lines: item.lines.map((line) => ({ ...line })),
     })),

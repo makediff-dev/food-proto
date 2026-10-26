@@ -1,15 +1,34 @@
-import { derivativeSections, derivativesList } from '@/domain/derivatives';
-import type { DerivativeUnit, DerivativeWorkshopId, PrototypeDocument } from '@/domain/document';
+import { derivativeByIdOrNull, derivativeSections, derivativesList } from '@/domain/derivatives';
+import type {
+  DerivativeNorm,
+  DerivativeNormLine,
+  DerivativeOpening,
+  DerivativeOpeningLine,
+  DerivativeUnit,
+  DerivativeWorkshopId,
+  PrototypeDocument,
+} from '@/domain/document';
+import { isMonthKey } from '@/domain/document';
 import { plannedProductionVolumePieces } from '@/domain/finished-goods';
 import { type MaterialMoney, materialConsumptionPrice, materialPlanPrice } from '@/domain/materials';
 import { ratioRound } from '@/domain/money';
-import { QUANTITY_SCALE } from '@/domain/quantity';
+import { isQuantityThousandths, QUANTITY_SCALE } from '@/domain/quantity';
 import { consumptionQuantityForComponent, derivativeBatchThousandths } from '@/domain/recipe-consumption';
+import { planMonthOpen, shiftMonth } from '@/domain/sales-plan';
+
+export type DerivativeOpeningRejection = 'month' | 'closed' | 'derivative' | 'locked' | 'quantity';
+
+export type DerivativeNormField = 'minQuantity' | 'maxQuantity';
+
+export type DerivativeNormRejection = 'month' | 'closed' | 'derivative' | 'locked' | 'quantity';
 
 export type DerivativeMovementRow = {
   derivativeId: string;
   name: string;
   unit: DerivativeUnit;
+  deleted: boolean;
+  /** Остаток на начало: инвентаризация конца прошлого месяца, тысячные доли. */
+  openingQuantity: number;
   /** План расхода на выпуск месяца, тысячные доли единицы производной. */
   planConsumptionQuantity: number;
   /** Плановая цена 1 единицы производной (шт или кг) по плановым ценам сырья. */
@@ -22,6 +41,23 @@ export type DerivativeMovementRow = {
   factConsumptionPrice: MaterialMoney;
   /** Фактическая стоимость расхода: фактическая цена × факт расхода. */
   factConsumptionCost: MaterialMoney;
+  /** Факт инвентаризации на конец, тысячные доли. Нет строки — 0. */
+  inventoryClosingQuantity: number;
+  /** Была ли правка инвентаризации по этой производной. */
+  hasInventoryLine: boolean;
+  /** Нормативный минимум, тысячные доли. Нет записи — 0. */
+  minQuantity: number;
+  /** Нормативный максимум, тысячные доли. Нет записи — 0. */
+  maxQuantity: number;
+  /** Отклонение ниже минимума (отрицательное) или 0. Запас — факт инвентаризации на конец. */
+  belowMinQuantity: number;
+  /** Отклонение выше максимума (положительное) или 0. Запас — факт инвентаризации на конец. */
+  aboveMaxQuantity: number;
+  /**
+   * Рекомендуемый объём выпуска производной на месяц:
+   * план расхода + (мин + макс) / 2 − остаток на начало (не меньше 0).
+   */
+  recommendedQuantity: number;
 };
 
 export type DerivativeMovementSection = {
@@ -161,27 +197,343 @@ function sumMoney(left: MaterialMoney, right: MaterialMoney): MaterialMoney {
   };
 }
 
-/** Свод месяца: рабочие производные по цехам, план и факт расхода (количество, цена, стоимость) на выпуск. */
+/** Старый документ без поля читается как пустой список. */
+export function derivativeOpeningsList(document: PrototypeDocument): DerivativeOpening[] {
+  return document.derivativeOpenings ?? [];
+}
+
+function openingForMonth(document: PrototypeDocument, month: string): DerivativeOpening | null {
+  return derivativeOpeningsList(document).find((item) => item.month === month) ?? null;
+}
+
+/** Факт инвентаризации на конец месяца. Нет строки — 0. */
+export function inventoryQuantityForDerivative(
+  document: PrototypeDocument,
+  month: string,
+  derivativeId: string,
+): number {
+  return openingForMonth(document, month)?.lines.find((line) => line.derivativeId === derivativeId)?.quantity ?? 0;
+}
+
+export function hasStoredDerivativeInventoryLine(
+  document: PrototypeDocument,
+  month: string,
+  derivativeId: string,
+): boolean {
+  return openingForMonth(document, month)?.lines.some((line) => line.derivativeId === derivativeId) ?? false;
+}
+
+/**
+ * Остаток на начало: инвентаризация конца прошлого месяца.
+ * Нет прошлого месяца или записи — 0.
+ */
+export function openingQuantityForDerivative(document: PrototypeDocument, month: string, derivativeId: string): number {
+  if (!isMonthKey(month) || month <= '2000-01') {
+    return 0;
+  }
+  const previous = shiftMonth(month, -1);
+  if (!isMonthKey(previous) || previous < '2000-01') {
+    return 0;
+  }
+  return inventoryQuantityForDerivative(document, previous, derivativeId);
+}
+
+export function setDerivativeOpeningRejection(
+  document: PrototypeDocument,
+  month: string,
+  derivativeId: string,
+  quantity: number,
+  today: Date,
+): DerivativeOpeningRejection | null {
+  if (!isMonthKey(month) || !planMonthOpen(month, today)) {
+    return month < '2000-01' || !isMonthKey(month) ? 'month' : 'closed';
+  }
+  const derivative = derivativeByIdOrNull(document, derivativeId);
+  if (!derivative) {
+    return 'derivative';
+  }
+  if (derivative.deletedAt !== null) {
+    return 'locked';
+  }
+  return isQuantityThousandths(quantity, true) ? null : 'quantity';
+}
+
+/**
+ * Пишет инвентаризацию на конец месяца. Нет записи месяца — создаёт.
+ * Первая правка материализует месяц.
+ */
+export function setDerivativeOpening(
+  document: PrototypeDocument,
+  month: string,
+  derivativeId: string,
+  quantity: number,
+  today: Date,
+): PrototypeDocument {
+  if (setDerivativeOpeningRejection(document, month, derivativeId, quantity, today)) {
+    return document;
+  }
+
+  const openings = derivativeOpeningsList(document);
+  const existing = openingForMonth(document, month);
+
+  if (!existing) {
+    const created: DerivativeOpening = {
+      id: `derivative-opening:${month}`,
+      month,
+      lines: [
+        {
+          id: `derivative-opening-line:${month}:${derivativeId}`,
+          derivativeId,
+          quantity,
+        },
+      ],
+    };
+    return {
+      ...document,
+      derivativeOpenings: [...openings, created],
+    };
+  }
+
+  const line = existing.lines.find((item) => item.derivativeId === derivativeId);
+  if (line) {
+    if (line.quantity === quantity) {
+      return document;
+    }
+    return {
+      ...document,
+      derivativeOpenings: openings.map((item) =>
+        item.month !== month
+          ? item
+          : {
+              ...item,
+              lines: item.lines.map((entry) => (entry.derivativeId === derivativeId ? { ...entry, quantity } : entry)),
+            },
+      ),
+    };
+  }
+
+  const nextLine: DerivativeOpeningLine = {
+    id: `derivative-opening-line:${month}:${derivativeId}`,
+    derivativeId,
+    quantity,
+  };
+  return {
+    ...document,
+    derivativeOpenings: openings.map((item) =>
+      item.month !== month ? item : { ...item, lines: [...item.lines, nextLine] },
+    ),
+  };
+}
+
+/** Старый документ без поля читается как пустой список. */
+export function derivativeNormsList(document: PrototypeDocument): DerivativeNorm[] {
+  return document.derivativeNorms ?? [];
+}
+
+function normForMonth(document: PrototypeDocument, month: string): DerivativeNorm | null {
+  return derivativeNormsList(document).find((item) => item.month === month) ?? null;
+}
+
+/** Норматив производной на месяц. Нет записи — нули. */
+export function normForDerivative(
+  document: PrototypeDocument,
+  month: string,
+  derivativeId: string,
+): Pick<DerivativeNormLine, 'minQuantity' | 'maxQuantity'> {
+  const line = normForMonth(document, month)?.lines.find((item) => item.derivativeId === derivativeId);
+  if (!line) {
+    return { minQuantity: 0, maxQuantity: 0 };
+  }
+  return {
+    minQuantity: line.minQuantity,
+    maxQuantity: line.maxQuantity,
+  };
+}
+
+/** Целевой остаток производной на конец месяца: середина норматива мин/макс. */
+export function targetClosingQuantityFromDerivativeNorm(minQuantity: number, maxQuantity: number): number {
+  return Math.round((minQuantity + maxQuantity) / 2);
+}
+
+/**
+ * Рекомендуемый объём производной на месяц:
+ * план расхода + целевой остаток на конец ((мин + макс) / 2) − остаток на начало.
+ * Отрицательный результат — 0.
+ */
+export function recommendedDerivativeVolumeQuantity(
+  openingQuantity: number,
+  planConsumptionQuantity: number,
+  minQuantity: number,
+  maxQuantity: number,
+): number {
+  const targetClosing = targetClosingQuantityFromDerivativeNorm(minQuantity, maxQuantity);
+  const volume = planConsumptionQuantity + targetClosing - openingQuantity;
+  return volume < 0 ? 0 : volume;
+}
+
+function derivativeNormMetrics(
+  openingQuantity: number,
+  planConsumptionQuantity: number,
+  stockQuantity: number,
+  minQuantity: number,
+  maxQuantity: number,
+) {
+  const belowMinQuantity = stockQuantity < minQuantity ? stockQuantity - minQuantity : 0;
+  const aboveMaxQuantity = stockQuantity > maxQuantity ? stockQuantity - maxQuantity : 0;
+  const recommendedQuantity = recommendedDerivativeVolumeQuantity(
+    openingQuantity,
+    planConsumptionQuantity,
+    minQuantity,
+    maxQuantity,
+  );
+  return { belowMinQuantity, aboveMaxQuantity, recommendedQuantity };
+}
+
+export function setDerivativeNormRejection(
+  document: PrototypeDocument,
+  month: string,
+  derivativeId: string,
+  _field: DerivativeNormField,
+  value: number,
+  today: Date,
+): DerivativeNormRejection | null {
+  if (!isMonthKey(month) || !planMonthOpen(month, today)) {
+    return month < '2000-01' || !isMonthKey(month) ? 'month' : 'closed';
+  }
+  const derivative = derivativeByIdOrNull(document, derivativeId);
+  if (!derivative) {
+    return 'derivative';
+  }
+  if (derivative.deletedAt !== null) {
+    return 'locked';
+  }
+  return isQuantityThousandths(value, true) ? null : 'quantity';
+}
+
+/**
+ * Пишет поле норматива (мин/макс) производной на месяц. Нет записи месяца — создаёт.
+ */
+export function setDerivativeNorm(
+  document: PrototypeDocument,
+  month: string,
+  derivativeId: string,
+  field: DerivativeNormField,
+  value: number,
+  today: Date,
+): PrototypeDocument {
+  if (setDerivativeNormRejection(document, month, derivativeId, field, value, today)) {
+    return document;
+  }
+
+  const norms = derivativeNormsList(document);
+  const existing = normForMonth(document, month);
+
+  if (!existing) {
+    const created: DerivativeNorm = {
+      id: `derivative-norm:${month}`,
+      month,
+      lines: [
+        {
+          id: `derivative-norm-line:${month}:${derivativeId}`,
+          derivativeId,
+          minQuantity: 0,
+          maxQuantity: 0,
+          [field]: value,
+        },
+      ],
+    };
+    return {
+      ...document,
+      derivativeNorms: [...norms, created],
+    };
+  }
+
+  const line = existing.lines.find((item) => item.derivativeId === derivativeId);
+  if (line) {
+    if (line[field] === value) {
+      return document;
+    }
+    return {
+      ...document,
+      derivativeNorms: norms.map((item) =>
+        item.month !== month
+          ? item
+          : {
+              ...item,
+              lines: item.lines.map((entry) =>
+                entry.derivativeId === derivativeId ? { ...entry, [field]: value } : entry,
+              ),
+            },
+      ),
+    };
+  }
+
+  const nextLine: DerivativeNormLine = {
+    id: `derivative-norm-line:${month}:${derivativeId}`,
+    derivativeId,
+    minQuantity: 0,
+    maxQuantity: 0,
+    [field]: value,
+  };
+  return {
+    ...document,
+    derivativeNorms: norms.map((item) => (item.month !== month ? item : { ...item, lines: [...item.lines, nextLine] })),
+  };
+}
+
+function buildRow(
+  document: PrototypeDocument,
+  month: string,
+  item: {
+    id: string;
+    name: string;
+    unit: DerivativeUnit;
+    deletedAt: string | null;
+  },
+): DerivativeMovementRow {
+  const openingQuantity = openingQuantityForDerivative(document, month, item.id);
+  const planConsumptionQuantity = planConsumptionQuantityForDerivative(document, item.id, month);
+  const planConsumptionPrice = derivativeConsumptionPrice(document, item.id, month, 'plan');
+  const factConsumptionQuantity = factConsumptionQuantityForDerivative(document, item.id, month);
+  const factConsumptionPrice = derivativeConsumptionPrice(document, item.id, month, 'fact');
+  const inventoryClosingQuantity = inventoryQuantityForDerivative(document, month, item.id);
+  const hasInventoryLine = hasStoredDerivativeInventoryLine(document, month, item.id);
+  const norm = normForDerivative(document, month, item.id);
+  const metrics = derivativeNormMetrics(
+    openingQuantity,
+    planConsumptionQuantity,
+    inventoryClosingQuantity,
+    norm.minQuantity,
+    norm.maxQuantity,
+  );
+
+  return {
+    derivativeId: item.id,
+    name: item.name,
+    unit: item.unit,
+    deleted: item.deletedAt !== null,
+    openingQuantity,
+    planConsumptionQuantity,
+    planConsumptionPrice,
+    planConsumptionCost: costForQuantity(planConsumptionPrice, planConsumptionQuantity),
+    factConsumptionQuantity,
+    factConsumptionPrice,
+    factConsumptionCost: costForQuantity(factConsumptionPrice, factConsumptionQuantity),
+    inventoryClosingQuantity,
+    hasInventoryLine,
+    minQuantity: norm.minQuantity,
+    maxQuantity: norm.maxQuantity,
+    belowMinQuantity: metrics.belowMinQuantity,
+    aboveMaxQuantity: metrics.aboveMaxQuantity,
+    recommendedQuantity: metrics.recommendedQuantity,
+  };
+}
+
+/** Свод месяца: рабочие производные по цехам, расход, остатки по инвентаризации и норматив. */
 export function derivativeMovementMonth(document: PrototypeDocument, month: string): DerivativeMovementMonthView {
   const sections = derivativeSections(document)
     .map((section) => {
-      const rows = section.items.map((item) => {
-        const planConsumptionQuantity = planConsumptionQuantityForDerivative(document, item.id, month);
-        const planConsumptionPrice = derivativeConsumptionPrice(document, item.id, month, 'plan');
-        const factConsumptionQuantity = factConsumptionQuantityForDerivative(document, item.id, month);
-        const factConsumptionPrice = derivativeConsumptionPrice(document, item.id, month, 'fact');
-        return {
-          derivativeId: item.id,
-          name: item.name,
-          unit: item.unit,
-          planConsumptionQuantity,
-          planConsumptionPrice,
-          planConsumptionCost: costForQuantity(planConsumptionPrice, planConsumptionQuantity),
-          factConsumptionQuantity,
-          factConsumptionPrice,
-          factConsumptionCost: costForQuantity(factConsumptionPrice, factConsumptionQuantity),
-        };
-      });
+      const rows = section.items.map((item) => buildRow(document, month, item));
       return {
         workshopId: section.workshopId,
         name: section.name,

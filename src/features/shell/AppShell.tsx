@@ -6,6 +6,10 @@ import { type ReactNode, useEffect, useState } from 'react';
 
 import { useDocumentStore } from '@/data/DocumentProvider';
 import {
+  DERIVATIVE_MOVEMENT_INVENTORY_HREF,
+  DERIVATIVE_MOVEMENT_INVENTORY_TITLE,
+  DERIVATIVE_MOVEMENT_PLAN_HREF,
+  DERIVATIVE_MOVEMENT_PLAN_TITLE,
   DERIVATIVE_MOVEMENT_SECTION_TITLE,
   DERIVATIVE_MOVEMENT_SUMMARY_HREF,
   DERIVATIVE_MOVEMENT_SUMMARY_TITLE,
@@ -86,6 +90,16 @@ const DERIVATIVE_MOVEMENT_NAV: readonly NavItem[] = [
     label: DERIVATIVE_MOVEMENT_SUMMARY_TITLE,
     exact: true,
     navKind: 'report',
+  },
+  {
+    href: DERIVATIVE_MOVEMENT_PLAN_HREF,
+    label: DERIVATIVE_MOVEMENT_PLAN_TITLE,
+    navKind: 'input',
+  },
+  {
+    href: DERIVATIVE_MOVEMENT_INVENTORY_HREF,
+    label: DERIVATIVE_MOVEMENT_INVENTORY_TITLE,
+    navKind: 'input',
   },
 ];
 

@@ -96,9 +96,9 @@
     "semantic_hash": "66c2951a711a3c1f4596fa8fff571b2d"
   },
   "src/data/mock-document.ts": {
-    "mtime": 1793005378.5882308,
-    "seen": 1793005395.384959,
-    "ast_hash": "b7ad6ef0232b2a95340a791b30aae537",
+    "mtime": 1793031527.270425,
+    "seen": 1793031707.1647987,
+    "ast_hash": "e6321627806bf33f1424609a2e43da36",
     "semantic_hash": ""
   },
   "src/domain/categories.ts": {
@@ -120,9 +120,9 @@
     "semantic_hash": "724f33ff464c09fb3fcdf0af0a576d9d"
   },
   "src/domain/document.ts": {
-    "mtime": 1793004827.8204098,
-    "seen": 1793004966.3635683,
-    "ast_hash": "9676730d3b612f1431fffa180a50c389",
+    "mtime": 1793031524.8542035,
+    "seen": 1793031707.1647987,
+    "ast_hash": "0b6146c2f3c7fcc026f4c8e4c1417f64",
     "semantic_hash": ""
   },
   "src/domain/money.ts": {
@@ -268,21 +268,21 @@
     "semantic_hash": ""
   },
   "docs/architecture.md": {
-    "mtime": 1793004935.7492108,
-    "seen": 1793004966.3635683,
-    "ast_hash": "0cad1c1a0e2d8025141255e406bff36b",
+    "mtime": 1793031693.464547,
+    "seen": 1793031707.1647987,
+    "ast_hash": "a7039e476791736e9d1c7b1c16c5420f",
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1793026466.337367,
-    "seen": 1793026615.9354663,
-    "ast_hash": "d256d6a98a64d38416dde2f5cc80bee5",
+    "mtime": 1793036268.2093818,
+    "seen": 1793036319.2745113,
+    "ast_hash": "9143356c707052989cb17725c2f7ca5b",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
-    "mtime": 1793003528.5884056,
-    "seen": 1793003571.4124308,
-    "ast_hash": "be34aa312f76dff8a805f810dec315b4",
+    "mtime": 1793031678.1696992,
+    "seen": 1793031707.1647987,
+    "ast_hash": "a7f2b47540ba56f61488153a1da5a7bb",
     "semantic_hash": ""
   },
   "inputs/README.md": {
@@ -537,9 +537,9 @@
     "semantic_hash": ""
   },
   "src/features/shell/AppShell.tsx": {
-    "mtime": 1793025621.18689,
-    "seen": 1793025979.5258381,
-    "ast_hash": "c54f657ff3501694306c669ab1961c3f",
+    "mtime": 1793031674.4580574,
+    "seen": 1793031707.1647987,
+    "ast_hash": "7860ed55ce064ca9ccc4d9f077b56b90",
     "semantic_hash": ""
   },
   "src/features/shell/Dialog.tsx": {
@@ -1083,21 +1083,21 @@
     "semantic_hash": ""
   },
   "src/features/derivative-movement/paths.ts": {
-    "mtime": 1793006759.9130893,
-    "seen": 1793006821.5665376,
-    "ast_hash": "b41f49029af377f5ad484d219d57486d",
+    "mtime": 1793031599.5148945,
+    "seen": 1793031707.1647987,
+    "ast_hash": "e529dc36954413502c6f2ec701cc454e",
     "semantic_hash": ""
   },
   "src/domain/derivative-movement.ts": {
-    "mtime": 1793022955.9589448,
-    "seen": 1793023026.7380872,
-    "ast_hash": "5bc7216b3e8ec1fd38016efde525c724",
+    "mtime": 1793036262.237368,
+    "seen": 1793036319.2745113,
+    "ast_hash": "8151ce1ba4489b26206472e131326de2",
     "semantic_hash": ""
   },
   "src/features/derivative-movement/DerivativeMovementSummaryTable.tsx": {
-    "mtime": 1793023000.548329,
-    "seen": 1793023026.7380872,
-    "ast_hash": "fcb5f8ff62d90227c89426681e088bd5",
+    "mtime": 1793031653.3808935,
+    "seen": 1793031707.1647987,
+    "ast_hash": "6e8c06cbfe2a6c2dc99526c857ed35d6",
     "semantic_hash": ""
   },
   "src/domain/recipe-consumption.ts": {
@@ -1110,6 +1110,72 @@
     "mtime": 1793026488.3056662,
     "seen": 1793026615.9354663,
     "ast_hash": "557d1bda9638c76c9fa7b967c81639c7",
+    "semantic_hash": ""
+  },
+  "src/app/derivative-movement/inventory/page.tsx": {
+    "mtime": 1793027993.6391654,
+    "seen": 1793028124.2907588,
+    "ast_hash": "223c9bf1e41adc3cf6706051b66b442a",
+    "semantic_hash": ""
+  },
+  "src/features/derivative-movement/DerivativeMovementInventoryScreen.tsx": {
+    "mtime": 1793030612.0170274,
+    "seen": 1793030664.485857,
+    "ast_hash": "060209261c267750126bfea6814dce71",
+    "semantic_hash": ""
+  },
+  "src/features/derivative-movement/DerivativeMovementInventoryTable.tsx": {
+    "mtime": 1793030643.598755,
+    "seen": 1793030664.485857,
+    "ast_hash": "22aa7a93689350d1266abbba4ef7a007",
+    "semantic_hash": ""
+  },
+  "src/features/derivative-movement/text.ts": {
+    "mtime": 1793031619.3688567,
+    "seen": 1793031707.1647987,
+    "ast_hash": "79178b4533f0ef9f361d4a576ccdb153",
+    "semantic_hash": ""
+  },
+  "src/features/derivative-movement/use-derivative-movement.ts": {
+    "mtime": 1793031601.346906,
+    "seen": 1793031707.1647987,
+    "ast_hash": "9d7bbf621d45f0dad40d387611dddd48",
+    "semantic_hash": ""
+  },
+  "docs/tables/derivative-movement-inventory.md": {
+    "mtime": 1793030631.4827204,
+    "seen": 1793030664.485857,
+    "ast_hash": "eeb0ff520ed9fade303941f59cb09cab",
+    "semantic_hash": ""
+  },
+  "docs/tables/derivative-movement-summary.md": {
+    "mtime": 1793031680.2752736,
+    "seen": 1793031707.1647987,
+    "ast_hash": "6fe3da51ce80e720816a67ffbbf92979",
+    "semantic_hash": ""
+  },
+  "src/app/derivative-movement/plan/page.tsx": {
+    "mtime": 1793031694.5086343,
+    "seen": 1793031707.1647987,
+    "ast_hash": "2ae118a6fe41ee2b263cc1b427f73232",
+    "semantic_hash": ""
+  },
+  "src/features/derivative-movement/DerivativeMovementPlanScreen.tsx": {
+    "mtime": 1793036267.1401255,
+    "seen": 1793036319.2745113,
+    "ast_hash": "f15a0da477b8840bb973ced950344bb5",
+    "semantic_hash": ""
+  },
+  "src/features/derivative-movement/DerivativeMovementPlanTable.tsx": {
+    "mtime": 1793036264.5850296,
+    "seen": 1793036319.2745113,
+    "ast_hash": "55f8dd99a7a04e9bbdb6cca5c586f856",
+    "semantic_hash": ""
+  },
+  "docs/tables/derivative-movement-plan.md": {
+    "mtime": 1793036269.0094054,
+    "seen": 1793036319.2745113,
+    "ast_hash": "4870b112e817b14156ba8913a6c6f5ed",
     "semantic_hash": ""
   }
 }

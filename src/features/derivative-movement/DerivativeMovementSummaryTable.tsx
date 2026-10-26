@@ -3,18 +3,22 @@
 import { useState } from 'react';
 
 import type { DerivativeMovementRow, DerivativeMovementSection } from '@/domain/derivative-movement';
+import { MaterialNormDeviation } from '@/features/materials/MaterialNormDeviation';
 import { QuantityRead } from '@/features/materials/QuantityCell';
+import {
+  ReportSubBannerColumnHeaders,
+  type ReportSubBannerGroup,
+} from '@/features/movement/FinishedGoodsNormativeColumnHeading';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
   blockHeadingClassName,
-  ColumnLabel,
+  type CellKind,
   categoryBandClassName,
   categoryNameClassName,
   categoryNameRowClassName,
   cellKindClassName,
   columnDividerClassName,
-  columnHeadingClassName,
   entityNameRowClassName,
   keepWithNext,
   nameHeadingClassName,
@@ -27,14 +31,23 @@ import {
 } from '@/features/table';
 
 type ColumnKey =
+  | 'opening'
   | 'planConsumption'
   | 'planConsumptionPrice'
   | 'planConsumptionCost'
   | 'factConsumption'
   | 'factConsumptionPrice'
-  | 'factConsumptionCost';
+  | 'factConsumptionCost'
+  | 'inventoryClosing'
+  | 'min'
+  | 'max'
+  | 'normDeviation';
 
 const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; hint?: string }[] }[] = [
+  {
+    label: 'Остаток на начало',
+    columns: [{ key: 'opening', label: 'Факт', hint: 'по данным инвентаризации прошлого месяца' }],
+  },
   {
     label: 'План расхода',
     columns: [
@@ -73,10 +86,48 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
       },
     ],
   },
+  {
+    label: 'Остаток на конец',
+    columns: [
+      {
+        key: 'inventoryClosing',
+        label: 'Факт',
+        hint: 'по данным инвентаризации',
+      },
+      { key: 'min', label: 'Мин.' },
+      { key: 'max', label: 'Макс.' },
+      { key: 'normDeviation', label: 'Откл.' },
+    ],
+  },
+];
+
+const DERIVATIVE_CLOSING_SUB_BANNERS: readonly ReportSubBannerGroup[] = [
+  {
+    label: 'инвентаризация',
+    keys: ['inventoryClosing'],
+  },
+  {
+    label: 'нормативный',
+    keys: ['min', 'max', 'normDeviation'],
+  },
 ];
 
 const COLUMNS = COLUMN_GROUPS.flatMap((group) => group.columns);
 const GROUP_END_KEYS = new Set(COLUMN_GROUPS.slice(0, -1).map((group) => group.columns.at(-1)?.key));
+
+const COLUMN_KIND: Record<ColumnKey, CellKind> = {
+  opening: 'repeated',
+  planConsumption: 'computed',
+  planConsumptionPrice: 'computed',
+  planConsumptionCost: 'computed',
+  factConsumption: 'computed',
+  factConsumptionPrice: 'computed',
+  factConsumptionCost: 'computed',
+  inventoryClosing: 'repeated',
+  min: 'repeated',
+  max: 'repeated',
+  normDeviation: 'computed',
+};
 
 function columnEdgeClass(key: ColumnKey): string {
   return GROUP_END_KEYS.has(key) ? tableBorder.rightThick : columnDividerClassName;
@@ -86,7 +137,7 @@ export function DerivativeMovementSummaryTable({ sections }: { sections: readonl
   return (
     <div className={tableFrameClassName}>
       <table className={tableClassName}>
-        <caption className="sr-only">Движение производных: план и факт расхода</caption>
+        <caption className="sr-only">Движение производных: остатки, расход и норматив</caption>
         <thead className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
@@ -102,18 +153,23 @@ export function DerivativeMovementSummaryTable({ sections }: { sections: readonl
             ))}
           </tr>
           <tr>
-            <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+            <th rowSpan={2} scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               Производная
             </th>
-            {COLUMNS.map((column) => (
-              <th
-                key={column.key}
-                scope="col"
-                className={`${columnHeadingClassName} last:border-r-0 ${columnEdgeClass(column.key)}`}
-              >
-                <ColumnLabel label={column.label} hint={column.hint} />
-              </th>
-            ))}
+            <ReportSubBannerColumnHeaders
+              row="primary"
+              columns={COLUMNS}
+              subBannerGroups={DERIVATIVE_CLOSING_SUB_BANNERS}
+              groupEndClass={columnEdgeClass}
+            />
+          </tr>
+          <tr>
+            <ReportSubBannerColumnHeaders
+              row="secondary"
+              columns={COLUMNS}
+              subBannerGroups={DERIVATIVE_CLOSING_SUB_BANNERS}
+              groupEndClass={columnEdgeClass}
+            />
           </tr>
         </thead>
         <tbody>
@@ -200,7 +256,7 @@ function DerivativeRow({ row, index }: { row: DerivativeMovementRow; index: numb
       {COLUMNS.map((column) => (
         <td
           key={`row:${column.key}`}
-          className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${cellKindClassName.computed} ${columnEdgeClass(column.key)}`}
+          className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${cellKindClassName[COLUMN_KIND[column.key]]} ${columnEdgeClass(column.key)}`}
         >
           <RowCell column={column.key} row={row} />
         </td>
@@ -210,9 +266,12 @@ function DerivativeRow({ row, index }: { row: DerivativeMovementRow; index: numb
 }
 
 function RowCell({ column, row }: { column: ColumnKey; row: DerivativeMovementRow }) {
+  const unit = row.unit;
   switch (column) {
+    case 'opening':
+      return <QuantityRead value={row.openingQuantity} unit={unit} signed />;
     case 'planConsumption':
-      return <QuantityRead value={row.planConsumptionQuantity} unit={row.unit} />;
+      return <QuantityRead value={row.planConsumptionQuantity} unit={unit} />;
     case 'planConsumptionPrice':
       return (
         <VatMoneyCell
@@ -230,7 +289,7 @@ function RowCell({ column, row }: { column: ColumnKey; row: DerivativeMovementRo
         />
       );
     case 'factConsumption':
-      return <QuantityRead value={row.factConsumptionQuantity} unit={row.unit} />;
+      return <QuantityRead value={row.factConsumptionQuantity} unit={unit} />;
     case 'factConsumptionPrice':
       return (
         <VatMoneyCell
@@ -245,6 +304,20 @@ function RowCell({ column, row }: { column: ColumnKey; row: DerivativeMovementRo
           label="Фактическая стоимость расхода"
           withVat={row.factConsumptionCost.withVat}
           exVat={row.factConsumptionCost.exVat}
+        />
+      );
+    case 'inventoryClosing':
+      return <QuantityRead value={row.inventoryClosingQuantity} unit={unit} signed />;
+    case 'min':
+      return <QuantityRead value={row.minQuantity} unit={unit} />;
+    case 'max':
+      return <QuantityRead value={row.maxQuantity} unit={unit} />;
+    case 'normDeviation':
+      return (
+        <MaterialNormDeviation
+          belowMinQuantity={row.belowMinQuantity}
+          aboveMaxQuantity={row.aboveMaxQuantity}
+          unit={unit}
         />
       );
     default:
