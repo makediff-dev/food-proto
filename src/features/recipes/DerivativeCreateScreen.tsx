@@ -6,20 +6,24 @@ import { useId, useMemo, useState } from 'react';
 import {
   activeDerivatives,
   derivativeByIdOrNull,
-  isDerivativeUnit,
   isDerivativeWorkshopId,
+  outputPieceThousandthsOf,
   warehouseIdForWorkshop,
 } from '@/domain/derivatives';
 import {
-  DERIVATIVE_UNITS,
   DERIVATIVE_WORKSHOPS,
   type Derivative,
   type DerivativeLine,
-  type DerivativeUnit,
   type DerivativeWorkshopId,
 } from '@/domain/document';
 import { activeMaterials } from '@/domain/materials';
-import { recipeComponentsKilogramThousandths } from '@/domain/recipe-yield';
+import { QUANTITY_SCALE } from '@/domain/quantity';
+import {
+  applyHeatTreatmentYield,
+  gramsPerPieceThousandths,
+  outputKilogramThousandthsFromPiecesAndGrams,
+  recipeComponentsKilogramThousandths,
+} from '@/domain/recipe-yield';
 import { formatQuantity, formatQuantityDraft, parseQuantityInput } from '@/features/materials/text';
 import {
   componentDraftKey,
@@ -36,6 +40,10 @@ import { useDerivatives } from '@/features/recipes/use-derivatives';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { IconArrowLeft, IconCheck } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
+import { parsePercentWhole } from '@/features/table/format';
+
+const yieldInputClassName =
+  'h-11 min-w-0 flex-1 border border-line bg-paper px-2 text-base text-ink outline-none focus-visible:border-ink focus-visible:bg-sheet focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink';
 
 export function DerivativeCreateScreen({ workshopQuery }: { workshopQuery: string }) {
   const initialWorkshop = isDerivativeWorkshopId(workshopQuery) ? workshopQuery : '';
@@ -79,6 +87,23 @@ function draftsFromLines(lines: readonly DerivativeLine[]): Record<string, Deriv
   return drafts;
 }
 
+function initialPiecesDraft(existing: Derivative | null): string {
+  if (existing?.unit !== 'шт') {
+    return '';
+  }
+  const pieces = outputPieceThousandthsOf(existing) ?? QUANTITY_SCALE;
+  return formatQuantityDraft(pieces);
+}
+
+function initialGramsDraft(existing: Derivative | null): string {
+  if (existing?.unit !== 'шт') {
+    return '';
+  }
+  const pieces = outputPieceThousandthsOf(existing) ?? QUANTITY_SCALE;
+  const grams = gramsPerPieceThousandths(existing.outputKilogramThousandths, pieces);
+  return grams === null ? '' : formatQuantityDraft(grams);
+}
+
 function DerivativeForm({
   initialWorkshopId,
   existing,
@@ -90,14 +115,22 @@ function DerivativeForm({
   const router = useRouter();
   const workshopFieldId = useId();
   const nameFieldId = useId();
-  const unitFieldId = useId();
+  const byPieceFieldId = useId();
+  const piecesFieldId = useId();
+  const gramsFieldId = useId();
   const outputFieldId = useId();
+  const heatTreatmentFieldId = useId();
   const editingId = existing?.id ?? null;
 
   const [workshopId, setWorkshopId] = useState<DerivativeWorkshopId | ''>(initialWorkshopId);
   const [name, setName] = useState(existing?.name ?? '');
-  const [unit, setUnit] = useState<DerivativeUnit>(existing?.unit ?? 'кг');
+  const [byPiece, setByPiece] = useState(() => existing?.unit === 'шт');
+  const [piecesDraft, setPiecesDraft] = useState(() => initialPiecesDraft(existing));
+  const [gramsDraft, setGramsDraft] = useState(() => initialGramsDraft(existing));
   const [outputDraft, setOutputDraft] = useState(() => formatQuantityDraft(existing?.outputKilogramThousandths ?? 0));
+  const [heatTreatmentDraft, setHeatTreatmentDraft] = useState(() =>
+    String(existing?.heatTreatmentYieldPercent ?? 100),
+  );
   const [drafts, setDrafts] = useState<Record<string, DerivativeLineDraft>>(() =>
     existing ? draftsFromLines(existing.lines) : {},
   );
@@ -139,16 +172,80 @@ function DerivativeForm({
     return result;
   }, [drafts]);
 
-  const componentsKilograms = useMemo(
-    () => recipeComponentsKilogramThousandths(journal.document, draftLines),
-    [journal.document, draftLines],
-  );
+  const componentsKilograms = useMemo(() => {
+    const raw = recipeComponentsKilogramThousandths(journal.document, draftLines);
+    const percent = parsePercentWhole(heatTreatmentDraft);
+    if (percent === null || percent <= 0) {
+      return raw;
+    }
+    return applyHeatTreatmentYield(raw, percent);
+  }, [journal.document, draftLines, heatTreatmentDraft]);
 
   function setQuantity(key: string, raw: string) {
     setDrafts((current) => ({
       ...current,
       [key]: { ...(current[key] ?? emptyDerivativeLineDraft()), quantity: raw },
     }));
+  }
+
+  function enableByPiece() {
+    setByPiece(true);
+    setPiecesDraft(formatQuantityDraft(QUANTITY_SCALE));
+    const kilograms = parseQuantityInput(outputDraft, false);
+    if (kilograms === null || kilograms < 0) {
+      setGramsDraft('');
+      return;
+    }
+    const grams = gramsPerPieceThousandths(kilograms, QUANTITY_SCALE);
+    setGramsDraft(grams === null ? '' : formatQuantityDraft(grams));
+  }
+
+  function disableByPiece() {
+    setByPiece(false);
+    setPiecesDraft('');
+    setGramsDraft('');
+  }
+
+  function onOutputChange(raw: string) {
+    setOutputDraft(raw);
+    if (!byPiece) {
+      return;
+    }
+    const kilograms = parseQuantityInput(raw, false);
+    const pieces = parseQuantityInput(piecesDraft, false);
+    if (kilograms === null || kilograms < 0 || pieces === null || pieces <= 0) {
+      return;
+    }
+    const grams = gramsPerPieceThousandths(kilograms, pieces);
+    if (grams !== null) {
+      setGramsDraft(formatQuantityDraft(grams));
+    }
+  }
+
+  function onPiecesChange(raw: string) {
+    setPiecesDraft(raw);
+    const pieces = parseQuantityInput(raw, false);
+    const grams = parseQuantityInput(gramsDraft, false);
+    if (pieces === null || pieces <= 0 || grams === null || grams < 0) {
+      return;
+    }
+    const kilograms = outputKilogramThousandthsFromPiecesAndGrams(pieces, grams);
+    if (kilograms !== null) {
+      setOutputDraft(formatQuantityDraft(kilograms));
+    }
+  }
+
+  function onGramsChange(raw: string) {
+    setGramsDraft(raw);
+    const pieces = parseQuantityInput(piecesDraft, false);
+    const grams = parseQuantityInput(raw, false);
+    if (pieces === null || pieces <= 0 || grams === null || grams < 0) {
+      return;
+    }
+    const kilograms = outputKilogramThousandthsFromPiecesAndGrams(pieces, grams);
+    if (kilograms !== null) {
+      setOutputDraft(formatQuantityDraft(kilograms));
+    }
   }
 
   function parsedLines(): DerivativeLine[] | null {
@@ -200,15 +297,27 @@ function DerivativeForm({
       setSaveError(DERIVATIVE_ADD_ERROR.workshop);
       return;
     }
-    if (!isDerivativeUnit(unit)) {
-      setSaveError(DERIVATIVE_ADD_ERROR.unit);
-      return;
-    }
 
     const outputKilogramThousandths = parseQuantityInput(outputDraft, false);
     if (outputKilogramThousandths === null) {
       setSaveError(DERIVATIVE_ADD_ERROR.output);
       return;
+    }
+
+    const heatTreatmentYieldPercent = parsePercentWhole(heatTreatmentDraft);
+    if (heatTreatmentYieldPercent === null || heatTreatmentYieldPercent <= 0) {
+      setSaveError(DERIVATIVE_ADD_ERROR['heat-treatment-yield']);
+      return;
+    }
+
+    let outputPieceThousandths: number | null = null;
+    if (byPiece) {
+      const pieces = parseQuantityInput(piecesDraft, false);
+      if (pieces === null || pieces <= 0) {
+        setSaveError(DERIVATIVE_ADD_ERROR.pieces);
+        return;
+      }
+      outputPieceThousandths = pieces;
     }
 
     const lines = parsedLines();
@@ -219,8 +328,10 @@ function DerivativeForm({
     const input = {
       name,
       workshopId,
-      unit,
+      unit: byPiece ? ('шт' as const) : ('кг' as const),
       outputKilogramThousandths,
+      outputPieceThousandths,
+      heatTreatmentYieldPercent,
       lines,
     };
 
@@ -306,41 +417,80 @@ function DerivativeForm({
               />
             </div>
 
-            <div>
-              <label htmlFor={unitFieldId} className="text-sm text-muted">
-                Единица
-              </label>
-              <select
-                id={unitFieldId}
-                value={unit}
+            <label htmlFor={byPieceFieldId} className="flex cursor-pointer items-center gap-2 text-base text-ink">
+              <input
+                id={byPieceFieldId}
+                type="checkbox"
+                checked={byPiece}
                 onChange={(event) => {
-                  const next = event.target.value;
-                  if (isDerivativeUnit(next)) {
-                    setUnit(next);
+                  if (event.target.checked) {
+                    enableByPiece();
+                  } else {
+                    disableByPiece();
                   }
                 }}
-                className={`mt-2 ${fieldClassName}`}
-              >
-                {DERIVATIVE_UNITS.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </div>
+                className="size-4 accent-ink"
+              />
+              Поштучно
+            </label>
+
+            <fieldset className="min-w-0 border-0 p-0">
+              <legend className="text-sm text-muted">Рассчитан на</legend>
+              <div className="mt-2 flex flex-col gap-2">
+                <div className="flex items-center gap-1.5">
+                  <input
+                    id={outputFieldId}
+                    aria-label="Килограммы"
+                    value={outputDraft}
+                    onChange={(event) => onOutputChange(event.target.value)}
+                    className={yieldInputClassName}
+                    inputMode="decimal"
+                    autoComplete="off"
+                  />
+                  <span className="shrink-0 text-sm text-ink">кг</span>
+                </div>
+                {byPiece ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      id={piecesFieldId}
+                      aria-label="Штуки"
+                      value={piecesDraft}
+                      onChange={(event) => onPiecesChange(event.target.value)}
+                      className={yieldInputClassName}
+                      inputMode="decimal"
+                      autoComplete="off"
+                    />
+                    <span className="shrink-0 text-sm text-ink">шт</span>
+                    <input
+                      id={gramsFieldId}
+                      aria-label="Граммы на штуку"
+                      value={gramsDraft}
+                      onChange={(event) => onGramsChange(event.target.value)}
+                      className={yieldInputClassName}
+                      inputMode="decimal"
+                      autoComplete="off"
+                    />
+                    <span className="shrink-0 text-sm text-ink">г/шт</span>
+                  </div>
+                ) : null}
+              </div>
+            </fieldset>
 
             <div>
-              <label htmlFor={outputFieldId} className="text-sm text-muted">
-                Рассчитан на, кг
+              <label htmlFor={heatTreatmentFieldId} className="text-sm text-muted">
+                Выход после термообработки
               </label>
-              <input
-                id={outputFieldId}
-                value={outputDraft}
-                onChange={(event) => setOutputDraft(event.target.value)}
-                className={`mt-2 ${fieldClassName}`}
-                inputMode="decimal"
-                autoComplete="off"
-              />
+              <div className="mt-2 flex items-center gap-1.5">
+                <input
+                  id={heatTreatmentFieldId}
+                  value={heatTreatmentDraft}
+                  onChange={(event) => setHeatTreatmentDraft(event.target.value)}
+                  className={yieldInputClassName}
+                  inputMode="numeric"
+                  autoComplete="off"
+                />
+                <span className="shrink-0 text-sm text-ink">%</span>
+              </div>
             </div>
 
             <div>

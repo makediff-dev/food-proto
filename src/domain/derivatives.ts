@@ -11,7 +11,7 @@ import {
 } from '@/domain/document';
 import { materialsList } from '@/domain/materials';
 import { isQuantityThousandths } from '@/domain/quantity';
-import { validateRecipeYield } from '@/domain/recipe-yield';
+import { isHeatTreatmentYieldPercent, validateRecipeYield } from '@/domain/recipe-yield';
 
 export type DerivativeNameRejection = 'empty' | 'too-long' | 'duplicate' | 'missing';
 
@@ -24,7 +24,9 @@ export type DerivativeAddRejection =
   | 'component'
   | 'warehouse'
   | 'output'
-  | 'yield';
+  | 'yield'
+  | 'pieces'
+  | 'heat-treatment-yield';
 
 export function derivativesList(document: PrototypeDocument): Derivative[] {
   return document.derivatives ?? [];
@@ -36,6 +38,17 @@ export function isDerivativeWorkshopId(value: string): value is DerivativeWorksh
 
 export function isDerivativeUnit(value: string): value is DerivativeUnit {
   return (DERIVATIVE_UNITS as readonly string[]).includes(value);
+}
+
+/**
+ * Штуки партии при поштучно. Нет поля, `null`, ноль или чужое число — не заданы.
+ */
+export function outputPieceThousandthsOf(derivative: { outputPieceThousandths?: number | null }): number | null {
+  const value = derivative.outputPieceThousandths;
+  if (value == null || !isQuantityThousandths(value, false) || value <= 0) {
+    return null;
+  }
+  return value;
 }
 
 export function derivativeWorkshopById(workshopId: DerivativeWorkshopId) {
@@ -140,6 +153,8 @@ function writeRejection(
     workshopId: DerivativeWorkshopId;
     unit: DerivativeUnit;
     outputKilogramThousandths: number;
+    outputPieceThousandths: number | null;
+    heatTreatmentYieldPercent: number;
     lines: readonly DerivativeLine[];
   },
   options?: { exceptId?: string },
@@ -149,6 +164,20 @@ function writeRejection(
   }
   if (!isDerivativeUnit(input.unit)) {
     return 'unit';
+  }
+  if (!isHeatTreatmentYieldPercent(input.heatTreatmentYieldPercent)) {
+    return 'heat-treatment-yield';
+  }
+  if (input.unit === 'шт') {
+    if (
+      input.outputPieceThousandths === null ||
+      !isQuantityThousandths(input.outputPieceThousandths, false) ||
+      input.outputPieceThousandths <= 0
+    ) {
+      return 'pieces';
+    }
+  } else if (input.outputPieceThousandths !== null) {
+    return 'pieces';
   }
 
   const warehouseId = warehouseIdForWorkshop(input.workshopId);
@@ -162,7 +191,7 @@ function writeRejection(
     return linesRejection;
   }
 
-  return validateRecipeYield(document, input.outputKilogramThousandths, input.lines);
+  return validateRecipeYield(document, input.outputKilogramThousandths, input.lines, input.heatTreatmentYieldPercent);
 }
 
 export function addDerivative(
@@ -173,6 +202,8 @@ export function addDerivative(
     workshopId: DerivativeWorkshopId;
     unit: DerivativeUnit;
     outputKilogramThousandths: number;
+    outputPieceThousandths: number | null;
+    heatTreatmentYieldPercent: number;
     lines: readonly DerivativeLine[];
   },
 ): { document: PrototypeDocument; rejection: DerivativeAddRejection | null } {
@@ -187,6 +218,8 @@ export function addDerivative(
     workshopId: input.workshopId,
     unit: input.unit,
     outputKilogramThousandths: input.outputKilogramThousandths,
+    outputPieceThousandths: input.outputPieceThousandths,
+    heatTreatmentYieldPercent: input.heatTreatmentYieldPercent,
     lines: input.lines.map((line) => ({ ...line })),
     deletedAt: null,
   };
@@ -208,6 +241,8 @@ export function updateDerivative(
     workshopId: DerivativeWorkshopId;
     unit: DerivativeUnit;
     outputKilogramThousandths: number;
+    outputPieceThousandths: number | null;
+    heatTreatmentYieldPercent: number;
     lines: readonly DerivativeLine[];
   },
 ): { document: PrototypeDocument; rejection: DerivativeAddRejection | null } {
@@ -232,6 +267,8 @@ export function updateDerivative(
               workshopId: input.workshopId,
               unit: input.unit,
               outputKilogramThousandths: input.outputKilogramThousandths,
+              outputPieceThousandths: input.outputPieceThousandths,
+              heatTreatmentYieldPercent: input.heatTreatmentYieldPercent,
               lines: input.lines.map((line) => ({ ...line })),
             }
           : item,

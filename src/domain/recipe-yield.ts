@@ -55,8 +55,39 @@ export function recipeLineKilogramThousandths(document: PrototypeDocument, line:
     return line.quantity;
   }
 
-  // шт: рецепт производной — на одну штуку; вес штуки = рассчитанный выход.
-  return ratioRound(line.quantity * derivative.outputKilogramThousandths, QUANTITY_SCALE) ?? 0;
+  // шт: вес штуки = рассчитанный выход / число штук партии; нет штук — как на 1 шт.
+  const pieces =
+    derivative.outputPieceThousandths != null &&
+    isQuantityThousandths(derivative.outputPieceThousandths, false) &&
+    derivative.outputPieceThousandths > 0
+      ? derivative.outputPieceThousandths
+      : QUANTITY_SCALE;
+  return ratioRound(line.quantity * derivative.outputKilogramThousandths, pieces) ?? 0;
+}
+
+/**
+ * Граммы на штуку (тысячные доли г) из рассчитанного выхода и числа штук.
+ * 1 тысячная кг = 1 г.
+ */
+export function gramsPerPieceThousandths(outputKilogramThousandths: number, pieceThousandths: number): number | null {
+  if (!isQuantityThousandths(pieceThousandths, false) || pieceThousandths <= 0) {
+    return null;
+  }
+  return ratioRound(outputKilogramThousandths * QUANTITY_SCALE * QUANTITY_SCALE, pieceThousandths);
+}
+
+/** Рассчитанный выход (тысячные кг) из штук и г/шт. */
+export function outputKilogramThousandthsFromPiecesAndGrams(
+  pieceThousandths: number,
+  gramThousandths: number,
+): number | null {
+  if (!isQuantityThousandths(pieceThousandths, false) || pieceThousandths <= 0) {
+    return null;
+  }
+  if (!isQuantityThousandths(gramThousandths, false) || gramThousandths < 0) {
+    return null;
+  }
+  return ratioRound(pieceThousandths * gramThousandths, QUANTITY_SCALE * QUANTITY_SCALE);
 }
 
 /** Сумма кг по компонентам рецепта, тысячные доли. */
@@ -69,6 +100,22 @@ export function recipeComponentsKilogramThousandths(
     total += recipeLineKilogramThousandths(document, line);
   }
   return total;
+}
+
+/**
+ * «По компонентам» у производной: сумма кг × выход после термообработки / 100.
+ * Целый процент; 100 — без потерь. Половина от нуля.
+ */
+export function applyHeatTreatmentYield(
+  componentsKilogramThousandths: number,
+  heatTreatmentYieldPercent: number,
+): number {
+  return ratioRound(componentsKilogramThousandths * heatTreatmentYieldPercent, 100) ?? 0;
+}
+
+/** Целый процент выхода после термообработки: больше нуля. */
+export function isHeatTreatmentYieldPercent(value: number): boolean {
+  return Number.isSafeInteger(value) && value > 0;
 }
 
 export function isRecipeOutputKilogramThousandths(value: number): boolean {
@@ -99,10 +146,11 @@ export function validateRecipeYield(
   document: PrototypeDocument,
   outputKilogramThousandths: number,
   lines: readonly (DerivativeLine | ProductRecipeLine)[],
+  heatTreatmentYieldPercent: number = 100,
 ): 'output' | 'yield' | null {
-  return recipeYieldRejection(
-    outputKilogramThousandths,
+  const components = applyHeatTreatmentYield(
     recipeComponentsKilogramThousandths(document, lines),
-    lines.length,
+    heatTreatmentYieldPercent,
   );
+  return recipeYieldRejection(outputKilogramThousandths, components, lines.length);
 }

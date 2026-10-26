@@ -538,6 +538,8 @@ const mockDerivatives: Derivative[] = [
     workshopId: 'meat-1',
     unit: 'кг',
     outputKilogramThousandths: q(8.32),
+    outputPieceThousandths: null,
+    heatTreatmentYieldPercent: 100,
     lines: [
       {
         id: 'derivative-line-mince-beef',
@@ -566,6 +568,8 @@ const mockDerivatives: Derivative[] = [
     workshopId: 'meat-1',
     unit: 'шт',
     outputKilogramThousandths: q(0.097),
+    outputPieceThousandths: q(1),
+    heatTreatmentYieldPercent: 100,
     lines: [
       {
         id: 'derivative-line-cutlet-mince',
@@ -600,6 +604,8 @@ const mockDerivatives: Derivative[] = [
     workshopId: 'meat-1',
     unit: 'кг',
     outputKilogramThousandths: q(3.55),
+    outputPieceThousandths: null,
+    heatTreatmentYieldPercent: 100,
     lines: [
       {
         id: 'derivative-line-broth-beef',
@@ -628,6 +634,8 @@ const mockDerivatives: Derivative[] = [
     workshopId: 'bakery-1',
     unit: 'кг',
     outputKilogramThousandths: q(5.33),
+    outputPieceThousandths: null,
+    heatTreatmentYieldPercent: 100,
     lines: [
       {
         id: 'derivative-line-dough-flour',
@@ -662,6 +670,8 @@ const mockDerivatives: Derivative[] = [
     workshopId: 'bakery-1',
     unit: 'шт',
     outputKilogramThousandths: q(0.065),
+    outputPieceThousandths: q(1),
+    heatTreatmentYieldPercent: 100,
     lines: [
       {
         id: 'derivative-line-bun-dough',

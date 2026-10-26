@@ -15,6 +15,8 @@ export const DERIVATIVE_ADD_ERROR: Record<DerivativeAddRejection, string> = {
   warehouse: 'Выберите склад.',
   output: 'Укажите, на сколько кг рассчитан рецепт.',
   yield: 'Рассчитанный выход и сумма по компонентам не сходятся больше чем на 1 г.',
+  pieces: 'Укажите число штук.',
+  'heat-treatment-yield': 'Укажите выход после термообработки целым процентом больше нуля.',
 };
 
 export const PRODUCT_RECIPE_ERROR: Record<ProductRecipeRejection, string> = {
@@ -26,9 +28,16 @@ export const PRODUCT_RECIPE_ERROR: Record<ProductRecipeRejection, string> = {
   yield: 'Рассчитанный выход и сумма по компонентам не сходятся больше чем на 1 г.',
 };
 
-export function formatRecipeBatchLabel(outputKilogramThousandths: number): string {
-  if (outputKilogramThousandths <= 0) {
-    return '';
+/**
+ * Колонка выхода. Штуки заданы — «на 1 шт / 0,097 кг», иначе «на X кг».
+ */
+export function formatRecipeBatchLabel(
+  outputKilogramThousandths: number,
+  pieceThousandths: number | null = null,
+): string {
+  const kilograms = outputKilogramThousandths > 0 ? formatQuantity(outputKilogramThousandths, 'кг') : '';
+  if (pieceThousandths !== null && pieceThousandths > 0 && kilograms) {
+    return `на ${formatQuantity(pieceThousandths, 'шт')} / ${kilograms}`;
   }
-  return `на ${formatQuantity(outputKilogramThousandths, 'кг')}`;
+  return kilograms ? `на ${kilograms}` : '';
 }

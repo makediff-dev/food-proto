@@ -9,6 +9,8 @@ type DerivativeWriteInput = {
   workshopId: DerivativeWorkshopId;
   unit: DerivativeUnit;
   outputKilogramThousandths: number;
+  outputPieceThousandths: number | null;
+  heatTreatmentYieldPercent: number;
   lines: readonly DerivativeLine[];
 };
 

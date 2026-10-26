@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 50 as const;
+export const SCHEMA_VERSION = 51 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -413,16 +413,30 @@ export interface DerivativeLine {
 /**
  * Производная цеха. Имя уникально в пределах склада.
  * Себестоимость из состава пока не считают.
- * У единицы «шт» рецепт на одну штуку: «рассчитан на» — её вес.
+ * У единицы «шт» (режим поштучно) — партия из `outputPieceThousandths` штук
+ * на `outputKilogramThousandths` кг; вес одной штуки = выход / штуки.
+ * У «кг» штуки не задают (`null`).
  */
 export interface Derivative extends DeletableRecord {
   workshopId: DerivativeWorkshopId;
   unit: DerivativeUnit;
   /**
    * На сколько кг рассчитан рецепт, тысячные доли кг.
-   * Должен совпадать с суммой кг компонентов с допуском 1 г.
+   * Должен совпадать с «по компонентам» (сумма кг × выход после термообработки / 100)
+   * с допуском 1 г.
    */
   outputKilogramThousandths: number;
+  /**
+   * На сколько штук рассчитана партия, тысячные доли.
+   * Обязательно при `unit === 'шт'`; при `кг` — `null`.
+   * Старая запись без поля при `шт` читается как 1 шт.
+   */
+  outputPieceThousandths: number | null;
+  /**
+   * Выход после термообработки, целый процент (100 = без потерь).
+   * Умножает только сумму кг компонентов на экране и при сверке с «рассчитан на».
+   */
+  heatTreatmentYieldPercent: number;
   lines: DerivativeLine[];
 }
 

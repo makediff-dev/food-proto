@@ -19,7 +19,7 @@ export type RecipeListItem = {
   id: string;
   name: string;
   /**
-   * Выход рецепта: «на X кг». Узкая колонка после названия.
+   * Выход рецепта: «на X кг» или «на N шт / X кг».
    * Пусто — ячейка без текста (нет заданного выхода).
    */
   batchLabel?: string;
@@ -29,8 +29,8 @@ export type RecipeListItem = {
   href?: string;
 };
 
-/** Фиксированная ширина колонки «на X кг». */
-const BATCH_COLUMN_WIDTH_PX = 108;
+/** Фиксированная ширина колонки выхода: «на 1 шт / 0,097 кг». */
+const BATCH_COLUMN_WIDTH_PX = 148;
 
 export type RecipeListSection = {
   id: string;
