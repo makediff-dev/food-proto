@@ -67,6 +67,44 @@ function ArrowIcon() {
   return <span aria-hidden="true">↗</span>;
 }
 
+const faqItems = [
+  {
+    question: 'Нужно ли покупать специальное оборудование?',
+    answer:
+      'Нет, экран работает в браузере на планшете. Поддерживаемые модели и требования к настройке устройства будут указаны после технического тестирования.',
+  },
+  {
+    question: 'Можно ли использовать несколько планшетов в одном заведении?',
+    answer:
+      'Да. У торговой точки может быть несколько экранов с уникальными ссылками, а статистика объединяется на уровне заведения. Количество планшетов не формирует отдельную стоимость.',
+  },
+  {
+    question: 'Что произойдёт, если отключится интернет?',
+    answer:
+      'Экран продолжит принимать оценки и сохранит фактическое время локально. После восстановления связи очередь отправится автоматически без дублирования.',
+  },
+  {
+    question: 'Можно ли изменить оформление экрана?',
+    answer:
+      'Предусмотрены логотип, фон, основные цвета и иконки оценок. На каком уровне применяется оформление — компания, точка или экран — ещё согласовывается.',
+  },
+  {
+    question: 'Как рассчитывается стоимость подписки?',
+    answer:
+      'Стоимость зависит от количества торговых точек. Цена за точку, скидки и точная формула пока не утверждены.',
+  },
+  {
+    question: 'Что произойдёт после 7 дней бесплатного доступа?',
+    answer:
+      'Без оплаты доступ будет ограничен. Точный состав доступных экранов и действий после окончания периода требует согласования.',
+  },
+  {
+    question: 'Можно ли отменить подписку?',
+    answer:
+      'Управление автопродлением предусмотрено. Точные сроки и последствия отмены будут зафиксированы вместе с правилами платёжного провайдера.',
+  },
+] as const;
+
 function Landing({
   onRegister,
   onDemo,
@@ -91,7 +129,9 @@ function Landing({
         </button>
         <nav className={styles.siteNav} aria-label="Навигация по странице">
           <a href="#how">Как работает</a>
+          <a href="#analytics">Аналитика</a>
           <a href="#price">Стоимость</a>
+          <a href="#faq">Вопросы</a>
         </nav>
         <div className={styles.headerActions}>
           <button type="button" className={styles.textButton} onClick={onDemo}>
@@ -178,6 +218,167 @@ function Landing({
         </ol>
       </section>
 
+      <section className={styles.benefitsSection}>
+        <div className={styles.sectionIntro}>
+          <p className={styles.kicker}>Начать можно без сложного внедрения</p>
+          <h2>Обычный планшет становится точкой контакта.</h2>
+        </div>
+        <div className={styles.benefitGrid}>
+          <article>
+            <span>01</span>
+            <h3>Работает в браузере</h3>
+            <p>Посетителю не нужны приложение, регистрация или собственный смартфон.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>Подключается по ссылке</h3>
+            <p>Для каждого экрана создаётся уникальная ссылка, связанная с нужной торговой точкой.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Не теряет оценки офлайн</h3>
+            <p>Временная потеря сети не останавливает сбор: оценки ждут синхронизации на устройстве.</p>
+          </article>
+        </div>
+      </section>
+
+      <section className={styles.analyticsSection} id="analytics">
+        <div className={styles.analyticsCopy}>
+          <p className={styles.kicker}>Вся сеть в одном обзоре</p>
+          <h2>Не средний балл, а понятная картина по каждой точке.</h2>
+          <p>
+            Смотрите количество и распределение оценок, динамику периода, комментарии и сравнение заведений. Формула
+            удовлетворённости не показывается, пока она не согласована.
+          </p>
+          <button type="button" className={styles.outlineButton} onClick={onDemo}>
+            Посмотреть кабинет <ArrowIcon />
+          </button>
+        </div>
+        <figure className={styles.analyticsPreview}>
+          <figcaption className={styles.srOnly}>Демонстрационный пример аналитики</figcaption>
+          <div className={styles.previewTopline}>
+            <span>Последние 7 дней</span>
+            <strong>248 оценок</strong>
+          </div>
+          <div className={styles.previewBars}>
+            <div>
+              <span>Хорошо</span>
+              <i style={{ '--landing-bar': '72%' } as React.CSSProperties} />
+              <strong>72%</strong>
+            </div>
+            <div>
+              <span>Нормально</span>
+              <i style={{ '--landing-bar': '19%' } as React.CSSProperties} />
+              <strong>19%</strong>
+            </div>
+            <div>
+              <span>Плохо</span>
+              <i style={{ '--landing-bar': '9%' } as React.CSSProperties} />
+              <strong>9%</strong>
+            </div>
+          </div>
+          <div className={styles.previewLocations}>
+            <div>
+              <span>Кофейня у парка</span>
+              <strong>76% хорошо</strong>
+            </div>
+            <div>
+              <span>Кофейня на Центральной</span>
+              <strong>68% хорошо</strong>
+            </div>
+          </div>
+          <small>Демонстрационные данные</small>
+        </figure>
+      </section>
+
+      <section className={styles.reactionSection}>
+        <div className={styles.sectionIntro}>
+          <p className={styles.kicker}>Быстрая реакция</p>
+          <h2>Негатив не ждёт следующего отчёта.</h2>
+        </div>
+        <div className={styles.reactionFlow}>
+          <div>
+            <span className={styles.flowNumber}>1</span>
+            <strong>Посетитель выбирает «Плохо»</strong>
+            <p>Комментарий можно оставить, но он необязателен.</p>
+          </div>
+          <span aria-hidden="true">→</span>
+          <div>
+            <span className={styles.flowNumber}>2</span>
+            <strong>Оценка попадает в кабинет</strong>
+            <p>Она связана с торговой точкой и временем получения.</p>
+          </div>
+          <span aria-hidden="true">→</span>
+          <div className={styles.telegramCard}>
+            <span>Telegram · сейчас</span>
+            <strong>Негативная оценка</strong>
+            <p>Кофейня на Центральной</p>
+            <blockquote>«Слишком долго ждал заказ»</blockquote>
+          </div>
+        </div>
+        <p className={styles.neutralNote}>Точный состав Telegram-сообщения требует согласования.</p>
+      </section>
+
+      <section className={styles.customizationSection}>
+        <div className={styles.customizationPreview}>
+          <div className={styles.miniTablet}>
+            <div>
+              <Mark />
+              <span>Название заведения</span>
+            </div>
+            <h3>Как прошло ваше посещение?</h3>
+            <div>
+              <span>⌢</span>
+              <span>—</span>
+              <span>⌣</span>
+            </div>
+          </div>
+          <div className={styles.customizationControls}>
+            <span>Предпросмотр оформления</span>
+            <div>
+              <i />
+              <i />
+              <i />
+              <i />
+            </div>
+            <small>Логотип · фон · цвета · иконки</small>
+          </div>
+        </div>
+        <div className={styles.customizationCopy}>
+          <p className={styles.kicker}>Кастомизация экрана</p>
+          <h2>Экран выглядит частью вашего заведения.</h2>
+          <p>
+            Загрузите логотип, настройте фон, основные цвета и иконки трёх оценок. Конструктор вопросов и сложных
+            опросов в MVP не входит.
+          </p>
+          <div className={styles.neutralNote}>Уровень применения оформления пока не согласован.</div>
+        </div>
+      </section>
+
+      <section className={styles.venuesSection}>
+        <div className={styles.sectionIntro}>
+          <p className={styles.kicker}>Для офлайн-бизнеса</p>
+          <h2>Один короткий вопрос — разные рабочие сценарии.</h2>
+        </div>
+        <div className={styles.venueGrid}>
+          <article>
+            <span>Кофейня</span>
+            <h3>Узнать о задержке у стойки</h3>
+            <p>Планшет рядом с выдачей помогает заметить проблему в момент посещения.</p>
+          </article>
+          <article>
+            <span>Магазин</span>
+            <h3>Сравнить опыт в филиалах</h3>
+            <p>Оценки объединяются по торговым точкам и позволяют увидеть различия.</p>
+          </article>
+          <article>
+            <span>Салон</span>
+            <h3>Получить комментарий после услуги</h3>
+            <p>Посетитель может добавить пояснение к одной из трёх оценок.</p>
+          </article>
+        </div>
+      </section>
+
       <section className={styles.priceSection} id="price">
         <div className={styles.priceCopy}>
           <p className={styles.kicker}>Тариф зависит от точек</p>
@@ -211,11 +412,48 @@ function Landing({
         </div>
       </section>
 
+      <section className={styles.faqSection} id="faq">
+        <div className={styles.faqIntro}>
+          <p className={styles.kicker}>Практические вопросы</p>
+          <h2>Что нужно знать перед запуском.</h2>
+          <p>Ответы с открытыми условиями помечены прямо в тексте — без неподтверждённых обещаний.</p>
+        </div>
+        <div className={styles.faqList}>
+          {faqItems.map((item, index) => (
+            <details key={item.question}>
+              <summary>
+                <span>{String(index + 1).padStart(2, '0')}</span>
+                {item.question}
+                <i aria-hidden="true">＋</i>
+              </summary>
+              <p>{item.answer}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.finalCta}>
+        <p className={styles.kicker}>7 дней бесплатного доступа</p>
+        <h2>Запустите первый экран и получите первую оценку.</h2>
+        <p>Создайте аккаунт, добавьте точку и откройте ссылку на планшете.</p>
+        <div className={styles.actionRow}>
+          <button type="button" className={styles.darkButton} onClick={onRegister}>
+            Начать бесплатно <ArrowIcon />
+          </button>
+          <button type="button" className={styles.outlineButton} onClick={onDemo}>
+            Открыть демо
+          </button>
+        </div>
+      </section>
+
       <footer className={styles.footer}>
         <span className={styles.wordmark}>
           <Mark /> Отклик
         </span>
-        <p>Рабочий прототип · данные демонстрационные</p>
+        <div className={styles.footerMeta}>
+          <p>Рабочий прототип · данные демонстрационные</p>
+          <span>Контакты и юридические документы — состав уточняется</span>
+        </div>
         <button type="button" className={styles.textButton} onClick={onDemo}>
           Перейти в кабинет
         </button>
