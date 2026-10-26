@@ -22,10 +22,11 @@ import {
   NORMED_MATERIAL_GROUP_ID,
   type PrototypeDocument,
 } from '@/domain/document';
+import { plannedProductionVolumePieces } from '@/domain/finished-goods';
 import { ratioRound } from '@/domain/money';
 import { maxProductionEntryOccurredOn } from '@/domain/production-journal';
-import { productionPlanForMonth } from '@/domain/production-plan';
 import { isQuantityThousandths, QUANTITY_SCALE } from '@/domain/quantity';
+import { consumptionQuantityForComponent } from '@/domain/recipe-consumption';
 import { planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
@@ -793,8 +794,11 @@ function deviationCostMoney(quantity: number, price: MaterialMoney): MaterialMon
 function productionPieces(document: PrototypeDocument, month: string, mode: 'plan' | 'fact'): Map<string, number> {
   const pieces = new Map<string, number>();
   if (mode === 'plan') {
-    for (const line of productionPlanForMonth(document, month).lines) {
-      pieces.set(line.productId, line.volumePieces);
+    for (const product of document.products) {
+      const volume = plannedProductionVolumePieces(document, month, product.id);
+      if (volume !== 0) {
+        pieces.set(product.id, volume);
+      }
     }
     return pieces;
   }
@@ -834,17 +838,55 @@ function receiptFact(
   return { quantity, cost };
 }
 
+/** Плановая цена единицы сырья в месяце, с НДС и без НДС. `DSM Meat!H`, `DSM Meat!J`. */
+export function materialPlanPrice(document: PrototypeDocument, month: string, materialId: string): MaterialMoney {
+  const material = materialById(document, materialId);
+  if (!material) {
+    return ZERO_MONEY;
+  }
+  const planLine = planLineFor(document, month, material.warehouseId, material.id);
+  return priceOf(planLine?.priceWithVat ?? 0, material.vatPercent);
+}
+
+/**
+ * Фактическая цена расхода единицы сырья в месяце: средневзвешенная цена прихода за месяц,
+ * а если прихода не было — плановая цена. `DSM Meat!R8`.
+ */
+export function materialConsumptionPrice(
+  document: PrototypeDocument,
+  month: string,
+  materialId: string,
+): MaterialMoney {
+  const material = materialById(document, materialId);
+  if (!material) {
+    return ZERO_MONEY;
+  }
+  const planLine = planLineFor(document, month, material.warehouseId, material.id);
+  const priceWithVat = planLine?.priceWithVat ?? 0;
+  const receipt = receiptFact(document, month, material.warehouseId, material.id, material.vatPercent);
+  const valuation =
+    receipt.quantity === 0 ? priceWithVat : (ratioRound(receipt.cost.withVat * QUANTITY_SCALE, receipt.quantity) ?? 0);
+  return priceOf(valuation, material.vatPercent);
+}
+
+/**
+ * Расход сырья в производстве: из объёма выпуска (план или факт) и рецептов
+ * готовой продукции / производных. Ручные поля плана месяца не читаем.
+ */
 function consumptionQuantity(
-  _document: PrototypeDocument,
+  document: PrototypeDocument,
   _warehouseId: MaterialWarehouseId,
-  _materialId: string,
-  mode: 'plan' | 'fact',
-  _piecesByProduct: ReadonlyMap<string, number>,
-  planConsumption: number,
-  factConsumption: number,
+  materialId: string,
+  _mode: 'plan' | 'fact',
+  piecesByProduct: ReadonlyMap<string, number>,
+  _planConsumption: number,
+  _factConsumption: number,
 ): number {
-  // Временно: план и факт расхода вводят в отчёте (пока нет связи с планом выпуска), без нормы.
-  return mode === 'plan' ? planConsumption : factConsumption;
+  return consumptionQuantityForComponent(
+    document,
+    { kind: 'material', id: materialId },
+    (productId) => piecesByProduct.get(productId) ?? 0,
+  );
 }
 
 /**
@@ -856,7 +898,7 @@ export function closingMaterialQuantity(opening: number, receipt: number, consum
 }
 
 /**
- * План остатка на конец: начало + приход − расход.
+ * План остатка на конец: начало + план прихода − план расхода.
  * Другой склад в расчёт не входит.
  */
 export function bookClosingQuantity(
@@ -865,21 +907,12 @@ export function bookClosingQuantity(
   warehouseId: MaterialWarehouseId,
   materialId: string,
 ): number {
-  const material = materialById(document, materialId);
-  const vatPercent = material?.vatPercent ?? 0;
   const opening = openingQuantityFor(document, month, warehouseId, materialId);
-  const receipt = receiptFact(document, month, warehouseId, materialId, vatPercent).quantity;
   const planLine = planLineFor(document, month, warehouseId, materialId);
-  const consumption = consumptionQuantity(
-    document,
-    warehouseId,
-    materialId,
-    'fact',
-    new Map<string, number>(),
-    planLine?.consumptionQuantity ?? 0,
-    planLine?.factConsumptionQuantity ?? 0,
-  );
-  return closingMaterialQuantity(opening, receipt, consumption);
+  const planReceipt = planLine?.receiptQuantity ?? 0;
+  const planPieces = productionPieces(document, month, 'plan');
+  const planConsumption = consumptionQuantity(document, warehouseId, materialId, 'plan', planPieces, 0, 0);
+  return closingMaterialQuantity(opening, planReceipt, planConsumption);
 }
 
 function movementMetrics(closing: number, minQuantity: number, maxQuantity: number) {
@@ -1026,6 +1059,8 @@ function gridMaterials(
   groupId: MaterialGroupId,
   warehouseId: MaterialWarehouseId,
   month: string,
+  planPieces: ReadonlyMap<string, number>,
+  factPieces: ReadonlyMap<string, number>,
 ): Material[] {
   const materials = materialsList(document).filter(
     (item) => item.groupId === groupId && item.warehouseId === warehouseId,
@@ -1040,9 +1075,13 @@ function gridMaterials(
     if (referenced.has(item.id)) {
       return true;
     }
+    const planConsumption = consumptionQuantity(document, warehouseId, item.id, 'plan', planPieces, 0, 0);
+    const factConsumption = consumptionQuantity(document, warehouseId, item.id, 'fact', factPieces, 0, 0);
     return (
       openingQuantityFor(document, month, warehouseId, item.id) !== 0 ||
       inventoryQuantityFor(document, month, warehouseId, item.id) !== 0 ||
+      planConsumption !== 0 ||
+      factConsumption !== 0 ||
       bookClosingQuantity(document, month, warehouseId, item.id) !== 0
     );
   });
@@ -1170,7 +1209,7 @@ export function materialMovementMonth(document: PrototypeDocument, month: string
       groupId: group.id,
       name: group.name,
       warehouses: MATERIAL_WAREHOUSES.map((warehouse) => {
-        const rows = gridMaterials(document, group.id, warehouse.id, month).map((material) =>
+        const rows = gridMaterials(document, group.id, warehouse.id, month, planPieces, factPieces).map((material) =>
           movementRow(document, month, warehouse.id, material, planPieces, factPieces),
         );
         return {

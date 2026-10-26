@@ -1,8 +1,8 @@
 'use client';
 
-import type { MaterialMovementRow, MaterialMovementTotals, MaterialPlanField } from '@/domain/materials';
+import type { MaterialMovementRow, MaterialMovementTotals } from '@/domain/materials';
 import { MaterialNormDeviation } from '@/features/materials/MaterialNormDeviation';
-import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
+import { QuantityRead } from '@/features/materials/QuantityCell';
 import {
   MATERIALS_SUMMARY_SUB_BANNERS,
   ReportSubBannerColumnHeaders,
@@ -79,10 +79,18 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
   {
     label: 'Расход в производстве',
     columns: [
-      { key: 'planConsumption', label: 'Кол-во' },
+      {
+        key: 'planConsumption',
+        label: 'Кол-во',
+        hint: 'Количество, необходимое для выпуска по плану',
+      },
       { key: 'planConsumptionPrice', label: 'Цена' },
       { key: 'planConsumptionCost', label: 'Стоимость' },
-      { key: 'factConsumption', label: 'Кол-во' },
+      {
+        key: 'factConsumption',
+        label: 'Кол-во',
+        hint: 'Количество, необходимое для фактического выпуска',
+      },
       { key: 'factConsumptionPrice', label: 'Цена' },
       { key: 'factConsumptionCost', label: 'Стоимость' },
       { key: 'consumptionDeviation', label: 'Кол-во' },
@@ -130,10 +138,10 @@ const COLUMN_KIND: Record<ColumnKey, CellKind> = {
   receiptDeviation: 'computed',
   receiptDeviationPrice: 'computed',
   receiptDeviationCost: 'computed',
-  planConsumption: 'assigned',
+  planConsumption: 'computed',
   planConsumptionPrice: 'repeated',
   planConsumptionCost: 'computed',
-  factConsumption: 'assigned',
+  factConsumption: 'computed',
   factConsumptionPrice: 'computed',
   factConsumptionCost: 'computed',
   consumptionDeviation: 'computed',
@@ -152,10 +160,6 @@ const COLUMN_KIND: Record<ColumnKey, CellKind> = {
   closingCost: 'computed',
 };
 
-function consumptionEditable(editable: boolean, row: MaterialMovementRow): boolean {
-  return editable && !row.deleted;
-}
-
 function groupEndClass(key: ColumnKey): string {
   return GROUP_END_KEYS.has(key) ? tableBorder.rightThick : columnDividerClassName;
 }
@@ -164,14 +168,10 @@ export function MaterialsSummaryTable({
   caption,
   rows,
   totals,
-  editable = false,
-  onConsumption,
 }: {
   caption: string;
   rows: MaterialMovementRow[];
   totals: MaterialMovementTotals;
-  editable?: boolean;
-  onConsumption?: (materialId: string, field: MaterialPlanField, value: number) => string | null;
 }) {
   return (
     <div className={tableFrameClassName}>
@@ -224,12 +224,7 @@ export function MaterialsSummaryTable({
                   key={column.key}
                   className={`border-b border-b-line px-2 py-2 text-right align-middle ${groupEndClass(column.key)} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
                 >
-                  <RowCell
-                    column={column.key}
-                    row={row}
-                    editable={consumptionEditable(editable, row)}
-                    onConsumption={onConsumption}
-                  />
+                  <RowCell column={column.key} row={row} />
                 </td>
               ))}
             </tr>
@@ -250,17 +245,7 @@ export function MaterialsSummaryTable({
   );
 }
 
-function RowCell({
-  column,
-  row,
-  editable,
-  onConsumption,
-}: {
-  column: ColumnKey;
-  row: MaterialMovementRow;
-  editable: boolean;
-  onConsumption?: (materialId: string, field: MaterialPlanField, value: number) => string | null;
-}) {
+function RowCell({ column, row }: { column: ColumnKey; row: MaterialMovementRow }) {
   const unit = row.unit;
   switch (column) {
     case 'opening':
@@ -318,29 +303,9 @@ function RowCell({
         />
       );
     case 'planConsumption':
-      if (!editable || !onConsumption) {
-        return <QuantityRead value={row.planConsumptionQuantity} unit={unit} />;
-      }
-      return (
-        <QuantityCell
-          label={`План расхода ${row.name}`}
-          value={row.planConsumptionQuantity}
-          unit={unit}
-          onChange={(value) => onConsumption(row.materialId, 'consumptionQuantity', value)}
-        />
-      );
+      return <QuantityRead value={row.planConsumptionQuantity} unit={unit} />;
     case 'factConsumption':
-      if (!editable || !onConsumption) {
-        return <QuantityRead value={row.factConsumptionQuantity} unit={unit} />;
-      }
-      return (
-        <QuantityCell
-          label={`Факт расхода ${row.name}`}
-          value={row.factConsumptionQuantity}
-          unit={unit}
-          onChange={(value) => onConsumption(row.materialId, 'factConsumptionQuantity', value)}
-        />
-      );
+      return <QuantityRead value={row.factConsumptionQuantity} unit={unit} />;
     case 'planConsumptionPrice':
       return <VatMoneyCell label="Плановая цена расхода" withVat={row.planPrice.withVat} exVat={row.planPrice.exVat} />;
     case 'planConsumptionCost':

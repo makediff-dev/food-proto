@@ -1,24 +1,37 @@
-import { derivativeSections, derivativesList, outputPieceThousandthsOf } from '@/domain/derivatives';
-import type { Derivative, DerivativeUnit, DerivativeWorkshopId, PrototypeDocument } from '@/domain/document';
+import { derivativeSections, derivativesList } from '@/domain/derivatives';
+import type { DerivativeUnit, DerivativeWorkshopId, PrototypeDocument } from '@/domain/document';
+import { plannedProductionVolumePieces } from '@/domain/finished-goods';
+import { type MaterialMoney, materialConsumptionPrice, materialPlanPrice } from '@/domain/materials';
 import { ratioRound } from '@/domain/money';
 import { QUANTITY_SCALE } from '@/domain/quantity';
-import { workingSalesInMonth } from '@/domain/sales';
-import { planSalesVolumePiecesForProduct } from '@/domain/sales-plan';
+import { consumptionQuantityForComponent, derivativeBatchThousandths } from '@/domain/recipe-consumption';
 
 export type DerivativeMovementRow = {
   derivativeId: string;
   name: string;
   unit: DerivativeUnit;
-  /** План расхода на продажи месяца, тысячные доли единицы производной. */
+  /** План расхода на выпуск месяца, тысячные доли единицы производной. */
   planConsumptionQuantity: number;
-  /** Факт расхода по фактическим продажам месяца, тысячные доли единицы. */
+  /** Плановая цена 1 единицы производной (шт или кг) по плановым ценам сырья. */
+  planConsumptionPrice: MaterialMoney;
+  /** Плановая стоимость расхода: плановая цена × план расхода. */
+  planConsumptionCost: MaterialMoney;
+  /** Факт расхода по фактическому выпуску месяца, тысячные доли единицы. */
   factConsumptionQuantity: number;
+  /** Фактическая цена 1 единицы производной по фактическим ценам расхода сырья. */
+  factConsumptionPrice: MaterialMoney;
+  /** Фактическая стоимость расхода: фактическая цена × факт расхода. */
+  factConsumptionCost: MaterialMoney;
 };
 
 export type DerivativeMovementSection = {
   workshopId: DerivativeWorkshopId;
   name: string;
   rows: DerivativeMovementRow[];
+  /** Сумма плановой стоимости расхода по цеху. */
+  planConsumptionCost: MaterialMoney;
+  /** Сумма фактической стоимости расхода по цеху. */
+  factConsumptionCost: MaterialMoney;
 };
 
 export type DerivativeMovementMonthView = {
@@ -26,110 +39,72 @@ export type DerivativeMovementMonthView = {
   sections: DerivativeMovementSection[];
 };
 
-/** Размер партии рецепта производной в тысячных долях её единицы. */
-function derivativeBatchThousandths(derivative: Derivative): number {
-  if (derivative.unit === 'шт') {
-    return outputPieceThousandthsOf(derivative) ?? QUANTITY_SCALE;
-  }
-  return derivative.outputKilogramThousandths;
+const ZERO_MONEY: MaterialMoney = { withVat: 0, exVat: 0 };
+
+function costForQuantity(price: MaterialMoney, quantityThousandths: number): MaterialMoney {
+  return {
+    withVat: ratioRound(price.withVat * quantityThousandths, QUANTITY_SCALE) ?? 0,
+    exVat: ratioRound(price.exVat * quantityThousandths, QUANTITY_SCALE) ?? 0,
+  };
 }
 
-/**
- * Сколько целевой производной нужно, чтобы получить `neededParentThousandths`
- * единиц родительской (по рецепту родителя и вложенным производным).
- * Единицы — тысячные доли единицы каждой производной.
- */
-function requirementFromDerivative(
-  document: PrototypeDocument,
-  parentId: string,
-  targetId: string,
-  neededParentThousandths: number,
-  visiting: Set<string>,
-): number {
-  if (neededParentThousandths === 0) {
-    return 0;
-  }
-  if (parentId === targetId) {
-    return neededParentThousandths;
-  }
-  if (visiting.has(parentId)) {
-    return 0;
-  }
-
-  const parent = derivativesList(document).find((item) => item.id === parentId);
-  if (!parent) {
-    return 0;
-  }
-
-  const batch = derivativeBatchThousandths(parent);
-  if (batch <= 0) {
-    return 0;
-  }
-
-  visiting.add(parentId);
-  let total = 0;
-  for (const line of parent.lines) {
-    if (line.componentKind !== 'derivative') {
-      continue;
-    }
-    const neededOfComponent = ratioRound(line.quantity * neededParentThousandths, batch) ?? 0;
-    if (neededOfComponent === 0) {
-      continue;
-    }
-    if (line.componentId === targetId) {
-      total += neededOfComponent;
-      continue;
-    }
-    total += requirementFromDerivative(document, line.componentId, targetId, neededOfComponent, visiting);
-  }
-  visiting.delete(parentId);
-  return total;
-}
-
-/**
- * Расход производной по объёмам продаж готовой продукции и рецептам
- * (готовая → производные по цепочке). Тысячные доли единицы производной.
- */
-function consumptionQuantityForDerivative(
+function derivativePriceInternal(
   document: PrototypeDocument,
   derivativeId: string,
-  volumePiecesForProduct: (productId: string) => number,
-): number {
-  let total = 0;
-
-  for (const product of document.products) {
-    const volumePieces = volumePiecesForProduct(product.id);
-    if (volumePieces === 0) {
-      continue;
-    }
-
-    const batchPieces = product.outputPieceThousandths;
-    if (!batchPieces || batchPieces <= 0) {
-      continue;
-    }
-
-    for (const line of product.lines ?? []) {
-      if (line.componentKind !== 'derivative') {
-        continue;
-      }
-      // line.quantity — на партию outputPieceThousandths; volumePieces — целые штуки продаж.
-      const neededOfComponent = ratioRound(line.quantity * volumePieces * QUANTITY_SCALE, batchPieces) ?? 0;
-      if (neededOfComponent === 0) {
-        continue;
-      }
-      if (line.componentId === derivativeId) {
-        total += neededOfComponent;
-        continue;
-      }
-      total += requirementFromDerivative(document, line.componentId, derivativeId, neededOfComponent, new Set());
-    }
+  month: string,
+  mode: 'plan' | 'fact',
+  visiting: Set<string>,
+): MaterialMoney {
+  if (visiting.has(derivativeId)) {
+    return ZERO_MONEY;
+  }
+  const derivative = derivativesList(document).find((item) => item.id === derivativeId);
+  if (!derivative) {
+    return ZERO_MONEY;
+  }
+  const batch = derivativeBatchThousandths(derivative);
+  if (batch <= 0) {
+    return ZERO_MONEY;
   }
 
-  return total;
+  visiting.add(derivativeId);
+  let batchWithVat = 0;
+  let batchExVat = 0;
+
+  for (const line of derivative.lines) {
+    if (line.quantity <= 0) {
+      continue;
+    }
+    const componentPrice =
+      line.componentKind === 'material'
+        ? mode === 'plan'
+          ? materialPlanPrice(document, month, line.componentId)
+          : materialConsumptionPrice(document, month, line.componentId)
+        : derivativePriceInternal(document, line.componentId, month, mode, visiting);
+    const lineCost = costForQuantity(componentPrice, line.quantity);
+    batchWithVat += lineCost.withVat;
+    batchExVat += lineCost.exVat;
+  }
+
+  visiting.delete(derivativeId);
+  return {
+    withVat: ratioRound(batchWithVat * QUANTITY_SCALE, batch) ?? 0,
+    exVat: ratioRound(batchExVat * QUANTITY_SCALE, batch) ?? 0,
+  };
+}
+
+/** Расчётная цена 1 единицы производной (шт или кг) из цен компонентов рецепта. */
+export function derivativeConsumptionPrice(
+  document: PrototypeDocument,
+  derivativeId: string,
+  month: string,
+  mode: 'plan' | 'fact',
+): MaterialMoney {
+  return derivativePriceInternal(document, derivativeId, month, mode, new Set());
 }
 
 /**
- * План расхода производной за месяц: из плана продаж готовой продукции
+ * План расхода производной за месяц: из плана выпуска готовой продукции
  * и рецептов (готовая → производные по цепочке).
  * Тысячные доли единицы производной (шт или кг).
  */
@@ -138,16 +113,24 @@ export function planConsumptionQuantityForDerivative(
   derivativeId: string,
   month: string,
 ): number {
-  return consumptionQuantityForDerivative(document, derivativeId, (productId) =>
-    planSalesVolumePiecesForProduct(document, productId, month),
+  return consumptionQuantityForComponent(document, { kind: 'derivative', id: derivativeId }, (productId) =>
+    plannedProductionVolumePieces(document, month, productId),
   );
 }
 
-/** Фактический объём продаж товара за месяц, шт. Нет продаж — 0. */
-export function factSalesVolumePiecesForProduct(document: PrototypeDocument, productId: string, month: string): number {
+/** Фактический объём выпуска товара за месяц из журнала выпуска, шт. Нет выпуска — 0. */
+export function factProductionVolumePiecesForProduct(
+  document: PrototypeDocument,
+  productId: string,
+  month: string,
+): number {
   let pieces = 0;
-  for (const sale of workingSalesInMonth(document, month)) {
-    for (const line of sale.lines) {
+  const prefix = `${month}-`;
+  for (const entry of document.productionEntries ?? []) {
+    if (!entry.occurredOn.startsWith(prefix)) {
+      continue;
+    }
+    for (const line of entry.lines) {
       if (line.productId === productId) {
         pieces += line.pieces;
       }
@@ -158,7 +141,7 @@ export function factSalesVolumePiecesForProduct(document: PrototypeDocument, pro
 
 /**
  * Факт расхода производной за месяц: те же рецепты, что у плана,
- * объём — фактические продажи месяца (уже введённые дни).
+ * объём — фактический выпуск месяца из журнала.
  * Тысячные доли единицы производной (шт или кг).
  */
 export function factConsumptionQuantityForDerivative(
@@ -166,25 +149,47 @@ export function factConsumptionQuantityForDerivative(
   derivativeId: string,
   month: string,
 ): number {
-  return consumptionQuantityForDerivative(document, derivativeId, (productId) =>
-    factSalesVolumePiecesForProduct(document, productId, month),
+  return consumptionQuantityForComponent(document, { kind: 'derivative', id: derivativeId }, (productId) =>
+    factProductionVolumePiecesForProduct(document, productId, month),
   );
 }
 
-/** Свод месяца: рабочие производные по цехам, план и факт расхода на продажи. */
+function sumMoney(left: MaterialMoney, right: MaterialMoney): MaterialMoney {
+  return {
+    withVat: left.withVat + right.withVat,
+    exVat: left.exVat + right.exVat,
+  };
+}
+
+/** Свод месяца: рабочие производные по цехам, план и факт расхода (количество, цена, стоимость) на выпуск. */
 export function derivativeMovementMonth(document: PrototypeDocument, month: string): DerivativeMovementMonthView {
   const sections = derivativeSections(document)
-    .map((section) => ({
-      workshopId: section.workshopId,
-      name: section.name,
-      rows: section.items.map((item) => ({
-        derivativeId: item.id,
-        name: item.name,
-        unit: item.unit,
-        planConsumptionQuantity: planConsumptionQuantityForDerivative(document, item.id, month),
-        factConsumptionQuantity: factConsumptionQuantityForDerivative(document, item.id, month),
-      })),
-    }))
+    .map((section) => {
+      const rows = section.items.map((item) => {
+        const planConsumptionQuantity = planConsumptionQuantityForDerivative(document, item.id, month);
+        const planConsumptionPrice = derivativeConsumptionPrice(document, item.id, month, 'plan');
+        const factConsumptionQuantity = factConsumptionQuantityForDerivative(document, item.id, month);
+        const factConsumptionPrice = derivativeConsumptionPrice(document, item.id, month, 'fact');
+        return {
+          derivativeId: item.id,
+          name: item.name,
+          unit: item.unit,
+          planConsumptionQuantity,
+          planConsumptionPrice,
+          planConsumptionCost: costForQuantity(planConsumptionPrice, planConsumptionQuantity),
+          factConsumptionQuantity,
+          factConsumptionPrice,
+          factConsumptionCost: costForQuantity(factConsumptionPrice, factConsumptionQuantity),
+        };
+      });
+      return {
+        workshopId: section.workshopId,
+        name: section.name,
+        rows,
+        planConsumptionCost: rows.reduce((sum, row) => sumMoney(sum, row.planConsumptionCost), ZERO_MONEY),
+        factConsumptionCost: rows.reduce((sum, row) => sumMoney(sum, row.factConsumptionCost), ZERO_MONEY),
+      };
+    })
     .filter((section) => section.rows.length > 0);
 
   return { month, sections };

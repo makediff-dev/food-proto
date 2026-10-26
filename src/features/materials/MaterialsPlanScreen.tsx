@@ -64,7 +64,7 @@ export function MaterialsPlanScreen({ month }: { month: string }) {
     <PageFrame
       title={MATERIALS_PLAN_TITLE}
       full
-      lede="Цена, план прихода, минимум и максимум. План и факт расхода вводят в отчёте."
+      lede="Цена, план прихода, минимум и максимум. План и факт расхода в отчёте считаются из выпуска по рецептам."
       intro={
         <MaterialMonthBar
           month={selectedMonth}

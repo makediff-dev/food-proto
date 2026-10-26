@@ -23,18 +23,34 @@ import {
   tableBorder,
   tableClassName,
   tableFrameClassName,
+  VatMoneyCell,
 } from '@/features/table';
 
-type ColumnKey = 'planConsumption' | 'factConsumption';
+type ColumnKey =
+  | 'planConsumption'
+  | 'planConsumptionPrice'
+  | 'planConsumptionCost'
+  | 'factConsumption'
+  | 'factConsumptionPrice'
+  | 'factConsumptionCost';
 
-const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; hint: string }[] }[] = [
+const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; hint?: string }[] }[] = [
   {
     label: 'План расхода',
     columns: [
       {
         key: 'planConsumption',
         label: 'Кол-во',
-        hint: 'Количество, необходимое для продаж по плану',
+        hint: 'Количество, необходимое для выпуска по плану',
+      },
+      {
+        key: 'planConsumptionPrice',
+        label: 'Цена',
+        hint: 'Себестоимость единицы по плановым ценам сырья',
+      },
+      {
+        key: 'planConsumptionCost',
+        label: 'Стоимость',
       },
     ],
   },
@@ -44,7 +60,16 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
       {
         key: 'factConsumption',
         label: 'Кол-во',
-        hint: 'Количество, необходимое для фактических продаж',
+        hint: 'Количество, необходимое для фактического выпуска',
+      },
+      {
+        key: 'factConsumptionPrice',
+        label: 'Цена',
+        hint: 'Себестоимость единицы по фактическим ценам расхода сырья',
+      },
+      {
+        key: 'factConsumptionCost',
+        label: 'Стоимость',
       },
     ],
   },
@@ -128,8 +153,10 @@ function WorkshopBlock({ section }: { section: DerivativeMovementSection }) {
         {COLUMNS.map((column) => (
           <td
             key={`group:${column.key}`}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${categoryBandClassName} ${columnEdgeClass(column.key)}`}
-          />
+            className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${categoryBandClassName} ${columnEdgeClass(column.key)}`}
+          >
+            <WorkshopCell column={column.key} section={section} />
+          </td>
         ))}
       </tr>
       {open
@@ -137,6 +164,28 @@ function WorkshopBlock({ section }: { section: DerivativeMovementSection }) {
         : null}
     </>
   );
+}
+
+function WorkshopCell({ column, section }: { column: ColumnKey; section: DerivativeMovementSection }) {
+  if (column === 'planConsumptionCost') {
+    return (
+      <VatMoneyCell
+        label="Плановая стоимость расхода"
+        withVat={section.planConsumptionCost.withVat}
+        exVat={section.planConsumptionCost.exVat}
+      />
+    );
+  }
+  if (column === 'factConsumptionCost') {
+    return (
+      <VatMoneyCell
+        label="Фактическая стоимость расхода"
+        withVat={section.factConsumptionCost.withVat}
+        exVat={section.factConsumptionCost.exVat}
+      />
+    );
+  }
+  return null;
 }
 
 function DerivativeRow({ row, index }: { row: DerivativeMovementRow; index: number }) {
@@ -151,14 +200,54 @@ function DerivativeRow({ row, index }: { row: DerivativeMovementRow; index: numb
       {COLUMNS.map((column) => (
         <td
           key={`row:${column.key}`}
-          className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${cellKindClassName.computed} ${columnEdgeClass(column.key)}`}
+          className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${cellKindClassName.computed} ${columnEdgeClass(column.key)}`}
         >
-          <QuantityRead
-            value={column.key === 'planConsumption' ? row.planConsumptionQuantity : row.factConsumptionQuantity}
-            unit={row.unit}
-          />
+          <RowCell column={column.key} row={row} />
         </td>
       ))}
     </tr>
   );
+}
+
+function RowCell({ column, row }: { column: ColumnKey; row: DerivativeMovementRow }) {
+  switch (column) {
+    case 'planConsumption':
+      return <QuantityRead value={row.planConsumptionQuantity} unit={row.unit} />;
+    case 'planConsumptionPrice':
+      return (
+        <VatMoneyCell
+          label="Плановая цена расхода"
+          withVat={row.planConsumptionPrice.withVat}
+          exVat={row.planConsumptionPrice.exVat}
+        />
+      );
+    case 'planConsumptionCost':
+      return (
+        <VatMoneyCell
+          label="Плановая стоимость расхода"
+          withVat={row.planConsumptionCost.withVat}
+          exVat={row.planConsumptionCost.exVat}
+        />
+      );
+    case 'factConsumption':
+      return <QuantityRead value={row.factConsumptionQuantity} unit={row.unit} />;
+    case 'factConsumptionPrice':
+      return (
+        <VatMoneyCell
+          label="Фактическая цена расхода"
+          withVat={row.factConsumptionPrice.withVat}
+          exVat={row.factConsumptionPrice.exVat}
+        />
+      );
+    case 'factConsumptionCost':
+      return (
+        <VatMoneyCell
+          label="Фактическая стоимость расхода"
+          withVat={row.factConsumptionCost.withVat}
+          exVat={row.factConsumptionCost.exVat}
+        />
+      );
+    default:
+      return null;
+  }
 }

@@ -274,9 +274,9 @@
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1793004931.407304,
-    "seen": 1793004966.3635683,
-    "ast_hash": "40f67926cee40fba00abf331f72a2d67",
+    "mtime": 1793021450.037967,
+    "seen": 1793021530.6053705,
+    "ast_hash": "b3e522d3c1484ed2827a811550f5df88",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
@@ -837,9 +837,9 @@
     "semantic_hash": ""
   },
   "src/domain/materials.ts": {
-    "mtime": 1792774168.838878,
-    "seen": 1792774351.8077369,
-    "ast_hash": "fcaf7932857f9aec340f39ae4b932284",
+    "mtime": 1793022118.7657194,
+    "seen": 1793022214.5508258,
+    "ast_hash": "ab08282def1b110dff662ce425982499",
     "semantic_hash": ""
   },
   "src/domain/quantity.ts": {
@@ -891,15 +891,15 @@
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsNormsScreen.tsx": {
-    "mtime": 1792742915.5233598,
-    "seen": 1792743010.5104587,
-    "ast_hash": "786d5be1c416d8fad13d04a8722f058d",
+    "mtime": 1793021447.00036,
+    "seen": 1793021530.6053705,
+    "ast_hash": "77d71d985a0c5ba52e9e5642d88587ef",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsPlanScreen.tsx": {
-    "mtime": 1792774332.9481535,
-    "seen": 1792774351.8077369,
-    "ast_hash": "9c62e9b9ef79ac4ecf1c30b5f4c6e39c",
+    "mtime": 1793021447.7071018,
+    "seen": 1793021530.6053705,
+    "ast_hash": "070fcf6bc6dc4adf05fc379f2e0a86a1",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsPlanTable.tsx": {
@@ -909,15 +909,15 @@
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsSummaryScreen.tsx": {
-    "mtime": 1792567087.4157915,
-    "seen": 1792567846.6235266,
-    "ast_hash": "8748d493fe6032084114b7cece5c74ce",
+    "mtime": 1793021445.654299,
+    "seen": 1793021530.6053705,
+    "ast_hash": "ee445691b1546488cac90a799de7ee55",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsSummaryTable.tsx": {
-    "mtime": 1792663436.2954848,
-    "seen": 1792743010.5104587,
-    "ast_hash": "cd5c44de910de6eb45f480e0e046e6c3",
+    "mtime": 1793021464.7104006,
+    "seen": 1793021530.6053705,
+    "ast_hash": "75b92f2aff705dcb482fbbeb180d8e6b",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsWarehouseBlocks.tsx": {
@@ -1089,15 +1089,21 @@
     "semantic_hash": ""
   },
   "src/domain/derivative-movement.ts": {
-    "mtime": 1793007307.555024,
-    "seen": 1793007324.671529,
-    "ast_hash": "2b5a53341e5f764e5cf7d872105d409c",
+    "mtime": 1793022955.9589448,
+    "seen": 1793023026.7380872,
+    "ast_hash": "5bc7216b3e8ec1fd38016efde525c724",
     "semantic_hash": ""
   },
   "src/features/derivative-movement/DerivativeMovementSummaryTable.tsx": {
-    "mtime": 1793007303.705359,
-    "seen": 1793007324.671529,
-    "ast_hash": "6ab0c3ec11066649b773c851f2584d65",
+    "mtime": 1793023000.548329,
+    "seen": 1793023026.7380872,
+    "ast_hash": "fcb5f8ff62d90227c89426681e088bd5",
+    "semantic_hash": ""
+  },
+  "src/domain/recipe-consumption.ts": {
+    "mtime": 1793022035.5433981,
+    "seen": 1793022214.5508258,
+    "ast_hash": "4d689bd1b4fa1e5d0d0894651bca8598",
     "semantic_hash": ""
   }
 }
