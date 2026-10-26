@@ -1,8 +1,25 @@
 'use client';
 
+import {
+  ArrowUpRight,
+  BarChartSquare02,
+  Bell01,
+  CheckCircle,
+  Copy01,
+  CreditCard01,
+  HomeLine,
+  LogOut01,
+  MarkerPin01,
+  Menu01,
+  MessageSquare01,
+  Plus,
+  TrendUp01,
+} from '@untitledui/icons';
+import type { ComponentType } from 'react';
 import { useEffect, useId, useState } from 'react';
 
 import styles from './feedback-prototype.module.css';
+import { UIBadge, UIButton, UINavButton, UIStatCard, UITabs } from './feedback-ui';
 
 type WorkspaceView = 'overview' | 'reviews' | 'locations' | 'telegram' | 'subscription';
 type Rating = 'Плохо' | 'Нормально' | 'Хорошо';
@@ -26,12 +43,16 @@ const reviews: ReadonlyArray<{
   { rating: 'Хорошо', comment: 'Бариста помог выбрать зерно.', location: 'Кофейня у парка', date: 'Вчера, 14:31' },
 ];
 
-const navItems: ReadonlyArray<{ id: WorkspaceView; label: string; index: string }> = [
-  { id: 'overview', label: 'Обзор', index: '1' },
-  { id: 'reviews', label: 'Отзывы', index: '2' },
-  { id: 'locations', label: 'Точки и экраны', index: '3' },
-  { id: 'telegram', label: 'Telegram', index: '4' },
-  { id: 'subscription', label: 'Подписка', index: '5' },
+const navItems: ReadonlyArray<{
+  id: WorkspaceView;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+}> = [
+  { id: 'overview', label: 'Обзор', icon: HomeLine },
+  { id: 'reviews', label: 'Отзывы', icon: MessageSquare01 },
+  { id: 'locations', label: 'Точки и экраны', icon: MarkerPin01 },
+  { id: 'telegram', label: 'Telegram', icon: Bell01 },
+  { id: 'subscription', label: 'Подписка', icon: CreditCard01 },
 ];
 
 function Mark() {
@@ -336,7 +357,7 @@ function Workspace({
         aria-controls="feedback-sidebar"
         onClick={() => setMobileNav((value) => !value)}
       >
-        <span aria-hidden="true">☰</span> Меню
+        <Menu01 aria-hidden="true" /> Меню
       </button>
       <aside id="feedback-sidebar" className={styles.sidebar} data-open={mobileNav}>
         <div className={styles.sidebarBrand}>
@@ -344,30 +365,34 @@ function Workspace({
         </div>
         <nav aria-label="Личный кабинет">
           {navItems.map((item) => (
-            <button
-              type="button"
+            <UINavButton
               key={item.id}
-              aria-current={view === item.id ? 'page' : undefined}
-              onClick={() => {
+              current={view === item.id}
+              label={item.label}
+              icon={item.icon}
+              onPress={() => {
                 setView(item.id);
                 setMobileNav(false);
               }}
-            >
-              <span>{item.index}</span>
-              {item.label}
-            </button>
+            />
           ))}
         </nav>
         <div className={styles.trialBox}>
-          <span>Пробный период</span>
+          <UIBadge tone="warning" dot>
+            Пробный период
+          </UIBadge>
           <strong>Осталось 6 дней</strong>
           <button type="button" onClick={() => setView('subscription')}>
             Выбрать подписку
           </button>
         </div>
         <button type="button" className={styles.companyButton} onClick={onExit}>
-          <span>Кофейни Север</span>
-          <small>Выйти из демо</small>
+          <span className={styles.companyAvatar}>КС</span>
+          <span className={styles.companyMeta}>
+            <strong>Кофейни Север</strong>
+            <small>Выйти из демо</small>
+          </span>
+          <LogOut01 aria-hidden="true" />
         </button>
       </aside>
 
@@ -377,7 +402,9 @@ function Workspace({
             <span>Кофейни Север</span>
             <strong>{navItems.find((item) => item.id === view)?.label}</strong>
           </div>
-          <span className={styles.demoBadge}>Демонстрационные данные</span>
+          <UIBadge tone="neutral" dot>
+            Демонстрационные данные
+          </UIBadge>
         </header>
         {notice ? (
           <div className={styles.notice} role="status">
@@ -408,9 +435,14 @@ function Workspace({
             <strong>Следующий шаг: создайте первую точку</strong>
             <span>После этого вы получите ссылку для планшета.</span>
           </div>
-          <button type="button" className={styles.darkButton} onClick={() => setView('locations')}>
-            Создать точку <ArrowIcon />
-          </button>
+          <UIButton
+            color="secondary"
+            iconLeading={Plus}
+            iconTrailing={ArrowUpRight}
+            onPress={() => setView('locations')}
+          >
+            Создать точку
+          </UIButton>
         </div>
       ) : null}
     </main>
@@ -436,36 +468,23 @@ function Overview({ onTablet }: { onTablet: () => void }) {
         </label>
       </div>
 
-      <section className={styles.metrics}>
-        <div className={styles.primaryMetric}>
-          <span>Всего оценок</span>
-          <strong>{period === '7' ? '248' : '1 064'}</strong>
-          <small>По двум торговым точкам</small>
-        </div>
-        <fieldset className={styles.distribution}>
-          <legend className={styles.srOnly}>Распределение оценок</legend>
-          <div>
-            <span>Хорошо</span>
-            <strong>178</strong>
-            <i style={{ '--bar': '72%' } as React.CSSProperties} />
-          </div>
-          <div>
-            <span>Нормально</span>
-            <strong>48</strong>
-            <i style={{ '--bar': '19%' } as React.CSSProperties} />
-          </div>
-          <div>
-            <span>Плохо</span>
-            <strong>22</strong>
-            <i style={{ '--bar': '9%' } as React.CSSProperties} />
-          </div>
-        </fieldset>
-        <div className={styles.pendingMetric}>
-          <span>Удовлетворённость</span>
-          <strong>Формула не согласована</strong>
-          <small>Не подменяем её долей положительных оценок</small>
-        </div>
+      <section className={styles.uiStatsGrid}>
+        <UIStatCard
+          label="Всего оценок"
+          value={period === '7' ? '248' : '1 064'}
+          detail="По двум торговым точкам"
+          icon={BarChartSquare02}
+        />
+        <UIStatCard label="Хорошо" value="178" detail="72% оценок за период" icon={TrendUp01} />
+        <UIStatCard label="Плохо" value="22" detail="9% оценок за период" icon={MessageSquare01} />
       </section>
+      <div className={styles.metricNote}>
+        <CheckCircle aria-hidden="true" />
+        <div>
+          <strong>Показатель удовлетворённости не рассчитан</strong>
+          <span>Формула ещё не согласована — не подменяем её долей положительных оценок.</span>
+        </div>
+      </div>
 
       <div className={styles.dashboardGrid}>
         <section className={styles.panel}>
@@ -528,10 +547,11 @@ function Overview({ onTablet }: { onTablet: () => void }) {
 }
 
 function RatingBadge({ rating }: { rating: Rating }) {
+  const tone = rating === 'Плохо' ? 'error' : rating === 'Хорошо' ? 'success' : 'neutral';
   return (
-    <span className={styles.ratingBadge} data-rating={rating}>
+    <UIBadge tone={tone} dot>
       {rating}
-    </span>
+    </UIBadge>
   );
 }
 
@@ -547,13 +567,13 @@ function Reviews() {
           <h1>Отзывы</h1>
         </div>
       </div>
-      <fieldset className={styles.filterBar}>
-        <legend className={styles.srOnly}>Фильтры отзывов</legend>
-        {(['Все', 'Плохо', 'Нормально', 'Хорошо'] as const).map((item) => (
-          <button type="button" key={item} aria-pressed={filter === item} onClick={() => setFilter(item)}>
-            {item}
-          </button>
-        ))}
+      <div className={styles.filterBar}>
+        <UITabs
+          items={['Все', 'Плохо', 'Нормально', 'Хорошо'] as const}
+          selectedKey={filter}
+          onSelectionChange={setFilter}
+          ariaLabel="Фильтр по оценке"
+        />
         <label>
           Точка
           <select>
@@ -562,7 +582,7 @@ function Reviews() {
             <option>Кофейня у парка</option>
           </select>
         </label>
-      </fieldset>
+      </div>
       <section className={styles.reviewList} aria-live="polite">
         {visible.map((review) => (
           <article key={`${review.location}-${review.date}`}>
@@ -614,9 +634,9 @@ function Locations({
           <p className={styles.kicker}>Единица подписки и аналитики</p>
           <h1>Точки и экраны</h1>
         </div>
-        <button type="button" className={styles.darkButton} onClick={() => setDialogOpen(true)}>
-          <span aria-hidden="true">＋</span> Добавить точку
-        </button>
+        <UIButton iconLeading={Plus} onPress={() => setDialogOpen(true)}>
+          Добавить точку
+        </UIButton>
       </div>
       <section className={styles.locationList}>
         <article>
@@ -633,9 +653,14 @@ function Locations({
               Экран в зале <span>Активен</span>
             </button>
           </div>
-          <button type="button" className={styles.outlineButton} onClick={() => onNotice('Ссылка экрана скопирована')}>
+          <UIButton
+            color="secondary"
+            size="sm"
+            iconLeading={Copy01}
+            onPress={() => onNotice('Ссылка экрана скопирована')}
+          >
             Копировать ссылку
-          </button>
+          </UIButton>
         </article>
         <article>
           <div className={styles.locationIndex}>02</div>
@@ -648,9 +673,14 @@ function Locations({
               Основной экран <span>Активен</span>
             </button>
           </div>
-          <button type="button" className={styles.outlineButton} onClick={() => onNotice('Ссылка экрана скопирована')}>
+          <UIButton
+            color="secondary"
+            size="sm"
+            iconLeading={Copy01}
+            onPress={() => onNotice('Ссылка экрана скопирована')}
+          >
             Копировать ссылку
-          </button>
+          </UIButton>
         </article>
       </section>
       <div className={styles.scopeNote}>
@@ -679,9 +709,9 @@ function Locations({
               <p className={styles.fieldNote}>
                 Адрес и другие поля не добавлены: их необходимость ещё не подтверждена.
               </p>
-              <button type="submit" className={styles.darkButton}>
-                Создать точку <ArrowIcon />
-              </button>
+              <UIButton type="submit" iconLeading={Plus} iconTrailing={ArrowUpRight}>
+                Создать точку
+              </UIButton>
             </form>
           </div>
         </div>
@@ -709,16 +739,16 @@ function Telegram({ onNotice }: { onNotice: (message: string) => void }) {
             <li>Выберите личный или групповой чат.</li>
             <li>Подтвердите получение уведомлений.</li>
           </ol>
-          <button
-            type="button"
-            className={styles.darkButton}
-            onClick={() => {
+          <UIButton
+            iconLeading={Bell01}
+            iconTrailing={ArrowUpRight}
+            onPress={() => {
               setConnected(true);
               onNotice('Демо-подключение Telegram завершено');
             }}
           >
-            {connected ? 'Telegram подключён' : 'Подключить Telegram'} <ArrowIcon />
-          </button>
+            {connected ? 'Telegram подключён' : 'Подключить Telegram'}
+          </UIButton>
         </div>
         <div className={styles.telegramPreview}>
           <div className={styles.telegramTop}>
@@ -802,13 +832,13 @@ function Subscription({ onNotice }: { onNotice: (message: string) => void }) {
             <input type="checkbox" checked={renew} onChange={(event) => setRenew(event.target.checked)} />
             Автоматическое продление
           </label>
-          <button
-            type="button"
-            className={styles.darkButton}
-            onClick={() => onNotice('Переход к платёжному провайдеру показан в демо')}
+          <UIButton
+            iconLeading={CreditCard01}
+            iconTrailing={ArrowUpRight}
+            onPress={() => onNotice('Переход к платёжному провайдеру показан в демо')}
           >
-            Перейти к оплате <ArrowIcon />
-          </button>
+            Перейти к оплате
+          </UIButton>
           <p className={styles.fieldNote}>
             Провайдер оплаты ещё не выбран. Карточные данные в прототипе не запрашиваются.
           </p>
