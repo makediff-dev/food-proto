@@ -537,9 +537,9 @@
     "semantic_hash": ""
   },
   "src/features/shell/AppShell.tsx": {
-    "mtime": 1792762396.930254,
-    "seen": 1792762430.4980009,
-    "ast_hash": "16ecbb1f895107220adef7af7e2fab01",
+    "mtime": 1793005730.9886322,
+    "seen": 1793006821.5665376,
+    "ast_hash": "977359f8e21f2dc2b98875c673d598d3",
     "semantic_hash": ""
   },
   "src/features/shell/Dialog.tsx": {
@@ -1023,9 +1023,9 @@
     "semantic_hash": ""
   },
   "src/features/recipes/text.ts": {
-    "mtime": 1793004878.3049266,
-    "seen": 1793004966.3635683,
-    "ast_hash": "4f154a6ed6b83f3ae2934f2f918357e7",
+    "mtime": 1793005424.2408168,
+    "seen": 1793005715.501006,
+    "ast_hash": "86481f76a97d1b6ecd30f4638eace2ff",
     "semantic_hash": ""
   },
   "src/features/recipes/use-derivatives.ts": {
@@ -1068,6 +1068,36 @@
     "mtime": 1793003446.2677927,
     "seen": 1793003571.4104116,
     "ast_hash": "5e279013f19f14d035f0d8a8eb655cbc",
+    "semantic_hash": ""
+  },
+  "src/app/derivative-movement/page.tsx": {
+    "mtime": 1793006798.7507758,
+    "seen": 1793006821.5665376,
+    "ast_hash": "f87a7fdd9f7ad6ba1e2d38e1357e1796",
+    "semantic_hash": ""
+  },
+  "src/features/derivative-movement/DerivativeMovementSummaryScreen.tsx": {
+    "mtime": 1793006805.723332,
+    "seen": 1793006821.5665376,
+    "ast_hash": "d2eb9791d2ccda741c3685a402f85c3d",
+    "semantic_hash": ""
+  },
+  "src/features/derivative-movement/paths.ts": {
+    "mtime": 1793006759.9130893,
+    "seen": 1793006821.5665376,
+    "ast_hash": "b41f49029af377f5ad484d219d57486d",
+    "semantic_hash": ""
+  },
+  "src/domain/derivative-movement.ts": {
+    "mtime": 1793007307.555024,
+    "seen": 1793007324.671529,
+    "ast_hash": "2b5a53341e5f764e5cf7d872105d409c",
+    "semantic_hash": ""
+  },
+  "src/features/derivative-movement/DerivativeMovementSummaryTable.tsx": {
+    "mtime": 1793007303.705359,
+    "seen": 1793007324.671529,
+    "ast_hash": "6ab0c3ec11066649b773c851f2584d65",
     "semantic_hash": ""
   }
 }

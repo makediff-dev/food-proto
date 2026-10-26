@@ -6,6 +6,11 @@ import { type ReactNode, useEffect, useState } from 'react';
 
 import { useDocumentStore } from '@/data/DocumentProvider';
 import {
+  DERIVATIVE_MOVEMENT_SECTION_TITLE,
+  DERIVATIVE_MOVEMENT_SUMMARY_HREF,
+  DERIVATIVE_MOVEMENT_SUMMARY_TITLE,
+} from '@/features/derivative-movement/paths';
+import {
   MATERIALS_INVENTORY_TITLE,
   MATERIALS_PLAN_TITLE,
   MATERIALS_RECEIPTS_TITLE,
@@ -73,6 +78,15 @@ const MOVEMENT_NAV: readonly NavItem[] = [
   { href: '/movement/fact', label: MOVEMENT_FACT_TITLE, navKind: 'report' },
   { href: '/movement/plan', label: MOVEMENT_PLAN_TITLE, navKind: 'input' },
   { href: '/movement/inventory', label: MOVEMENT_INVENTORY_TITLE, navKind: 'input' },
+];
+
+const DERIVATIVE_MOVEMENT_NAV: readonly NavItem[] = [
+  {
+    href: DERIVATIVE_MOVEMENT_SUMMARY_HREF,
+    label: DERIVATIVE_MOVEMENT_SUMMARY_TITLE,
+    exact: true,
+    navKind: 'report',
+  },
 ];
 
 const MATERIALS_NAV: readonly NavItem[] = [
@@ -299,6 +313,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           />
           <NavGroup title={RECIPES_SECTION_TITLE} items={RECIPES_NAV} pathname={pathname} onNavigate={closeMenu} />
           <NavGroup title={MOVEMENT_SECTION_TITLE} items={MOVEMENT_NAV} pathname={pathname} onNavigate={closeMenu} />
+          <NavGroup
+            title={DERIVATIVE_MOVEMENT_SECTION_TITLE}
+            items={DERIVATIVE_MOVEMENT_NAV}
+            pathname={pathname}
+            onNavigate={closeMenu}
+          />
           <NavGroup title={MATERIALS_SECTION_TITLE} items={MATERIALS_NAV} pathname={pathname} onNavigate={closeMenu} />
         </nav>
 
