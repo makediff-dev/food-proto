@@ -39,27 +39,27 @@ const caesar: Product = {
   vatPercent: 20,
   /** 40 ₽. В книге строки салата нет. */
   unitCostWithVat: 4_000,
-  /** 0,08 + 0,015 + лоток 0 кг. */
-  outputKilogramThousandths: q(0.095),
-  outputPieceThousandths: q(1),
+  /** Партия ×1000: 80 + 15 + лоток 0 кг → 95 кг / 1000 шт. */
+  outputKilogramThousandths: q(95),
+  outputPieceThousandths: q(1000),
   lines: [
     {
       id: 'product-line-caesar-chicken',
       componentKind: 'material',
       componentId: 'material-chicken',
-      quantity: q(0.08),
+      quantity: q(80),
     },
     {
       id: 'product-line-caesar-oil',
       componentKind: 'material',
       componentId: 'material-oil',
-      quantity: q(0.015),
+      quantity: q(15),
     },
     {
       id: 'product-line-caesar-tray',
       componentKind: 'material',
       componentId: 'material-tray',
-      quantity: q(1),
+      quantity: q(1000),
     },
   ],
   deletedAt: null,
@@ -73,27 +73,27 @@ const olivier: Product = {
   vatPercent: 20,
   /** 30 ₽. В книге строки салата нет. */
   unitCostWithVat: 3_000,
-  /** 0,02 + 0,005 + лоток 0 кг. */
-  outputKilogramThousandths: q(0.025),
-  outputPieceThousandths: q(1),
+  /** Партия ×1000: 20 + 5 + лоток 0 кг → 25 кг / 1000 шт. */
+  outputKilogramThousandths: q(25),
+  outputPieceThousandths: q(1000),
   lines: [
     {
       id: 'product-line-olivier-oil',
       componentKind: 'material',
       componentId: 'material-oil-w2',
-      quantity: q(0.02),
+      quantity: q(20),
     },
     {
       id: 'product-line-olivier-salt',
       componentKind: 'material',
       componentId: 'material-salt-w2',
-      quantity: q(0.005),
+      quantity: q(5),
     },
     {
       id: 'product-line-olivier-tray',
       componentKind: 'material',
       componentId: 'material-tray-w2',
-      quantity: q(1),
+      quantity: q(1000),
     },
   ],
   deletedAt: null,
@@ -107,27 +107,27 @@ const goulash: Product = {
   vatPercent: 20,
   /** 50 ₽. `Svod!D31` в файле 0. */
   unitCostWithVat: 5_000,
-  /** 0,15 бульона + 0,12 курицы + лоток 0 кг. */
-  outputKilogramThousandths: q(0.27),
-  outputPieceThousandths: q(1),
+  /** Партия ×100: 15 бульона + 12 курицы + лоток 0 кг → 27 кг / 100 шт. */
+  outputKilogramThousandths: q(27),
+  outputPieceThousandths: q(100),
   lines: [
     {
       id: 'product-line-goulash-broth',
       componentKind: 'derivative',
       componentId: 'derivative-broth',
-      quantity: q(0.15),
+      quantity: q(15),
     },
     {
       id: 'product-line-goulash-chicken',
       componentKind: 'material',
       componentId: 'material-chicken',
-      quantity: q(0.12),
+      quantity: q(12),
     },
     {
       id: 'product-line-goulash-tray',
       componentKind: 'material',
       componentId: 'material-tray',
-      quantity: q(1),
+      quantity: q(100),
     },
   ],
   deletedAt: null,
@@ -141,33 +141,33 @@ const burger: Product = {
   vatPercent: 20,
   /** 40 ₽. */
   unitCostWithVat: 4_000,
-  /** Котлета 0,097 + булочка 0,065 + кетчуп 0,02 + этикетка 0. */
-  outputKilogramThousandths: q(0.182),
-  outputPieceThousandths: q(1),
+  /** Партия ×1000: котлета 97 + булочка 65 + кетчуп 20 + этикетка 0 → 182 кг / 1000 шт. */
+  outputKilogramThousandths: q(182),
+  outputPieceThousandths: q(1000),
   lines: [
     {
       id: 'product-line-burger-cutlet',
       componentKind: 'derivative',
       componentId: 'derivative-cutlet',
-      quantity: q(1),
+      quantity: q(1000),
     },
     {
       id: 'product-line-burger-bun',
       componentKind: 'derivative',
       componentId: 'derivative-bun',
-      quantity: q(1),
+      quantity: q(1000),
     },
     {
       id: 'product-line-burger-ketchup',
       componentKind: 'material',
       componentId: 'material-ketchup',
-      quantity: q(0.02),
+      quantity: q(20),
     },
     {
       id: 'product-line-burger-label',
       componentKind: 'material',
       componentId: 'material-label',
-      quantity: q(1),
+      quantity: q(1000),
     },
   ],
   deletedAt: null,
@@ -535,14 +535,18 @@ const productionPlans: ProductionPlan[] = [productionPlan('2026-09'), production
 const finishedGoodsNorms: FinishedGoodsNorm[] = [finishedGoodsNorm('2026-09'), finishedGoodsNorm('2026-10')];
 const finishedGoodsOpenings: FinishedGoodsOpening[] = [finishedGoodsOpening('2026-09', closingInventorySeptember)];
 
-/** Имена с макета рецептурных журналов. Выход = сумма кг компонентов. */
+/**
+ * Имена с макета рецептурных журналов. Выход = сумма кг компонентов.
+ * Партии домножены на степень 10, чтобы кг выхода были целыми (напр. 1000 котлет / 97 кг).
+ */
 const mockDerivatives: Derivative[] = [
   {
     id: 'derivative-mince',
     name: 'Фарш говяжий',
     workshopId: 'meat-1',
     unit: 'кг',
-    outputKilogramThousandths: q(8.32),
+    /** ×100: 800 + 12 + 20 → 832 кг. */
+    outputKilogramThousandths: q(832),
     outputPieceThousandths: null,
     heatTreatmentYieldPercent: 100,
     lines: [
@@ -550,19 +554,19 @@ const mockDerivatives: Derivative[] = [
         id: 'derivative-line-mince-beef',
         componentKind: 'material',
         componentId: 'material-beef',
-        quantity: q(8),
+        quantity: q(800),
       },
       {
         id: 'derivative-line-mince-salt',
         componentKind: 'material',
         componentId: 'material-salt',
-        quantity: q(0.12),
+        quantity: q(12),
       },
       {
         id: 'derivative-line-mince-oil',
         componentKind: 'material',
         componentId: 'material-oil',
-        quantity: q(0.2),
+        quantity: q(20),
       },
     ],
     deletedAt: null,
@@ -572,33 +576,34 @@ const mockDerivatives: Derivative[] = [
     name: 'Котлета сырая',
     workshopId: 'meat-1',
     unit: 'шт',
-    outputKilogramThousandths: q(0.097),
-    outputPieceThousandths: q(1),
+    /** ×1000: 80 + 2 + 10 + 5 → 97 кг / 1000 шт. */
+    outputKilogramThousandths: q(97),
+    outputPieceThousandths: q(1000),
     heatTreatmentYieldPercent: 100,
     lines: [
       {
         id: 'derivative-line-cutlet-mince',
         componentKind: 'derivative',
         componentId: 'derivative-mince',
-        quantity: q(0.08),
+        quantity: q(80),
       },
       {
         id: 'derivative-line-cutlet-nitrite',
         componentKind: 'material',
         componentId: 'material-nitrite',
-        quantity: q(0.002),
+        quantity: q(2),
       },
       {
         id: 'derivative-line-cutlet-oil',
         componentKind: 'material',
         componentId: 'material-oil',
-        quantity: q(0.01),
+        quantity: q(10),
       },
       {
         id: 'derivative-line-cutlet-salt',
         componentKind: 'material',
         componentId: 'material-salt',
-        quantity: q(0.005),
+        quantity: q(5),
       },
     ],
     deletedAt: null,
@@ -608,7 +613,8 @@ const mockDerivatives: Derivative[] = [
     name: 'Бульон мясной',
     workshopId: 'meat-1',
     unit: 'кг',
-    outputKilogramThousandths: q(3.55),
+    /** ×100: 200 + 150 + 5 → 355 кг. */
+    outputKilogramThousandths: q(355),
     outputPieceThousandths: null,
     heatTreatmentYieldPercent: 100,
     lines: [
@@ -616,19 +622,19 @@ const mockDerivatives: Derivative[] = [
         id: 'derivative-line-broth-beef',
         componentKind: 'material',
         componentId: 'material-beef',
-        quantity: q(2),
+        quantity: q(200),
       },
       {
         id: 'derivative-line-broth-chicken',
         componentKind: 'material',
         componentId: 'material-chicken',
-        quantity: q(1.5),
+        quantity: q(150),
       },
       {
         id: 'derivative-line-broth-salt',
         componentKind: 'material',
         componentId: 'material-salt',
-        quantity: q(0.05),
+        quantity: q(5),
       },
     ],
     deletedAt: null,
@@ -638,7 +644,8 @@ const mockDerivatives: Derivative[] = [
     name: 'Тесто дрожжевое',
     workshopId: 'bakery-1',
     unit: 'кг',
-    outputKilogramThousandths: q(5.33),
+    /** ×100: 500 + 8 + 10 + 15 → 533 кг. */
+    outputKilogramThousandths: q(533),
     outputPieceThousandths: null,
     heatTreatmentYieldPercent: 100,
     lines: [
@@ -646,25 +653,25 @@ const mockDerivatives: Derivative[] = [
         id: 'derivative-line-dough-flour',
         componentKind: 'material',
         componentId: 'material-flour',
-        quantity: q(5),
+        quantity: q(500),
       },
       {
         id: 'derivative-line-dough-yeast',
         componentKind: 'material',
         componentId: 'material-yeast',
-        quantity: q(0.08),
+        quantity: q(8),
       },
       {
         id: 'derivative-line-dough-salt',
         componentKind: 'material',
         componentId: 'material-salt',
-        quantity: q(0.1),
+        quantity: q(10),
       },
       {
         id: 'derivative-line-dough-oil',
         componentKind: 'material',
         componentId: 'material-oil',
-        quantity: q(0.15),
+        quantity: q(15),
       },
     ],
     deletedAt: null,
@@ -674,21 +681,22 @@ const mockDerivatives: Derivative[] = [
     name: 'Булочка для сэндвича',
     workshopId: 'bakery-1',
     unit: 'шт',
-    outputKilogramThousandths: q(0.065),
-    outputPieceThousandths: q(1),
+    /** ×1000: 60 + 5 → 65 кг / 1000 шт. */
+    outputKilogramThousandths: q(65),
+    outputPieceThousandths: q(1000),
     heatTreatmentYieldPercent: 100,
     lines: [
       {
         id: 'derivative-line-bun-dough',
         componentKind: 'derivative',
         componentId: 'derivative-dough',
-        quantity: q(0.06),
+        quantity: q(60),
       },
       {
         id: 'derivative-line-bun-oil',
         componentKind: 'material',
         componentId: 'material-oil',
-        quantity: q(0.005),
+        quantity: q(5),
       },
     ],
     deletedAt: null,

@@ -1,7 +1,7 @@
 # Graph Report - food-proto  (2026-10-26)
 
 ## Corpus Check
-- 174 files · ~103,700 words
+- 174 files · ~103,813 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 8 file(s) not represented in the graph (top: .mdc 5, (none) 1, .ico 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9747cdd6`
+- Built from commit: `bf761aed`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

@@ -96,9 +96,9 @@
     "semantic_hash": "66c2951a711a3c1f4596fa8fff571b2d"
   },
   "src/data/mock-document.ts": {
-    "mtime": 1793004858.8045382,
-    "seen": 1793004966.3635683,
-    "ast_hash": "e3f7dd198063876c625ca3e09ef839ce",
+    "mtime": 1793005378.5882308,
+    "seen": 1793005395.384959,
+    "ast_hash": "b7ad6ef0232b2a95340a791b30aae537",
     "semantic_hash": ""
   },
   "src/domain/categories.ts": {

@@ -30,7 +30,7 @@ export const PRODUCT_RECIPE_ERROR: Record<ProductRecipeRejection, string> = {
 };
 
 /**
- * Колонка выхода. Штуки заданы — «на 1 шт / 0,097 кг», иначе «на X кг».
+ * Колонка выхода. Штуки заданы — «на 1000 шт / 97 кг», иначе «на X кг».
  */
 export function formatRecipeBatchLabel(
   outputKilogramThousandths: number,
