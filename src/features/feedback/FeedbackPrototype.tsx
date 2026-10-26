@@ -145,44 +145,48 @@ function Landing({
 
       <section className={styles.hero}>
         <div className={styles.heroCopy}>
-          <p className={styles.kicker}>Обратная связь там, где случается сервис</p>
-          <h1>Узнайте о плохом опыте до того, как он станет публичным.</h1>
+          <h1>
+            Узнайте о плохом опыте <em>до того, как он станет публичным</em>
+          </h1>
           <p className={styles.heroLead}>
-            Гость нажимает одну из трёх оценок на планшете. Вы видите результат по каждой точке и получаете уведомление
-            о проблеме в Telegram.
+            Гость оставляет оценку на планшете в заведении. Вы видите статистику по точкам и получаете негатив в
+            Telegram. Без приложения для посетителя.
           </p>
           <div className={styles.actionRow}>
             <button type="button" className={styles.darkButton} onClick={onRegister}>
-              Начать 7 дней бесплатно <ArrowIcon />
+              Начать бесплатно
             </button>
             <button type="button" className={styles.outlineButton} onClick={onDemo}>
               Открыть демо
             </button>
           </div>
-          <p className={styles.microcopy}>Без установки приложения для посетителей</p>
+          <p className={styles.microcopy}>7 дней бесплатно · карта не нужна</p>
         </div>
 
-        <div className={styles.heroDemo}>
-          <div className={styles.demoCaption}>
-            <span>Экран посетителя</span>
-            <button type="button" onClick={onTablet}>
-              Проверить сценарий <ArrowIcon />
-            </button>
-          </div>
-          <div className={styles.ratingQuestion}>Как прошло ваше посещение?</div>
-          <div className={styles.ratingStrip}>
-            {(['Плохо', 'Нормально', 'Хорошо'] as const).map((rating, index) => (
-              <button type="button" key={rating} onClick={onTablet}>
-                <span className={styles.face} aria-hidden="true">
-                  {index === 0 ? '⌢' : index === 1 ? '—' : '⌣'}
-                </span>
-                {rating}
+        <div className={styles.heroPreview}>
+          <div className={styles.heroWindow}>
+            <div className={styles.windowChrome}>
+              <div className={styles.windowDots} aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </div>
+              <p>Кофейня на Центральной · экран у кассы</p>
+              <button type="button" onClick={onTablet}>
+                Открыть сценарий
               </button>
-            ))}
-          </div>
-          <div className={styles.demoFooter}>
-            <span>Кофейня на Центральной</span>
-            <span>Экран 01 · онлайн</span>
+            </div>
+            <div className={styles.ratingQuestion}>Как прошло ваше посещение?</div>
+            <div className={styles.ratingStrip}>
+              {(['Плохо', 'Нормально', 'Хорошо'] as const).map((rating, index) => (
+                <button type="button" key={rating} onClick={onTablet}>
+                  <span className={styles.face} aria-hidden="true">
+                    {index === 0 ? '⌢' : index === 1 ? '—' : '⌣'}
+                  </span>
+                  {rating}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -219,25 +223,25 @@ function Landing({
       </section>
 
       <section className={styles.benefitsSection}>
-        <div className={styles.sectionIntro}>
-          <p className={styles.kicker}>Начать можно без сложного внедрения</p>
-          <h2>Обычный планшет становится точкой контакта.</h2>
+        <div className={styles.benefitsIntro}>
+          <h2>Обычный планшет становится точкой контакта</h2>
+          <p>
+            Не нужно специальное оборудование: экран открывается в браузере, несколько планшетов работают в одном
+            заведении, а без сети оценки сохраняются на устройстве.
+          </p>
         </div>
-        <div className={styles.benefitGrid}>
+        <div className={styles.benefitStats}>
           <article>
-            <span>01</span>
-            <h3>Работает в браузере</h3>
-            <p>Посетителю не нужны приложение, регистрация или собственный смартфон.</p>
+            <strong>3</strong>
+            <span>Понятные оценки на экране</span>
           </article>
           <article>
-            <span>02</span>
-            <h3>Подключается по ссылке</h3>
-            <p>Для каждого экрана создаётся уникальная ссылка, связанная с нужной торговой точкой.</p>
+            <strong>1</strong>
+            <span>Ссылка, чтобы запустить сбор</span>
           </article>
           <article>
-            <span>03</span>
-            <h3>Не теряет оценки офлайн</h3>
-            <p>Временная потеря сети не останавливает сбор: оценки ждут синхронизации на устройстве.</p>
+            <strong>0</strong>
+            <span>Приложений для посетителя</span>
           </article>
         </div>
       </section>
