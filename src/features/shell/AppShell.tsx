@@ -275,12 +275,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-paper">
+    <div className="app-shell flex h-dvh flex-col overflow-hidden bg-paper">
       {menuOpen ? (
         <button
           type="button"
           aria-label="Закрыть меню"
-          className="fixed inset-0 z-20 bg-ink/40 lg:hidden"
+          className="app-menu-backdrop fixed inset-0 z-20 bg-ink/40 lg:hidden"
           onClick={closeMenu}
         />
       ) : null}
@@ -339,8 +339,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col lg:pl-64">
-        <header className="flex shrink-0 items-center gap-3 border-b border-line bg-paper px-4 py-2 lg:hidden">
+      <div className="app-main flex min-h-0 min-w-0 flex-1 flex-col lg:pl-64">
+        <header className="app-mobile-header flex shrink-0 items-center gap-3 border-b border-line bg-paper px-4 py-2 lg:hidden">
           <button
             type="button"
             aria-expanded={menuOpen}
@@ -353,7 +353,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
           <p className="text-sm text-ink">{currentLabel}</p>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <div className="app-scroll min-h-0 flex-1 overflow-y-auto">{children}</div>
       </div>
     </div>
   );

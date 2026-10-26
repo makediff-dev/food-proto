@@ -4,6 +4,7 @@ import { useDocumentStore } from '@/data/DocumentProvider';
 import { productCompositionLines, productRecipeSections } from '@/domain/products';
 import { finishedProductHref, RECIPES_FINISHED_TITLE } from '@/features/recipes/paths';
 import { RecipeJournalsScreen } from '@/features/recipes/RecipeJournalsScreen';
+import { productPrintModel } from '@/features/recipes/RecipePrint';
 import { formatRecipeBatchLabel } from '@/features/recipes/text';
 
 export function FinishedProductsScreen() {
@@ -22,6 +23,7 @@ export function FinishedProductsScreen() {
         quantity: line.quantity,
         unit: line.unit,
       })),
+      printModel: productPrintModel(store.document, item),
     })),
   }));
 

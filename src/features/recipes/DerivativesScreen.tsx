@@ -6,6 +6,7 @@ import { useDocumentStore } from '@/data/DocumentProvider';
 import { derivativeCompositionLines, derivativeSections, outputPieceThousandthsOf } from '@/domain/derivatives';
 import { derivativeHref, derivativeNewHref, RECIPES_DERIVATIVES_TITLE } from '@/features/recipes/paths';
 import { RecipeJournalsScreen } from '@/features/recipes/RecipeJournalsScreen';
+import { derivativePrintModel } from '@/features/recipes/RecipePrint';
 import { formatRecipeBatchLabel } from '@/features/recipes/text';
 import { primaryButtonClassName } from '@/features/sales/fields';
 import { IconPlus } from '@/features/shell/Icons';
@@ -27,6 +28,7 @@ export function DerivativesScreen() {
         quantity: line.quantity,
         unit: line.unit,
       })),
+      printModel: derivativePrintModel(store.document, item),
     })),
   }));
 

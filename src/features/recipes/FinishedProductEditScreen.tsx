@@ -25,6 +25,13 @@ import {
   parseComponentDraftKey,
 } from '@/features/recipes/DerivativeFormTable';
 import { RECIPES_FINISHED_HREF, RECIPES_FINISHED_TITLE } from '@/features/recipes/paths';
+import {
+  formatPrintKilograms,
+  formatPrintPieces,
+  RecipePrintButton,
+  RecipePrintSheet,
+  recipePrintGroups,
+} from '@/features/recipes/RecipePrint';
 import { PRODUCT_RECIPE_ERROR } from '@/features/recipes/text';
 import { useFinishedRecipes } from '@/features/recipes/use-finished-recipes';
 import { primaryButtonClassName } from '@/features/sales/fields';
@@ -250,102 +257,120 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
     router.replace(RECIPES_FINISHED_HREF);
   }
 
+  const printModel = {
+    kindLabel: 'готовая продукция',
+    name: product.name,
+    placeLabel: 'Склад',
+    place: warehouseLabel(product.warehouseId),
+    batchKilograms: formatPrintKilograms(outputDraft),
+    batchPieces: formatPrintPieces(piecesDraft, gramsDraft),
+    heatTreatment: null,
+    componentsKilograms: formatQuantity(componentsKilograms, 'кг'),
+    groups: recipePrintGroups(materials, derivatives, drafts),
+  };
+
   return (
-    <PageFrame
-      title={RECIPES_FINISHED_TITLE}
-      full
-      back={
-        <Link
-          href={RECIPES_FINISHED_HREF}
-          aria-label="Назад"
-          className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
-          <IconArrowLeft />
-        </Link>
-      }
-    >
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-start gap-4">
-          {!hasCandidates ? (
-            <DerivativeFormNoCandidates />
-          ) : (
-            <DerivativeFormTable
-              materials={materials}
-              derivatives={derivatives}
-              drafts={drafts}
-              onChange={setQuantity}
-            />
-          )}
-
-          <div className="sticky top-16 z-20 flex w-72 shrink-0 flex-col gap-4 self-start border border-line bg-sheet p-4 lg:top-4">
-            <div>
-              <p className="text-sm text-muted">Название</p>
-              <p className="mt-2 text-base text-ink">{product.name}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-muted">Склад</p>
-              <p className="mt-2 text-base text-ink">{warehouseLabel(product.warehouseId)}</p>
-            </div>
-
-            <fieldset className="min-w-0 border-0 p-0">
-              <legend className="text-sm text-muted">Рассчитан на</legend>
-              <div className="mt-2 flex flex-col gap-2">
-                <div className="flex items-center gap-1.5">
-                  <input
-                    id={outputFieldId}
-                    aria-label="Килограммы"
-                    value={outputDraft}
-                    onChange={(event) => onOutputChange(event.target.value)}
-                    className={yieldInputClassName}
-                    inputMode="decimal"
-                    autoComplete="off"
-                  />
-                  <span className="shrink-0 text-sm text-ink">кг</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    id={piecesFieldId}
-                    aria-label="Штуки"
-                    value={piecesDraft}
-                    onChange={(event) => onPiecesChange(event.target.value)}
-                    className={yieldInputClassName}
-                    inputMode="decimal"
-                    autoComplete="off"
-                  />
-                  <span className="shrink-0 text-sm text-ink">шт</span>
-                  <input
-                    id={gramsFieldId}
-                    aria-label="Граммы на штуку"
-                    value={gramsDraft}
-                    onChange={(event) => onGramsChange(event.target.value)}
-                    className={yieldInputClassName}
-                    inputMode="decimal"
-                    autoComplete="off"
-                  />
-                  <span className="shrink-0 text-sm text-ink">г/шт</span>
-                </div>
-              </div>
-            </fieldset>
-
-            <div>
-              <p className="text-sm text-muted">По компонентам</p>
-              <p className="mt-2 text-base text-ink">{formatQuantity(componentsKilograms, 'кг')}</p>
-            </div>
-
-            <button
-              type="button"
-              disabled={!journal.hydrated}
-              onClick={save}
-              className={`${primaryButtonClassName} w-full`}
+    <>
+      <div className="screen-only">
+        <PageFrame
+          title={RECIPES_FINISHED_TITLE}
+          full
+          back={
+            <Link
+              href={RECIPES_FINISHED_HREF}
+              aria-label="Назад"
+              className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
             >
-              <IconCheck />
-              Сохранить
-            </button>
-            {saveError ? <p className="text-sm text-ink">{saveError}</p> : null}
+              <IconArrowLeft />
+            </Link>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-start gap-4">
+              {!hasCandidates ? (
+                <DerivativeFormNoCandidates />
+              ) : (
+                <DerivativeFormTable
+                  materials={materials}
+                  derivatives={derivatives}
+                  drafts={drafts}
+                  onChange={setQuantity}
+                />
+              )}
+
+              <div className="sticky top-16 z-20 flex w-72 shrink-0 flex-col gap-4 self-start border border-line bg-sheet p-4 lg:top-4">
+                <div>
+                  <p className="text-sm text-muted">Название</p>
+                  <p className="mt-2 text-base text-ink">{product.name}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted">Склад</p>
+                  <p className="mt-2 text-base text-ink">{warehouseLabel(product.warehouseId)}</p>
+                </div>
+
+                <fieldset className="min-w-0 border-0 p-0">
+                  <legend className="text-sm text-muted">Рассчитан на</legend>
+                  <div className="mt-2 flex flex-col gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        id={outputFieldId}
+                        aria-label="Килограммы"
+                        value={outputDraft}
+                        onChange={(event) => onOutputChange(event.target.value)}
+                        className={yieldInputClassName}
+                        inputMode="decimal"
+                        autoComplete="off"
+                      />
+                      <span className="shrink-0 text-sm text-ink">кг</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        id={piecesFieldId}
+                        aria-label="Штуки"
+                        value={piecesDraft}
+                        onChange={(event) => onPiecesChange(event.target.value)}
+                        className={yieldInputClassName}
+                        inputMode="decimal"
+                        autoComplete="off"
+                      />
+                      <span className="shrink-0 text-sm text-ink">шт</span>
+                      <input
+                        id={gramsFieldId}
+                        aria-label="Граммы на штуку"
+                        value={gramsDraft}
+                        onChange={(event) => onGramsChange(event.target.value)}
+                        className={yieldInputClassName}
+                        inputMode="decimal"
+                        autoComplete="off"
+                      />
+                      <span className="shrink-0 text-sm text-ink">г/шт</span>
+                    </div>
+                  </div>
+                </fieldset>
+
+                <div>
+                  <p className="text-sm text-muted">По компонентам</p>
+                  <p className="mt-2 text-base text-ink">{formatQuantity(componentsKilograms, 'кг')}</p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={!journal.hydrated}
+                  onClick={save}
+                  className={`${primaryButtonClassName} w-full`}
+                >
+                  <IconCheck />
+                  Сохранить
+                </button>
+                <RecipePrintButton />
+                {saveError ? <p className="text-sm text-ink">{saveError}</p> : null}
+              </div>
+            </div>
           </div>
-        </div>
+        </PageFrame>
       </div>
-    </PageFrame>
+      <RecipePrintSheet model={printModel} />
+    </>
   );
 }

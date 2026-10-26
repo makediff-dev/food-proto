@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { Fragment, type RefObject, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { formatQuantity } from '@/features/materials/text';
-import { IconChevronDown, IconChevronRight, IconPlus } from '@/features/shell/Icons';
+import type { RecipePrintModel } from '@/features/recipes/RecipePrint';
+import { IconChevronDown, IconChevronRight, IconPlus, IconPrint } from '@/features/shell/Icons';
 import { categoryBandClassName, cellKindClassName, ProductIndex, tableBorder } from '@/features/table';
 
 export type RecipeListComponent = {
@@ -27,6 +28,8 @@ export type RecipeListItem = {
   components?: readonly RecipeListComponent[];
   /** Открыть запись на своей странице. */
   href?: string;
+  /** Сохранённый рецепт для иконки «Печать» в строке. */
+  printModel?: RecipePrintModel;
 };
 
 /** Фиксированная ширина колонки выхода: «на 1 шт / 0,097 кг». */
@@ -72,9 +75,11 @@ function useNameColumnWidth(catalogueKey: string): {
 export function RecipeJournalsTable({
   sections,
   caption,
+  onPrint,
 }: {
   sections: readonly RecipeListSection[];
   caption: string;
+  onPrint?: (model: RecipePrintModel) => void;
 }) {
   const measureItems = useMemo(
     () => sections.flatMap((section) => section.items.map((item) => ({ id: item.id, name: item.name }))),
@@ -99,13 +104,21 @@ export function RecipeJournalsTable({
         ))}
       </div>
       {sections.map((section) => (
-        <SectionBlock key={section.id} section={section} nameColumnWidth={nameColumnWidth} />
+        <SectionBlock key={section.id} section={section} nameColumnWidth={nameColumnWidth} onPrint={onPrint} />
       ))}
     </div>
   );
 }
 
-function SectionBlock({ section, nameColumnWidth }: { section: RecipeListSection; nameColumnWidth: number }) {
+function SectionBlock({
+  section,
+  nameColumnWidth,
+  onPrint,
+}: {
+  section: RecipeListSection;
+  nameColumnWidth: number;
+  onPrint?: (model: RecipePrintModel) => void;
+}) {
   const [open, setOpen] = useState(true);
   const itemCount = section.items.length;
 
@@ -138,14 +151,24 @@ function SectionBlock({ section, nameColumnWidth }: { section: RecipeListSection
       </div>
       {open
         ? section.items.map((item, index) => (
-            <ItemRow key={item.id} item={item} index={index + 1} nameColumnWidth={nameColumnWidth} />
+            <ItemRow key={item.id} item={item} index={index + 1} nameColumnWidth={nameColumnWidth} onPrint={onPrint} />
           ))
         : null}
     </div>
   );
 }
 
-function ItemRow({ item, index, nameColumnWidth }: { item: RecipeListItem; index: number; nameColumnWidth: number }) {
+function ItemRow({
+  item,
+  index,
+  nameColumnWidth,
+  onPrint,
+}: {
+  item: RecipeListItem;
+  index: number;
+  nameColumnWidth: number;
+  onPrint?: (model: RecipePrintModel) => void;
+}) {
   const components = item.components ?? [];
   const hasComponents = components.length > 0;
 
@@ -170,20 +193,44 @@ function ItemRow({ item, index, nameColumnWidth }: { item: RecipeListItem; index
     </>
   );
 
-  const rowClassName = `flex min-w-0 border-b border-b-line ${cellKindClassName.repeated}`;
+  const rowClassName = `flex min-w-0 items-stretch border-b border-b-line ${cellKindClassName.repeated}`;
+  const printButton =
+    item.printModel && onPrint ? (
+      <button
+        type="button"
+        aria-label={`Печать рецептуры ${item.name}`}
+        title="Печать"
+        onClick={() => {
+          if (item.printModel) {
+            onPrint(item.printModel);
+          }
+        }}
+        className="mr-1 inline-flex size-8 shrink-0 items-center justify-center self-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      >
+        <IconPrint />
+      </button>
+    ) : null;
 
   if (item.href) {
     return (
-      <Link
-        href={item.href}
-        className={`${rowClassName} outline-none hover:bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink`}
-      >
-        {body}
-      </Link>
+      <div className={rowClassName}>
+        <Link
+          href={item.href}
+          className="flex min-w-0 flex-1 outline-none hover:bg-paper focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        >
+          {body}
+        </Link>
+        {printButton}
+      </div>
     );
   }
 
-  return <div className={rowClassName}>{body}</div>;
+  return (
+    <div className={rowClassName}>
+      <div className="flex min-w-0 flex-1">{body}</div>
+      {printButton}
+    </div>
+  );
 }
 
 /**

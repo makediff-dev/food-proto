@@ -131,6 +131,16 @@ export function IconCheck() {
   );
 }
 
+export function IconPrint() {
+  return (
+    <Glyph>
+      <path d="M5 7V3h10v4" />
+      <path d="M3 7h14v6h-3" />
+      <path d="M6 11h8v6H6z" />
+    </Glyph>
+  );
+}
+
 export function IconPlan() {
   return (
     <Glyph>

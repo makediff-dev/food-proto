@@ -35,6 +35,14 @@ import {
   parseComponentDraftKey,
 } from '@/features/recipes/DerivativeFormTable';
 import { NEW_DERIVATIVE_TITLE, RECIPES_DERIVATIVES_HREF, RECIPES_DERIVATIVES_TITLE } from '@/features/recipes/paths';
+import {
+  formatPrintKilograms,
+  formatPrintPercent,
+  formatPrintPieces,
+  RecipePrintButton,
+  RecipePrintSheet,
+  recipePrintGroups,
+} from '@/features/recipes/RecipePrint';
 import { DERIVATIVE_ADD_ERROR } from '@/features/recipes/text';
 import { useDerivatives } from '@/features/recipes/use-derivatives';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
@@ -350,167 +358,186 @@ function DerivativeForm({
     router.replace(RECIPES_DERIVATIVES_HREF);
   }
 
+  const workshopName = DERIVATIVE_WORKSHOPS.find((item) => item.id === workshopId)?.name ?? '';
+  const printModel = {
+    kindLabel: 'производная',
+    name,
+    placeLabel: 'Цех',
+    place: workshopName,
+    batchKilograms: formatPrintKilograms(outputDraft),
+    batchPieces: byPiece ? formatPrintPieces(piecesDraft, gramsDraft) : null,
+    heatTreatment: formatPrintPercent(heatTreatmentDraft),
+    componentsKilograms: formatQuantity(componentsKilograms, 'кг'),
+    groups: recipePrintGroups(materials, derivatives, drafts),
+  };
+
   return (
-    <PageFrame
-      title={editingId ? RECIPES_DERIVATIVES_TITLE : NEW_DERIVATIVE_TITLE}
-      full
-      back={
-        <Link
-          href={RECIPES_DERIVATIVES_HREF}
-          aria-label="Назад"
-          className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+    <>
+      <div className="screen-only">
+        <PageFrame
+          title={editingId ? RECIPES_DERIVATIVES_TITLE : NEW_DERIVATIVE_TITLE}
+          full
+          back={
+            <Link
+              href={RECIPES_DERIVATIVES_HREF}
+              aria-label="Назад"
+              className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              <IconArrowLeft />
+            </Link>
+          }
         >
-          <IconArrowLeft />
-        </Link>
-      }
-    >
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-start gap-4">
-          {!workshopId ? (
-            <DerivativeFormEmpty />
-          ) : !hasCandidates ? (
-            <DerivativeFormNoCandidates />
-          ) : (
-            <DerivativeFormTable
-              materials={materials}
-              derivatives={derivatives}
-              drafts={drafts}
-              onChange={setQuantity}
-            />
-          )}
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-start gap-4">
+              {!workshopId ? (
+                <DerivativeFormEmpty />
+              ) : !hasCandidates ? (
+                <DerivativeFormNoCandidates />
+              ) : (
+                <DerivativeFormTable
+                  materials={materials}
+                  derivatives={derivatives}
+                  drafts={drafts}
+                  onChange={setQuantity}
+                />
+              )}
 
-          <div className="sticky top-16 z-20 flex w-72 shrink-0 flex-col gap-4 self-start border border-line bg-sheet p-4 lg:top-4">
-            <div>
-              <label htmlFor={workshopFieldId} className="text-sm text-muted">
-                Цех
-              </label>
-              <select
-                id={workshopFieldId}
-                value={workshopId}
-                onChange={(event) => {
-                  const next = event.target.value;
-                  setWorkshopId(isDerivativeWorkshopId(next) ? next : '');
-                  setDrafts({});
-                  setSaveError(null);
-                }}
-                className={`mt-2 ${fieldClassName}`}
-              >
-                <option value="">Выберите цех</option>
-                {DERIVATIVE_WORKSHOPS.map((workshop) => (
-                  <option key={workshop.id} value={workshop.id}>
-                    {workshop.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div className="sticky top-16 z-20 flex w-72 shrink-0 flex-col gap-4 self-start border border-line bg-sheet p-4 lg:top-4">
+                <div>
+                  <label htmlFor={workshopFieldId} className="text-sm text-muted">
+                    Цех
+                  </label>
+                  <select
+                    id={workshopFieldId}
+                    value={workshopId}
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      setWorkshopId(isDerivativeWorkshopId(next) ? next : '');
+                      setDrafts({});
+                      setSaveError(null);
+                    }}
+                    className={`mt-2 ${fieldClassName}`}
+                  >
+                    <option value="">Выберите цех</option>
+                    {DERIVATIVE_WORKSHOPS.map((workshop) => (
+                      <option key={workshop.id} value={workshop.id}>
+                        {workshop.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            <div>
-              <label htmlFor={nameFieldId} className="text-sm text-muted">
-                Название
-              </label>
-              <input
-                id={nameFieldId}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                className={`mt-2 ${fieldClassName}`}
-                autoComplete="off"
-              />
-            </div>
-
-            <label htmlFor={byPieceFieldId} className="flex cursor-pointer items-center gap-2 text-base text-ink">
-              <input
-                id={byPieceFieldId}
-                type="checkbox"
-                checked={byPiece}
-                onChange={(event) => {
-                  if (event.target.checked) {
-                    enableByPiece();
-                  } else {
-                    disableByPiece();
-                  }
-                }}
-                className="size-4 accent-ink"
-              />
-              Поштучно
-            </label>
-
-            <fieldset className="min-w-0 border-0 p-0">
-              <legend className="text-sm text-muted">Рассчитан на</legend>
-              <div className="mt-2 flex flex-col gap-2">
-                <div className="flex items-center gap-1.5">
+                <div>
+                  <label htmlFor={nameFieldId} className="text-sm text-muted">
+                    Название
+                  </label>
                   <input
-                    id={outputFieldId}
-                    aria-label="Килограммы"
-                    value={outputDraft}
-                    onChange={(event) => onOutputChange(event.target.value)}
-                    className={yieldInputClassName}
-                    inputMode="decimal"
+                    id={nameFieldId}
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    className={`mt-2 ${fieldClassName}`}
                     autoComplete="off"
                   />
-                  <span className="shrink-0 text-sm text-ink">кг</span>
                 </div>
-                {byPiece ? (
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      id={piecesFieldId}
-                      aria-label="Штуки"
-                      value={piecesDraft}
-                      onChange={(event) => onPiecesChange(event.target.value)}
-                      className={yieldInputClassName}
-                      inputMode="decimal"
-                      autoComplete="off"
-                    />
-                    <span className="shrink-0 text-sm text-ink">шт</span>
-                    <input
-                      id={gramsFieldId}
-                      aria-label="Граммы на штуку"
-                      value={gramsDraft}
-                      onChange={(event) => onGramsChange(event.target.value)}
-                      className={yieldInputClassName}
-                      inputMode="decimal"
-                      autoComplete="off"
-                    />
-                    <span className="shrink-0 text-sm text-ink">г/шт</span>
+
+                <label htmlFor={byPieceFieldId} className="flex cursor-pointer items-center gap-2 text-base text-ink">
+                  <input
+                    id={byPieceFieldId}
+                    type="checkbox"
+                    checked={byPiece}
+                    onChange={(event) => {
+                      if (event.target.checked) {
+                        enableByPiece();
+                      } else {
+                        disableByPiece();
+                      }
+                    }}
+                    className="size-4 accent-ink"
+                  />
+                  Поштучно
+                </label>
+
+                <fieldset className="min-w-0 border-0 p-0">
+                  <legend className="text-sm text-muted">Рассчитан на</legend>
+                  <div className="mt-2 flex flex-col gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        id={outputFieldId}
+                        aria-label="Килограммы"
+                        value={outputDraft}
+                        onChange={(event) => onOutputChange(event.target.value)}
+                        className={yieldInputClassName}
+                        inputMode="decimal"
+                        autoComplete="off"
+                      />
+                      <span className="shrink-0 text-sm text-ink">кг</span>
+                    </div>
+                    {byPiece ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          id={piecesFieldId}
+                          aria-label="Штуки"
+                          value={piecesDraft}
+                          onChange={(event) => onPiecesChange(event.target.value)}
+                          className={yieldInputClassName}
+                          inputMode="decimal"
+                          autoComplete="off"
+                        />
+                        <span className="shrink-0 text-sm text-ink">шт</span>
+                        <input
+                          id={gramsFieldId}
+                          aria-label="Граммы на штуку"
+                          value={gramsDraft}
+                          onChange={(event) => onGramsChange(event.target.value)}
+                          className={yieldInputClassName}
+                          inputMode="decimal"
+                          autoComplete="off"
+                        />
+                        <span className="shrink-0 text-sm text-ink">г/шт</span>
+                      </div>
+                    ) : null}
                   </div>
-                ) : null}
-              </div>
-            </fieldset>
+                </fieldset>
 
-            <div>
-              <label htmlFor={heatTreatmentFieldId} className="text-sm text-muted">
-                Выход после термообработки
-              </label>
-              <div className="mt-2 flex items-center gap-1.5">
-                <input
-                  id={heatTreatmentFieldId}
-                  value={heatTreatmentDraft}
-                  onChange={(event) => setHeatTreatmentDraft(event.target.value)}
-                  className={yieldInputClassName}
-                  inputMode="numeric"
-                  autoComplete="off"
-                />
-                <span className="shrink-0 text-sm text-ink">%</span>
+                <div>
+                  <label htmlFor={heatTreatmentFieldId} className="text-sm text-muted">
+                    Выход после термообработки
+                  </label>
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <input
+                      id={heatTreatmentFieldId}
+                      value={heatTreatmentDraft}
+                      onChange={(event) => setHeatTreatmentDraft(event.target.value)}
+                      className={yieldInputClassName}
+                      inputMode="numeric"
+                      autoComplete="off"
+                    />
+                    <span className="shrink-0 text-sm text-ink">%</span>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted">По компонентам</p>
+                  <p className="mt-2 text-base text-ink">{formatQuantity(componentsKilograms, 'кг')}</p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={!journal.hydrated}
+                  onClick={save}
+                  className={`${primaryButtonClassName} w-full`}
+                >
+                  <IconCheck />
+                  Сохранить
+                </button>
+                <RecipePrintButton />
+                {saveError ? <p className="text-sm text-ink">{saveError}</p> : null}
               </div>
             </div>
-
-            <div>
-              <p className="text-sm text-muted">По компонентам</p>
-              <p className="mt-2 text-base text-ink">{formatQuantity(componentsKilograms, 'кг')}</p>
-            </div>
-
-            <button
-              type="button"
-              disabled={!journal.hydrated}
-              onClick={save}
-              className={`${primaryButtonClassName} w-full`}
-            >
-              <IconCheck />
-              Сохранить
-            </button>
-            {saveError ? <p className="text-sm text-ink">{saveError}</p> : null}
           </div>
-        </div>
+        </PageFrame>
       </div>
-    </PageFrame>
+      <RecipePrintSheet model={printModel} />
+    </>
   );
 }

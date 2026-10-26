@@ -7,7 +7,6 @@ import { materialMovementMonth } from '@/domain/materials';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { MaterialMonthBar, resolveMaterialMonth } from '@/features/materials/MaterialMonthBar';
 import { MaterialsSummaryTable } from '@/features/materials/MaterialsSummaryTable';
-import { MaterialsWarehouseBlocks } from '@/features/materials/MaterialsWarehouseBlocks';
 import { MATERIALS_SUMMARY_TITLE, materialsSummaryHref } from '@/features/materials/paths';
 import { useMaterials } from '@/features/materials/use-materials';
 import { PageFrame } from '@/features/shell/PageFrame';
@@ -36,16 +35,7 @@ export function MaterialsSummaryScreen({ month }: { month: string }) {
         />
       }
     >
-      <MaterialsWarehouseBlocks
-        groups={view.groups}
-        renderWarehouse={(group, warehouse) => (
-          <MaterialsSummaryTable
-            caption={`${group.name}, ${warehouse.name}`}
-            rows={warehouse.rows}
-            totals={warehouse.totals}
-          />
-        )}
-      />
+      <MaterialsSummaryTable groups={view.groups} />
     </PageFrame>
   );
 }

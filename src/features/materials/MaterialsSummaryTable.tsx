@@ -1,27 +1,37 @@
 'use client';
 
-import type { MaterialMovementRow, MaterialMovementTotals } from '@/domain/materials';
+import { useState } from 'react';
+
+import type {
+  MaterialGroupMovement,
+  MaterialMovementRow,
+  MaterialMovementTotals,
+  MaterialWarehouseMovement,
+} from '@/domain/materials';
 import { MaterialNormDeviation } from '@/features/materials/MaterialNormDeviation';
 import { QuantityRead } from '@/features/materials/QuantityCell';
 import {
   MATERIALS_SUMMARY_SUB_BANNERS,
   ReportSubBannerColumnHeaders,
 } from '@/features/movement/FinishedGoodsNormativeColumnHeading';
+import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
   blockHeadingClassName,
   type CellKind,
+  categoryBandClassName,
+  categoryNameClassName,
+  categoryNameRowClassName,
   cellKindClassName,
   columnDividerClassName,
   entityNameRowClassName,
   keepWithNext,
   nameHeadingClassName,
+  ProductIndex,
   stickyHeadClassName,
   tableBorder,
   tableClassName,
   tableFrameClassName,
-  totalNameClassName,
-  totalValueClassName,
   VatMoneyCell,
 } from '@/features/table';
 
@@ -160,23 +170,43 @@ const COLUMN_KIND: Record<ColumnKey, CellKind> = {
   closingCost: 'computed',
 };
 
+type SummarySection = {
+  key: string;
+  label: string;
+  warehouse: MaterialWarehouseMovement;
+};
+
 function groupEndClass(key: ColumnKey): string {
   return GROUP_END_KEYS.has(key) ? tableBorder.rightThick : columnDividerClassName;
 }
 
-export function MaterialsSummaryTable({
-  caption,
-  rows,
-  totals,
-}: {
-  caption: string;
-  rows: MaterialMovementRow[];
-  totals: MaterialMovementTotals;
-}) {
+function buildSections(groups: readonly MaterialGroupMovement[]): SummarySection[] {
+  return groups.flatMap((group) =>
+    group.warehouses
+      .filter((warehouse) => warehouse.rows.length > 0)
+      .map((warehouse) => ({
+        key: `${group.groupId}:${warehouse.warehouseId}`,
+        label: `${group.name}, ${warehouse.name}`,
+        warehouse,
+      })),
+  );
+}
+
+export function MaterialsSummaryTable({ groups }: { groups: readonly MaterialGroupMovement[] }) {
+  const sections = buildSections(groups);
+
+  if (sections.length === 0) {
+    return (
+      <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
+        Позиций нет. Добавьте наименование во вводе плана.
+      </p>
+    );
+  }
+
   return (
     <div className={tableFrameClassName}>
       <table className={tableClassName}>
-        <caption className="sr-only">{caption}</caption>
+        <caption className="sr-only">Отчет общий: сырьё и материалы за месяц</caption>
         <thead className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
@@ -213,35 +243,76 @@ export function MaterialsSummaryTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.materialId}>
-              <th scope="row" className={entityNameRowClassName('repeated')}>
-                {row.name}
-                {row.deleted ? <span className="text-muted"> (архив)</span> : null}
-              </th>
-              {COLUMNS.map((column) => (
-                <td
-                  key={column.key}
-                  className={`border-b border-b-line px-2 py-2 text-right align-middle ${groupEndClass(column.key)} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
-                >
-                  <RowCell column={column.key} row={row} />
-                </td>
-              ))}
-            </tr>
+          {sections.map((section) => (
+            <SectionBlock key={section.key} section={section} />
           ))}
-          <tr>
-            <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
-              {totals.unit ? 'Всего' : 'Сумма'}
-            </th>
-            {COLUMNS.map((column) => (
-              <td key={column.key} className={`${totalValueClassName} ${groupEndClass(column.key)}`}>
-                <TotalsCell column={column.key} totals={totals} />
-              </td>
-            ))}
-          </tr>
         </tbody>
       </table>
     </div>
+  );
+}
+
+function SectionBlock({ section }: { section: SummarySection }) {
+  const [open, setOpen] = useState(true);
+  const count = section.warehouse.rows.length;
+
+  return (
+    <>
+      <tr>
+        <th scope="row" className={categoryNameRowClassName(false)}>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-label={open ? `Свернуть ${section.label}` : `Развернуть ${section.label}`}
+              title={open ? 'Свернуть' : 'Развернуть'}
+              onClick={() => setOpen((current) => !current)}
+              className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              {open ? <IconChevronDown /> : <IconChevronRight />}
+            </button>
+            <span className={categoryNameClassName}>
+              {section.label} ({count})
+            </span>
+          </div>
+        </th>
+        {COLUMNS.map((column) => (
+          <td
+            key={`group:${column.key}`}
+            className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${categoryBandClassName} ${groupEndClass(column.key)}`}
+          >
+            <TotalsCell column={column.key} totals={section.warehouse.totals} />
+          </td>
+        ))}
+      </tr>
+      {open
+        ? section.warehouse.rows.map((row, index) => <MaterialRow key={row.materialId} row={row} index={index + 1} />)
+        : null}
+    </>
+  );
+}
+
+function MaterialRow({ row, index }: { row: MaterialMovementRow; index: number }) {
+  return (
+    <tr>
+      <th scope="row" className={entityNameRowClassName('repeated')}>
+        <div className="flex items-center gap-2">
+          <ProductIndex index={index} />
+          <span className="flex h-8 min-w-max items-center text-sm leading-none text-ink">
+            {row.name}
+            {row.deleted ? <span className="text-muted"> (архив)</span> : null}
+          </span>
+        </div>
+      </th>
+      {COLUMNS.map((column) => (
+        <td
+          key={column.key}
+          className={`border-b border-b-line px-2 py-2 text-right align-middle ${groupEndClass(column.key)} ${cellKindClassName[COLUMN_KIND[column.key]]}`}
+        >
+          <RowCell column={column.key} row={row} />
+        </td>
+      ))}
+    </tr>
   );
 }
 

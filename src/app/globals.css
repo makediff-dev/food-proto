@@ -70,3 +70,160 @@ body {
 .composition-join-start {
   margin-left: -1ch;
 }
+
+.recipe-print {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm 14mm;
+  }
+
+  html,
+  body,
+  .app-shell,
+  .app-main,
+  .app-scroll {
+    display: block;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    background: #fff;
+  }
+
+  .app-main {
+    padding: 0;
+  }
+
+  #app-menu,
+  .app-menu-backdrop,
+  .app-mobile-header,
+  .screen-only {
+    display: none;
+  }
+
+  .recipe-print {
+    display: block;
+    color: #1a1a1a;
+    font-family: var(--font-onest), sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .recipe-print__kicker {
+    margin: 0;
+    font-size: 10pt;
+    line-height: 1.4;
+    color: #5e5e5e;
+  }
+
+  .recipe-print__title {
+    margin: 1.5mm 0 0;
+    font-family: var(--font-unbounded), sans-serif;
+    font-size: 18pt;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  .recipe-print__place {
+    margin: 3mm 0 0;
+    font-size: 11pt;
+    line-height: 1.4;
+  }
+
+  .recipe-print__place-label {
+    margin-right: 2mm;
+    color: #5e5e5e;
+  }
+
+  .recipe-print__facts {
+    display: flex;
+    margin: 6mm 0 5mm;
+    border: 1px solid #1a1a1a;
+    break-inside: avoid;
+  }
+
+  .recipe-print__fact {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 3mm 4mm;
+    border-right: 1px solid #1a1a1a;
+  }
+
+  .recipe-print__fact:last-child {
+    border-right: 0;
+  }
+
+  .recipe-print__fact-label {
+    margin: 0;
+    font-size: 8.5pt;
+    line-height: 1.3;
+    color: #5e5e5e;
+  }
+
+  .recipe-print__fact-value {
+    margin: 1.5mm 0 0;
+    font-size: 12pt;
+    line-height: 1.35;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .recipe-print__fact-note {
+    margin: 0.6mm 0 0;
+    font-size: 10pt;
+    line-height: 1.35;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .recipe-print__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11pt;
+    line-height: 1.35;
+  }
+
+  .recipe-print__table th,
+  .recipe-print__table td {
+    padding: 1.8mm 2mm;
+    border-bottom: 1px solid #1a1a1a;
+    text-align: left;
+    vertical-align: baseline;
+    font-weight: 400;
+  }
+
+  .recipe-print__table thead th {
+    border-bottom-width: 1.5px;
+    font-size: 9pt;
+    color: #5e5e5e;
+  }
+
+  .recipe-print__table tr {
+    break-inside: avoid;
+  }
+
+  .recipe-print__table .recipe-print__num {
+    width: 10mm;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .recipe-print__table .recipe-print__qty {
+    width: 28mm;
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .recipe-print__group td {
+    padding-top: 3mm;
+    background: #f4f4f2;
+    font-size: 9pt;
+  }
+
+  .recipe-print__empty {
+    margin: 0;
+    font-size: 11pt;
+  }
+}
