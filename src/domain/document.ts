@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 51 as const;
+export const SCHEMA_VERSION = 52 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -63,6 +63,12 @@ export interface Product extends DeletableRecord {
    * Пустой состав — 0. Себестоимость из состава пока не считают.
    */
   outputKilogramThousandths: number;
+  /**
+   * На сколько штук рассчитана партия, тысячные доли.
+   * Готовая продукция всегда поштучно: партия из штук на `outputKilogramThousandths` кг;
+   * вес одной штуки = выход / штуки. Больше нуля.
+   */
+  outputPieceThousandths: number;
   /** Состав рецепта. Пустой — рецепт ещё не задан. */
   lines: ProductRecipeLine[];
 }

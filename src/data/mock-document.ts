@@ -41,6 +41,7 @@ const caesar: Product = {
   unitCostWithVat: 4_000,
   /** 0,08 + 0,015 + лоток 0 кг. */
   outputKilogramThousandths: q(0.095),
+  outputPieceThousandths: q(1),
   lines: [
     {
       id: 'product-line-caesar-chicken',
@@ -74,6 +75,7 @@ const olivier: Product = {
   unitCostWithVat: 3_000,
   /** 0,02 + 0,005 + лоток 0 кг. */
   outputKilogramThousandths: q(0.025),
+  outputPieceThousandths: q(1),
   lines: [
     {
       id: 'product-line-olivier-oil',
@@ -107,6 +109,7 @@ const goulash: Product = {
   unitCostWithVat: 5_000,
   /** 0,15 бульона + 0,12 курицы + лоток 0 кг. */
   outputKilogramThousandths: q(0.27),
+  outputPieceThousandths: q(1),
   lines: [
     {
       id: 'product-line-goulash-broth',
@@ -140,6 +143,7 @@ const burger: Product = {
   unitCostWithVat: 4_000,
   /** Котлета 0,097 + булочка 0,065 + кетчуп 0,02 + этикетка 0. */
   outputKilogramThousandths: q(0.182),
+  outputPieceThousandths: q(1),
   lines: [
     {
       id: 'product-line-burger-cutlet',
@@ -179,6 +183,7 @@ const sandwich: Product = {
   /** 35 ₽. */
   unitCostWithVat: 3_500,
   outputKilogramThousandths: 0,
+  outputPieceThousandths: q(1),
   lines: [],
   deletedAt: null,
 };

@@ -16,7 +16,7 @@ import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
 export type FieldRejection = NameRejection | 'cost' | 'missing' | 'category' | 'warehouse';
 
-export type ProductRecipeRejection = 'missing' | 'quantity' | 'component' | 'warehouse' | 'output' | 'yield';
+export type ProductRecipeRejection = 'missing' | 'quantity' | 'component' | 'warehouse' | 'output' | 'yield' | 'pieces';
 
 function isUnitCost(value: number): boolean {
   return Number.isInteger(value) && value >= 0 && value <= MAX_PRICE_KOPECKS;
@@ -198,6 +198,11 @@ export function addProduct(document: PrototypeDocument, product: Product): Proto
     return document;
   }
 
+  const outputPieceThousandths = product.outputPieceThousandths;
+  if (!isQuantityThousandths(outputPieceThousandths, false) || outputPieceThousandths <= 0) {
+    return document;
+  }
+
   const next: Product = {
     id: product.id,
     name: product.name.trim(),
@@ -206,6 +211,7 @@ export function addProduct(document: PrototypeDocument, product: Product): Proto
     vatPercent,
     unitCostWithVat,
     outputKilogramThousandths: product.outputKilogramThousandths ?? 0,
+    outputPieceThousandths,
     lines: (product.lines ?? []).map((line) => ({ ...line })),
     deletedAt: null,
   };
@@ -234,6 +240,7 @@ export function updateProductRecipe(
   id: string,
   lines: readonly ProductRecipeLine[],
   outputKilogramThousandths: number,
+  outputPieceThousandths: number,
 ): { document: PrototypeDocument; rejection: ProductRecipeRejection | null } {
   const current = productByIdOrNull(document, id);
   if (!current || current.deletedAt !== null) {
@@ -241,6 +248,9 @@ export function updateProductRecipe(
   }
   if (!isWarehouseId(current.warehouseId)) {
     return { document, rejection: 'warehouse' };
+  }
+  if (!isQuantityThousandths(outputPieceThousandths, false) || outputPieceThousandths <= 0) {
+    return { document, rejection: 'pieces' };
   }
 
   const linesRejection = validateRecipeLines(document, current.warehouseId, lines);
@@ -261,6 +271,7 @@ export function updateProductRecipe(
           ? {
               ...item,
               outputKilogramThousandths,
+              outputPieceThousandths,
               lines: lines.map((line) => ({ ...line })),
             }
           : item,

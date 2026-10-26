@@ -26,6 +26,7 @@ export const PRODUCT_RECIPE_ERROR: Record<ProductRecipeRejection, string> = {
   warehouse: 'У товара не указан склад.',
   output: 'Укажите, на сколько кг рассчитан рецепт.',
   yield: 'Рассчитанный выход и сумма по компонентам не сходятся больше чем на 1 г.',
+  pieces: 'Укажите число штук.',
 };
 
 /**

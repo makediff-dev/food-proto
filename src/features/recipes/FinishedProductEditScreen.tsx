@@ -9,7 +9,12 @@ import type { Product, ProductRecipeLine } from '@/domain/document';
 import { MATERIAL_WAREHOUSES } from '@/domain/document';
 import { activeMaterials } from '@/domain/materials';
 import { productByIdOrNull } from '@/domain/products';
-import { recipeComponentsKilogramThousandths } from '@/domain/recipe-yield';
+import { QUANTITY_SCALE } from '@/domain/quantity';
+import {
+  gramsPerPieceThousandths,
+  outputKilogramThousandthsFromPiecesAndGrams,
+  recipeComponentsKilogramThousandths,
+} from '@/domain/recipe-yield';
 import { formatQuantity, formatQuantityDraft, parseQuantityInput } from '@/features/materials/text';
 import {
   componentDraftKey,
@@ -22,9 +27,12 @@ import {
 import { RECIPES_FINISHED_HREF, RECIPES_FINISHED_TITLE } from '@/features/recipes/paths';
 import { PRODUCT_RECIPE_ERROR } from '@/features/recipes/text';
 import { useFinishedRecipes } from '@/features/recipes/use-finished-recipes';
-import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
+import { primaryButtonClassName } from '@/features/sales/fields';
 import { IconArrowLeft, IconCheck } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
+
+const yieldInputClassName =
+  'h-11 min-w-0 flex-1 border border-line bg-paper px-2 text-base text-ink outline-none focus-visible:border-ink focus-visible:bg-sheet focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink';
 
 function draftsFromLines(lines: readonly ProductRecipeLine[]): Record<string, DerivativeLineDraft> {
   const drafts: Record<string, DerivativeLineDraft> = {};
@@ -38,6 +46,19 @@ function draftsFromLines(lines: readonly ProductRecipeLine[]): Record<string, De
 
 function warehouseLabel(warehouseId: Product['warehouseId']): string {
   return MATERIAL_WAREHOUSES.find((item) => item.id === warehouseId)?.name ?? warehouseId;
+}
+
+function piecesOf(product: Product): number {
+  return product.outputPieceThousandths > 0 ? product.outputPieceThousandths : QUANTITY_SCALE;
+}
+
+function initialPiecesDraft(product: Product): string {
+  return formatQuantityDraft(piecesOf(product));
+}
+
+function initialGramsDraft(product: Product): string {
+  const grams = gramsPerPieceThousandths(product.outputKilogramThousandths, piecesOf(product));
+  return grams === null ? '' : formatQuantityDraft(grams);
 }
 
 export function FinishedProductEditScreen({ productId }: { productId: string }) {
@@ -71,8 +92,12 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
   const journal = useFinishedRecipes();
   const router = useRouter();
   const outputFieldId = useId();
+  const piecesFieldId = useId();
+  const gramsFieldId = useId();
   const [drafts, setDrafts] = useState<Record<string, DerivativeLineDraft>>(() => draftsFromLines(product.lines));
   const [outputDraft, setOutputDraft] = useState(() => formatQuantityDraft(product.outputKilogramThousandths));
+  const [piecesDraft, setPiecesDraft] = useState(() => initialPiecesDraft(product));
+  const [gramsDraft, setGramsDraft] = useState(() => initialGramsDraft(product));
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const materials = useMemo(
@@ -118,6 +143,45 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
       ...current,
       [key]: { ...(current[key] ?? emptyDerivativeLineDraft()), quantity: raw },
     }));
+  }
+
+  function onOutputChange(raw: string) {
+    setOutputDraft(raw);
+    const kilograms = parseQuantityInput(raw, false);
+    const pieces = parseQuantityInput(piecesDraft, false);
+    if (kilograms === null || kilograms < 0 || pieces === null || pieces <= 0) {
+      return;
+    }
+    const grams = gramsPerPieceThousandths(kilograms, pieces);
+    if (grams !== null) {
+      setGramsDraft(formatQuantityDraft(grams));
+    }
+  }
+
+  function onPiecesChange(raw: string) {
+    setPiecesDraft(raw);
+    const pieces = parseQuantityInput(raw, false);
+    const grams = parseQuantityInput(gramsDraft, false);
+    if (pieces === null || pieces <= 0 || grams === null || grams < 0) {
+      return;
+    }
+    const kilograms = outputKilogramThousandthsFromPiecesAndGrams(pieces, grams);
+    if (kilograms !== null) {
+      setOutputDraft(formatQuantityDraft(kilograms));
+    }
+  }
+
+  function onGramsChange(raw: string) {
+    setGramsDraft(raw);
+    const pieces = parseQuantityInput(piecesDraft, false);
+    const grams = parseQuantityInput(raw, false);
+    if (pieces === null || pieces <= 0 || grams === null || grams < 0) {
+      return;
+    }
+    const kilograms = outputKilogramThousandthsFromPiecesAndGrams(pieces, grams);
+    if (kilograms !== null) {
+      setOutputDraft(formatQuantityDraft(kilograms));
+    }
   }
 
   function parsedLines(): ProductRecipeLine[] | null {
@@ -166,12 +230,18 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
       return;
     }
 
+    const outputPieceThousandths = parseQuantityInput(piecesDraft, false);
+    if (outputPieceThousandths === null || outputPieceThousandths <= 0) {
+      setSaveError(PRODUCT_RECIPE_ERROR.pieces);
+      return;
+    }
+
     const lines = parsedLines();
     if (!lines) {
       return;
     }
 
-    const rejection = journal.updateRecipe(product.id, lines, outputKilogramThousandths);
+    const rejection = journal.updateRecipe(product.id, lines, outputKilogramThousandths, outputPieceThousandths);
     if (rejection) {
       setSaveError(PRODUCT_RECIPE_ERROR[rejection]);
       return;
@@ -218,19 +288,45 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
               <p className="mt-2 text-base text-ink">{warehouseLabel(product.warehouseId)}</p>
             </div>
 
-            <div>
-              <label htmlFor={outputFieldId} className="text-sm text-muted">
-                Рассчитан на, кг
-              </label>
-              <input
-                id={outputFieldId}
-                value={outputDraft}
-                onChange={(event) => setOutputDraft(event.target.value)}
-                className={`mt-2 ${fieldClassName}`}
-                inputMode="decimal"
-                autoComplete="off"
-              />
-            </div>
+            <fieldset className="min-w-0 border-0 p-0">
+              <legend className="text-sm text-muted">Рассчитан на</legend>
+              <div className="mt-2 flex flex-col gap-2">
+                <div className="flex items-center gap-1.5">
+                  <input
+                    id={outputFieldId}
+                    aria-label="Килограммы"
+                    value={outputDraft}
+                    onChange={(event) => onOutputChange(event.target.value)}
+                    className={yieldInputClassName}
+                    inputMode="decimal"
+                    autoComplete="off"
+                  />
+                  <span className="shrink-0 text-sm text-ink">кг</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    id={piecesFieldId}
+                    aria-label="Штуки"
+                    value={piecesDraft}
+                    onChange={(event) => onPiecesChange(event.target.value)}
+                    className={yieldInputClassName}
+                    inputMode="decimal"
+                    autoComplete="off"
+                  />
+                  <span className="shrink-0 text-sm text-ink">шт</span>
+                  <input
+                    id={gramsFieldId}
+                    aria-label="Граммы на штуку"
+                    value={gramsDraft}
+                    onChange={(event) => onGramsChange(event.target.value)}
+                    className={yieldInputClassName}
+                    inputMode="decimal"
+                    autoComplete="off"
+                  />
+                  <span className="shrink-0 text-sm text-ink">г/шт</span>
+                </div>
+              </div>
+            </fieldset>
 
             <div>
               <p className="text-sm text-muted">По компонентам</p>

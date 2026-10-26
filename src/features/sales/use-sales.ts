@@ -24,6 +24,7 @@ import {
   setProductUnitCost,
   setProductVat,
 } from '@/domain/products';
+import { QUANTITY_SCALE } from '@/domain/quantity';
 import {
   addMissingPlanLines,
   addMissingPlanLinesRejection,
@@ -127,6 +128,7 @@ export function useSales() {
           vatPercent: 20,
           unitCostWithVat: 0,
           outputKilogramThousandths: 0,
+          outputPieceThousandths: QUANTITY_SCALE,
           lines: [],
           deletedAt: null,
         }),
