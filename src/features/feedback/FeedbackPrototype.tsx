@@ -191,13 +191,6 @@ function Landing({
         </div>
       </section>
 
-      <section className={styles.proofLine} aria-label="Возможности продукта">
-        <span>3 понятные оценки</span>
-        <span>Единая статистика точки</span>
-        <span>Офлайн-сбор</span>
-        <span>Telegram для негатива</span>
-      </section>
-
       <section className={styles.process} id="how">
         <div className={styles.sectionIntro}>
           <p className={styles.kicker}>Один короткий цикл</p>

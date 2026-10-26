@@ -150,7 +150,7 @@
   display: flex;
   align-items: center;
   flex-direction: column;
-  padding: 88px 4vw 0;
+  padding: 88px 4vw 72px;
   background: var(--fb-paper);
 }
 
@@ -221,8 +221,7 @@
 .heroWindow {
   overflow: hidden;
   border: 1px solid var(--fb-line);
-  border-bottom: 0;
-  border-radius: 16px 16px 0 0;
+  border-radius: 16px;
   background: var(--fb-white);
   box-shadow: 0 28px 64px rgb(0 0 0 / 12%);
 }
@@ -355,6 +354,10 @@
   border-bottom: 0;
 }
 
+.heroWindow .ratingStrip button {
+  min-height: 200px;
+}
+
 .face {
   display: grid;
   width: 70px;
@@ -367,23 +370,6 @@
 
 .demoFooter {
   color: var(--fb-mid);
-}
-
-.proofLine {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  border-bottom: 1px solid var(--fb-black);
-}
-
-.proofLine span {
-  padding: 22px 4vw;
-  border-right: 1px solid var(--fb-black);
-  font-size: 13px;
-  text-align: center;
-}
-
-.proofLine span:last-child {
-  border: 0;
 }
 
 .process {
@@ -2822,7 +2808,7 @@
   }
 
   .hero {
-    padding: 48px 20px 0;
+    padding: 48px 20px 40px;
   }
 
   .heroCopy {
@@ -2867,21 +2853,13 @@
     font-size: 13px;
   }
 
+  .heroWindow .ratingStrip button {
+    min-height: 160px;
+  }
+
   .face {
     width: 54px;
     height: 54px;
-  }
-
-  .proofLine {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .proofLine span:nth-child(2) {
-    border-right: 0;
-  }
-
-  .proofLine span:nth-child(-n + 2) {
-    border-bottom: 1px solid var(--fb-black);
   }
 
   .process {
