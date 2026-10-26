@@ -932,32 +932,79 @@
   justify-content: center;
 }
 
-.footerMeta {
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.footerMeta span {
-  color: #777;
-  font-size: 11px;
-}
-
 .footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 30px 4vw;
+  padding: 72px 4vw 28px;
   border-top: 1px solid #444;
   background: var(--fb-black);
   color: var(--fb-white);
 }
 
-.footer p {
+.footerGrid {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(3, 1fr);
+  gap: 48px 32px;
+  padding-bottom: 48px;
+  border-bottom: 1px solid #333;
+}
+
+.footerBrand {
+  display: flex;
+  max-width: 360px;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.footerBrand .wordmark {
+  color: var(--fb-white);
+}
+
+.footerBrand p,
+.footerBrand address {
   margin: 0;
-  color: #999;
+  color: #a3a3a3;
+  font-size: 14px;
+  font-style: normal;
+  line-height: 1.6;
+}
+
+.footerColumn {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.footerColumn strong {
+  margin-bottom: 6px;
   font-size: 13px;
+}
+
+.footerColumn a,
+.footerColumn span,
+.footerColumn .textButton {
+  color: #a3a3a3;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.footerColumn a:hover,
+.footerColumn .textButton:hover {
+  color: var(--fb-white);
+}
+
+.footerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 22px;
+}
+
+.footerBar p,
+.footerBar span {
+  margin: 0;
+  color: #777;
+  font-size: 12px;
 }
 
 .authPage {
@@ -2797,14 +2844,18 @@
   }
 
   .footer {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 22px;
-    padding: 34px 20px;
+    padding: 56px 20px 24px;
   }
 
-  .footerMeta {
+  .footerGrid {
+    grid-template-columns: 1fr;
+    gap: 36px;
+    padding-bottom: 36px;
+  }
+
+  .footerBar {
     align-items: flex-start;
+    flex-direction: column;
   }
 
   .authGrid > aside {

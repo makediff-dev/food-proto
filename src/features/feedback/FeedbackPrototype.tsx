@@ -447,16 +447,50 @@ function Landing({
       </section>
 
       <footer className={styles.footer}>
-        <span className={styles.wordmark}>
-          <Mark /> Отклик
-        </span>
-        <div className={styles.footerMeta}>
-          <p>Рабочий прототип · данные демонстрационные</p>
-          <span>Контакты и юридические документы — состав уточняется</span>
+        <div className={styles.footerGrid}>
+          <div className={styles.footerBrand}>
+            <span className={styles.wordmark}>
+              <Mark /> Отклик
+            </span>
+            <p>Платформа для сбора оценок посетителей в офлайн-заведениях.</p>
+            <address>
+              ООО «Отклик»
+              <br />
+              125009, Москва, ул. Тверская, 7, офис 412
+              <br />
+              ИНН 7708123456 · ОГРН 1237700123456
+            </address>
+          </div>
+          <nav className={styles.footerColumn} aria-label="Продукт">
+            <strong>Продукт</strong>
+            <a href="#how">Как работает</a>
+            <a href="#analytics">Аналитика</a>
+            <a href="#price">Стоимость</a>
+            <a href="#faq">Вопросы</a>
+          </nav>
+          <div className={styles.footerColumn}>
+            <strong>Контакты</strong>
+            <a href="mailto:hello@otklik.example">hello@otklik.example</a>
+            <a href="tel:+74951234567">+7 495 123-45-67</a>
+            <a href="https://t.me/otklik_support" rel="noreferrer">
+              Telegram: @otklik_support
+            </a>
+            <span>Пн–пт, 10:00–19:00</span>
+          </div>
+          <div className={styles.footerColumn}>
+            <strong>Документы</strong>
+            <a href="#faq">Пользовательское соглашение</a>
+            <a href="#faq">Политика конфиденциальности</a>
+            <a href="#faq">Публичная оферта</a>
+            <button type="button" className={styles.textButton} onClick={onDemo}>
+              Войти в кабинет
+            </button>
+          </div>
         </div>
-        <button type="button" className={styles.textButton} onClick={onDemo}>
-          Перейти в кабинет
-        </button>
+        <div className={styles.footerBar}>
+          <p>© 2026 ООО «Отклик». Данные в футере демонстрационные.</p>
+          <span>Юридические документы и реквизиты ещё не утверждены.</span>
+        </div>
       </footer>
     </main>
   );
