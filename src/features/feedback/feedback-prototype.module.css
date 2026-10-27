@@ -1378,7 +1378,7 @@
   background: var(--fb-white);
 }
 
-.workspaceHeader > div {
+.workspaceHeader > div:first-child {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -2588,6 +2588,8 @@
 
 .workspace .headerTools {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 12px;
 }
