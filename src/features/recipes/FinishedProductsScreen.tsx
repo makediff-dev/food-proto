@@ -16,6 +16,7 @@ export function FinishedProductsScreen() {
       id: item.id,
       name: item.name,
       href: finishedProductHref(item.id),
+      editAction: true,
       batchLabel: formatRecipeBatchLabel(item.outputKilogramThousandths, item.outputPieceThousandths),
       components: productCompositionLines(store.document, item).map((line) => ({
         id: line.id,

@@ -6,6 +6,7 @@ import {
   type DerivativeLine,
   type DerivativeUnit,
   type DerivativeWorkshopId,
+  isDeletionMark,
   type MaterialWarehouseId,
   type PrototypeDocument,
 } from '@/domain/document';
@@ -230,6 +231,42 @@ export function addDerivative(
       derivatives: [...derivativesList(document), next],
     },
     rejection: null,
+  };
+}
+
+/** Производная встречается в составе другой производной или готовой продукции. */
+export function derivativeReferencedInRecipes(document: PrototypeDocument, derivativeId: string): boolean {
+  for (const derivative of derivativesList(document)) {
+    if (derivative.id === derivativeId) {
+      continue;
+    }
+    for (const line of derivative.lines) {
+      if (line.componentKind === 'derivative' && line.componentId === derivativeId) {
+        return true;
+      }
+    }
+  }
+
+  for (const product of document.products) {
+    for (const line of product.lines) {
+      if (line.componentKind === 'derivative' && line.componentId === derivativeId) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+export function deleteDerivative(document: PrototypeDocument, id: string, deletedAt: string): PrototypeDocument {
+  const current = derivativesList(document).find((item) => item.id === id && item.deletedAt === null);
+  if (!current || !isDeletionMark(deletedAt)) {
+    return document;
+  }
+
+  return {
+    ...document,
+    derivatives: derivativesList(document).map((item) => (item.id === id ? { ...item, deletedAt } : item)),
   };
 }
 

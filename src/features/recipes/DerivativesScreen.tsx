@@ -3,7 +3,13 @@
 import Link from 'next/link';
 
 import { useDocumentStore } from '@/data/DocumentProvider';
-import { derivativeCompositionLines, derivativeSections, outputPieceThousandthsOf } from '@/domain/derivatives';
+import {
+  deleteDerivative,
+  derivativeCompositionLines,
+  derivativeReferencedInRecipes,
+  derivativeSections,
+  outputPieceThousandthsOf,
+} from '@/domain/derivatives';
 import { derivativeHref, derivativeNewHref, RECIPES_DERIVATIVES_TITLE } from '@/features/recipes/paths';
 import { RecipeJournalsScreen } from '@/features/recipes/RecipeJournalsScreen';
 import { derivativePrintModel } from '@/features/recipes/RecipePrint';
@@ -17,19 +23,30 @@ export function DerivativesScreen() {
     id: section.workshopId,
     name: section.name,
     addHref: derivativeNewHref(section.workshopId),
-    items: section.items.map((item) => ({
-      id: item.id,
-      name: item.name,
-      href: derivativeHref(item.id),
-      batchLabel: formatRecipeBatchLabel(item.outputKilogramThousandths, outputPieceThousandthsOf(item)),
-      components: derivativeCompositionLines(store.document, item).map((line) => ({
-        id: line.id,
-        name: line.name,
-        quantity: line.quantity,
-        unit: line.unit,
-      })),
-      printModel: derivativePrintModel(store.document, item),
-    })),
+    items: section.items.map((item) => {
+      const referenced = derivativeReferencedInRecipes(store.document, item.id);
+      return {
+        id: item.id,
+        name: item.name,
+        href: derivativeHref(item.id),
+        editAction: true,
+        deleteBlockedTitle: referenced ? 'Производная входит в состав другого рецепта' : undefined,
+        onDelete: () => {
+          const confirmed = window.confirm(`Удалить «${item.name}»? Производная пропадёт из рабочего списка.`);
+          if (confirmed) {
+            store.updateDocument((current) => deleteDerivative(current, item.id, new Date().toISOString()));
+          }
+        },
+        batchLabel: formatRecipeBatchLabel(item.outputKilogramThousandths, outputPieceThousandthsOf(item)),
+        components: derivativeCompositionLines(store.document, item).map((line) => ({
+          id: line.id,
+          name: line.name,
+          quantity: line.quantity,
+          unit: line.unit,
+        })),
+        printModel: derivativePrintModel(store.document, item),
+      };
+    }),
   }));
 
   return (

@@ -41,6 +41,15 @@ export function IconTrash() {
   );
 }
 
+export function IconPencil() {
+  return (
+    <Glyph>
+      <path d="M12.5 3.5 16.5 7.5 7 17H3v-4z" />
+      <path d="M10.5 5.5 14.5 9.5" />
+    </Glyph>
+  );
+}
+
 export function IconUndo() {
   return (
     <Glyph>

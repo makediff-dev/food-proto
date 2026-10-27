@@ -5,7 +5,7 @@ import { Fragment, type RefObject, useLayoutEffect, useMemo, useRef, useState } 
 
 import { formatQuantity } from '@/features/materials/text';
 import type { RecipePrintModel } from '@/features/recipes/RecipePrint';
-import { IconChevronDown, IconChevronRight, IconPlus, IconPrint } from '@/features/shell/Icons';
+import { IconChevronDown, IconChevronRight, IconPencil, IconPlus, IconPrint, IconTrash } from '@/features/shell/Icons';
 import { categoryBandClassName, cellKindClassName, ProductIndex, tableBorder } from '@/features/table';
 
 export type RecipeListComponent = {
@@ -28,6 +28,12 @@ export type RecipeListItem = {
   components?: readonly RecipeListComponent[];
   /** Открыть запись на своей странице. */
   href?: string;
+  /** Карандаш в ячейке названия; без него переход — по клику на строку. */
+  editAction?: boolean;
+  /** Мусорка: мягкое удаление. Не задавайте, если удаление не предусмотрено. */
+  onDelete?: () => void;
+  /** Неактивная мусорка и подсказка при наведении. */
+  deleteBlockedTitle?: string;
   /** Сохранённый рецепт для иконки «Печать» в строке. */
   printModel?: RecipePrintModel;
 };
@@ -44,6 +50,11 @@ export type RecipeListSection = {
 };
 
 const frameClassName = 'relative contain-paint overflow-x-hidden border border-line bg-sheet';
+
+const rowActionClassName =
+  'inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink';
+
+const rowActionDisabledClassName = 'disabled:cursor-not-allowed disabled:opacity-40';
 
 function componentLabel(component: RecipeListComponent): string {
   return `${component.name} ${formatQuantity(component.quantity, component.unit)}`;
@@ -82,10 +93,20 @@ export function RecipeJournalsTable({
   onPrint?: (model: RecipePrintModel) => void;
 }) {
   const measureItems = useMemo(
-    () => sections.flatMap((section) => section.items.map((item) => ({ id: item.id, name: item.name }))),
+    () =>
+      sections.flatMap((section) =>
+        section.items.map((item) => ({
+          id: item.id,
+          name: item.name,
+          nameActionCount: item.editAction ? (item.onDelete || item.deleteBlockedTitle ? 2 : 1) : 0,
+        })),
+      ),
     [sections],
   );
-  const catalogueKey = useMemo(() => measureItems.map((item) => `${item.id}:${item.name}`).join('|'), [measureItems]);
+  const catalogueKey = useMemo(
+    () => measureItems.map((item) => `${item.id}:${item.name}:${item.nameActionCount}`).join('|'),
+    [measureItems],
+  );
   const { measureRef, width: nameColumnWidth } = useNameColumnWidth(catalogueKey);
 
   return (
@@ -100,6 +121,12 @@ export function RecipeJournalsTable({
           <div key={item.id} className="flex items-center gap-2 whitespace-nowrap px-3 py-2">
             <ProductIndex index={1} />
             <span className="text-sm leading-none">{item.name}</span>
+            {item.nameActionCount > 0 ? (
+              <span className="inline-flex shrink-0">
+                <span className="size-8 shrink-0" aria-hidden="true" />
+                {item.nameActionCount > 1 ? <span className="size-8 shrink-0" aria-hidden="true" /> : null}
+              </span>
+            ) : null}
           </div>
         ))}
       </div>
@@ -172,14 +199,35 @@ function ItemRow({
   const components = item.components ?? [];
   const hasComponents = components.length > 0;
 
+  const nameCellActions = item.editAction || item.onDelete || item.deleteBlockedTitle;
+
   const body = (
     <>
       <div
-        className={`relative z-10 box-border flex shrink-0 items-center gap-2 whitespace-nowrap px-3 py-2 ${tableBorder.rightThick} ${cellKindClassName.repeated}`}
+        className={`relative z-10 box-border flex shrink-0 items-center px-3 py-2 ${tableBorder.rightThick} ${cellKindClassName.repeated}`}
         style={nameColumnWidth > 0 ? { width: nameColumnWidth, minWidth: nameColumnWidth } : undefined}
       >
-        <ProductIndex index={index} />
-        <span className="text-sm leading-none text-ink">{item.name}</span>
+        <span className="inline-flex w-full min-w-0 items-center gap-2 whitespace-nowrap">
+          <ProductIndex index={index} />
+          <span className="min-w-0 flex-1 text-sm leading-none text-ink">{item.name}</span>
+          {nameCellActions ? (
+            <span className="ml-auto inline-flex shrink-0 items-center">
+              {item.editAction && item.href ? (
+                <Link
+                  href={item.href}
+                  aria-label={`Изменить ${item.name}`}
+                  title="Изменить"
+                  className={rowActionClassName}
+                >
+                  <IconPencil />
+                </Link>
+              ) : null}
+              {item.onDelete || item.deleteBlockedTitle ? (
+                <DeleteAction name={item.name} blockedTitle={item.deleteBlockedTitle} onDelete={item.onDelete} />
+              ) : null}
+            </span>
+          ) : null}
+        </span>
       </div>
       <div
         className={`box-border flex shrink-0 items-center whitespace-nowrap px-2 py-2 text-sm leading-none text-ink ${tableBorder.rightThick} ${cellKindClassName.repeated}`}
@@ -211,7 +259,7 @@ function ItemRow({
       </button>
     ) : null;
 
-  if (item.href) {
+  if (item.href && !item.editAction) {
     return (
       <div className={rowClassName}>
         <Link
@@ -231,6 +279,45 @@ function ItemRow({
       {printButton}
     </div>
   );
+}
+
+function DeleteAction({
+  name,
+  blockedTitle,
+  onDelete,
+}: {
+  name: string;
+  blockedTitle?: string;
+  onDelete?: () => void;
+}) {
+  const disabled = Boolean(blockedTitle);
+
+  const button = (
+    <button
+      type="button"
+      aria-label={`Удалить ${name}`}
+      title={disabled ? undefined : 'Удалить'}
+      disabled={disabled}
+      onClick={() => {
+        if (!disabled) {
+          onDelete?.();
+        }
+      }}
+      className={`${rowActionClassName} ${rowActionDisabledClassName}`}
+    >
+      <IconTrash />
+    </button>
+  );
+
+  if (disabled && blockedTitle) {
+    return (
+      <span className="inline-flex" title={blockedTitle}>
+        {button}
+      </span>
+    );
+  }
+
+  return button;
 }
 
 /**

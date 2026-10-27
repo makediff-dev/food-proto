@@ -319,6 +319,48 @@ export function renameMaterial(document: PrototypeDocument, id: string, name: st
   };
 }
 
+/**
+ * Имя, единица, вес и НДС одной записью.
+ * Отдельные setUnit/setWeight не меняют кг↔шт: вес кг должен быть null, а для шт — обязателен.
+ */
+export function updateMaterial(
+  document: PrototypeDocument,
+  id: string,
+  patch: Pick<Material, 'name' | 'unit' | 'weight' | 'vatPercent'>,
+): PrototypeDocument {
+  const current = materialsList(document).find((item) => item.id === id && item.deletedAt === null);
+  if (!current || materialNameRejection(document, patch.name, current.warehouseId, id)) {
+    return document;
+  }
+  if (
+    !isMaterialUnit(patch.unit) ||
+    !isMaterialWeightPair(patch.weight, patch.unit) ||
+    !isVatPercent(patch.vatPercent)
+  ) {
+    return document;
+  }
+
+  const nextName = patch.name.trim();
+  if (
+    nextName === current.name &&
+    patch.unit === current.unit &&
+    patch.vatPercent === current.vatPercent &&
+    current.weight?.kilogramThousandths === patch.weight?.kilogramThousandths &&
+    current.weight?.unitThousandths === patch.weight?.unitThousandths
+  ) {
+    return document;
+  }
+
+  return {
+    ...document,
+    materials: materialsList(document).map((item) =>
+      item.id === id
+        ? { ...item, name: nextName, unit: patch.unit, weight: patch.weight, vatPercent: patch.vatPercent }
+        : item,
+    ),
+  };
+}
+
 export function setMaterialVat(document: PrototypeDocument, id: string, vatPercent: number): PrototypeDocument {
   const current = materialsList(document).find((item) => item.id === id && item.deletedAt === null);
   if (!current || !isVatPercent(vatPercent) || current.vatPercent === vatPercent) {

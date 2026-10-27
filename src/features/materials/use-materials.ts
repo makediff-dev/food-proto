@@ -27,6 +27,7 @@ import {
   setMaterialUnit,
   setMaterialVat,
   setMaterialWeight,
+  updateMaterial,
 } from '@/domain/materials';
 
 export function useMaterials() {
@@ -96,6 +97,18 @@ export function useMaterials() {
         return rejection;
       }
       store.updateDocument((document) => renameMaterial(document, id, name));
+      return null;
+    },
+    update(id: string, patch: Pick<Material, 'name' | 'unit' | 'weight' | 'vatPercent'>) {
+      const current = store.document.materials.find((item) => item.id === id && item.deletedAt === null);
+      if (!current) {
+        return 'missing' as const;
+      }
+      const rejection = materialNameRejection(store.document, patch.name, current.warehouseId, id);
+      if (rejection) {
+        return rejection;
+      }
+      store.updateDocument((document) => updateMaterial(document, id, patch));
       return null;
     },
     setVat(id: string, vatPercent: number) {

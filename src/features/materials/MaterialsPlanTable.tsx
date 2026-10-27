@@ -6,7 +6,7 @@ import { MaterialNormDeviation } from '@/features/materials/MaterialNormDeviatio
 import { MATERIALS_RECEIPTS_TITLE } from '@/features/materials/paths';
 import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
 import { formatMaterialWeightPair } from '@/features/materials/text';
-import { IconTrash } from '@/features/shell/Icons';
+import { IconPencil, IconTrash } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
   blockHeadingClassName,
@@ -15,7 +15,6 @@ import {
   columnDividerClassName,
   columnHeadingClassName,
   entityNameRowClassName,
-  GridText,
   keepWithNext,
   nameCellKind,
   nameHeadingClassName,
@@ -57,7 +56,7 @@ export function MaterialsPlanTable({
   totals,
   editable,
   onField,
-  onRename,
+  onEdit,
   onDelete,
 }: {
   caption: string;
@@ -65,7 +64,7 @@ export function MaterialsPlanTable({
   totals: MaterialMovementTotals;
   editable: boolean;
   onField: (materialId: string, field: MaterialPlanField, value: number) => string | null;
-  onRename: (materialId: string, name: string) => string | null;
+  onEdit: (materialId: string) => void;
   onDelete: (materialId: string, name: string) => void;
 }) {
   return (
@@ -94,34 +93,33 @@ export function MaterialsPlanTable({
           {rows.map((row) => (
             <tr key={row.materialId}>
               <th scope="row" className={entityNameRowClassName(nameCellKind(editable && !row.deleted))}>
-                <span className="inline-flex items-center gap-2">
-                  {row.deleted || !editable ? (
-                    <span>
-                      {row.name}
-                      {row.deleted ? <span className="text-muted"> (архив)</span> : null}
-                      <span className="text-muted"> · {materialUnitHint(row)}</span>
-                    </span>
-                  ) : (
-                    <>
-                      <GridText
-                        label={`Наименование, ${row.name}`}
-                        value={row.name}
-                        invalidMessage="Укажите название."
-                        onCommit={(next) => onRename(row.materialId, next)}
-                      />
-                      <span className="text-sm text-muted">· {materialUnitHint(row)}</span>
-                    </>
-                  )}
+                <span className="inline-flex w-full items-center gap-2">
+                  <span className="min-w-0 flex-1">
+                    {row.name}
+                    {row.deleted ? <span className="text-muted"> (архив)</span> : null}
+                    <span className="text-muted"> · {materialUnitHint(row)}</span>
+                  </span>
                   {editable && !row.deleted ? (
-                    <button
-                      type="button"
-                      aria-label={`Удалить ${row.name}`}
-                      title="Удалить"
-                      onClick={() => onDelete(row.materialId, row.name)}
-                      className="inline-flex size-8 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                    >
-                      <IconTrash />
-                    </button>
+                    <span className="ml-auto inline-flex shrink-0 items-center">
+                      <button
+                        type="button"
+                        aria-label={`Изменить ${row.name}`}
+                        title="Изменить"
+                        onClick={() => onEdit(row.materialId)}
+                        className="inline-flex size-8 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                      >
+                        <IconPencil />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`Удалить ${row.name}`}
+                        title="Удалить"
+                        onClick={() => onDelete(row.materialId, row.name)}
+                        className="inline-flex size-8 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                      >
+                        <IconTrash />
+                      </button>
+                    </span>
                   ) : null}
                 </span>
               </th>
