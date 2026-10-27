@@ -1786,10 +1786,19 @@
   gap: 4px;
 }
 
-.screenLinks button {
+.screenRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  gap: 6px;
+  align-items: center;
+}
+
+.screenChip {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   padding: 8px 10px;
   border: 0;
   background: var(--fb-soft);
@@ -1797,9 +1806,27 @@
   text-align: left;
 }
 
-.screenLinks button span {
+.screenChip span {
   color: var(--fb-mid);
   font-size: 10px;
+  white-space: nowrap;
+}
+
+.screenCopy {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--fb-line);
+  background: var(--fb-white);
+  color: var(--ui-gray-700);
+}
+
+.screenCopy svg {
+  width: 16px;
+  height: 16px;
 }
 
 .scopeNote {
@@ -2669,17 +2696,19 @@
   background: var(--ui-gray-50);
 }
 
-.workspace .screenLinks button:hover {
+.workspace .screenChip:hover,
+.workspace .screenCopy:hover,
+.workspace .locationMenuTrigger:hover {
   background: var(--ui-gray-100);
 }
 
-.workspace .screenLinks button[data-paused="true"] {
+.workspace .screenChip[data-paused="true"] {
   background: var(--fb-white);
   color: var(--ui-gray-500);
   text-decoration: line-through;
 }
 
-.workspace .screenLinks button[data-paused="true"] span {
+.workspace .screenChip[data-paused="true"] span {
   text-decoration: none;
 }
 
@@ -2765,6 +2794,66 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.locationMenu {
+  position: relative;
+  justify-self: end;
+}
+
+.locationMenuTrigger {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--fb-line);
+  background: var(--fb-white);
+  color: var(--ui-gray-700);
+}
+
+.locationMenuTrigger svg {
+  width: 18px;
+  height: 18px;
+}
+
+.locationMenuPopover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 5;
+  display: flex;
+  min-width: 200px;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid var(--ui-gray-200);
+  border-radius: 10px;
+  background: var(--fb-white);
+  box-shadow: 0 12px 24px rgb(16 24 40 / 12%);
+}
+
+.locationMenuPopover button {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ui-gray-700);
+  text-align: left;
+}
+
+.locationMenuPopover button:hover {
+  background: var(--ui-gray-50);
+  color: var(--ui-gray-900);
+}
+
+.locationMenuPopover svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
 }
 
 .statusPills {
@@ -2890,10 +2979,17 @@
   border: 1px solid var(--ui-gray-200);
 }
 
-.workspace .screenLinks button {
+.workspace .screenChip,
+.workspace .screenCopy,
+.workspace .locationMenuTrigger {
   border: 1px solid var(--ui-gray-200);
   border-radius: 6px;
   background: var(--ui-gray-50);
+}
+
+.workspace .screenCopy,
+.workspace .locationMenuTrigger {
+  background: var(--fb-white);
 }
 
 .workspace .scopeNote {
@@ -3429,8 +3525,13 @@
   }
 
   .locationList > article > .outlineButton,
-  .screenLinks {
+  .screenLinks,
+  .locationMenu {
     grid-column: 2;
+  }
+
+  .locationMenu {
+    justify-self: start;
   }
 
   .scopeNote {

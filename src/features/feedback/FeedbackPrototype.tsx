@@ -8,6 +8,7 @@ import {
   CheckCircle,
   Copy01,
   CreditCard01,
+  DotsHorizontal,
   Edit01,
   HomeLine,
   LogOut01,
@@ -1125,6 +1126,7 @@ function Locations({
     null,
   );
   const [appearanceFor, setAppearanceFor] = useState<string | null>(null);
+  const [menuFor, setMenuFor] = useState<string | null>(null);
   const [accent, setAccent] = useState('#101828');
   const [paidSlots] = useState(2);
   const [items, setItems] = useState(initialLocations);
@@ -1212,32 +1214,43 @@ function Locations({
               </div>
               <div className={styles.screenLinks}>
                 {location.screens.map((screen) => (
-                  <button
-                    type="button"
-                    key={screen.id}
-                    data-paused={(!screen.active).toString()}
-                    onClick={() =>
-                      screen.active
-                        ? setConfirmScreen({ locationId: location.id, screenId: screen.id, name: screen.name })
-                        : setItems((current) =>
-                            current.map((item) =>
-                              item.id === location.id
-                                ? {
-                                    ...item,
-                                    screens: item.screens.map((entry) =>
-                                      entry.id === screen.id ? { ...entry, active: true } : entry,
-                                    ),
-                                  }
-                                : item,
-                            ),
-                          )
-                    }
-                  >
-                    {screen.name} <span>{screen.active ? 'Активен · отключить' : 'Отключён · включить'}</span>
-                  </button>
+                  <div key={screen.id} className={styles.screenRow}>
+                    <button
+                      type="button"
+                      className={styles.screenChip}
+                      data-paused={(!screen.active).toString()}
+                      onClick={() =>
+                        screen.active
+                          ? setConfirmScreen({ locationId: location.id, screenId: screen.id, name: screen.name })
+                          : setItems((current) =>
+                              current.map((item) =>
+                                item.id === location.id
+                                  ? {
+                                      ...item,
+                                      screens: item.screens.map((entry) =>
+                                        entry.id === screen.id ? { ...entry, active: true } : entry,
+                                      ),
+                                    }
+                                  : item,
+                              ),
+                            )
+                      }
+                    >
+                      {screen.name} <span>{screen.active ? 'Активен · отключить' : 'Отключён · включить'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.screenCopy}
+                      aria-label={`Копировать ссылку экрана «${screen.name}»`}
+                      onClick={() => onNotice(`Ссылка «${screen.name}» скопирована`)}
+                    >
+                      <Copy01 />
+                    </button>
+                  </div>
                 ))}
                 <button
                   type="button"
+                  className={styles.screenChip}
                   onClick={() => {
                     setItems((current) =>
                       current.map((item) =>
@@ -1258,29 +1271,51 @@ function Locations({
                   + Создать экран <span>Ссылка</span>
                 </button>
               </div>
-              <div className={styles.locationActions}>
-                <UIButton
-                  color="secondary"
-                  size="sm"
-                  iconLeading={Copy01}
-                  onPress={() => onNotice('Ссылка экрана скопирована')}
+              <div className={styles.locationMenu}>
+                <button
+                  type="button"
+                  className={styles.locationMenuTrigger}
+                  aria-label={`Действия для «${location.name}»`}
+                  aria-expanded={menuFor === location.id}
+                  aria-haspopup="menu"
+                  onClick={() => setMenuFor((current) => (current === location.id ? null : location.id))}
                 >
-                  Копировать ссылку
-                </UIButton>
-                <UIButton color="tertiary" size="sm" iconLeading={Edit01} onPress={() => setEditId(location.id)}>
-                  Изменить
-                </UIButton>
-                <UIButton
-                  color="tertiary"
-                  size="sm"
-                  iconLeading={Settings01}
-                  onPress={() => setAppearanceFor(location.id)}
-                >
-                  Оформление
-                </UIButton>
-                <UIButton color="tertiary" size="sm" onPress={onTablet}>
-                  Открыть
-                </UIButton>
+                  <DotsHorizontal />
+                </button>
+                {menuFor === location.id ? (
+                  <div className={styles.locationMenuPopover} role="menu">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setEditId(location.id);
+                        setMenuFor(null);
+                      }}
+                    >
+                      <Edit01 /> Изменить
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setAppearanceFor(location.id);
+                        setMenuFor(null);
+                      }}
+                    >
+                      <Settings01 /> Оформление
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setMenuFor(null);
+                        onTablet();
+                      }}
+                    >
+                      Открыть
+                    </button>
+                  </div>
+                ) : null}
               </div>
             </article>
           ))}
