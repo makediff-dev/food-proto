@@ -704,9 +704,9 @@ function Workspace({
         <Menu01 aria-hidden="true" /> Меню
       </button>
       <aside id="feedback-sidebar" className={styles.sidebar} data-open={mobileNav}>
-        <div className={styles.sidebarBrand}>
+        <button type="button" className={styles.sidebarBrand} onClick={onExit} aria-label="На главную">
           <Mark /> <span>Отклик</span>
-        </div>
+        </button>
         <nav aria-label="Личный кабинет">
           {navItems.map((item) => (
             <UINavButton

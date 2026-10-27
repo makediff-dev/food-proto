@@ -1288,12 +1288,18 @@
 
 .sidebarBrand {
   display: flex;
+  width: 100%;
   min-height: 78px;
   align-items: center;
   gap: 10px;
   padding: 0 24px;
+  border: 0;
   border-bottom: 1px solid var(--fb-black);
+  background: transparent;
+  color: inherit;
   font-weight: 700;
+  text-align: left;
+  cursor: pointer;
 }
 
 .sidebar nav {
