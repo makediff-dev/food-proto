@@ -3,7 +3,10 @@
 import { useState } from 'react';
 
 import type { FinishedGoodsGroup, FinishedGoodsRow, FinishedGoodsTotals } from '@/domain/finished-goods';
-import { FinishedGoodsReportColumnHeaders } from '@/features/movement/FinishedGoodsNormativeColumnHeading';
+import {
+  FINISHED_GOODS_SUMMARY_SUB_BANNERS,
+  FinishedGoodsReportColumnHeaders,
+} from '@/features/movement/FinishedGoodsNormativeColumnHeading';
 import { NormDeviationCell } from '@/features/movement/NormDeviationCell';
 import { formatPieces } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
@@ -37,12 +40,24 @@ type ColumnKey =
   | 'openingFact'
   | 'openingPrice'
   | 'openingValue'
+  | 'planSalesPieces'
+  | 'planSalesPrice'
+  | 'planSalesRevenue'
   | 'salesPieces'
   | 'salesPrice'
   | 'salesRevenue'
+  | 'salesDeviationPieces'
+  | 'salesDeviationPrice'
+  | 'salesDeviationRevenue'
+  | 'planProductionPieces'
+  | 'planProductionPrice'
+  | 'planProductionValue'
   | 'productionPieces'
   | 'productionPrice'
   | 'productionValue'
+  | 'productionDeviationPieces'
+  | 'productionDeviationPrice'
+  | 'productionDeviationValue'
   | 'bookClosing'
   | 'inventoryClosing'
   | 'closingInventoryDeviation'
@@ -68,17 +83,29 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
   {
     label: 'Продажи',
     columns: [
+      { key: 'planSalesPieces', label: 'Объём' },
+      { key: 'planSalesPrice', label: 'Цена' },
+      { key: 'planSalesRevenue', label: 'Стоимость' },
       { key: 'salesPieces', label: 'Объём' },
       { key: 'salesPrice', label: 'Цена' },
       { key: 'salesRevenue', label: 'Стоимость' },
+      { key: 'salesDeviationPieces', label: 'Объём' },
+      { key: 'salesDeviationPrice', label: 'Цена' },
+      { key: 'salesDeviationRevenue', label: 'Стоимость' },
     ],
   },
   {
     label: 'Производство',
     columns: [
+      { key: 'planProductionPieces', label: 'Объём' },
+      { key: 'planProductionPrice', label: 'Цена' },
+      { key: 'planProductionValue', label: 'Стоимость' },
       { key: 'productionPieces', label: 'Объём' },
       { key: 'productionPrice', label: 'Цена' },
       { key: 'productionValue', label: 'Стоимость' },
+      { key: 'productionDeviationPieces', label: 'Объём' },
+      { key: 'productionDeviationPrice', label: 'Цена' },
+      { key: 'productionDeviationValue', label: 'Стоимость' },
     ],
   },
   {
@@ -110,12 +137,24 @@ const COLUMN_KIND: Record<ColumnKey, CellKind> = {
   openingFact: 'repeated',
   openingPrice: 'repeated',
   openingValue: 'computed',
+  planSalesPieces: 'repeated',
+  planSalesPrice: 'repeated',
+  planSalesRevenue: 'repeated',
   salesPieces: 'repeated',
   salesPrice: 'repeated',
   salesRevenue: 'repeated',
+  salesDeviationPieces: 'computed',
+  salesDeviationPrice: 'computed',
+  salesDeviationRevenue: 'computed',
+  planProductionPieces: 'repeated',
+  planProductionPrice: 'repeated',
+  planProductionValue: 'repeated',
   productionPieces: 'repeated',
   productionPrice: 'repeated',
   productionValue: 'repeated',
+  productionDeviationPieces: 'computed',
+  productionDeviationPrice: 'computed',
+  productionDeviationValue: 'computed',
   bookClosing: 'computed',
   inventoryClosing: 'repeated',
   closingInventoryDeviation: 'computed',
@@ -172,12 +211,18 @@ export function FinishedGoodsMonthTable({
             <FinishedGoodsReportColumnHeaders
               row="primary"
               columns={COLUMNS}
+              subBannerGroups={FINISHED_GOODS_SUMMARY_SUB_BANNERS}
               groupEndClass={groupEndClass}
               lastColumnExtraClassName="last:border-r-0"
             />
           </tr>
           <tr>
-            <FinishedGoodsReportColumnHeaders row="secondary" columns={COLUMNS} groupEndClass={groupEndClass} />
+            <FinishedGoodsReportColumnHeaders
+              row="secondary"
+              columns={COLUMNS}
+              subBannerGroups={FINISHED_GOODS_SUMMARY_SUB_BANNERS}
+              groupEndClass={groupEndClass}
+            />
           </tr>
         </thead>
         <tbody>
@@ -274,6 +319,18 @@ function RowCell({ column, row }: { column: ColumnKey; row: FinishedGoodsRow }) 
       return <VatMoneyCell withVat={row.openingPriceWithVat} exVat={row.openingPriceExVat} />;
     case 'openingValue':
       return <VatMoneyCell withVat={row.openingValueWithVat} exVat={row.openingValueExVat} />;
+    case 'planSalesPieces':
+      return <TableNumber value={row.planSalesPieces}>{formatPieces(row.planSalesPieces)} шт</TableNumber>;
+    case 'planSalesPrice':
+      if (!row.planRevenueComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return <VatMoneyCell withVat={row.planSalesPriceWithVat} exVat={row.planSalesPriceExVat} />;
+    case 'planSalesRevenue':
+      if (!row.planRevenueComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return <VatMoneyCell withVat={row.planSalesRevenueWithVat} exVat={row.planSalesRevenueExVat} />;
     case 'salesPieces':
       return <TableNumber value={row.salesPieces}>{formatPieces(row.salesPieces)} шт</TableNumber>;
     case 'salesPrice':
@@ -286,12 +343,52 @@ function RowCell({ column, row }: { column: ColumnKey; row: FinishedGoodsRow }) 
         return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
       }
       return <VatMoneyCell withVat={row.salesRevenueWithVat} exVat={row.salesRevenueExVat} />;
+    case 'salesDeviationPieces':
+      return <IntegerCell value={row.salesDeviationPieces} unit="шт" signed />;
+    case 'salesDeviationPrice':
+      if (!row.revenueComplete || !row.planRevenueComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return <VatMoneyCell withVat={row.salesDeviationPriceWithVat} exVat={row.salesDeviationPriceExVat} signed />;
+    case 'salesDeviationRevenue':
+      if (!row.revenueComplete || !row.planRevenueComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return <VatMoneyCell withVat={row.salesDeviationRevenueWithVat} exVat={row.salesDeviationRevenueExVat} signed />;
+    case 'planProductionPieces':
+      return <TableNumber value={row.planProductionPieces}>{formatPieces(row.planProductionPieces)} шт</TableNumber>;
+    case 'planProductionPrice':
+      if (!row.planProductionComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return <VatMoneyCell withVat={row.planProductionPriceWithVat} exVat={row.planProductionPriceExVat} />;
+    case 'planProductionValue':
+      if (!row.planProductionComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return <VatMoneyCell withVat={row.planProductionValueWithVat} exVat={row.planProductionValueExVat} />;
     case 'productionPieces':
       return <TableNumber value={row.productionPieces}>{formatPieces(row.productionPieces)} шт</TableNumber>;
     case 'productionPrice':
       return <VatMoneyCell withVat={row.productionPriceWithVat} exVat={row.productionPriceExVat} />;
     case 'productionValue':
       return <VatMoneyCell withVat={row.productionValueWithVat} exVat={row.productionValueExVat} />;
+    case 'productionDeviationPieces':
+      return <IntegerCell value={row.productionDeviationPieces} unit="шт" signed />;
+    case 'productionDeviationPrice':
+      if (!row.planProductionComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return (
+        <VatMoneyCell withVat={row.productionDeviationPriceWithVat} exVat={row.productionDeviationPriceExVat} signed />
+      );
+    case 'productionDeviationValue':
+      if (!row.planProductionComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return (
+        <VatMoneyCell withVat={row.productionDeviationValueWithVat} exVat={row.productionDeviationValueExVat} signed />
+      );
     case 'bookClosing':
       return <TableNumber value={row.bookClosingPieces}>{formatPieces(row.bookClosingPieces)} шт</TableNumber>;
     case 'inventoryClosing':
@@ -344,6 +441,18 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: FinishedGoo
       return <VatMoneyCell withVat={totals.openingPriceWithVat} exVat={totals.openingPriceExVat} />;
     case 'openingValue':
       return <VatMoneyCell withVat={totals.openingValueWithVat} exVat={totals.openingValueExVat} />;
+    case 'planSalesPieces':
+      return <TableNumber value={totals.planSalesPieces}>{formatPieces(totals.planSalesPieces)} шт</TableNumber>;
+    case 'planSalesPrice':
+      if (!totals.planRevenueComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return <VatMoneyCell withVat={totals.planSalesPriceWithVat} exVat={totals.planSalesPriceExVat} />;
+    case 'planSalesRevenue':
+      if (!totals.planRevenueComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return <VatMoneyCell withVat={totals.planSalesRevenueWithVat} exVat={totals.planSalesRevenueExVat} />;
     case 'salesPieces':
       return <TableNumber value={totals.salesPieces}>{formatPieces(totals.salesPieces)} шт</TableNumber>;
     case 'salesPrice':
@@ -356,12 +465,66 @@ function TotalsCell({ column, totals }: { column: ColumnKey; totals: FinishedGoo
         return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
       }
       return <VatMoneyCell withVat={totals.salesRevenueWithVat} exVat={totals.salesRevenueExVat} />;
+    case 'salesDeviationPieces':
+      return <IntegerCell value={totals.salesDeviationPieces} unit="шт" signed />;
+    case 'salesDeviationPrice':
+      if (!totals.revenueComplete || !totals.planRevenueComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return (
+        <VatMoneyCell withVat={totals.salesDeviationPriceWithVat} exVat={totals.salesDeviationPriceExVat} signed />
+      );
+    case 'salesDeviationRevenue':
+      if (!totals.revenueComplete || !totals.planRevenueComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return (
+        <VatMoneyCell withVat={totals.salesDeviationRevenueWithVat} exVat={totals.salesDeviationRevenueExVat} signed />
+      );
+    case 'planProductionPieces':
+      return (
+        <TableNumber value={totals.planProductionPieces}>{formatPieces(totals.planProductionPieces)} шт</TableNumber>
+      );
+    case 'planProductionPrice':
+      if (!totals.planProductionComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return <VatMoneyCell withVat={totals.planProductionPriceWithVat} exVat={totals.planProductionPriceExVat} />;
+    case 'planProductionValue':
+      if (!totals.planProductionComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return <VatMoneyCell withVat={totals.planProductionValueWithVat} exVat={totals.planProductionValueExVat} />;
     case 'productionPieces':
       return <TableNumber value={totals.productionPieces}>{formatPieces(totals.productionPieces)} шт</TableNumber>;
     case 'productionPrice':
       return <VatMoneyCell withVat={totals.productionPriceWithVat} exVat={totals.productionPriceExVat} />;
     case 'productionValue':
       return <VatMoneyCell withVat={totals.productionValueWithVat} exVat={totals.productionValueExVat} />;
+    case 'productionDeviationPieces':
+      return <IntegerCell value={totals.productionDeviationPieces} unit="шт" signed />;
+    case 'productionDeviationPrice':
+      if (!totals.planProductionComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return (
+        <VatMoneyCell
+          withVat={totals.productionDeviationPriceWithVat}
+          exVat={totals.productionDeviationPriceExVat}
+          signed
+        />
+      );
+    case 'productionDeviationValue':
+      if (!totals.planProductionComplete) {
+        return <Muted>{keepWithNext('не по всем товарам')}</Muted>;
+      }
+      return (
+        <VatMoneyCell
+          withVat={totals.productionDeviationValueWithVat}
+          exVat={totals.productionDeviationValueExVat}
+          signed
+        />
+      );
     case 'bookClosing':
       return <TableNumber value={totals.bookClosingPieces}>{formatPieces(totals.bookClosingPieces)} шт</TableNumber>;
     case 'inventoryClosing':

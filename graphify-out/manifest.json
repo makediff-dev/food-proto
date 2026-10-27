@@ -274,9 +274,9 @@
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1793127299.8014863,
-    "seen": 1793127326.7384608,
-    "ast_hash": "6fe5846411ea361d8cbcf4c076b4b639",
+    "mtime": 1793128876.1169605,
+    "seen": 1793128918.503298,
+    "ast_hash": "fffdb1944256284ca7df50008ef901d3",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
@@ -597,9 +597,9 @@
     "semantic_hash": ""
   },
   "src/domain/finished-goods.ts": {
-    "mtime": 1792571098.650562,
-    "seen": 1792571131.9145477,
-    "ast_hash": "883079d32563a40ea4cd37f4c12abb1b",
+    "mtime": 1793128880.833505,
+    "seen": 1793128918.503298,
+    "ast_hash": "b51669a2b8a1626a2fed184716084f32",
     "semantic_hash": ""
   },
   "src/features/movement/FinishedGoodsFactScreen.tsx": {
@@ -621,9 +621,9 @@
     "semantic_hash": ""
   },
   "src/features/movement/FinishedGoodsMonthTable.tsx": {
-    "mtime": 1792663436.3518524,
-    "seen": 1792743010.5104587,
-    "ast_hash": "9331d1d44460664ffab1f8d8763924fb",
+    "mtime": 1793128880.862451,
+    "seen": 1793128918.503298,
+    "ast_hash": "7e69c9ddd8697e33cb9b60c8ba38d147",
     "semantic_hash": ""
   },
   "src/features/movement/paths.ts": {
@@ -699,9 +699,9 @@
     "semantic_hash": ""
   },
   "src/features/movement/FinishedGoodsNormativeColumnHeading.tsx": {
-    "mtime": 1792588852.342735,
-    "seen": 1792588862.0959382,
-    "ast_hash": "c69b533f6257f4929385eec0af29c422",
+    "mtime": 1793128759.2423077,
+    "seen": 1793128918.503298,
+    "ast_hash": "f3e069e34deb5ece80c66f7187c65dcd",
     "semantic_hash": ""
   },
   "docs/flow.md": {
@@ -729,9 +729,9 @@
     "semantic_hash": ""
   },
   "docs/tables/movement-summary.md": {
-    "mtime": 1792571426.9182487,
-    "seen": 1792573497.5206597,
-    "ast_hash": "b42c5752d62077e28c992cc330f1bac7",
+    "mtime": 1793128853.7407365,
+    "seen": 1793128918.503298,
+    "ast_hash": "9f450763c6b4aa844a28bc01bd5491a4",
     "semantic_hash": ""
   },
   "docs/tables/production-daily.md": {

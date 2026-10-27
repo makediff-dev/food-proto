@@ -20,6 +20,42 @@ export const FINISHED_GOODS_CLOSING_SUB_BANNERS: ReportSubBannerGroup[] = [
   },
 ];
 
+export const FINISHED_GOODS_SALES_SUB_BANNERS: ReportSubBannerGroup[] = [
+  {
+    label: 'план',
+    keys: ['planSalesPieces', 'planSalesPrice', 'planSalesRevenue'],
+  },
+  {
+    label: 'факт',
+    keys: ['salesPieces', 'salesPrice', 'salesRevenue'],
+  },
+  {
+    label: 'отклонение',
+    keys: ['salesDeviationPieces', 'salesDeviationPrice', 'salesDeviationRevenue'],
+  },
+];
+
+export const FINISHED_GOODS_PRODUCTION_SUB_BANNERS: ReportSubBannerGroup[] = [
+  {
+    label: 'план',
+    keys: ['planProductionPieces', 'planProductionPrice', 'planProductionValue'],
+  },
+  {
+    label: 'факт',
+    keys: ['productionPieces', 'productionPrice', 'productionValue'],
+  },
+  {
+    label: 'отклонение',
+    keys: ['productionDeviationPieces', 'productionDeviationPrice', 'productionDeviationValue'],
+  },
+];
+
+export const FINISHED_GOODS_SUMMARY_SUB_BANNERS: ReportSubBannerGroup[] = [
+  ...FINISHED_GOODS_SALES_SUB_BANNERS,
+  ...FINISHED_GOODS_PRODUCTION_SUB_BANNERS,
+  ...FINISHED_GOODS_CLOSING_SUB_BANNERS,
+];
+
 export const MATERIALS_RECEIPT_SUB_BANNERS: ReportSubBannerGroup[] = [
   {
     label: 'план',
@@ -169,17 +205,19 @@ export function FinishedGoodsReportColumnHeaders<K extends string>({
   columns,
   groupEndClass,
   lastColumnExtraClassName = '',
+  subBannerGroups = FINISHED_GOODS_CLOSING_SUB_BANNERS,
 }: {
   row: 'primary' | 'secondary';
   columns: readonly { key: K; label: string; hint?: string }[];
   groupEndClass: (key: K) => string;
   lastColumnExtraClassName?: string;
+  subBannerGroups?: readonly ReportSubBannerGroup[];
 }): ReactNode {
   return (
     <ReportSubBannerColumnHeaders
       row={row}
       columns={columns}
-      subBannerGroups={FINISHED_GOODS_CLOSING_SUB_BANNERS}
+      subBannerGroups={subBannerGroups}
       groupEndClass={groupEndClass}
       lastColumnExtraClassName={lastColumnExtraClassName}
     />

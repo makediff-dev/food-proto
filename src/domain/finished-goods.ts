@@ -23,6 +23,8 @@ import {
   planPriceWithVatForProduct,
   planSalesVolumePiecesForProduct,
   priceExVatTenThousandths,
+  revenueExVat,
+  revenueWithVat,
   shiftMonth,
 } from '@/domain/sales-plan';
 import { monthsInRange, normalizeMonthRange } from '@/domain/summary';
@@ -63,9 +65,29 @@ export interface FinishedGoodsTotals {
   currentClosingDeviationPieces: number;
   currentClosingDeviationValueWithVat: number | null;
   currentClosingDeviationValueExVat: number | null;
+  /** План продаж за период: сумма плановых штук месяцев. */
+  planSalesPieces: number;
+  planSalesPriceWithVat: number | null;
+  planSalesPriceExVat: number | null;
+  planSalesRevenueWithVat: number | null;
+  planSalesRevenueExVat: number | null;
+  planRevenueComplete: boolean;
   salesPieces: number;
   salesRevenueWithVat: number | null;
   salesRevenueExVat: number | null;
+  /** Отклонение продаж: факт − план. */
+  salesDeviationPieces: number;
+  salesDeviationPriceWithVat: number | null;
+  salesDeviationPriceExVat: number | null;
+  salesDeviationRevenueWithVat: number | null;
+  salesDeviationRevenueExVat: number | null;
+  /** План выпуска за период: сумма плановых штук месяцев. */
+  planProductionPieces: number;
+  planProductionPriceWithVat: number | null;
+  planProductionPriceExVat: number | null;
+  planProductionValueWithVat: number | null;
+  planProductionValueExVat: number | null;
+  planProductionComplete: boolean;
   productionPieces: number;
   /**
    * Цена выпуска: стоимость / штуки.
@@ -76,6 +98,12 @@ export interface FinishedGoodsTotals {
   /** Стоимость выпуска: сумма строк журнала (цена × штуки). Выпуска не было — 0. */
   productionValueWithVat: number | null;
   productionValueExVat: number | null;
+  /** Отклонение выпуска: факт − план. */
+  productionDeviationPieces: number;
+  productionDeviationPriceWithVat: number | null;
+  productionDeviationPriceExVat: number | null;
+  productionDeviationValueWithVat: number | null;
+  productionDeviationValueExVat: number | null;
   closingPieces: number;
   factPriceWithVat: number | null;
   factPriceExVat: number | null;
@@ -378,14 +406,36 @@ function emptyTotals(): FinishedGoodsTotals {
     currentClosingDeviationPieces: 0,
     currentClosingDeviationValueWithVat: null,
     currentClosingDeviationValueExVat: null,
+    planSalesPieces: 0,
+    planSalesPriceWithVat: null,
+    planSalesPriceExVat: null,
+    planSalesRevenueWithVat: 0,
+    planSalesRevenueExVat: 0,
+    planRevenueComplete: true,
     salesPieces: 0,
     salesRevenueWithVat: 0,
     salesRevenueExVat: 0,
+    salesDeviationPieces: 0,
+    salesDeviationPriceWithVat: null,
+    salesDeviationPriceExVat: null,
+    salesDeviationRevenueWithVat: 0,
+    salesDeviationRevenueExVat: 0,
+    planProductionPieces: 0,
+    planProductionPriceWithVat: null,
+    planProductionPriceExVat: null,
+    planProductionValueWithVat: 0,
+    planProductionValueExVat: 0,
+    planProductionComplete: true,
     productionPieces: 0,
     productionPriceWithVat: null,
     productionPriceExVat: null,
     productionValueWithVat: null,
     productionValueExVat: null,
+    productionDeviationPieces: 0,
+    productionDeviationPriceWithVat: null,
+    productionDeviationPriceExVat: null,
+    productionDeviationValueWithVat: null,
+    productionDeviationValueExVat: null,
     closingPieces: 0,
     factPriceWithVat: null,
     factPriceExVat: null,
@@ -429,6 +479,119 @@ export function closingStockPieces(openingPieces: number, productionPieces: numb
 
 function priceAverage(amount: number | null, pieces: number): number | null {
   return averageAmount(amount, pieces);
+}
+
+function moneyDelta(fact: number | null, plan: number | null, complete: boolean): number | null {
+  if (!complete || fact === null || plan === null) {
+    return null;
+  }
+  return fact - plan;
+}
+
+type PlanSideAmounts = {
+  pieces: number;
+  priceWithVat: number | null;
+  priceExVat: number | null;
+  valueWithVat: number | null;
+  valueExVat: number | null;
+  complete: boolean;
+};
+
+function emptyPlanSide(): PlanSideAmounts {
+  return {
+    pieces: 0,
+    priceWithVat: null,
+    priceExVat: null,
+    valueWithVat: 0,
+    valueExVat: 0,
+    complete: true,
+  };
+}
+
+/** План продаж за месяцы периода: штуки, цена и стоимость из плана продаж. */
+function rangePlanSales(document: PrototypeDocument, months: readonly string[], product: Product): PlanSideAmounts {
+  let pieces = 0;
+  let revenueWith = 0;
+  let revenueEx = 0;
+  let complete = true;
+  const lastMonth = months[months.length - 1] ?? '';
+
+  for (const month of months) {
+    const volume = planSalesVolumePiecesForProduct(document, product.id, month);
+    const priceWithVat = planPriceWithVatForProduct(document, product.id, month);
+    pieces += volume;
+    const withVat = revenueWithVat(priceWithVat, volume);
+    const exVat = revenueExVat(priceWithVat, product.vatPercent, volume);
+    if (exVat === null) {
+      if (volume > 0) {
+        complete = false;
+      }
+    } else {
+      revenueWith += withVat;
+      revenueEx += exVat;
+    }
+  }
+
+  const fallbackPriceWithVat = lastMonth ? planPriceWithVatForProduct(document, product.id, lastMonth) : 0;
+  const fallbackPriceExVat = amountExVat(fallbackPriceWithVat, product.vatPercent);
+  const valueWithVat = complete ? revenueWith : null;
+  const valueExVat = complete ? revenueEx : null;
+  const averageWith = priceAverage(valueWithVat, pieces);
+  const averageEx = priceAverage(valueExVat, pieces);
+
+  return {
+    pieces,
+    priceWithVat: pieces > 0 ? averageWith : fallbackPriceWithVat,
+    priceExVat: pieces > 0 ? averageEx : fallbackPriceExVat,
+    valueWithVat,
+    valueExVat,
+    complete,
+  };
+}
+
+/** План выпуска за месяцы периода: штуки из плана выпуска, цена — расчётная цена продаж. */
+function rangePlanProduction(
+  document: PrototypeDocument,
+  months: readonly string[],
+  product: Product,
+): PlanSideAmounts {
+  let pieces = 0;
+  let valueWith = 0;
+  let valueEx = 0;
+  let complete = true;
+  const lastMonth = months[months.length - 1] ?? '';
+
+  for (const month of months) {
+    const volume = plannedProductionVolumePieces(document, month, product.id);
+    const priceWithVat = planPriceWithVatForProduct(document, product.id, month);
+    pieces += volume;
+    const withVat = revenueWithVat(priceWithVat, volume);
+    const exVat = revenueExVat(priceWithVat, product.vatPercent, volume);
+    if (exVat === null) {
+      if (volume > 0) {
+        complete = false;
+      }
+    } else {
+      valueWith += withVat;
+      valueEx += exVat;
+    }
+  }
+
+  const fallbackPriceWithVat = lastMonth ? planPriceWithVatForProduct(document, product.id, lastMonth) : 0;
+  const fallbackPriceExVat = amountExVat(fallbackPriceWithVat, product.vatPercent);
+  const valueWithVat = complete ? valueWith : null;
+  const valueExVat = complete ? valueEx : null;
+  const averageWith = priceAverage(valueWithVat, pieces);
+  const averageEx = priceAverage(valueExVat, pieces);
+
+  return {
+    pieces,
+    priceWithVat: pieces > 0 ? averageWith : fallbackPriceWithVat,
+    priceExVat: pieces > 0 ? averageEx : fallbackPriceExVat,
+    valueWithVat,
+    valueExVat,
+    complete,
+  };
 }
 
 function productionSpendOn(
@@ -476,6 +639,8 @@ function rowFromParts(
     hasInventoryLine?: boolean;
     closingPieces?: number;
     currentClosingPieces?: number;
+    planSales?: PlanSideAmounts;
+    planProduction?: PlanSideAmounts;
   } = {},
 ): FinishedGoodsRow {
   const vat = product.vatPercent;
@@ -511,6 +676,14 @@ function rowFromParts(
   const closingValueWith = factPriceWith === null ? null : closingPieces * factPriceWith;
   const closingValueEx = factPriceEx === null ? null : closingPieces * factPriceEx;
 
+  const planSales = options.planSales ?? emptyPlanSide();
+  const planProduction = options.planProduction ?? emptyPlanSide();
+  const salesRevenueWith = revenueComplete ? salesRevenueWithVat : null;
+  const salesRevenueEx = revenueComplete ? salesRevenueExVat : null;
+  const salesDeviationComplete = revenueComplete && planSales.complete;
+  const productionComplete = productionCostWithVat !== null && productionCostExVat !== null;
+  const productionDeviationComplete = productionComplete && planProduction.complete;
+
   return {
     productId: product.id,
     name: product.name,
@@ -535,14 +708,60 @@ function rowFromParts(
     currentClosingDeviationPieces: currentClosingDeviation,
     currentClosingDeviationValueWithVat: currentClosingDeviationValueWith,
     currentClosingDeviationValueExVat: currentClosingDeviationValueEx,
+    planSalesPieces: planSales.pieces,
+    planSalesPriceWithVat: planSales.priceWithVat,
+    planSalesPriceExVat: planSales.priceExVat,
+    planSalesRevenueWithVat: planSales.complete ? planSales.valueWithVat : null,
+    planSalesRevenueExVat: planSales.complete ? planSales.valueExVat : null,
+    planRevenueComplete: planSales.complete,
     salesPieces,
-    salesRevenueWithVat: revenueComplete ? salesRevenueWithVat : null,
-    salesRevenueExVat: revenueComplete ? salesRevenueExVat : null,
+    salesRevenueWithVat: salesRevenueWith,
+    salesRevenueExVat: salesRevenueEx,
+    salesDeviationPieces: salesPieces - planSales.pieces,
+    salesDeviationPriceWithVat: moneyDelta(
+      salesPieces > 0 ? factPriceWith : null,
+      planSales.priceWithVat,
+      salesDeviationComplete && salesPieces > 0,
+    ),
+    salesDeviationPriceExVat: moneyDelta(
+      salesPieces > 0 ? factPriceEx : null,
+      planSales.priceExVat,
+      salesDeviationComplete && salesPieces > 0,
+    ),
+    salesDeviationRevenueWithVat: moneyDelta(salesRevenueWith, planSales.valueWithVat, salesDeviationComplete),
+    salesDeviationRevenueExVat: moneyDelta(salesRevenueEx, planSales.valueExVat, salesDeviationComplete),
+    planProductionPieces: planProduction.pieces,
+    planProductionPriceWithVat: planProduction.priceWithVat,
+    planProductionPriceExVat: planProduction.priceExVat,
+    planProductionValueWithVat: planProduction.complete ? planProduction.valueWithVat : null,
+    planProductionValueExVat: planProduction.complete ? planProduction.valueExVat : null,
+    planProductionComplete: planProduction.complete,
     productionPieces,
     productionPriceWithVat: productionPriceWith,
     productionPriceExVat: productionPriceEx,
     productionValueWithVat: productionCostWithVat,
     productionValueExVat: productionCostExVat,
+    productionDeviationPieces: productionPieces - planProduction.pieces,
+    productionDeviationPriceWithVat: moneyDelta(
+      productionPieces > 0 ? productionPriceWith : null,
+      planProduction.priceWithVat,
+      productionDeviationComplete && productionPieces > 0,
+    ),
+    productionDeviationPriceExVat: moneyDelta(
+      productionPieces > 0 ? productionPriceEx : null,
+      planProduction.priceExVat,
+      productionDeviationComplete && productionPieces > 0,
+    ),
+    productionDeviationValueWithVat: moneyDelta(
+      productionCostWithVat,
+      planProduction.valueWithVat,
+      productionDeviationComplete,
+    ),
+    productionDeviationValueExVat: moneyDelta(
+      productionCostExVat,
+      planProduction.valueExVat,
+      productionDeviationComplete,
+    ),
     closingPieces,
     factPriceWithVat: factPriceWith,
     factPriceExVat: factPriceEx,
@@ -568,14 +787,30 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
   let openingDeviationValueEx = 0;
   let openingDeviationValueWithComplete = true;
   let openingDeviationValueExComplete = true;
+  let planSalesPieces = 0;
+  let planSalesRevenueWith = 0;
+  let planSalesRevenueEx = 0;
+  let planRevenueComplete = true;
   let salesPieces = 0;
   let salesRevenueWith = 0;
   let salesRevenueEx = 0;
   let revenueComplete = true;
+  let salesDeviationPiecesSum = 0;
+  let salesDeviationRevenueWith = 0;
+  let salesDeviationRevenueEx = 0;
+  let salesDeviationRevenueComplete = true;
+  let planProductionPieces = 0;
+  let planProductionValueWith = 0;
+  let planProductionValueEx = 0;
+  let planProductionComplete = true;
   let productionPieces = 0;
   let productionValueWith = 0;
   let productionValueEx = 0;
   let productionValueComplete = true;
+  let productionDeviationPiecesSum = 0;
+  let productionDeviationValueWith = 0;
+  let productionDeviationValueEx = 0;
+  let productionDeviationValueComplete = true;
   let bookClosingPieces = 0;
   let inventoryClosingPieces = 0;
   let closingInventoryDeviationPiecesSum = 0;
@@ -631,6 +866,16 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
       openingDeviationValueEx += row.openingDeviationValueExVat;
     }
 
+    planSalesPieces += row.planSalesPieces;
+    if (!row.planRevenueComplete || row.planSalesRevenueWithVat === null || row.planSalesRevenueExVat === null) {
+      if (row.planSalesPieces > 0) {
+        planRevenueComplete = false;
+      }
+    } else {
+      planSalesRevenueWith += row.planSalesRevenueWithVat;
+      planSalesRevenueEx += row.planSalesRevenueExVat;
+    }
+
     salesPieces += row.salesPieces;
     if (!row.revenueComplete || row.salesRevenueWithVat === null || row.salesRevenueExVat === null) {
       if (row.salesPieces > 0) {
@@ -641,6 +886,30 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
       salesRevenueEx += row.salesRevenueExVat;
     }
 
+    salesDeviationPiecesSum += row.salesDeviationPieces;
+    if (row.salesDeviationRevenueWithVat === null || row.salesDeviationRevenueExVat === null) {
+      if (row.salesPieces > 0 || row.planSalesPieces > 0) {
+        salesDeviationRevenueComplete = false;
+      }
+    } else {
+      salesDeviationRevenueWith += row.salesDeviationRevenueWithVat;
+      salesDeviationRevenueEx += row.salesDeviationRevenueExVat;
+    }
+
+    planProductionPieces += row.planProductionPieces;
+    if (
+      !row.planProductionComplete ||
+      row.planProductionValueWithVat === null ||
+      row.planProductionValueExVat === null
+    ) {
+      if (row.planProductionPieces > 0) {
+        planProductionComplete = false;
+      }
+    } else {
+      planProductionValueWith += row.planProductionValueWithVat;
+      planProductionValueEx += row.planProductionValueExVat;
+    }
+
     productionPieces += row.productionPieces;
     if (row.productionValueWithVat === null || row.productionValueExVat === null) {
       if (row.productionPieces !== 0) {
@@ -649,6 +918,16 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
     } else {
       productionValueWith += row.productionValueWithVat;
       productionValueEx += row.productionValueExVat;
+    }
+
+    productionDeviationPiecesSum += row.productionDeviationPieces;
+    if (row.productionDeviationValueWithVat === null || row.productionDeviationValueExVat === null) {
+      if (row.productionPieces !== 0 || row.planProductionPieces !== 0) {
+        productionDeviationValueComplete = false;
+      }
+    } else {
+      productionDeviationValueWith += row.productionDeviationValueWithVat;
+      productionDeviationValueEx += row.productionDeviationValueExVat;
     }
 
     bookClosingPieces += row.bookClosingPieces;
@@ -703,16 +982,30 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
 
   const salesRevenueWithVat = revenueComplete ? salesRevenueWith : null;
   const salesRevenueExVat = revenueComplete ? salesRevenueEx : null;
+  const planSalesRevenueWithVat = planRevenueComplete ? planSalesRevenueWith : null;
+  const planSalesRevenueExVat = planRevenueComplete ? planSalesRevenueEx : null;
+  const planSalesPriceWithVat = planRevenueComplete ? priceAverage(planSalesRevenueWithVat, planSalesPieces) : null;
+  const planSalesPriceExVat = planRevenueComplete ? priceAverage(planSalesRevenueExVat, planSalesPieces) : null;
   const openingValueWithVat = openingValueWithComplete ? openingValueWith : null;
   const openingValueExVat = openingValueExComplete ? openingValueEx : null;
   const openingPriceWithVat = openingValueWithComplete ? priceAverage(openingValueWith, openingPieces) : null;
   const openingPriceExVat = openingValueExComplete ? priceAverage(openingValueEx, openingPieces) : null;
   const factPriceWithVat = averageAmount(salesRevenueWithVat, salesPieces);
   const factPriceExVat = averageAmount(salesRevenueExVat, salesPieces);
+  const salesDeviationComplete = revenueComplete && planRevenueComplete;
   const productionValueWithVat = productionValueComplete ? productionValueWith : null;
   const productionValueExVat = productionValueComplete ? productionValueEx : null;
   const productionPriceWithVat = priceAverage(productionValueWithVat, productionPieces);
   const productionPriceExVat = priceAverage(productionValueExVat, productionPieces);
+  const planProductionValueWithVat = planProductionComplete ? planProductionValueWith : null;
+  const planProductionValueExVat = planProductionComplete ? planProductionValueEx : null;
+  const planProductionPriceWithVat = planProductionComplete
+    ? priceAverage(planProductionValueWithVat, planProductionPieces)
+    : null;
+  const planProductionPriceExVat = planProductionComplete
+    ? priceAverage(planProductionValueExVat, planProductionPieces)
+    : null;
+  const productionDeviationComplete = productionValueComplete && planProductionComplete;
 
   return {
     bookOpeningPieces,
@@ -740,14 +1033,52 @@ function sumRows(rows: readonly FinishedGoodsRow[]): FinishedGoodsTotals {
       ? currentClosingDeviationValueWith
       : null,
     currentClosingDeviationValueExVat: currentClosingDeviationValueExComplete ? currentClosingDeviationValueEx : null,
+    planSalesPieces,
+    planSalesPriceWithVat,
+    planSalesPriceExVat,
+    planSalesRevenueWithVat,
+    planSalesRevenueExVat,
+    planRevenueComplete,
     salesPieces,
     salesRevenueWithVat,
     salesRevenueExVat,
+    salesDeviationPieces: salesDeviationPiecesSum,
+    salesDeviationPriceWithVat: moneyDelta(
+      salesPieces > 0 ? factPriceWithVat : null,
+      planSalesPriceWithVat,
+      salesDeviationComplete && salesPieces > 0,
+    ),
+    salesDeviationPriceExVat: moneyDelta(
+      salesPieces > 0 ? factPriceExVat : null,
+      planSalesPriceExVat,
+      salesDeviationComplete && salesPieces > 0,
+    ),
+    salesDeviationRevenueWithVat: salesDeviationRevenueComplete ? salesDeviationRevenueWith : null,
+    salesDeviationRevenueExVat: salesDeviationRevenueComplete ? salesDeviationRevenueEx : null,
+    planProductionPieces,
+    planProductionPriceWithVat,
+    planProductionPriceExVat,
+    planProductionValueWithVat,
+    planProductionValueExVat,
+    planProductionComplete,
     productionPieces,
     productionPriceWithVat,
     productionPriceExVat,
     productionValueWithVat,
     productionValueExVat,
+    productionDeviationPieces: productionDeviationPiecesSum,
+    productionDeviationPriceWithVat: moneyDelta(
+      productionPieces > 0 ? productionPriceWithVat : null,
+      planProductionPriceWithVat,
+      productionDeviationComplete && productionPieces > 0,
+    ),
+    productionDeviationPriceExVat: moneyDelta(
+      productionPieces > 0 ? productionPriceExVat : null,
+      planProductionPriceExVat,
+      productionDeviationComplete && productionPieces > 0,
+    ),
+    productionDeviationValueWithVat: productionDeviationValueComplete ? productionDeviationValueWith : null,
+    productionDeviationValueExVat: productionDeviationValueComplete ? productionDeviationValueEx : null,
     closingPieces,
     factPriceWithVat,
     factPriceExVat,
@@ -958,6 +1289,8 @@ export function finishedGoodsRangeView(
     const openingPrice = monthOpeningPrice(document, firstMonth, product);
     const sales = rangeSales(document, months, product.id);
     const produced = productionAmounts(producedByProduct.get(product.id));
+    const planSales = rangePlanSales(document, months, product);
+    const planProduction = rangePlanProduction(document, months, product);
     const bookClosingPieces = bookClosingPiecesForProduct(document, lastMonth, product.id);
     const inventoryClosingPieces = storedInventoryPiecesForProduct(document, lastMonth, product.id);
     const hasInventoryLine = hasStoredInventoryLine(document, lastMonth, product.id);
@@ -980,6 +1313,8 @@ export function finishedGoodsRangeView(
         inventoryClosingPieces,
         hasInventoryLine,
         currentClosingPieces,
+        planSales,
+        planProduction,
       },
     );
   });
