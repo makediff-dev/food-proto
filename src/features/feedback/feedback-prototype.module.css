@@ -392,7 +392,7 @@
 .steps {
   margin: 0;
   padding: 0;
-  border-top: 0;
+  border-top: 1px solid var(--fb-line);
   list-style: none;
 }
 
@@ -402,6 +402,10 @@
   gap: 20px;
   align-items: baseline;
   padding: 28px 0;
+  border-bottom: 1px solid var(--fb-line);
+}
+
+.steps li:last-child {
   border-bottom: 0;
 }
 
@@ -469,7 +473,7 @@
 }
 
 .benefitStats article + article {
-  border-left: 0;
+  border-left: 1px solid var(--fb-line);
 }
 
 .benefitStats strong {
@@ -589,7 +593,7 @@
   align-items: flex-end;
   justify-content: space-between;
   padding-bottom: 24px;
-  border-bottom: 0;
+  border-bottom: 1px solid var(--fb-line);
 }
 
 .previewTopline span {
@@ -640,8 +644,8 @@
 }
 
 .previewLocations {
-  border-top: 0;
-  border-bottom: 0;
+  border-top: 1px solid var(--fb-line);
+  border-bottom: 1px solid var(--fb-line);
 }
 
 .previewLocations > div {
@@ -649,7 +653,7 @@
   justify-content: space-between;
   gap: 20px;
   padding: 18px 0;
-  border-bottom: 0;
+  border-bottom: 1px solid var(--fb-line);
 }
 
 .previewLocations > div:last-child {
@@ -687,8 +691,8 @@
   display: grid;
   grid-template-columns: 1fr auto 1fr auto 1.2fr;
   align-items: stretch;
-  border-top: 0;
-  border-bottom: 0;
+  border-top: 1px solid #555;
+  border-bottom: 1px solid #555;
 }
 
 .reactionFlow > div {
@@ -997,10 +1001,14 @@
 }
 
 .faqList {
-  border-top: 0;
+  border-top: 1px solid var(--fb-line);
 }
 
 .faqList details {
+  border-bottom: 1px solid var(--fb-line);
+}
+
+.faqList details:last-child {
   border-bottom: 0;
 }
 
@@ -1567,10 +1575,11 @@
 
 .locationCompare > div {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) repeat(3, 70px);
+  grid-template-columns: minmax(140px, 1fr) 70px repeat(3, 64px);
   gap: 12px;
   padding: 19px 24px;
   border-bottom: 1px solid var(--fb-line);
+  transition: background 120ms ease;
 }
 
 .locationCompare > div:last-child {
@@ -2509,6 +2518,258 @@
   font-size: 12px;
 }
 
+.uiStatCard:hover {
+  border-color: var(--ui-gray-300);
+  background: #fcfcfd;
+  box-shadow: 0 8px 16px rgb(16 24 40 / 6%);
+}
+
+.uiStatsGridFour {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.workspace .workspaceHeader {
+  gap: 16px;
+}
+
+.workspace .headerTools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.workspace .sceneSelect {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ui-gray-500);
+  font-size: 12px;
+}
+
+.workspace .sceneSelect select {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--ui-gray-300);
+  border-radius: 8px;
+  background: var(--fb-white);
+  color: var(--ui-gray-900);
+}
+
+.emptyState,
+.errorState,
+.lockedState,
+.skeletonGrid {
+  display: flex;
+  min-height: 220px;
+  align-items: flex-start;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 32px;
+  border: 1px dashed var(--ui-gray-200);
+  border-radius: 12px;
+  background: var(--fb-white);
+}
+
+.errorState {
+  border-style: solid;
+  border-color: #fecdca;
+  background: #fef3f2;
+}
+
+.lockedState {
+  border-style: solid;
+  background: var(--ui-gray-50);
+}
+
+.emptyState h2,
+.errorState h2,
+.lockedState h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.emptyState p,
+.errorState p,
+.lockedState p {
+  margin: 0 0 12px;
+  color: var(--ui-gray-500);
+  max-width: 520px;
+}
+
+.skeletonRow {
+  height: 18px;
+  width: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f2f4f7 0%, #eaecf0 50%, #f2f4f7 100%);
+  background-size: 200% 100%;
+  animation: pulseFill 1.2s ease-in-out infinite;
+}
+
+@keyframes pulseFill {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.workspace .reviewList article {
+  padding: 20px 12px;
+  border-radius: 10px;
+  transition: background 120ms ease;
+}
+
+.workspace .reviewList article:hover,
+.workspace .compactReviews article:hover {
+  background: var(--ui-gray-50);
+}
+
+.workspace .locationCompare > div:not(.compareHeader):hover {
+  background: var(--ui-gray-50);
+}
+
+.workspace .locationList > article:hover,
+.workspace .tabletShortcut:hover {
+  border-color: var(--ui-gray-300);
+  box-shadow: 0 8px 18px rgb(16 24 40 / 6%);
+}
+
+.workspace .companyButton:hover {
+  background: var(--ui-gray-50);
+}
+
+.workspace .screenLinks button:hover {
+  background: var(--ui-gray-100);
+}
+
+.workspace .screenLinks button[data-paused="true"] {
+  background: var(--fb-white);
+  color: var(--ui-gray-500);
+  text-decoration: line-through;
+}
+
+.workspace .screenLinks button[data-paused="true"] span {
+  text-decoration: none;
+}
+
+.accountMenu {
+  position: relative;
+}
+
+.accountPopover {
+  position: absolute;
+  right: 16px;
+  bottom: 88px;
+  z-index: 4;
+  display: flex;
+  min-width: 220px;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid var(--ui-gray-200);
+  border-radius: 10px;
+  background: var(--fb-white);
+  box-shadow: 0 12px 24px rgb(16 24 40 / 12%);
+}
+
+.accountPopover button {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ui-gray-700);
+  text-align: left;
+}
+
+.accountPopover button:hover {
+  background: var(--ui-gray-50);
+  color: var(--ui-gray-900);
+}
+
+.chatList,
+.appearanceGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.chatRow,
+.screenRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--ui-gray-200);
+  border-radius: 10px;
+  background: var(--fb-white);
+}
+
+.chatRow:hover,
+.screenRow:hover {
+  background: var(--ui-gray-50);
+}
+
+.colorSwatches {
+  display: flex;
+  gap: 8px;
+}
+
+.colorSwatches button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--ui-gray-200);
+  border-radius: 50%;
+}
+
+.colorSwatches button[data-selected="true"] {
+  outline: 2px solid var(--ui-gray-900);
+  outline-offset: 2px;
+}
+
+.locationActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.statusPills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 0;
+  border: 0;
+}
+
+.statusPills button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--ui-gray-200);
+  border-radius: 999px;
+  background: var(--fb-white);
+  color: var(--ui-gray-700);
+}
+
+.statusPills button:hover {
+  background: var(--ui-gray-50);
+}
+
+.statusPills button[aria-pressed="true"] {
+  border-color: var(--ui-gray-900);
+  background: var(--ui-gray-900);
+  color: var(--fb-white);
+}
+
 .metricNote {
   display: flex;
   align-items: flex-start;
@@ -2778,7 +3039,8 @@
     grid-template-columns: 1fr;
   }
 
-  .uiStatsGrid {
+  .uiStatsGrid,
+  .uiStatsGridFour {
     grid-template-columns: 1fr;
   }
 
@@ -2892,7 +3154,7 @@
   }
 
   .benefitStats article + article {
-    border-top: 0;
+    border-top: 1px solid var(--fb-line);
     border-left: 0;
     padding-top: 28px;
   }
@@ -2936,7 +3198,7 @@
 
   .reactionFlow > div {
     min-height: 220px;
-    border-bottom: 0;
+    border-bottom: 1px solid #555;
   }
 
   .reactionFlow .telegramCard {
