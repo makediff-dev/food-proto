@@ -87,7 +87,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
     ],
   },
   {
-    label: 'Расход в производстве',
+    label: 'Расход в производство',
     columns: [
       {
         key: 'planConsumption',

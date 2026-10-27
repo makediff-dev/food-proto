@@ -163,13 +163,13 @@ function currentNavLabel(pathname: string): string | undefined {
     }
   }
 
-  for (const item of RECIPES_NAV) {
+  for (const item of MOVEMENT_NAV) {
     if (navItemIsCurrent(pathname, item)) {
       return item.label;
     }
   }
 
-  for (const item of MOVEMENT_NAV) {
+  for (const item of RECIPES_NAV) {
     if (navItemIsCurrent(pathname, item)) {
       return item.label;
     }
@@ -325,8 +325,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             pathname={pathname}
             onNavigate={closeMenu}
           />
-          <NavGroup title={RECIPES_SECTION_TITLE} items={RECIPES_NAV} pathname={pathname} onNavigate={closeMenu} />
           <NavGroup title={MOVEMENT_SECTION_TITLE} items={MOVEMENT_NAV} pathname={pathname} onNavigate={closeMenu} />
+          <NavGroup title={RECIPES_SECTION_TITLE} items={RECIPES_NAV} pathname={pathname} onNavigate={closeMenu} />
           <NavGroup
             title={DERIVATIVE_MOVEMENT_SECTION_TITLE}
             items={DERIVATIVE_MOVEMENT_NAV}

@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { Derivative } from '@/domain/document';
 import { MATERIAL_GROUPS, type Material } from '@/domain/document';
-import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
+import { fieldClassName } from '@/features/sales/fields';
+import { IconChevronDown, IconChevronRight, IconTrash } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
   blockHeadingClassName,
@@ -59,7 +60,6 @@ type CandidateRow = {
   id: string;
   name: string;
   unit: string;
-  draft: DerivativeLineDraft;
 };
 
 type CandidateGroup = {
@@ -68,24 +68,140 @@ type CandidateGroup = {
   rows: CandidateRow[];
 };
 
-export function DerivativeFormTable({
+type SelectedRow = CandidateRow & {
+  draft: DerivativeLineDraft;
+};
+
+type SelectedGroup = {
+  groupId: string;
+  groupName: string;
+  rows: SelectedRow[];
+};
+
+export function buildCandidateGroups(
+  materials: readonly Material[],
+  derivatives: readonly Derivative[],
+): CandidateGroup[] {
+  const materialGroups = MATERIAL_GROUPS.flatMap((group) => {
+    const rows = materials
+      .filter((item) => item.groupId === group.id)
+      .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+      .map((material) => ({
+        key: componentDraftKey('material', material.id),
+        kind: 'material' as const,
+        id: material.id,
+        name: material.name,
+        unit: material.unit,
+      }));
+
+    if (rows.length === 0) {
+      return [];
+    }
+
+    return [
+      {
+        groupId: `material:${group.id}`,
+        groupName: group.name,
+        rows,
+      },
+    ];
+  });
+
+  const derivativeRows = [...derivatives]
+    .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+    .map((item) => ({
+      key: componentDraftKey('derivative', item.id),
+      kind: 'derivative' as const,
+      id: item.id,
+      name: item.name,
+      unit: item.unit,
+    }));
+
+  if (derivativeRows.length === 0) {
+    return materialGroups;
+  }
+
+  return [
+    ...materialGroups,
+    {
+      groupId: 'derivatives',
+      groupName: 'Производные',
+      rows: derivativeRows,
+    },
+  ];
+}
+
+function selectedGroups(
+  materials: readonly Material[],
+  derivatives: readonly Derivative[],
+  drafts: Readonly<Record<string, DerivativeLineDraft>>,
+): SelectedGroup[] {
+  return buildCandidateGroups(materials, derivatives).flatMap((group) => {
+    const rows = group.rows.flatMap((row) => {
+      if (!Object.hasOwn(drafts, row.key)) {
+        return [];
+      }
+      return [
+        {
+          ...row,
+          draft: drafts[row.key] ?? emptyDerivativeLineDraft(),
+        },
+      ];
+    });
+    if (rows.length === 0) {
+      return [];
+    }
+    return [{ groupId: group.groupId, groupName: group.groupName, rows }];
+  });
+}
+
+export function DerivativeCompositionEditor({
   materials,
   derivatives,
   drafts,
   onChange,
+  onAdd,
+  onRemove,
 }: {
   materials: readonly Material[];
   derivatives: readonly Derivative[];
   drafts: Readonly<Record<string, DerivativeLineDraft>>;
   onChange: (key: string, raw: string) => void;
+  onAdd: (key: string) => void;
+  onRemove: (key: string) => void;
 }) {
-  const groups = buildGroups(materials, derivatives, drafts);
+  const groups = selectedGroups(materials, derivatives, drafts);
+  const hasSelected = groups.length > 0;
+
+  return (
+    <div className={`flex min-w-0 flex-col gap-3 ${hasSelected ? '' : 'w-[36rem] max-w-full'}`}>
+      <RecipeComponentSearch materials={materials} derivatives={derivatives} drafts={drafts} onAdd={onAdd} />
+      {hasSelected ? (
+        <DerivativeFormTable groups={groups} onChange={onChange} onRemove={onRemove} />
+      ) : (
+        <p className="w-full border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
+          Добавьте позиции через поиск.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function DerivativeFormTable({
+  groups,
+  onChange,
+  onRemove,
+}: {
+  groups: readonly SelectedGroup[];
+  onChange: (key: string, raw: string) => void;
+  onRemove: (key: string) => void;
+}) {
   const { toggleCategory, categoryOpen } = useOpenCategories();
 
   return (
     <div className="w-max max-w-full border border-line bg-sheet">
       <table className="w-max border-separate border-spacing-0 text-sm">
-        <caption className="sr-only">Состав производной</caption>
+        <caption className="sr-only">Состав рецепта</caption>
         <thead className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
@@ -110,6 +226,7 @@ export function DerivativeFormTable({
               open={categoryOpen(group.groupId)}
               onToggle={() => toggleCategory(group.groupId)}
               onChange={onChange}
+              onRemove={onRemove}
             />
           ))}
         </tbody>
@@ -118,66 +235,127 @@ export function DerivativeFormTable({
   );
 }
 
-function buildGroups(
-  materials: readonly Material[],
-  derivatives: readonly Derivative[],
-  drafts: Readonly<Record<string, DerivativeLineDraft>>,
-): CandidateGroup[] {
-  const materialGroups = MATERIAL_GROUPS.flatMap((group) => {
-    const rows = materials
-      .filter((item) => item.groupId === group.id)
-      .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
-      .map((material) => {
-        const key = componentDraftKey('material', material.id);
-        return {
-          key,
-          kind: 'material' as const,
-          id: material.id,
-          name: material.name,
-          unit: material.unit,
-          draft: drafts[key] ?? emptyDerivativeLineDraft(),
-        };
-      });
+function RecipeComponentSearch({
+  materials,
+  derivatives,
+  drafts,
+  onAdd,
+}: {
+  materials: readonly Material[];
+  derivatives: readonly Derivative[];
+  drafts: Readonly<Record<string, DerivativeLineDraft>>;
+  onAdd: (key: string) => void;
+}) {
+  const listboxId = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
 
-    if (rows.length === 0) {
-      return [];
+  const availableGroups = buildCandidateGroups(materials, derivatives)
+    .map((group) => ({
+      ...group,
+      rows: group.rows.filter((row) => !Object.hasOwn(drafts, row.key)),
+    }))
+    .filter((group) => group.rows.length > 0);
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredGroups =
+    normalizedQuery === ''
+      ? availableGroups
+      : availableGroups
+          .map((group) => ({
+            ...group,
+            rows: group.rows.filter((row) => row.name.toLowerCase().includes(normalizedQuery)),
+          }))
+          .filter((group) => group.rows.length > 0);
+
+  const hasAnyAvailable = availableGroups.length > 0;
+
+  useEffect(() => {
+    if (!open) {
+      return;
     }
 
-    return [
-      {
-        groupId: `material:${group.id}`,
-        groupName: group.name,
-        rows,
-      },
-    ];
-  });
+    function onPointerDown(event: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
 
-  const derivativeRows = [...derivatives]
-    .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
-    .map((item) => {
-      const key = componentDraftKey('derivative', item.id);
-      return {
-        key,
-        kind: 'derivative' as const,
-        id: item.id,
-        name: item.name,
-        unit: item.unit,
-        draft: drafts[key] ?? emptyDerivativeLineDraft(),
-      };
-    });
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setOpen(false);
+      }
+    }
 
-  if (derivativeRows.length === 0) {
-    return materialGroups;
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  function selectRow(key: string) {
+    onAdd(key);
+    setQuery('');
+    setOpen(false);
   }
 
-  return [
-    ...materialGroups,
-    {
-      groupId: 'derivatives',
-      groupName: 'Производные',
-      rows: derivativeRows,
-    },
-  ];
+  return (
+    <div ref={rootRef} className="relative z-50 w-full max-w-xl">
+      <input
+        type="search"
+        value={query}
+        autoComplete="off"
+        aria-label="Найти сырьё или производную"
+        aria-expanded={open}
+        aria-controls={listboxId}
+        aria-haspopup="listbox"
+        role="combobox"
+        placeholder="Найти сырьё или производную"
+        onChange={(event) => {
+          setQuery(event.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+        className={fieldClassName}
+      />
+      {open ? (
+        <div
+          id={listboxId}
+          role="listbox"
+          aria-label="Доступные позиции"
+          className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto border border-line bg-sheet shadow-sm"
+        >
+          {!hasAnyAvailable ? (
+            <p className="px-3 py-2 text-sm text-muted">Все позиции уже выбраны.</p>
+          ) : filteredGroups.length === 0 ? (
+            <p className="px-3 py-2 text-sm text-muted">Ничего не найдено.</p>
+          ) : (
+            filteredGroups.map((group) => (
+              <div key={group.groupId}>
+                <p className="border-y border-line px-3 py-1.5 text-xs text-muted">{group.groupName}</p>
+                {group.rows.map((row) => (
+                  <button
+                    key={row.key}
+                    type="button"
+                    role="option"
+                    aria-selected={false}
+                    onClick={() => selectRow(row.key)}
+                    className="flex w-full items-baseline justify-between gap-3 border-b border-line px-3 py-2 text-left text-sm text-ink outline-none last:border-b-0 hover:bg-paper focus-visible:bg-paper focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ink"
+                  >
+                    <span>{row.name}</span>
+                    <span className="shrink-0 text-muted">{row.unit}</span>
+                  </button>
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function GroupBlock({
@@ -185,11 +363,13 @@ function GroupBlock({
   open,
   onToggle,
   onChange,
+  onRemove,
 }: {
-  group: CandidateGroup;
+  group: SelectedGroup;
   open: boolean;
   onToggle: () => void;
   onChange: (key: string, raw: string) => void;
+  onRemove: (key: string) => void;
 }) {
   return (
     <>
@@ -219,7 +399,7 @@ function GroupBlock({
       </tr>
       {open
         ? group.rows.map((row, index) => (
-            <CandidateRowView key={row.key} row={row} index={index + 1} onChange={onChange} />
+            <CandidateRowView key={row.key} row={row} index={index + 1} onChange={onChange} onRemove={onRemove} />
           ))
         : null}
     </>
@@ -230,10 +410,12 @@ function CandidateRowView({
   row,
   index,
   onChange,
+  onRemove,
 }: {
-  row: CandidateRow;
+  row: SelectedRow;
   index: number;
   onChange: (key: string, raw: string) => void;
+  onRemove: (key: string) => void;
 }) {
   return (
     <tr>
@@ -241,6 +423,15 @@ function CandidateRowView({
         <div className="flex items-center gap-2">
           <ProductIndex index={index} />
           <span className="text-sm text-ink">{row.name}</span>
+          <button
+            type="button"
+            aria-label={`Убрать ${row.name} из состава`}
+            title="Убрать"
+            onClick={() => onRemove(row.key)}
+            className="ml-auto inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            <IconTrash />
+          </button>
         </div>
       </th>
       <td

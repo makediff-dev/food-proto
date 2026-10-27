@@ -274,15 +274,15 @@
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1793036268.2093818,
-    "seen": 1793036319.2745113,
-    "ast_hash": "9143356c707052989cb17725c2f7ca5b",
+    "mtime": 1793123055.734825,
+    "seen": 1793123100.1942902,
+    "ast_hash": "a1f07821cbf6ff19592779545acdd70b",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
-    "mtime": 1793031678.1696992,
-    "seen": 1793031707.1647987,
-    "ast_hash": "a7f2b47540ba56f61488153a1da5a7bb",
+    "mtime": 1793118560.392949,
+    "seen": 1793118577.9005435,
+    "ast_hash": "179e2ccdf5cab7370bb6fdd870751579",
     "semantic_hash": ""
   },
   "inputs/README.md": {
@@ -537,9 +537,9 @@
     "semantic_hash": ""
   },
   "src/features/shell/AppShell.tsx": {
-    "mtime": 1793031674.4580574,
-    "seen": 1793031707.1647987,
-    "ast_hash": "7860ed55ce064ca9ccc4d9f077b56b90",
+    "mtime": 1793118562.0882244,
+    "seen": 1793118577.9005435,
+    "ast_hash": "5c1e5666d94e3957c9463592cd66f5a0",
     "semantic_hash": ""
   },
   "src/features/shell/Dialog.tsx": {
@@ -831,8 +831,8 @@
     "semantic_hash": ""
   },
   "src/data/mock-materials.ts": {
-    "mtime": 1793002072.1160872,
-    "seen": 1793003333.0082333,
+    "mtime": 1793089008.4513302,
+    "seen": 1793118577.9005435,
     "ast_hash": "d734bf39ed8acd293907284fdab271d8",
     "semantic_hash": ""
   },
@@ -915,9 +915,9 @@
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsSummaryTable.tsx": {
-    "mtime": 1793025954.7126746,
-    "seen": 1793025979.5258381,
-    "ast_hash": "75089b0166cf8c6fce47c3aca5db5abe",
+    "mtime": 1793118546.3801005,
+    "seen": 1793118577.9005435,
+    "ast_hash": "908477d670616426e56f56422ed1fd4e",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsWarehouseBlocks.tsx": {
@@ -1005,15 +1005,15 @@
     "semantic_hash": ""
   },
   "src/features/recipes/DerivativeCreateScreen.tsx": {
-    "mtime": 1793025696.6948235,
-    "seen": 1793025979.5258381,
-    "ast_hash": "acc7a4e24fa71aa3f4bab5f546d1a0a2",
+    "mtime": 1793123035.6961277,
+    "seen": 1793123100.1942902,
+    "ast_hash": "bdf7c606d31a63be658ba9a4c1522f37",
     "semantic_hash": ""
   },
   "src/features/recipes/DerivativeFormTable.tsx": {
-    "mtime": 1792765011.2347791,
-    "seen": 1792765036.8599648,
-    "ast_hash": "cee511f01066c2ca9c839bbbfcd1d6c8",
+    "mtime": 1793123478.4692876,
+    "seen": 1793123489.8839238,
+    "ast_hash": "024545d4cece990e2f5478f27f1d951c",
     "semantic_hash": ""
   },
   "src/features/recipes/DerivativesScreen.tsx": {
@@ -1047,9 +1047,9 @@
     "semantic_hash": ""
   },
   "src/features/recipes/FinishedProductEditScreen.tsx": {
-    "mtime": 1793025696.6862578,
-    "seen": 1793025979.5258381,
-    "ast_hash": "d09b0fff2906db5bfefff022e9e6eefb",
+    "mtime": 1793123038.3645794,
+    "seen": 1793123100.1942902,
+    "ast_hash": "7af6ddc49767afc3f01f1a38e3be5e33",
     "semantic_hash": ""
   },
   "src/features/recipes/FinishedProductsScreen.tsx": {

@@ -18,8 +18,8 @@ import {
 import { formatQuantity, formatQuantityDraft, parseQuantityInput } from '@/features/materials/text';
 import {
   componentDraftKey,
+  DerivativeCompositionEditor,
   DerivativeFormNoCandidates,
-  DerivativeFormTable,
   type DerivativeLineDraft,
   emptyDerivativeLineDraft,
   parseComponentDraftKey,
@@ -150,6 +150,18 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
       ...current,
       [key]: { ...(current[key] ?? emptyDerivativeLineDraft()), quantity: raw },
     }));
+  }
+
+  function addComponent(key: string) {
+    setDrafts((current) => (Object.hasOwn(current, key) ? current : { ...current, [key]: emptyDerivativeLineDraft() }));
+  }
+
+  function removeComponent(key: string) {
+    setDrafts((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
   }
 
   function onOutputChange(raw: string) {
@@ -290,11 +302,13 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
               {!hasCandidates ? (
                 <DerivativeFormNoCandidates />
               ) : (
-                <DerivativeFormTable
+                <DerivativeCompositionEditor
                   materials={materials}
                   derivatives={derivatives}
                   drafts={drafts}
                   onChange={setQuantity}
+                  onAdd={addComponent}
+                  onRemove={removeComponent}
                 />
               )}
 
