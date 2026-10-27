@@ -961,7 +961,7 @@ function Overview({
               </div>
               <div className={styles.locationCompare}>
                 <div className={styles.compareHeader}>
-                  <span>Точка</span>
+                  <span aria-hidden="true" />
                   <span>Оценки</span>
                   <span>Хорошо</span>
                   <span>Нормально</span>
