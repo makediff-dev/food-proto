@@ -375,7 +375,7 @@
 .process {
   display: grid;
   grid-template-columns: 1fr 1.4fr;
-  padding: 120px 4vw;
+  padding: 120px 4vw 80px;
   border-bottom: 0;
 }
 
@@ -1004,7 +1004,7 @@
 .faqSection {
   display: grid;
   grid-template-columns: 0.8fr 1.2fr;
-  padding: 110px 4vw;
+  padding: 110px 4vw 70px;
   border-bottom: 0;
 }
 
@@ -3138,7 +3138,7 @@
   }
 
   .process {
-    padding: 80px 20px;
+    padding: 80px 20px 40px;
   }
 
   .benefitsSection,
@@ -3146,6 +3146,10 @@
   .reactionSection,
   .faqSection {
     padding: 80px 20px;
+  }
+
+  .faqSection {
+    padding-bottom: 40px;
   }
 
   .benefitsSection .sectionIntro,
