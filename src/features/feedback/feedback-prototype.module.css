@@ -2303,22 +2303,30 @@
   color: var(--ui-gray-900);
 }
 
-.uiNavButton[data-current="true"] {
-  background: var(--ui-gray-100);
-  color: var(--ui-gray-900);
-}
-
-.uiNavButton[data-focus-visible] {
-  outline: 2px solid var(--ui-gray-900);
-  outline-offset: 2px;
-}
-
 .uiNavIcon {
   width: 20px;
   height: 20px;
   flex: none;
   color: var(--ui-gray-500);
   stroke-width: 2;
+}
+
+.uiNavButton[data-current="true"],
+.workspace .sidebar nav .uiNavButton[data-current="true"],
+.workspace .sidebar nav .uiNavButton[aria-current="page"] {
+  background: var(--ui-gray-100);
+  color: var(--ui-gray-900);
+}
+
+.uiNavButton[data-current="true"] .uiNavIcon,
+.workspace .sidebar nav .uiNavButton[data-current="true"] .uiNavIcon,
+.workspace .sidebar nav .uiNavButton[aria-current="page"] .uiNavIcon {
+  color: var(--ui-gray-900);
+}
+
+.uiNavButton[data-focus-visible] {
+  outline: 2px solid var(--ui-gray-900);
+  outline-offset: 2px;
 }
 
 .uiButton {

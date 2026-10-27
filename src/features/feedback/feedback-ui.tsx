@@ -73,7 +73,12 @@ export function UINavButton({
   onPress: () => void;
 }) {
   return (
-    <AriaButton className={styles.uiNavButton} data-current={current || undefined} onPress={onPress}>
+    <AriaButton
+      className={styles.uiNavButton}
+      data-current={current || undefined}
+      aria-current={current ? 'page' : undefined}
+      onPress={onPress}
+    >
       <Icon className={styles.uiNavIcon} />
       <span>{label}</span>
     </AriaButton>
