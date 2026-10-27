@@ -41,23 +41,52 @@ export type DerivativeMovementRow = {
   factConsumptionPrice: MaterialMoney;
   /** Фактическая стоимость расхода: фактическая цена × факт расхода. */
   factConsumptionCost: MaterialMoney;
+  /** Отклонение количества расхода: факт − план. */
+  consumptionDeviationQuantity: number;
+  /** Отклонение цены расхода: факт − план. */
+  consumptionDeviationPrice: MaterialMoney;
+  /** Отклонение стоимости расхода: факт − план. */
+  consumptionDeviationCost: MaterialMoney;
+  /**
+   * План остатка на конец: начало + рекомендуемый объём − план расхода
+   * (целевой норматив (мин + макс) / 2, если рекомендуемый объём не упирается в ноль).
+   */
+  bookClosingQuantity: number;
+  /** Расчётный факт конца: начало + рекомендуемый объём − факт расхода. */
+  currentClosingQuantity: number;
+  /** Отклонение расчётного конца: расчётный факт − план. */
+  currentClosingDeviationQuantity: number;
+  /** Стоимость отклонения расчётного конца: отклонение × фактическая цена расхода. */
+  currentClosingDeviationCost: MaterialMoney;
   /** Факт инвентаризации на конец, тысячные доли. Нет строки — 0. */
   inventoryClosingQuantity: number;
   /** Была ли правка инвентаризации по этой производной. */
   hasInventoryLine: boolean;
+  /** Отклонение инвентаризации: факт − план. Нет строки инвентаризации — 0. */
+  closingDeviationQuantity: number;
+  /** Стоимость отклонения инвентаризации. Нет строки — 0. */
+  closingInventoryDeviationCost: MaterialMoney;
   /** Нормативный минимум, тысячные доли. Нет записи — 0. */
   minQuantity: number;
   /** Нормативный максимум, тысячные доли. Нет записи — 0. */
   maxQuantity: number;
-  /** Отклонение ниже минимума (отрицательное) или 0. Запас — факт инвентаризации на конец. */
+  /**
+   * Отклонение ниже минимума (отрицательное) или 0.
+   * Запас — факт инвентаризации, если вводили, иначе план конца.
+   */
   belowMinQuantity: number;
-  /** Отклонение выше максимума (положительное) или 0. Запас — факт инвентаризации на конец. */
+  /**
+   * Отклонение выше максимума (положительное) или 0.
+   * Запас — факт инвентаризации, если вводили, иначе план конца.
+   */
   aboveMaxQuantity: number;
   /**
    * Рекомендуемый объём выпуска производной на месяц:
    * план расхода + (мин + макс) / 2 − остаток на начало (не меньше 0).
    */
   recommendedQuantity: number;
+  /** Стоимость остатка на конец: (инвентаризация или план) × фактическая цена расхода. */
+  closingCost: MaterialMoney;
 };
 
 export type DerivativeMovementSection = {
@@ -68,6 +97,14 @@ export type DerivativeMovementSection = {
   planConsumptionCost: MaterialMoney;
   /** Сумма фактической стоимости расхода по цеху. */
   factConsumptionCost: MaterialMoney;
+  /** Сумма отклонения стоимости расхода по цеху. */
+  consumptionDeviationCost: MaterialMoney;
+  /** Сумма стоимости отклонения расчётного конца по цеху. */
+  currentClosingDeviationCost: MaterialMoney;
+  /** Сумма стоимости отклонения инвентаризации по цеху. */
+  closingInventoryDeviationCost: MaterialMoney;
+  /** Сумма стоимости остатка на конец по цеху. */
+  closingCost: MaterialMoney;
 };
 
 export type DerivativeMovementMonthView = {
@@ -194,6 +231,13 @@ function sumMoney(left: MaterialMoney, right: MaterialMoney): MaterialMoney {
   return {
     withVat: left.withVat + right.withVat,
     exVat: left.exVat + right.exVat,
+  };
+}
+
+function subtractMoney(left: MaterialMoney, right: MaterialMoney): MaterialMoney {
+  return {
+    withVat: left.withVat - right.withVat,
+    exVat: left.exVat - right.exVat,
   };
 }
 
@@ -494,15 +538,33 @@ function buildRow(
   const openingQuantity = openingQuantityForDerivative(document, month, item.id);
   const planConsumptionQuantity = planConsumptionQuantityForDerivative(document, item.id, month);
   const planConsumptionPrice = derivativeConsumptionPrice(document, item.id, month, 'plan');
+  const planConsumptionCost = costForQuantity(planConsumptionPrice, planConsumptionQuantity);
   const factConsumptionQuantity = factConsumptionQuantityForDerivative(document, item.id, month);
   const factConsumptionPrice = derivativeConsumptionPrice(document, item.id, month, 'fact');
+  const factConsumptionCost = costForQuantity(factConsumptionPrice, factConsumptionQuantity);
   const inventoryClosingQuantity = inventoryQuantityForDerivative(document, month, item.id);
   const hasInventoryLine = hasStoredDerivativeInventoryLine(document, month, item.id);
   const norm = normForDerivative(document, month, item.id);
+  const recommendedQuantity = recommendedDerivativeVolumeQuantity(
+    openingQuantity,
+    planConsumptionQuantity,
+    norm.minQuantity,
+    norm.maxQuantity,
+  );
+  const bookClosingQuantity = openingQuantity + recommendedQuantity - planConsumptionQuantity;
+  const currentClosingQuantity = openingQuantity + recommendedQuantity - factConsumptionQuantity;
+  const currentClosingDeviationQuantity = currentClosingQuantity - bookClosingQuantity;
+  const currentClosingDeviationCost = costForQuantity(factConsumptionPrice, currentClosingDeviationQuantity);
+  const closingDeviationQuantity = hasInventoryLine ? inventoryClosingQuantity - bookClosingQuantity : 0;
+  const closingInventoryDeviationCost = hasInventoryLine
+    ? costForQuantity(factConsumptionPrice, closingDeviationQuantity)
+    : ZERO_MONEY;
+  const stockForNorm = hasInventoryLine ? inventoryClosingQuantity : bookClosingQuantity;
+  const stockForClosingCost = hasInventoryLine ? inventoryClosingQuantity : bookClosingQuantity;
   const metrics = derivativeNormMetrics(
     openingQuantity,
     planConsumptionQuantity,
-    inventoryClosingQuantity,
+    stockForNorm,
     norm.minQuantity,
     norm.maxQuantity,
   );
@@ -515,21 +577,31 @@ function buildRow(
     openingQuantity,
     planConsumptionQuantity,
     planConsumptionPrice,
-    planConsumptionCost: costForQuantity(planConsumptionPrice, planConsumptionQuantity),
+    planConsumptionCost,
     factConsumptionQuantity,
     factConsumptionPrice,
-    factConsumptionCost: costForQuantity(factConsumptionPrice, factConsumptionQuantity),
+    factConsumptionCost,
+    consumptionDeviationQuantity: factConsumptionQuantity - planConsumptionQuantity,
+    consumptionDeviationPrice: subtractMoney(factConsumptionPrice, planConsumptionPrice),
+    consumptionDeviationCost: subtractMoney(factConsumptionCost, planConsumptionCost),
+    bookClosingQuantity,
+    currentClosingQuantity,
+    currentClosingDeviationQuantity,
+    currentClosingDeviationCost,
     inventoryClosingQuantity,
     hasInventoryLine,
+    closingDeviationQuantity,
+    closingInventoryDeviationCost,
     minQuantity: norm.minQuantity,
     maxQuantity: norm.maxQuantity,
     belowMinQuantity: metrics.belowMinQuantity,
     aboveMaxQuantity: metrics.aboveMaxQuantity,
     recommendedQuantity: metrics.recommendedQuantity,
+    closingCost: costForQuantity(factConsumptionPrice, stockForClosingCost),
   };
 }
 
-/** Свод месяца: рабочие производные по цехам, расход, остатки по инвентаризации и норматив. */
+/** Свод месяца: рабочие производные по цехам, расход, остатки и норматив. */
 export function derivativeMovementMonth(document: PrototypeDocument, month: string): DerivativeMovementMonthView {
   const sections = derivativeSections(document)
     .map((section) => {
@@ -540,6 +612,16 @@ export function derivativeMovementMonth(document: PrototypeDocument, month: stri
         rows,
         planConsumptionCost: rows.reduce((sum, row) => sumMoney(sum, row.planConsumptionCost), ZERO_MONEY),
         factConsumptionCost: rows.reduce((sum, row) => sumMoney(sum, row.factConsumptionCost), ZERO_MONEY),
+        consumptionDeviationCost: rows.reduce((sum, row) => sumMoney(sum, row.consumptionDeviationCost), ZERO_MONEY),
+        currentClosingDeviationCost: rows.reduce(
+          (sum, row) => sumMoney(sum, row.currentClosingDeviationCost),
+          ZERO_MONEY,
+        ),
+        closingInventoryDeviationCost: rows.reduce(
+          (sum, row) => sumMoney(sum, row.closingInventoryDeviationCost),
+          ZERO_MONEY,
+        ),
+        closingCost: rows.reduce((sum, row) => sumMoney(sum, row.closingCost), ZERO_MONEY),
       };
     })
     .filter((section) => section.rows.length > 0);

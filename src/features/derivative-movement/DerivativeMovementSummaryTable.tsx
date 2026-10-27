@@ -6,8 +6,9 @@ import type { DerivativeMovementRow, DerivativeMovementSection } from '@/domain/
 import { MaterialNormDeviation } from '@/features/materials/MaterialNormDeviation';
 import { QuantityRead } from '@/features/materials/QuantityCell';
 import {
+  MATERIALS_CLOSING_SUB_BANNERS,
+  MATERIALS_CONSUMPTION_SUB_BANNERS,
   ReportSubBannerColumnHeaders,
-  type ReportSubBannerGroup,
 } from '@/features/movement/FinishedGoodsNormativeColumnHeading';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
@@ -38,10 +39,20 @@ type ColumnKey =
   | 'factConsumption'
   | 'factConsumptionPrice'
   | 'factConsumptionCost'
+  | 'consumptionDeviation'
+  | 'consumptionDeviationPrice'
+  | 'consumptionDeviationCost'
+  | 'bookClosing'
+  | 'currentClosing'
+  | 'currentClosingDeviation'
+  | 'currentClosingDeviationCost'
   | 'inventoryClosing'
+  | 'closingInventoryDeviation'
+  | 'closingInventoryDeviationCost'
   | 'min'
   | 'max'
-  | 'normDeviation';
+  | 'normDeviation'
+  | 'closingCost';
 
 const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; hint?: string }[] }[] = [
   {
@@ -49,7 +60,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
     columns: [{ key: 'opening', label: 'Факт', hint: 'по данным инвентаризации прошлого месяца' }],
   },
   {
-    label: 'План расхода',
+    label: 'Расход в производство',
     columns: [
       {
         key: 'planConsumption',
@@ -65,11 +76,6 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
         key: 'planConsumptionCost',
         label: 'Стоимость',
       },
-    ],
-  },
-  {
-    label: 'Факт расхода',
-    columns: [
       {
         key: 'factConsumption',
         label: 'Кол-во',
@@ -84,33 +90,38 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
         key: 'factConsumptionCost',
         label: 'Стоимость',
       },
+      { key: 'consumptionDeviation', label: 'Кол-во' },
+      { key: 'consumptionDeviationPrice', label: 'Цена' },
+      { key: 'consumptionDeviationCost', label: 'Стоимость' },
     ],
   },
   {
     label: 'Остаток на конец',
     columns: [
       {
+        key: 'bookClosing',
+        label: 'План',
+        hint: 'остаток на начало + рекомендуемый объём − план расхода',
+      },
+      { key: 'currentClosing', label: 'Факт' },
+      { key: 'currentClosingDeviation', label: 'Откл.' },
+      { key: 'currentClosingDeviationCost', label: 'Стоим. откл.' },
+      {
         key: 'inventoryClosing',
         label: 'Факт',
         hint: 'по данным инвентаризации',
       },
+      { key: 'closingInventoryDeviation', label: 'Откл.' },
+      { key: 'closingInventoryDeviationCost', label: 'Стоим. откл.' },
       { key: 'min', label: 'Мин.' },
       { key: 'max', label: 'Макс.' },
       { key: 'normDeviation', label: 'Откл.' },
+      { key: 'closingCost', label: 'Стоимость' },
     ],
   },
 ];
 
-const DERIVATIVE_CLOSING_SUB_BANNERS: readonly ReportSubBannerGroup[] = [
-  {
-    label: 'инвентаризация',
-    keys: ['inventoryClosing'],
-  },
-  {
-    label: 'нормативный',
-    keys: ['min', 'max', 'normDeviation'],
-  },
-];
+const DERIVATIVE_SUMMARY_SUB_BANNERS = [...MATERIALS_CONSUMPTION_SUB_BANNERS, ...MATERIALS_CLOSING_SUB_BANNERS];
 
 const COLUMNS = COLUMN_GROUPS.flatMap((group) => group.columns);
 const GROUP_END_KEYS = new Set(COLUMN_GROUPS.slice(0, -1).map((group) => group.columns.at(-1)?.key));
@@ -123,10 +134,20 @@ const COLUMN_KIND: Record<ColumnKey, CellKind> = {
   factConsumption: 'computed',
   factConsumptionPrice: 'computed',
   factConsumptionCost: 'computed',
+  consumptionDeviation: 'computed',
+  consumptionDeviationPrice: 'computed',
+  consumptionDeviationCost: 'computed',
+  bookClosing: 'computed',
+  currentClosing: 'computed',
+  currentClosingDeviation: 'computed',
+  currentClosingDeviationCost: 'computed',
   inventoryClosing: 'repeated',
+  closingInventoryDeviation: 'computed',
+  closingInventoryDeviationCost: 'computed',
   min: 'repeated',
   max: 'repeated',
   normDeviation: 'computed',
+  closingCost: 'computed',
 };
 
 function columnEdgeClass(key: ColumnKey): string {
@@ -159,15 +180,16 @@ export function DerivativeMovementSummaryTable({ sections }: { sections: readonl
             <ReportSubBannerColumnHeaders
               row="primary"
               columns={COLUMNS}
-              subBannerGroups={DERIVATIVE_CLOSING_SUB_BANNERS}
+              subBannerGroups={DERIVATIVE_SUMMARY_SUB_BANNERS}
               groupEndClass={columnEdgeClass}
+              lastColumnExtraClassName="last:border-r-0"
             />
           </tr>
           <tr>
             <ReportSubBannerColumnHeaders
               row="secondary"
               columns={COLUMNS}
-              subBannerGroups={DERIVATIVE_CLOSING_SUB_BANNERS}
+              subBannerGroups={DERIVATIVE_SUMMARY_SUB_BANNERS}
               groupEndClass={columnEdgeClass}
             />
           </tr>
@@ -241,6 +263,47 @@ function WorkshopCell({ column, section }: { column: ColumnKey; section: Derivat
       />
     );
   }
+  if (column === 'consumptionDeviationCost') {
+    return (
+      <VatMoneyCell
+        label="Отклонение стоимости расхода"
+        withVat={section.consumptionDeviationCost.withVat}
+        exVat={section.consumptionDeviationCost.exVat}
+        signed
+        sense="cost"
+      />
+    );
+  }
+  if (column === 'currentClosingDeviationCost') {
+    return (
+      <VatMoneyCell
+        label="Стоимость отклонения текущего остатка"
+        withVat={section.currentClosingDeviationCost.withVat}
+        exVat={section.currentClosingDeviationCost.exVat}
+        signed
+      />
+    );
+  }
+  if (column === 'closingInventoryDeviationCost') {
+    return (
+      <VatMoneyCell
+        label="Стоимость отклонения инвентаризации"
+        withVat={section.closingInventoryDeviationCost.withVat}
+        exVat={section.closingInventoryDeviationCost.exVat}
+        signed
+      />
+    );
+  }
+  if (column === 'closingCost') {
+    return (
+      <VatMoneyCell
+        label="Стоимость остатка"
+        withVat={section.closingCost.withVat}
+        exVat={section.closingCost.exVat}
+        signed
+      />
+    );
+  }
   return null;
 }
 
@@ -306,8 +369,56 @@ function RowCell({ column, row }: { column: ColumnKey; row: DerivativeMovementRo
           exVat={row.factConsumptionCost.exVat}
         />
       );
+    case 'consumptionDeviation':
+      return <QuantityRead value={row.consumptionDeviationQuantity} unit={unit} signed />;
+    case 'consumptionDeviationPrice':
+      return (
+        <VatMoneyCell
+          label="Отклонение цены расхода"
+          withVat={row.consumptionDeviationPrice.withVat}
+          exVat={row.consumptionDeviationPrice.exVat}
+          signed
+          sense="cost"
+        />
+      );
+    case 'consumptionDeviationCost':
+      return (
+        <VatMoneyCell
+          label="Отклонение стоимости расхода"
+          withVat={row.consumptionDeviationCost.withVat}
+          exVat={row.consumptionDeviationCost.exVat}
+          signed
+          sense="cost"
+        />
+      );
+    case 'bookClosing':
+      return <QuantityRead value={row.bookClosingQuantity} unit={unit} signed />;
+    case 'currentClosing':
+      return <QuantityRead value={row.currentClosingQuantity} unit={unit} signed />;
+    case 'currentClosingDeviation':
+      return <QuantityRead value={row.currentClosingDeviationQuantity} unit={unit} signed />;
+    case 'currentClosingDeviationCost':
+      return (
+        <VatMoneyCell
+          label="Стоимость отклонения текущего остатка"
+          withVat={row.currentClosingDeviationCost.withVat}
+          exVat={row.currentClosingDeviationCost.exVat}
+          signed
+        />
+      );
     case 'inventoryClosing':
       return <QuantityRead value={row.inventoryClosingQuantity} unit={unit} signed />;
+    case 'closingInventoryDeviation':
+      return <QuantityRead value={row.closingDeviationQuantity} unit={unit} signed />;
+    case 'closingInventoryDeviationCost':
+      return (
+        <VatMoneyCell
+          label="Стоимость отклонения инвентаризации"
+          withVat={row.closingInventoryDeviationCost.withVat}
+          exVat={row.closingInventoryDeviationCost.exVat}
+          signed
+        />
+      );
     case 'min':
       return <QuantityRead value={row.minQuantity} unit={unit} />;
     case 'max':
@@ -318,6 +429,15 @@ function RowCell({ column, row }: { column: ColumnKey; row: DerivativeMovementRo
           belowMinQuantity={row.belowMinQuantity}
           aboveMaxQuantity={row.aboveMaxQuantity}
           unit={unit}
+        />
+      );
+    case 'closingCost':
+      return (
+        <VatMoneyCell
+          label="Стоимость остатка"
+          withVat={row.closingCost.withVat}
+          exVat={row.closingCost.exVat}
+          signed
         />
       );
     default:
