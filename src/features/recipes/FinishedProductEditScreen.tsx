@@ -32,7 +32,8 @@ import {
   RecipePrintSheet,
   recipePrintGroups,
 } from '@/features/recipes/RecipePrint';
-import { PRODUCT_RECIPE_ERROR } from '@/features/recipes/text';
+import { RecipeWeightCompare } from '@/features/recipes/RecipeWeightCompare';
+import { formatRecipeWeightGap, PRODUCT_RECIPE_ERROR } from '@/features/recipes/text';
 import { useFinishedRecipes } from '@/features/recipes/use-finished-recipes';
 import { primaryButtonClassName } from '@/features/sales/fields';
 import { IconArrowLeft, IconCheck } from '@/features/shell/Icons';
@@ -269,6 +270,7 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
     router.replace(RECIPES_FINISHED_HREF);
   }
 
+  const batchKilogramThousandths = parseQuantityInput(outputDraft, false);
   const printModel = {
     kindLabel: 'готовая продукция',
     name: product.name,
@@ -278,6 +280,7 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
     batchPieces: formatPrintPieces(piecesDraft, gramsDraft),
     heatTreatment: null,
     componentsKilograms: formatQuantity(componentsKilograms, 'кг'),
+    weightGap: formatRecipeWeightGap(batchKilogramThousandths, componentsKilograms),
     groups: recipePrintGroups(materials, derivatives, drafts),
   };
 
@@ -363,10 +366,10 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
                   </div>
                 </fieldset>
 
-                <div>
-                  <p className="text-sm text-muted">По компонентам</p>
-                  <p className="mt-2 text-base text-ink">{formatQuantity(componentsKilograms, 'кг')}</p>
-                </div>
+                <RecipeWeightCompare
+                  batchKilogramThousandths={parseQuantityInput(outputDraft, false)}
+                  componentsKilogramThousandths={componentsKilograms}
+                />
 
                 <button
                   type="button"

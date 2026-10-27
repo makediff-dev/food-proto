@@ -17,6 +17,7 @@ import {
 } from '@/domain/recipe-yield';
 import { formatQuantity, formatQuantityDraft, parseQuantityInput } from '@/features/materials/text';
 import { componentDraftKey, type DerivativeLineDraft } from '@/features/recipes/DerivativeFormTable';
+import { formatRecipeWeightGap } from '@/features/recipes/text';
 import { IconPrint } from '@/features/shell/Icons';
 
 const printButtonClassName =
@@ -47,6 +48,8 @@ export type RecipePrintModel = {
   /** Целый процент. Нет ячейки, если рецепт без термообработки. */
   heatTreatment: string | null;
   componentsKilograms: string;
+  /** «−13 кг не хватает» / «+13 кг лишнее». Нет — сходится или закладка не разобралась. */
+  weightGap: string | null;
   groups: readonly RecipePrintGroup[];
 };
 
@@ -150,6 +153,7 @@ export function derivativePrintModel(document: PrototypeDocument, derivative: De
   const warehouseId = warehouseIdForWorkshop(derivative.workshopId);
   const pieces = derivative.unit === 'шт' ? (outputPieceThousandthsOf(derivative) ?? QUANTITY_SCALE) : null;
   const rawKilograms = recipeComponentsKilogramThousandths(document, derivative.lines);
+  const componentsKilogramThousandths = applyHeatTreatmentYield(rawKilograms, derivative.heatTreatmentYieldPercent);
   return {
     kindLabel: 'производная',
     name: derivative.name,
@@ -158,10 +162,8 @@ export function derivativePrintModel(document: PrototypeDocument, derivative: De
     batchKilograms: formatQuantity(derivative.outputKilogramThousandths, 'кг'),
     batchPieces: pieces === null ? null : savedPiecesLabel(derivative.outputKilogramThousandths, pieces),
     heatTreatment: `${derivative.heatTreatmentYieldPercent} %`,
-    componentsKilograms: formatQuantity(
-      applyHeatTreatmentYield(rawKilograms, derivative.heatTreatmentYieldPercent),
-      'кг',
-    ),
+    componentsKilograms: formatQuantity(componentsKilogramThousandths, 'кг'),
+    weightGap: formatRecipeWeightGap(derivative.outputKilogramThousandths, componentsKilogramThousandths),
     groups: recipePrintGroups(
       materialsList(document).filter((item) => item.warehouseId === warehouseId),
       derivativesList(document).filter((item) => warehouseIdForWorkshop(item.workshopId) === warehouseId),
@@ -173,6 +175,7 @@ export function derivativePrintModel(document: PrototypeDocument, derivative: De
 /** Лист по сохранённому рецепту готовой продукции. */
 export function productPrintModel(document: PrototypeDocument, product: Product): RecipePrintModel {
   const pieces = product.outputPieceThousandths > 0 ? product.outputPieceThousandths : QUANTITY_SCALE;
+  const componentsKilogramThousandths = recipeComponentsKilogramThousandths(document, product.lines);
   return {
     kindLabel: 'готовая продукция',
     name: product.name,
@@ -181,7 +184,8 @@ export function productPrintModel(document: PrototypeDocument, product: Product)
     batchKilograms: formatQuantity(product.outputKilogramThousandths, 'кг'),
     batchPieces: savedPiecesLabel(product.outputKilogramThousandths, pieces),
     heatTreatment: null,
-    componentsKilograms: formatQuantity(recipeComponentsKilogramThousandths(document, product.lines), 'кг'),
+    componentsKilograms: formatQuantity(componentsKilogramThousandths, 'кг'),
+    weightGap: formatRecipeWeightGap(product.outputKilogramThousandths, componentsKilogramThousandths),
     groups: recipePrintGroups(
       materialsList(document).filter((item) => item.warehouseId === product.warehouseId),
       derivativesList(document).filter((item) => warehouseIdForWorkshop(item.workshopId) === product.warehouseId),
@@ -220,7 +224,7 @@ export function RecipePrintSheet({ model }: { model: RecipePrintModel }) {
 
       <div className="recipe-print__facts">
         <div className="recipe-print__fact">
-          <p className="recipe-print__fact-label">Рассчитан на</p>
+          <p className="recipe-print__fact-label">Вес закладки</p>
           <p className="recipe-print__fact-value">{model.batchKilograms}</p>
           {model.batchPieces ? <p className="recipe-print__fact-note">{model.batchPieces}</p> : null}
         </div>
@@ -231,8 +235,9 @@ export function RecipePrintSheet({ model }: { model: RecipePrintModel }) {
           </div>
         ) : null}
         <div className="recipe-print__fact">
-          <p className="recipe-print__fact-label">По компонентам</p>
+          <p className="recipe-print__fact-label">Вес по компонентам</p>
           <p className="recipe-print__fact-value">{model.componentsKilograms}</p>
+          {model.weightGap ? <p className="recipe-print__fact-note">{model.weightGap}</p> : null}
         </div>
       </div>
 

@@ -274,9 +274,9 @@
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1793128876.1169605,
-    "seen": 1793128918.503298,
-    "ast_hash": "fffdb1944256284ca7df50008ef901d3",
+    "mtime": 1793129646.3397057,
+    "seen": 1793129694.477248,
+    "ast_hash": "d25cb8481768e40266d8c134dc58a47a",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
@@ -1005,9 +1005,9 @@
     "semantic_hash": ""
   },
   "src/features/recipes/DerivativeCreateScreen.tsx": {
-    "mtime": 1793123035.6961277,
-    "seen": 1793123100.1942902,
-    "ast_hash": "bdf7c606d31a63be658ba9a4c1522f37",
+    "mtime": 1793129683.0893724,
+    "seen": 1793129694.477248,
+    "ast_hash": "58392a80719fa14063ae8c2d5c232ec2",
     "semantic_hash": ""
   },
   "src/features/recipes/DerivativeFormTable.tsx": {
@@ -1023,9 +1023,9 @@
     "semantic_hash": ""
   },
   "src/features/recipes/text.ts": {
-    "mtime": 1793005424.2408168,
-    "seen": 1793005715.501006,
-    "ast_hash": "86481f76a97d1b6ecd30f4638eace2ff",
+    "mtime": 1793129649.7502937,
+    "seen": 1793129694.477248,
+    "ast_hash": "f58b29b6452ac22166940c1207ec1cfb",
     "semantic_hash": ""
   },
   "src/features/recipes/use-derivatives.ts": {
@@ -1047,9 +1047,9 @@
     "semantic_hash": ""
   },
   "src/features/recipes/FinishedProductEditScreen.tsx": {
-    "mtime": 1793123038.3645794,
-    "seen": 1793123100.1942902,
-    "ast_hash": "7af6ddc49767afc3f01f1a38e3be5e33",
+    "mtime": 1793129683.085087,
+    "seen": 1793129694.477248,
+    "ast_hash": "05935d0f79f14af3d0587c69798173d8",
     "semantic_hash": ""
   },
   "src/features/recipes/FinishedProductsScreen.tsx": {
@@ -1107,9 +1107,9 @@
     "semantic_hash": ""
   },
   "src/features/recipes/RecipePrint.tsx": {
-    "mtime": 1793026488.3056662,
-    "seen": 1793026615.9354663,
-    "ast_hash": "557d1bda9638c76c9fa7b967c81639c7",
+    "mtime": 1793129683.080538,
+    "seen": 1793129694.477248,
+    "ast_hash": "ea1db2cfe8f79500272b2cf271306059",
     "semantic_hash": ""
   },
   "src/app/derivative-movement/inventory/page.tsx": {
@@ -1176,6 +1176,12 @@
     "mtime": 1793036269.0094054,
     "seen": 1793036319.2745113,
     "ast_hash": "4870b112e817b14156ba8913a6c6f5ed",
+    "semantic_hash": ""
+  },
+  "src/features/recipes/RecipeWeightCompare.tsx": {
+    "mtime": 1793129683.0725565,
+    "seen": 1793129694.477248,
+    "ast_hash": "f710827725610723e3d33558c03e135e",
     "semantic_hash": ""
   }
 }

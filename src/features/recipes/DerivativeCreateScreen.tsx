@@ -43,7 +43,8 @@ import {
   RecipePrintSheet,
   recipePrintGroups,
 } from '@/features/recipes/RecipePrint';
-import { DERIVATIVE_ADD_ERROR } from '@/features/recipes/text';
+import { RecipeWeightCompare } from '@/features/recipes/RecipeWeightCompare';
+import { DERIVATIVE_ADD_ERROR, formatRecipeWeightGap } from '@/features/recipes/text';
 import { useDerivatives } from '@/features/recipes/use-derivatives';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { IconArrowLeft, IconCheck } from '@/features/shell/Icons';
@@ -371,6 +372,7 @@ function DerivativeForm({
   }
 
   const workshopName = DERIVATIVE_WORKSHOPS.find((item) => item.id === workshopId)?.name ?? '';
+  const batchKilogramThousandths = parseQuantityInput(outputDraft, false);
   const printModel = {
     kindLabel: 'производная',
     name,
@@ -380,6 +382,7 @@ function DerivativeForm({
     batchPieces: byPiece ? formatPrintPieces(piecesDraft, gramsDraft) : null,
     heatTreatment: formatPrintPercent(heatTreatmentDraft),
     componentsKilograms: formatQuantity(componentsKilograms, 'кг'),
+    weightGap: formatRecipeWeightGap(batchKilogramThousandths, componentsKilograms),
     groups: recipePrintGroups(materials, derivatives, drafts),
   };
 
@@ -530,10 +533,10 @@ function DerivativeForm({
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-sm text-muted">По компонентам</p>
-                  <p className="mt-2 text-base text-ink">{formatQuantity(componentsKilograms, 'кг')}</p>
-                </div>
+                <RecipeWeightCompare
+                  batchKilogramThousandths={parseQuantityInput(outputDraft, false)}
+                  componentsKilogramThousandths={componentsKilograms}
+                />
 
                 <button
                   type="button"
