@@ -1456,10 +1456,8 @@
 .inlineSelect select,
 .filterBar select {
   min-height: 42px;
-  padding: 0 36px 0 12px;
   border: 1px solid var(--fb-black);
   border-radius: 0;
-  background: var(--fb-white);
 }
 
 .metrics {
@@ -2633,13 +2631,27 @@
   font-size: 12px;
 }
 
-.workspace .sceneSelect select {
-  min-height: 36px;
-  padding: 0 10px;
+.workspace select {
+  appearance: none;
+  min-height: 40px;
+  padding: 0 40px 0 16px;
   border: 1px solid var(--ui-gray-300);
   border-radius: 8px;
-  background: var(--fb-white);
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 16px center;
+  background-repeat: no-repeat;
+  background-size: 16px 16px;
   color: var(--ui-gray-900);
+  cursor: pointer;
+}
+
+.workspace select::-ms-expand {
+  display: none;
+}
+
+.workspace .sceneSelect select {
+  min-height: 36px;
 }
 
 .emptyState,
