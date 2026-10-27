@@ -1792,9 +1792,9 @@
   gap: 4px;
 }
 
-.screenRow {
+.screenLine {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px;
+  grid-template-columns: minmax(0, 1fr) 34px 34px;
   gap: 6px;
   align-items: center;
 }
@@ -1803,8 +1803,7 @@
   display: flex;
   min-width: 0;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   padding: 8px 10px;
   border: 0;
   background: var(--fb-soft);
@@ -1812,13 +1811,34 @@
   text-align: left;
 }
 
+.screenChip strong {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .screenChip span {
+  margin-left: auto;
   color: var(--fb-mid);
   font-size: 10px;
   white-space: nowrap;
 }
 
-.screenCopy {
+.screenDot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: #067647;
+}
+
+.screenChip[data-paused="true"] .screenDot {
+  background: #98a2b3;
+}
+
+.screenCopy,
+.screenPower {
   display: grid;
   width: 34px;
   height: 34px;
@@ -1830,9 +1850,14 @@
   color: var(--ui-gray-700);
 }
 
-.screenCopy svg {
+.screenCopy svg,
+.screenPower svg {
   width: 16px;
   height: 16px;
+}
+
+.screenPower[data-paused="true"] {
+  color: #98a2b3;
 }
 
 .scopeNote {
@@ -2704,8 +2729,8 @@
   background: var(--ui-gray-50);
 }
 
-.workspace .screenChip:hover,
 .workspace .screenCopy:hover,
+.workspace .screenPower:hover,
 .workspace .locationMenuTrigger:hover {
   background: var(--ui-gray-100);
 }
@@ -2759,8 +2784,7 @@
   margin-top: 20px;
 }
 
-.chatRow,
-.screenRow {
+.chatRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2771,8 +2795,7 @@
   background: var(--fb-white);
 }
 
-.chatRow:hover,
-.screenRow:hover {
+.chatRow:hover {
   background: var(--ui-gray-50);
 }
 
@@ -3000,6 +3023,7 @@
 
 .workspace .screenChip,
 .workspace .screenCopy,
+.workspace .screenPower,
 .workspace .locationMenuTrigger {
   border: 1px solid var(--ui-gray-200);
   border-radius: 6px;
@@ -3007,6 +3031,7 @@
 }
 
 .workspace .screenCopy,
+.workspace .screenPower,
 .workspace .locationMenuTrigger {
   background: var(--fb-white);
 }

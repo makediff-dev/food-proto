@@ -16,6 +16,7 @@ import {
   Menu01,
   MessageSquare01,
   Plus,
+  Power01,
   Settings01,
   TrendUp01,
 } from '@untitledui/icons';
@@ -1214,11 +1215,27 @@ function Locations({
               </div>
               <div className={styles.screenLinks}>
                 {location.screens.map((screen) => (
-                  <div key={screen.id} className={styles.screenRow}>
+                  <div key={screen.id} className={styles.screenLine}>
+                    <div className={styles.screenChip} data-paused={(!screen.active).toString()}>
+                      <i className={styles.screenDot} aria-hidden="true" />
+                      <strong>{screen.name}</strong>
+                      <span>{screen.active ? 'Включён' : 'Отключён'}</span>
+                    </div>
                     <button
                       type="button"
-                      className={styles.screenChip}
+                      className={styles.screenCopy}
+                      aria-label={`Копировать ссылку экрана «${screen.name}»`}
+                      onClick={() => onNotice(`Ссылка «${screen.name}» скопирована`)}
+                    >
+                      <Copy01 />
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.screenPower}
                       data-paused={(!screen.active).toString()}
+                      aria-label={
+                        screen.active ? `Отключить экран «${screen.name}»` : `Включить экран «${screen.name}»`
+                      }
                       onClick={() =>
                         screen.active
                           ? setConfirmScreen({ locationId: location.id, screenId: screen.id, name: screen.name })
@@ -1236,15 +1253,7 @@ function Locations({
                             )
                       }
                     >
-                      {screen.name} <span>{screen.active ? 'Активен · отключить' : 'Отключён · включить'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.screenCopy}
-                      aria-label={`Копировать ссылку экрана «${screen.name}»`}
-                      onClick={() => onNotice(`Ссылка «${screen.name}» скопирована`)}
-                    >
-                      <Copy01 />
+                      <Power01 />
                     </button>
                   </div>
                 ))}
