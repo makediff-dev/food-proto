@@ -2705,11 +2705,6 @@
 .workspace .screenChip[data-paused="true"] {
   background: var(--fb-white);
   color: var(--ui-gray-500);
-  text-decoration: line-through;
-}
-
-.workspace .screenChip[data-paused="true"] span {
-  text-decoration: none;
 }
 
 .accountMenu {
