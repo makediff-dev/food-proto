@@ -21,6 +21,7 @@ import {
 } from '@untitledui/icons';
 import type { ComponentType } from 'react';
 import { useEffect, useId, useState } from 'react';
+import { Button as AriaButton, Menu, MenuItem, MenuTrigger, Popover } from 'react-aria-components';
 
 import styles from './feedback-prototype.module.css';
 import { UIBadge, UIButton, UINavButton, UIStatCard, UITabs } from './feedback-ui';
@@ -1126,7 +1127,6 @@ function Locations({
     null,
   );
   const [appearanceFor, setAppearanceFor] = useState<string | null>(null);
-  const [menuFor, setMenuFor] = useState<string | null>(null);
   const [accent, setAccent] = useState('#101828');
   const [paidSlots] = useState(2);
   const [items, setItems] = useState(initialLocations);
@@ -1272,50 +1272,35 @@ function Locations({
                 </button>
               </div>
               <div className={styles.locationMenu}>
-                <button
-                  type="button"
-                  className={styles.locationMenuTrigger}
-                  aria-label={`Действия для «${location.name}»`}
-                  aria-expanded={menuFor === location.id}
-                  aria-haspopup="menu"
-                  onClick={() => setMenuFor((current) => (current === location.id ? null : location.id))}
-                >
-                  <DotsHorizontal />
-                </button>
-                {menuFor === location.id ? (
-                  <div className={styles.locationMenuPopover} role="menu">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setEditId(location.id);
-                        setMenuFor(null);
+                <MenuTrigger>
+                  <AriaButton className={styles.locationMenuTrigger} aria-label={`Действия для «${location.name}»`}>
+                    <DotsHorizontal />
+                  </AriaButton>
+                  <Popover placement="bottom end" offset={8} className={styles.locationMenuPopover}>
+                    <Menu
+                      aria-label={`Действия для «${location.name}»`}
+                      className={styles.locationMenuList}
+                      onAction={(key) => {
+                        if (key === 'edit') setEditId(location.id);
+                        if (key === 'appearance') setAppearanceFor(location.id);
+                        if (key === 'open') onTablet();
                       }}
                     >
-                      <Edit01 /> Изменить
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setAppearanceFor(location.id);
-                        setMenuFor(null);
-                      }}
-                    >
-                      <Settings01 /> Оформление
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setMenuFor(null);
-                        onTablet();
-                      }}
-                    >
-                      Открыть
-                    </button>
-                  </div>
-                ) : null}
+                      <MenuItem id="edit" textValue="Изменить" className={styles.locationMenuItem}>
+                        <Edit01 />
+                        <span>Изменить</span>
+                      </MenuItem>
+                      <MenuItem id="appearance" textValue="Оформление" className={styles.locationMenuItem}>
+                        <Settings01 />
+                        <span>Оформление</span>
+                      </MenuItem>
+                      <MenuItem id="open" textValue="Открыть" className={styles.locationMenuItem}>
+                        <ArrowUpRight />
+                        <span>Открыть</span>
+                      </MenuItem>
+                    </Menu>
+                  </Popover>
+                </MenuTrigger>
               </div>
             </article>
           ))}

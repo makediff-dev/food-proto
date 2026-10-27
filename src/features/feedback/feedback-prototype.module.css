@@ -2801,6 +2801,7 @@
 
 .locationMenu {
   position: relative;
+  z-index: 3;
   justify-self: end;
 }
 
@@ -2813,6 +2814,8 @@
   border: 1px solid var(--fb-line);
   background: var(--fb-white);
   color: var(--ui-gray-700);
+  outline: none;
+  cursor: pointer;
 }
 
 .locationMenuTrigger svg {
@@ -2821,39 +2824,51 @@
 }
 
 .locationMenuPopover {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 5;
-  display: flex;
-  min-width: 200px;
-  flex-direction: column;
+  z-index: 40;
+  min-width: 220px;
   padding: 6px;
   border: 1px solid var(--ui-gray-200);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--fb-white);
-  box-shadow: 0 12px 24px rgb(16 24 40 / 12%);
+  box-shadow: 0 12px 28px rgb(16 24 40 / 16%);
+  outline: none;
 }
 
-.locationMenuPopover button {
+.locationMenuList {
   display: flex;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: 2px;
+  outline: none;
+}
+
+.locationMenuItem {
+  display: flex;
+  width: 100%;
   min-height: 40px;
   align-items: center;
-  gap: 8px;
-  padding: 0 10px;
+  gap: 10px;
+  padding: 0 12px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   color: var(--ui-gray-700);
+  font-size: 14px;
+  font-weight: 500;
   text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
 }
 
-.locationMenuPopover button:hover {
+.locationMenuItem[data-hovered],
+.locationMenuItem[data-focused] {
   background: var(--ui-gray-50);
   color: var(--ui-gray-900);
 }
 
-.locationMenuPopover svg {
+.locationMenuItem svg {
   width: 16px;
   height: 16px;
   flex: none;
@@ -2978,6 +2993,7 @@
 }
 
 .workspace .locationList > article {
+  overflow: visible;
   padding: 24px;
   border: 1px solid var(--ui-gray-200);
 }
