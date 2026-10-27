@@ -1610,10 +1610,15 @@
 
 .compactReviews article {
   display: grid;
-  grid-template-columns: 78px 1fr;
-  gap: 14px;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
   padding: 17px 20px;
   border-bottom: 1px solid var(--fb-line);
+}
+
+.compactReviews article > span {
+  flex: none;
 }
 
 .compactReviews article:last-child {
