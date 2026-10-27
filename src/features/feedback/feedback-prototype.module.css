@@ -494,7 +494,7 @@
   grid-template-columns: 0.7fr 1.3fr;
   gap: 40px;
   align-items: start;
-  margin-bottom: 70px;
+  margin-bottom: 20px;
 }
 
 .benefitsSection .sectionIntro h2,
@@ -684,7 +684,19 @@
   display: grid;
   grid-template-columns: 0.7fr 1.3fr;
   gap: 40px;
-  margin-bottom: 70px;
+  margin-bottom: 24px;
+}
+
+.sectionLead {
+  max-width: 720px;
+  margin: 0 0 56px auto;
+  color: var(--fb-mid);
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.reactionSection .sectionLead {
+  color: #bdbdb7;
 }
 
 .reactionFlow {
