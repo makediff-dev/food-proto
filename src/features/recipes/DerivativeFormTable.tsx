@@ -162,6 +162,7 @@ export function DerivativeCompositionEditor({
   onChange,
   onAdd,
   onRemove,
+  readOnly = false,
 }: {
   materials: readonly Material[];
   derivatives: readonly Derivative[];
@@ -169,18 +170,21 @@ export function DerivativeCompositionEditor({
   onChange: (key: string, raw: string) => void;
   onAdd: (key: string) => void;
   onRemove: (key: string) => void;
+  readOnly?: boolean;
 }) {
   const groups = selectedGroups(materials, derivatives, drafts);
   const hasSelected = groups.length > 0;
 
   return (
     <div className={`flex min-w-0 flex-col gap-3 ${hasSelected ? '' : 'w-[36rem] max-w-full'}`}>
-      <RecipeComponentSearch materials={materials} derivatives={derivatives} drafts={drafts} onAdd={onAdd} />
+      {readOnly ? null : (
+        <RecipeComponentSearch materials={materials} derivatives={derivatives} drafts={drafts} onAdd={onAdd} />
+      )}
       {hasSelected ? (
-        <DerivativeFormTable groups={groups} onChange={onChange} onRemove={onRemove} />
+        <DerivativeFormTable groups={groups} onChange={onChange} onRemove={onRemove} readOnly={readOnly} />
       ) : (
         <p className="w-full border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-          Добавьте позиции через поиск.
+          {readOnly ? 'В составе пока нет позиций.' : 'Добавьте позиции через поиск.'}
         </p>
       )}
     </div>
@@ -191,10 +195,12 @@ function DerivativeFormTable({
   groups,
   onChange,
   onRemove,
+  readOnly,
 }: {
   groups: readonly SelectedGroup[];
   onChange: (key: string, raw: string) => void;
   onRemove: (key: string) => void;
+  readOnly: boolean;
 }) {
   const { toggleCategory, categoryOpen } = useOpenCategories();
 
@@ -227,6 +233,7 @@ function DerivativeFormTable({
               onToggle={() => toggleCategory(group.groupId)}
               onChange={onChange}
               onRemove={onRemove}
+              readOnly={readOnly}
             />
           ))}
         </tbody>
@@ -364,12 +371,14 @@ function GroupBlock({
   onToggle,
   onChange,
   onRemove,
+  readOnly,
 }: {
   group: SelectedGroup;
   open: boolean;
   onToggle: () => void;
   onChange: (key: string, raw: string) => void;
   onRemove: (key: string) => void;
+  readOnly: boolean;
 }) {
   return (
     <>
@@ -399,7 +408,14 @@ function GroupBlock({
       </tr>
       {open
         ? group.rows.map((row, index) => (
-            <CandidateRowView key={row.key} row={row} index={index + 1} onChange={onChange} onRemove={onRemove} />
+            <CandidateRowView
+              key={row.key}
+              row={row}
+              index={index + 1}
+              onChange={onChange}
+              onRemove={onRemove}
+              readOnly={readOnly}
+            />
           ))
         : null}
     </>
@@ -411,11 +427,13 @@ function CandidateRowView({
   index,
   onChange,
   onRemove,
+  readOnly,
 }: {
   row: SelectedRow;
   index: number;
   onChange: (key: string, raw: string) => void;
   onRemove: (key: string) => void;
+  readOnly: boolean;
 }) {
   return (
     <tr>
@@ -423,25 +441,30 @@ function CandidateRowView({
         <div className="flex items-center gap-2">
           <ProductIndex index={index} />
           <span className="text-sm text-ink">{row.name}</span>
-          <button
-            type="button"
-            aria-label={`Убрать ${row.name} из состава`}
-            title="Убрать"
-            onClick={() => onRemove(row.key)}
-            className="ml-auto inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-          >
-            <IconTrash />
-          </button>
+          {readOnly ? null : (
+            <button
+              type="button"
+              aria-label={`Убрать ${row.name} из состава`}
+              title="Убрать"
+              onClick={() => onRemove(row.key)}
+              className="ml-auto inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              <IconTrash />
+            </button>
+          )}
         </div>
       </th>
       <td
-        className={`h-px w-px border-b border-b-line p-0 text-right align-middle ${columnDividerClassName} ${cellKindClassName.assigned}`}
+        className={`h-px w-px border-b border-b-line p-0 text-right align-middle ${columnDividerClassName} ${
+          readOnly ? cellKindClassName.repeated : cellKindClassName.assigned
+        }`}
       >
-        <MergedTwoStory kind="assigned">
+        <MergedTwoStory kind={readOnly ? 'repeated' : 'assigned'}>
           <GridInput
             label={`Количество, ${row.name}`}
             value={row.draft.quantity}
             unit={row.unit}
+            readOnly={readOnly}
             onChange={(raw) => onChange(row.key, raw)}
           />
         </MergedTwoStory>
@@ -455,26 +478,37 @@ function GridInput({
   value,
   unit,
   onChange,
+  readOnly,
 }: {
   label: string;
   value: string;
   unit: string;
   onChange: (raw: string) => void;
+  readOnly: boolean;
 }) {
   const [editing, setEditing] = useState(false);
 
   return (
-    <div data-editable-field="" className="min-w-0">
+    <div data-editable-field={readOnly ? undefined : ''} className="min-w-0">
       <div className="flex items-baseline justify-end gap-1">
         <input
           value={value}
           inputMode="decimal"
           autoComplete="off"
           aria-label={label}
-          onFocus={() => setEditing(true)}
+          readOnly={readOnly}
+          onFocus={() => {
+            if (!readOnly) {
+              setEditing(true);
+            }
+          }}
           onBlur={() => setEditing(false)}
-          onChange={(event) => onChange(sanitizeDraft(event.target.value, 'decimal'))}
-          className={`${gridFieldClassName} text-ink`}
+          onChange={(event) => {
+            if (!readOnly) {
+              onChange(sanitizeDraft(event.target.value, 'decimal'));
+            }
+          }}
+          className={`${gridFieldClassName} text-ink ${readOnly ? 'cursor-default' : ''}`}
           placeholder={editing || value ? undefined : '—'}
         />
         <span className="shrink-0 text-sm text-ink">{unit}</span>

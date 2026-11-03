@@ -70,7 +70,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
     columns: [{ key: 'opening', label: 'Факт', hint: 'по данным инвентаризации прошлого месяца' }],
   },
   {
-    label: 'Приход',
+    label: 'Произведено производных',
     columns: [
       {
         key: 'planReceipt',
@@ -428,7 +428,7 @@ function RowCell({ column, row }: { column: ColumnKey; row: DerivativeMovementRo
     case 'planReceiptCost':
       return (
         <VatMoneyCell
-          label="Плановая стоимость прихода"
+          label="Плановая стоимость а"
           withVat={row.planReceiptCost.withVat}
           exVat={row.planReceiptCost.exVat}
         />

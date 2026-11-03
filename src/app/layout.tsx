@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Onest, Unbounded } from 'next/font/google';
 
 import { DocumentProvider } from '@/data/DocumentProvider';
+import { RoleProvider } from '@/features/roles/RoleProvider';
 import { AppShell } from '@/features/shell/AppShell';
 
 import './globals.css';
@@ -30,7 +31,9 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html lang="ru" className={`${onest.variable} ${unbounded.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
         <DocumentProvider>
-          <AppShell>{children}</AppShell>
+          <RoleProvider>
+            <AppShell>{children}</AppShell>
+          </RoleProvider>
         </DocumentProvider>
       </body>
     </html>

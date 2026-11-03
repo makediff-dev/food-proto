@@ -35,6 +35,7 @@ import {
 import { RecipeWeightCompare } from '@/features/recipes/RecipeWeightCompare';
 import { formatRecipeWeightGap, PRODUCT_RECIPE_ERROR } from '@/features/recipes/text';
 import { useFinishedRecipes } from '@/features/recipes/use-finished-recipes';
+import { useRole } from '@/features/roles/RoleProvider';
 import { primaryButtonClassName } from '@/features/sales/fields';
 import { IconArrowLeft, IconCheck } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
@@ -98,6 +99,8 @@ export function FinishedProductEditScreen({ productId }: { productId: string }) 
 
 function FinishedProductRecipeForm({ product }: { product: Product }) {
   const journal = useFinishedRecipes();
+  const { canEditRecipes } = useRole();
+  const readOnly = !canEditRecipes;
   const router = useRouter();
   const outputFieldId = useId();
   const piecesFieldId = useId();
@@ -242,6 +245,10 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
   }
 
   function save() {
+    if (readOnly) {
+      return;
+    }
+
     setSaveError(null);
 
     const outputKilogramThousandths = parseQuantityInput(outputDraft, false);
@@ -312,6 +319,7 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
                   onChange={setQuantity}
                   onAdd={addComponent}
                   onRemove={removeComponent}
+                  readOnly={readOnly}
                 />
               )}
 
@@ -334,8 +342,13 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
                         id={outputFieldId}
                         aria-label="Килограммы"
                         value={outputDraft}
-                        onChange={(event) => onOutputChange(event.target.value)}
-                        className={yieldInputClassName}
+                        readOnly={readOnly}
+                        onChange={(event) => {
+                          if (!readOnly) {
+                            onOutputChange(event.target.value);
+                          }
+                        }}
+                        className={`${yieldInputClassName}${readOnly ? ' cursor-default' : ''}`}
                         inputMode="decimal"
                         autoComplete="off"
                       />
@@ -346,8 +359,13 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
                         id={piecesFieldId}
                         aria-label="Штуки"
                         value={piecesDraft}
-                        onChange={(event) => onPiecesChange(event.target.value)}
-                        className={yieldInputClassName}
+                        readOnly={readOnly}
+                        onChange={(event) => {
+                          if (!readOnly) {
+                            onPiecesChange(event.target.value);
+                          }
+                        }}
+                        className={`${yieldInputClassName}${readOnly ? ' cursor-default' : ''}`}
                         inputMode="decimal"
                         autoComplete="off"
                       />
@@ -356,8 +374,13 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
                         id={gramsFieldId}
                         aria-label="Граммы на штуку"
                         value={gramsDraft}
-                        onChange={(event) => onGramsChange(event.target.value)}
-                        className={yieldInputClassName}
+                        readOnly={readOnly}
+                        onChange={(event) => {
+                          if (!readOnly) {
+                            onGramsChange(event.target.value);
+                          }
+                        }}
+                        className={`${yieldInputClassName}${readOnly ? ' cursor-default' : ''}`}
                         inputMode="decimal"
                         autoComplete="off"
                       />
@@ -371,15 +394,17 @@ function FinishedProductRecipeForm({ product }: { product: Product }) {
                   componentsKilogramThousandths={componentsKilograms}
                 />
 
-                <button
-                  type="button"
-                  disabled={!journal.hydrated}
-                  onClick={save}
-                  className={`${primaryButtonClassName} w-full`}
-                >
-                  <IconCheck />
-                  Сохранить
-                </button>
+                {readOnly ? null : (
+                  <button
+                    type="button"
+                    disabled={!journal.hydrated}
+                    onClick={save}
+                    className={`${primaryButtonClassName} w-full`}
+                  >
+                    <IconCheck />
+                    Сохранить
+                  </button>
+                )}
                 <RecipePrintButton />
                 {saveError ? <p className="text-sm text-ink">{saveError}</p> : null}
               </div>

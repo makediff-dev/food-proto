@@ -140,6 +140,15 @@ export function IconCheck() {
   );
 }
 
+export function IconCross() {
+  return (
+    <Glyph>
+      <path d="M5 5l10 10" />
+      <path d="M15 5L5 15" />
+    </Glyph>
+  );
+}
+
 export function IconPrint() {
   return (
     <Glyph>

@@ -14,29 +14,33 @@ import { derivativeHref, derivativeNewHref, RECIPES_DERIVATIVES_TITLE } from '@/
 import { RecipeJournalsScreen } from '@/features/recipes/RecipeJournalsScreen';
 import { derivativePrintModel } from '@/features/recipes/RecipePrint';
 import { formatRecipeBatchLabel } from '@/features/recipes/text';
+import { useRole } from '@/features/roles/RoleProvider';
 import { primaryButtonClassName } from '@/features/sales/fields';
 import { IconPlus } from '@/features/shell/Icons';
 
 export function DerivativesScreen() {
   const store = useDocumentStore();
+  const { canEditRecipes } = useRole();
   const sections = derivativeSections(store.document).map((section) => ({
     id: section.workshopId,
     name: section.name,
-    addHref: derivativeNewHref(section.workshopId),
+    addHref: canEditRecipes ? derivativeNewHref(section.workshopId) : undefined,
     items: section.items.map((item) => {
       const referenced = derivativeReferencedInRecipes(store.document, item.id);
       return {
         id: item.id,
         name: item.name,
         href: derivativeHref(item.id),
-        editAction: true,
-        deleteBlockedTitle: referenced ? 'Производная входит в состав другого рецепта' : undefined,
-        onDelete: () => {
-          const confirmed = window.confirm(`Удалить «${item.name}»? Производная пропадёт из рабочего списка.`);
-          if (confirmed) {
-            store.updateDocument((current) => deleteDerivative(current, item.id, new Date().toISOString()));
-          }
-        },
+        editAction: canEditRecipes,
+        deleteBlockedTitle: canEditRecipes && referenced ? 'Производная входит в состав другого рецепта' : undefined,
+        onDelete: canEditRecipes
+          ? () => {
+              const confirmed = window.confirm(`Удалить «${item.name}»? Производная пропадёт из рабочего списка.`);
+              if (confirmed) {
+                store.updateDocument((current) => deleteDerivative(current, item.id, new Date().toISOString()));
+              }
+            }
+          : undefined,
         batchLabel: formatRecipeBatchLabel(item.outputKilogramThousandths, outputPieceThousandthsOf(item)),
         components: derivativeCompositionLines(store.document, item).map((line) => ({
           id: line.id,
@@ -55,10 +59,12 @@ export function DerivativesScreen() {
       sections={sections}
       caption="Производные по цехам"
       aside={
-        <Link href={derivativeNewHref()} className={primaryButtonClassName}>
-          <IconPlus />
-          Добавить производную
-        </Link>
+        canEditRecipes ? (
+          <Link href={derivativeNewHref()} className={primaryButtonClassName}>
+            <IconPlus />
+            Добавить производную
+          </Link>
+        ) : undefined
       }
     />
   );

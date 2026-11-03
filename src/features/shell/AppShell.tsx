@@ -43,6 +43,9 @@ import {
   RECIPES_FINISHED_TITLE,
   RECIPES_SECTION_TITLE,
 } from '@/features/recipes/paths';
+import { ROLES_HREF, ROLES_TITLE } from '@/features/roles/paths';
+import { useRole } from '@/features/roles/RoleProvider';
+import { isRoleId, ROLES } from '@/features/roles/roles';
 import { SUMMARY_SECTION_TITLE } from '@/features/sales/paths';
 import { SALES_FACT_TITLE, SALES_JOURNAL_TITLE, SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
 import { IconChevronDown, IconChevronRight, IconMenu, IconUndo } from '@/features/shell/Icons';
@@ -110,9 +113,6 @@ const MATERIALS_NAV: readonly NavItem[] = [
   { href: '/materials/receipts', label: MATERIALS_RECEIPTS_TITLE, navKind: 'input' },
 ];
 
-const QUESTIONS_HREF = '/questions';
-const QUESTIONS_LABEL = 'Вопросы';
-
 function sectionIsCurrent(pathname: string, href: string): boolean {
   if (href === '/') {
     return pathname === '/';
@@ -147,8 +147,8 @@ function navItemIsCurrent(pathname: string, item: NavItem): boolean {
 }
 
 function currentNavLabel(pathname: string): string | undefined {
-  if (sectionIsCurrent(pathname, QUESTIONS_HREF)) {
-    return QUESTIONS_LABEL;
+  if (sectionIsCurrent(pathname, ROLES_HREF)) {
+    return ROLES_TITLE;
   }
 
   for (const item of SALES_NAV) {
@@ -259,6 +259,26 @@ function NavGroup({
   );
 }
 
+function RolesNavLink({ pathname, onNavigate }: { pathname: string; onNavigate: () => void }) {
+  const current = sectionIsCurrent(pathname, ROLES_HREF);
+
+  return (
+    <div className="pb-1">
+      <Link
+        href={ROLES_HREF}
+        aria-current={current ? 'page' : undefined}
+        onClick={onNavigate}
+        className={`flex w-full items-center gap-1 px-3 py-2 text-left text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+          current ? 'bg-sidebar-active text-white' : 'text-white hover:bg-white/5'
+        }`}
+      >
+        <span className="inline-flex size-6 shrink-0" aria-hidden="true" />
+        <span>{ROLES_TITLE}</span>
+      </Link>
+    </div>
+  );
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -334,22 +354,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             onNavigate={closeMenu}
           />
           <NavGroup title={MATERIALS_SECTION_TITLE} items={MATERIALS_NAV} pathname={pathname} onNavigate={closeMenu} />
+          <RolesNavLink pathname={pathname} onNavigate={closeMenu} />
         </nav>
 
         <div className="border-t border-sidebar-line">
           <MockReset />
-          <Link
-            href={QUESTIONS_HREF}
-            aria-current={sectionIsCurrent(pathname, QUESTIONS_HREF) ? 'page' : undefined}
-            onClick={closeMenu}
-            className={`relative mx-2 mb-3 block px-3 py-2 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-              sectionIsCurrent(pathname, QUESTIONS_HREF)
-                ? 'bg-sidebar-active text-white'
-                : 'text-sidebar-muted hover:bg-white/5 hover:text-white'
-            }`}
-          >
-            {QUESTIONS_LABEL}
-          </Link>
+          <RoleSwitcher />
         </div>
       </aside>
 
@@ -402,6 +412,36 @@ function MockReset() {
         <IconUndo />
         Вернуть мок-данные
       </button>
+    </div>
+  );
+}
+
+function RoleSwitcher() {
+  const { roleId, setRole } = useRole();
+  const fieldId = 'app-menu-role';
+
+  return (
+    <div className="px-4 pt-1 pb-3">
+      <label htmlFor={fieldId} className="text-xs leading-5 text-sidebar-muted">
+        Роль
+      </label>
+      <select
+        id={fieldId}
+        value={roleId}
+        onChange={(event) => {
+          const next = event.target.value;
+          if (isRoleId(next)) {
+            setRole(next);
+          }
+        }}
+        className="mt-2 h-10 w-full border border-white/50 bg-sidebar px-2 text-sm text-white outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+      >
+        {ROLES.map((role) => (
+          <option key={role.id} value={role.id}>
+            {role.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

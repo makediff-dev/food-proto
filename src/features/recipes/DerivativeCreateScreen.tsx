@@ -46,6 +46,7 @@ import {
 import { RecipeWeightCompare } from '@/features/recipes/RecipeWeightCompare';
 import { DERIVATIVE_ADD_ERROR, formatRecipeWeightGap } from '@/features/recipes/text';
 import { useDerivatives } from '@/features/recipes/use-derivatives';
+import { useRole } from '@/features/roles/RoleProvider';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { IconArrowLeft, IconCheck } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
@@ -121,6 +122,8 @@ function DerivativeForm({
   existing: Derivative | null;
 }) {
   const journal = useDerivatives();
+  const { canEditRecipes } = useRole();
+  const readOnly = !canEditRecipes;
   const router = useRouter();
   const workshopFieldId = useId();
   const nameFieldId = useId();
@@ -312,6 +315,10 @@ function DerivativeForm({
   }
 
   function save() {
+    if (readOnly) {
+      return;
+    }
+
     setSaveError(null);
 
     if (!workshopId || !isDerivativeWorkshopId(workshopId)) {
@@ -386,6 +393,34 @@ function DerivativeForm({
     groups: recipePrintGroups(materials, derivatives, drafts),
   };
 
+  if (!existing && readOnly) {
+    return (
+      <PageFrame
+        title={NEW_DERIVATIVE_TITLE}
+        full
+        back={
+          <Link
+            href={RECIPES_DERIVATIVES_HREF}
+            aria-label="Назад"
+            className="inline-flex size-11 shrink-0 items-center justify-center text-ink outline-none hover:text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            <IconArrowLeft />
+          </Link>
+        }
+      >
+        <div className="border border-line bg-sheet px-4 py-4">
+          <p className="text-sm text-ink">Эта роль рецептуры только смотрит.</p>
+          <Link
+            href={RECIPES_DERIVATIVES_HREF}
+            className="mt-3 inline-flex text-sm text-ink underline outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            К списку производных
+          </Link>
+        </div>
+      </PageFrame>
+    );
+  }
+
   return (
     <>
       <div className="screen-only">
@@ -416,6 +451,7 @@ function DerivativeForm({
                   onChange={setQuantity}
                   onAdd={addComponent}
                   onRemove={removeComponent}
+                  readOnly={readOnly}
                 />
               )}
 
@@ -424,52 +460,67 @@ function DerivativeForm({
                   <label htmlFor={workshopFieldId} className="text-sm text-muted">
                     Цех
                   </label>
-                  <select
-                    id={workshopFieldId}
-                    value={workshopId}
-                    onChange={(event) => {
-                      const next = event.target.value;
-                      setWorkshopId(isDerivativeWorkshopId(next) ? next : '');
-                      setDrafts({});
-                      setSaveError(null);
-                    }}
-                    className={`mt-2 ${fieldClassName}`}
-                  >
-                    <option value="">Выберите цех</option>
-                    {DERIVATIVE_WORKSHOPS.map((workshop) => (
-                      <option key={workshop.id} value={workshop.id}>
-                        {workshop.name}
-                      </option>
-                    ))}
-                  </select>
+                  {readOnly ? (
+                    <p className="mt-2 text-base text-ink">{workshopName || '—'}</p>
+                  ) : (
+                    <select
+                      id={workshopFieldId}
+                      value={workshopId}
+                      onChange={(event) => {
+                        const next = event.target.value;
+                        setWorkshopId(isDerivativeWorkshopId(next) ? next : '');
+                        setDrafts({});
+                        setSaveError(null);
+                      }}
+                      className={`mt-2 ${fieldClassName}`}
+                    >
+                      <option value="">Выберите цех</option>
+                      {DERIVATIVE_WORKSHOPS.map((workshop) => (
+                        <option key={workshop.id} value={workshop.id}>
+                          {workshop.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div>
                   <label htmlFor={nameFieldId} className="text-sm text-muted">
                     Название
                   </label>
-                  <input
-                    id={nameFieldId}
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    className={`mt-2 ${fieldClassName}`}
-                    autoComplete="off"
-                  />
+                  {readOnly ? (
+                    <p className="mt-2 text-base text-ink">{name || '—'}</p>
+                  ) : (
+                    <input
+                      id={nameFieldId}
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      className={`mt-2 ${fieldClassName}`}
+                      autoComplete="off"
+                    />
+                  )}
                 </div>
 
-                <label htmlFor={byPieceFieldId} className="flex cursor-pointer items-center gap-2 text-base text-ink">
+                <label
+                  htmlFor={byPieceFieldId}
+                  className={`flex items-center gap-2 text-base text-ink ${readOnly ? '' : 'cursor-pointer'}`}
+                >
                   <input
                     id={byPieceFieldId}
                     type="checkbox"
                     checked={byPiece}
+                    disabled={readOnly}
                     onChange={(event) => {
+                      if (readOnly) {
+                        return;
+                      }
                       if (event.target.checked) {
                         enableByPiece();
                       } else {
                         disableByPiece();
                       }
                     }}
-                    className="size-4 accent-ink"
+                    className="size-4 accent-ink disabled:cursor-default"
                   />
                   Поштучно
                 </label>
@@ -482,8 +533,13 @@ function DerivativeForm({
                         id={outputFieldId}
                         aria-label="Килограммы"
                         value={outputDraft}
-                        onChange={(event) => onOutputChange(event.target.value)}
-                        className={yieldInputClassName}
+                        readOnly={readOnly}
+                        onChange={(event) => {
+                          if (!readOnly) {
+                            onOutputChange(event.target.value);
+                          }
+                        }}
+                        className={`${yieldInputClassName}${readOnly ? ' cursor-default' : ''}`}
                         inputMode="decimal"
                         autoComplete="off"
                       />
@@ -495,8 +551,13 @@ function DerivativeForm({
                           id={piecesFieldId}
                           aria-label="Штуки"
                           value={piecesDraft}
-                          onChange={(event) => onPiecesChange(event.target.value)}
-                          className={yieldInputClassName}
+                          readOnly={readOnly}
+                          onChange={(event) => {
+                            if (!readOnly) {
+                              onPiecesChange(event.target.value);
+                            }
+                          }}
+                          className={`${yieldInputClassName}${readOnly ? ' cursor-default' : ''}`}
                           inputMode="decimal"
                           autoComplete="off"
                         />
@@ -505,8 +566,13 @@ function DerivativeForm({
                           id={gramsFieldId}
                           aria-label="Граммы на штуку"
                           value={gramsDraft}
-                          onChange={(event) => onGramsChange(event.target.value)}
-                          className={yieldInputClassName}
+                          readOnly={readOnly}
+                          onChange={(event) => {
+                            if (!readOnly) {
+                              onGramsChange(event.target.value);
+                            }
+                          }}
+                          className={`${yieldInputClassName}${readOnly ? ' cursor-default' : ''}`}
                           inputMode="decimal"
                           autoComplete="off"
                         />
@@ -524,8 +590,13 @@ function DerivativeForm({
                     <input
                       id={heatTreatmentFieldId}
                       value={heatTreatmentDraft}
-                      onChange={(event) => setHeatTreatmentDraft(event.target.value)}
-                      className={yieldInputClassName}
+                      readOnly={readOnly}
+                      onChange={(event) => {
+                        if (!readOnly) {
+                          setHeatTreatmentDraft(event.target.value);
+                        }
+                      }}
+                      className={`${yieldInputClassName}${readOnly ? ' cursor-default' : ''}`}
                       inputMode="numeric"
                       autoComplete="off"
                     />
@@ -538,15 +609,17 @@ function DerivativeForm({
                   componentsKilogramThousandths={componentsKilograms}
                 />
 
-                <button
-                  type="button"
-                  disabled={!journal.hydrated}
-                  onClick={save}
-                  className={`${primaryButtonClassName} w-full`}
-                >
-                  <IconCheck />
-                  Сохранить
-                </button>
+                {readOnly ? null : (
+                  <button
+                    type="button"
+                    disabled={!journal.hydrated}
+                    onClick={save}
+                    className={`${primaryButtonClassName} w-full`}
+                  >
+                    <IconCheck />
+                    Сохранить
+                  </button>
+                )}
                 <RecipePrintButton />
                 {saveError ? <p className="text-sm text-ink">{saveError}</p> : null}
               </div>

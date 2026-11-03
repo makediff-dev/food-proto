@@ -6,9 +6,11 @@ import { finishedProductHref, RECIPES_FINISHED_TITLE } from '@/features/recipes/
 import { RecipeJournalsScreen } from '@/features/recipes/RecipeJournalsScreen';
 import { productPrintModel } from '@/features/recipes/RecipePrint';
 import { formatRecipeBatchLabel } from '@/features/recipes/text';
+import { useRole } from '@/features/roles/RoleProvider';
 
 export function FinishedProductsScreen() {
   const store = useDocumentStore();
+  const { canEditRecipes } = useRole();
   const sections = productRecipeSections(store.document).map((section) => ({
     id: section.warehouseId,
     name: section.name,
@@ -16,7 +18,7 @@ export function FinishedProductsScreen() {
       id: item.id,
       name: item.name,
       href: finishedProductHref(item.id),
-      editAction: true,
+      editAction: canEditRecipes,
       batchLabel: formatRecipeBatchLabel(item.outputKilogramThousandths, item.outputPieceThousandths),
       components: productCompositionLines(store.document, item).map((line) => ({
         id: line.id,
