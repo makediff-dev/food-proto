@@ -84,9 +84,9 @@
     "semantic_hash": "66c2951a711a3c1f4596fa8fff571b2d"
   },
   "src/data/mock-document.ts": {
-    "mtime": 1793712865.8334281,
-    "seen": 1793713061.3755891,
-    "ast_hash": "4eca90dd37f1cd6ccd1b8f77a8251488",
+    "mtime": 1793715762.9532325,
+    "seen": 1793715788.9536226,
+    "ast_hash": "33e6ee0737acc914f698e46695620421",
     "semantic_hash": ""
   },
   "src/domain/categories.ts": {
@@ -262,9 +262,9 @@
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1793714558.0637965,
-    "seen": 1793714635.6194293,
-    "ast_hash": "6c1cd6cb17589d8571dd3022df63b66b",
+    "mtime": 1793715700.3346624,
+    "seen": 1793715788.9536226,
+    "ast_hash": "d8d68ff780985878f3751cad78317563",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
@@ -819,9 +819,9 @@
     "semantic_hash": ""
   },
   "src/data/mock-materials.ts": {
-    "mtime": 1793694159.8818686,
-    "seen": 1793694423.5759275,
-    "ast_hash": "d734bf39ed8acd293907284fdab271d8",
+    "mtime": 1793715753.2182226,
+    "seen": 1793715788.9536226,
+    "ast_hash": "7f2896982d26e5d9ca99cd325e6f1f19",
     "semantic_hash": ""
   },
   "src/domain/materials.ts": {
@@ -1269,9 +1269,9 @@
     "semantic_hash": ""
   },
   "src/features/recipes/FinishedProductCostDetailScreen.tsx": {
-    "mtime": 1793713513.215351,
-    "seen": 1793713535.3266032,
-    "ast_hash": "8a66f7321583c65cb3c56ae45a38ed2f",
+    "mtime": 1793716051.2552984,
+    "seen": 1793716059.661019,
+    "ast_hash": "c28815a517cfa9f22e05f9c7779f2ed8",
     "semantic_hash": ""
   },
   "src/features/recipes/FinishedProductCostScreen.tsx": {

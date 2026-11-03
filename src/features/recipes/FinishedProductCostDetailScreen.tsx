@@ -41,21 +41,21 @@ export function FinishedProductCostDetailScreen({ productId, month }: { productI
     );
   }
 
-  const hasKilogramCost =
-    detail.hasKilogramCost && detail.planCostPerKg && detail.factCostPerKg && detail.costPerKgDeviation;
-  const unitCost = hasKilogramCost
-    ? { plan: detail.planCostPerKg, fact: detail.factCostPerKg }
-    : { plan: detail.planCostPerPiece, fact: detail.factCostPerPiece };
-  const extraUnitRows: RecipeCostDetailExtraUnitRow[] = hasKilogramCost
-    ? [
-        {
-          label: 'За шт',
-          plan: detail.planCostPerPiece,
-          fact: detail.factCostPerPiece,
-          deviation: detail.costPerPieceDeviation,
-        },
-      ]
-    : [];
+  const unitCost =
+    detail.planCostPerKg && detail.factCostPerKg
+      ? { plan: detail.planCostPerKg, fact: detail.factCostPerKg }
+      : { plan: detail.planCostPerPiece, fact: detail.factCostPerPiece };
+  const extraUnitRows: RecipeCostDetailExtraUnitRow[] =
+    detail.planCostPerKg && detail.factCostPerKg
+      ? [
+          {
+            label: 'За шт',
+            plan: detail.planCostPerPiece,
+            fact: detail.factCostPerPiece,
+            deviation: detail.costPerPieceDeviation,
+          },
+        ]
+      : [];
 
   return (
     <PageFrame

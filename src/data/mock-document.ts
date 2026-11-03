@@ -17,12 +17,17 @@ import {
  * Мок: два салата, одно горячее, гамбургер и сэндвич без рецепта.
  * Себестоимость 1 шт продаж считается из рецепта, в документ не пишется.
  * План продаж и план выпуска сентября и октября 2026 одинаковые: 500, 600, 800 и 1 000 шт (сэндвич — 0).
+ * Ноябрь: 500, 800, 900 и 900 — Оливье и гуляш выше к зиме, гамбургер чуть ниже.
  * Факт продаж сентября чуть выше плана: 550, 650, 900 и 1 100.
  * Выпуск сентября чуть выше продаж у салатов и гуляша (650, 800, 1 050) — расчётный перенос на октябрь 140, 200 и 220 шт.
- * У гамбургера выпуск 1 000 при продажах 1 100 — расчётный перенос 20 шт. Инвентаризация октября: недостача у Цезаря, гуляша и гамбургера, излишек у Оливье.
+ * У гамбургера выпуск 1 000 при продажах 1 100 — расчётный перенос 20 шт. Инвентаризация сентября: недостача у Цезаря, гуляша и гамбургера, излишек у Оливье.
  * Факт октября — 2, 9, 13, 16 и 20 число. Продажи за месяц: 350, 420, 560 и 380 шт.
  * Выпуск октября не копирует продажи: Цезарь и гуляш чуть впереди, Оливье и гамбургер отстают.
- * Операционные расходы пустые. Инвентаризация и нормативы движения — сентябрь и октябрь 2026; факт инвентаризации не ниже нуля, отклонение от переноса может быть отрицательным (недостача).
+ * Инвентаризация октября (перенос на ноябрь): 160, 195, 220 и 0. Журнальный конец 170, 185, 235 и −33:
+ * у салатов и гуляша счёт рядом с журналом, у гамбургера остаток не ниже нуля.
+ * Факт ноября — одна отгрузка 2 ноября: продажи 45, 90, 80 и 100; выпуск 50, 85, 90 и 110.
+ * Это около десятой плана (3 дня из 30), чтобы прогноз месяца не раздувался. Инвентаризации ноября нет.
+ * Операционные расходы пустые. Нормативы движения — сентябрь, октябрь и ноябрь.
  * Плановые цены с НДС: салаты — мок, гуляш `Svod!F31`, гамбургер `Svod!F63`.
  * Факт продаж — круглые и полукруглые: 95, 70, 100 и 85 ₽ с НДС.
  * НДС у всех товаров 20%. В книге у горячих `Svod!N31` 10%, у роллов `Svod!N63` 20%.
@@ -210,9 +215,18 @@ const planPieces = {
   'product-sandwich': 0,
 } as const;
 
+/** Ноябрь: новогодний Оливье и горячее выше, гамбургер чуть ниже октябрьского плана. */
+const novemberPlanPieces = {
+  'product-caesar': 500,
+  'product-olivier': 800,
+  'product-goulash': 900,
+  'product-burger': 900,
+  'product-sandwich': 0,
+} as const satisfies Record<CatalogProductId, number>;
+
 const catalogProductIds = Object.keys(planPieces) as CatalogProductId[];
 
-function salesPlan(month: string): SalesPlan {
+function salesPlan(month: string, pieces: Readonly<Record<CatalogProductId, number>> = planPieces): SalesPlan {
   return {
     id: `plan-${month}`,
     month,
@@ -221,12 +235,15 @@ function salesPlan(month: string): SalesPlan {
       id: `plan-${month}-${productId.slice('product-'.length)}`,
       productId,
       priceWithVat: priceWithVat[productId],
-      volumePieces: planPieces[productId],
+      volumePieces: pieces[productId],
     })),
   };
 }
 
-function productionPlan(month: string): ProductionPlan {
+function productionPlan(
+  month: string,
+  pieces: Readonly<Record<CatalogProductId, number>> = planPieces,
+): ProductionPlan {
   return {
     id: `production-plan-${month}`,
     month,
@@ -234,7 +251,7 @@ function productionPlan(month: string): ProductionPlan {
     lines: catalogProductIds.map((productId) => ({
       id: `production-plan-${month}-${productId.slice('product-'.length)}`,
       productId,
-      volumePieces: planPieces[productId],
+      volumePieces: pieces[productId],
     })),
   };
 }
@@ -259,6 +276,19 @@ const closingInventorySeptember = {
   'product-olivier': 210,
   'product-goulash': 195,
   'product-burger': 12,
+  'product-sandwich': 0,
+} as const satisfies Record<CatalogProductId, number>;
+
+/**
+ * Инвентаризация на конец октября 2026, шт. Это остаток на начало ноября.
+ * Журнальный конец октября: 170, 185, 235 и −33 (сэндвич 0).
+ * Счёт рядом с журналом; гамбургер не уходит ниже нуля.
+ */
+const closingInventoryOctober = {
+  'product-caesar': 160,
+  'product-olivier': 195,
+  'product-goulash': 220,
+  'product-burger': 0,
   'product-sandwich': 0,
 } as const satisfies Record<CatalogProductId, number>;
 
@@ -298,6 +328,7 @@ interface OrderDraft {
  * Сентябрь продажи: 550, 650, 900 и 1 100 шт — примерно на десятую выше плана.
  * Октябрь: 350, 420, 560 и 380 шт за 2, 9, 13, 16 и 20 число.
  * До 21 октября Цезарь, Оливье и гуляш не ниже темпа, гамбургер ниже.
+ * Ноябрь, 2-е число: 45, 90, 80 и 100 — около десятой месячного плана.
  */
 const orders: OrderDraft[] = [
   {
@@ -388,12 +419,24 @@ const orders: OrderDraft[] = [
       'product-burger': 20,
     },
   },
+  {
+    id: 'sale-2026-11-02',
+    customerName: 'РИТЕЙЛ Север',
+    occurredOn: '2026-11-02',
+    pieces: {
+      'product-caesar': 45,
+      'product-olivier': 90,
+      'product-goulash': 80,
+      'product-burger': 100,
+    },
+  },
 ];
 
 /**
  * Выпуск тех же дней, что и продажи. Октябрь по товарам расходится с продажами.
  * Сентябрь: салаты и гуляш выше продаж (остаток), гамбургер ниже.
  * Итого выпуск сентября: 650, 800, 1 050 и 1 000.
+ * 2 ноября: 50, 85, 90 и 110 — Цезарь и гуляш чуть впереди продаж дня, Оливье сзади, гамбургер догоняет нулевой остаток.
  */
 const productionOrders: OrderDraft[] = [
   {
@@ -484,6 +527,17 @@ const productionOrders: OrderDraft[] = [
       'product-burger': 15,
     },
   },
+  {
+    id: 'sale-2026-11-02',
+    customerName: 'РИТЕЙЛ Север',
+    occurredOn: '2026-11-02',
+    pieces: {
+      'product-caesar': 50,
+      'product-olivier': 85,
+      'product-goulash': 90,
+      'product-burger': 110,
+    },
+  },
 ];
 
 function orderLines(order: OrderDraft): Array<{ productId: CatalogProductId; pieces: number }> {
@@ -520,10 +574,21 @@ function productionFromOrders(drafts: readonly OrderDraft[]): ProductionEntry[] 
   }));
 }
 
-const salesPlans: SalesPlan[] = [salesPlan('2026-09'), salesPlan('2026-10')];
-const productionPlans: ProductionPlan[] = [productionPlan('2026-09'), productionPlan('2026-10')];
-const finishedGoodsNorms: FinishedGoodsNorm[] = [finishedGoodsNorm('2026-09'), finishedGoodsNorm('2026-10')];
-const finishedGoodsOpenings: FinishedGoodsOpening[] = [finishedGoodsOpening('2026-09', closingInventorySeptember)];
+const salesPlans: SalesPlan[] = [salesPlan('2026-09'), salesPlan('2026-10'), salesPlan('2026-11', novemberPlanPieces)];
+const productionPlans: ProductionPlan[] = [
+  productionPlan('2026-09'),
+  productionPlan('2026-10'),
+  productionPlan('2026-11', novemberPlanPieces),
+];
+const finishedGoodsNorms: FinishedGoodsNorm[] = [
+  finishedGoodsNorm('2026-09'),
+  finishedGoodsNorm('2026-10'),
+  finishedGoodsNorm('2026-11'),
+];
+const finishedGoodsOpenings: FinishedGoodsOpening[] = [
+  finishedGoodsOpening('2026-09', closingInventorySeptember),
+  finishedGoodsOpening('2026-10', closingInventoryOctober),
+];
 
 /**
  * Имена с макета рецептурных журналов. Выход = сумма кг компонентов.

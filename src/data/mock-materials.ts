@@ -12,9 +12,12 @@ import type {
 /**
  * Мок сырья двух складов.
  * Позиции индивидуальны для склада: одинаковые имена — разные id.
- * Инвентаризация — на конец месяца. В моке факт только за закрытые месяцы (август и сентябрь 2026);
- * октябрь ещё идёт — как у готовой продукции. На конец сентября: склад 1 — недостача говядины 30 кг,
+ * Инвентаризация — на конец месяца. В моке факт за закрытые месяцы (август, сентябрь и октябрь 2026);
+ * ноябрь ещё идёт — инвентаризации ноября нет. На конец сентября: склад 1 — недостача говядины 30 кг,
  * склад 2 — излишек 30 кг; сумма отклонений нулевая — объединённый остаток недостачу прячет.
+ * Октябрь закрыт приходами под выпуск: без них курица, масло и лотки ушли бы в минус.
+ * Счёт октября — рядом с журнальным концом (начало сентября + приход − факт расхода). На начало ноября этот счёт и переносится.
+ * План прихода ноября покрывает план выпуска и оставляет запас. Факт ноября — машина 2 ноября, не весь месяц.
  * Ножи и лезвия склада 1 и склада 2: план и факт расхода вводят в отчёте.
  * Оболочка в книге стоит на `DSM Meat`, в прототипе — в упаковке и вспомогательных, как на задаче.
  */
@@ -351,7 +354,16 @@ export const mockMaterials = {
     septemberPlanW1,
     septemberPlanW2,
     materialPlan('2026-10', 'warehouse-1', {
-      'material-beef': { minQuantity: q(80), maxQuantity: q(200) },
+      'material-beef': { receiptQuantity: q(50), minQuantity: q(80), maxQuantity: q(200) },
+      'material-chicken': { receiptQuantity: q(160) },
+      'material-nitrite': { receiptQuantity: q(2) },
+      'material-flour': { receiptQuantity: q(40) },
+      'material-yeast': { receiptQuantity: q(2) },
+      'material-ketchup': { receiptQuantity: q(10) },
+      'material-oil': { receiptQuantity: q(15) },
+      'material-salt': { receiptQuantity: q(5) },
+      'material-label': { receiptQuantity: q(500) },
+      'material-tray': { receiptQuantity: q(1_200) },
       'material-knives': {
         consumptionQuantity: q(18),
         factConsumptionQuantity: q(9.35),
@@ -367,6 +379,40 @@ export const mockMaterials = {
     }),
     materialPlan('2026-10', 'warehouse-2', {
       'material-beef': { minQuantity: q(40), maxQuantity: q(150) },
+      'material-oil': { receiptQuantity: q(15) },
+      'material-salt': { receiptQuantity: q(4) },
+      'material-tray': { receiptQuantity: q(600) },
+      'material-knives': { minQuantity: q(2), maxQuantity: q(15) },
+    }),
+    materialPlan('2026-11', 'warehouse-1', {
+      'material-beef': { receiptQuantity: q(150), minQuantity: q(80), maxQuantity: q(200) },
+      'material-chicken': { receiptQuantity: q(220) },
+      'material-nitrite': { receiptQuantity: q(2) },
+      'material-flour': { receiptQuantity: q(40) },
+      'material-yeast': { receiptQuantity: q(1) },
+      'material-ketchup': { receiptQuantity: q(18) },
+      'material-oil': { receiptQuantity: q(25) },
+      'material-salt': { receiptQuantity: q(8) },
+      'material-label': { receiptQuantity: q(500) },
+      'material-tray': { receiptQuantity: q(1_200) },
+      'material-knives': {
+        consumptionQuantity: q(18),
+        factConsumptionQuantity: q(1.8),
+        minQuantity: q(20),
+        maxQuantity: q(40),
+      },
+      'material-blades': {
+        consumptionQuantity: q(20),
+        factConsumptionQuantity: q(2),
+        minQuantity: q(15),
+        maxQuantity: q(40),
+      },
+    }),
+    materialPlan('2026-11', 'warehouse-2', {
+      'material-beef': { minQuantity: q(40), maxQuantity: q(150) },
+      'material-oil': { receiptQuantity: q(15) },
+      'material-salt': { receiptQuantity: q(4) },
+      'material-tray': { receiptQuantity: q(800) },
       'material-knives': { minQuantity: q(2), maxQuantity: q(15) },
     }),
   ],
@@ -401,6 +447,31 @@ export const mockMaterials = {
       'material-ketchup': q(4),
       'material-salt': q(1),
       'material-label': q(300),
+      'material-knives': q(4),
+    }),
+    materialOpening('2026-10', 'warehouse-1', {
+      'material-beef': q(98.5),
+      'material-chicken': q(26),
+      'material-nitrite': q(3.3),
+      'material-flour': q(41),
+      'material-yeast': q(6.7),
+      'material-ketchup': q(7.2),
+      'material-oil': q(9.2),
+      'material-salt': q(5.1),
+      'material-label': q(1_160),
+      'material-tray': q(590),
+      'material-knives': q(14.5),
+      'material-blades': q(10),
+    }),
+    materialOpening('2026-10', 'warehouse-2', {
+      'material-beef': q(105),
+      'material-flour': q(5),
+      'material-yeast': q(3),
+      'material-ketchup': q(4),
+      'material-oil': q(6.8),
+      'material-salt': q(3.2),
+      'material-label': q(300),
+      'material-tray': q(200),
       'material-knives': q(4),
     }),
   ],
@@ -447,6 +518,41 @@ export const mockMaterials = {
     ]),
     receipt('material-receipt:2026-09-18:w2', 'warehouse-2', 'МЛ Принт Реклама', '2026-09-18', [
       { baseId: 'material-label', quantity: q(500) },
+    ]),
+    receipt('material-receipt:2026-10-06:w1', 'warehouse-1', 'Велес', '2026-10-06', [
+      { baseId: 'material-beef', quantity: q(50) },
+      { baseId: 'material-chicken', quantity: q(160) },
+      { baseId: 'material-nitrite', quantity: q(2) },
+    ]),
+    receipt('material-receipt:2026-10-07:w1', 'warehouse-1', 'Волга Милл', '2026-10-07', [
+      { baseId: 'material-flour', quantity: q(40) },
+      { baseId: 'material-yeast', quantity: q(2) },
+    ]),
+    receipt('material-receipt:2026-10-14:w1', 'warehouse-1', 'Хайнц', '2026-10-14', [
+      { baseId: 'material-ketchup', quantity: q(10) },
+      { baseId: 'material-oil', quantity: q(15) },
+      { baseId: 'material-salt', quantity: q(5) },
+    ]),
+    receipt('material-receipt:2026-10-16:w1', 'warehouse-1', 'МЛ Принт Реклама', '2026-10-16', [
+      { baseId: 'material-label', quantity: q(500) },
+      { baseId: 'material-tray', quantity: q(1_200) },
+    ]),
+    receipt('material-receipt:2026-10-06:w2', 'warehouse-2', 'Дзержинский', '2026-10-06', [
+      { baseId: 'material-oil', quantity: q(15) },
+    ]),
+    receipt('material-receipt:2026-10-14:w2', 'warehouse-2', 'Хайнц', '2026-10-14', [
+      { baseId: 'material-salt', quantity: q(4) },
+    ]),
+    receipt('material-receipt:2026-10-16:w2', 'warehouse-2', 'МЛ Принт Реклама', '2026-10-16', [
+      { baseId: 'material-tray', quantity: q(600) },
+    ]),
+    receipt('material-receipt:2026-11-02:w1', 'warehouse-1', 'Велес', '2026-11-02', [
+      { baseId: 'material-beef', quantity: q(30) },
+      { baseId: 'material-chicken', quantity: q(40) },
+    ]),
+    receipt('material-receipt:2026-11-02:w2', 'warehouse-2', 'Дзержинский', '2026-11-02', [
+      { baseId: 'material-oil', quantity: q(6) },
+      { baseId: 'material-tray', quantity: q(200) },
     ]),
   ],
 };
