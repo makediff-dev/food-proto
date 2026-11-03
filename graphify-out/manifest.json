@@ -120,9 +120,9 @@
     "semantic_hash": "724f33ff464c09fb3fcdf0af0a576d9d"
   },
   "src/domain/document.ts": {
-    "mtime": 1793031524.8542035,
-    "seen": 1793031707.1647987,
-    "ast_hash": "0b6146c2f3c7fcc026f4c8e4c1417f64",
+    "mtime": 1793129698.8450344,
+    "seen": 1793694423.5759275,
+    "ast_hash": "67244da17c8e79095bdca778f2b5d7bf",
     "semantic_hash": ""
   },
   "src/domain/money.ts": {
@@ -274,9 +274,9 @@
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1793129646.3397057,
-    "seen": 1793129694.477248,
-    "ast_hash": "d25cb8481768e40266d8c134dc58a47a",
+    "mtime": 1793694399.12091,
+    "seen": 1793694423.57694,
+    "ast_hash": "787bdcea1404379565b526d7f9809c79",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
@@ -831,8 +831,8 @@
     "semantic_hash": ""
   },
   "src/data/mock-materials.ts": {
-    "mtime": 1793089008.4513302,
-    "seen": 1793118577.9005435,
+    "mtime": 1793694159.8818686,
+    "seen": 1793694423.5759275,
     "ast_hash": "d734bf39ed8acd293907284fdab271d8",
     "semantic_hash": ""
   },
@@ -1089,15 +1089,15 @@
     "semantic_hash": ""
   },
   "src/domain/derivative-movement.ts": {
-    "mtime": 1793127293.859003,
-    "seen": 1793127326.7373443,
-    "ast_hash": "33a81086102f4b9d582b53cd2be9c145",
+    "mtime": 1793694340.8536768,
+    "seen": 1793694423.5759275,
+    "ast_hash": "34001a06e0f12bc3729f86d1ebda3ca5",
     "semantic_hash": ""
   },
   "src/features/derivative-movement/DerivativeMovementSummaryTable.tsx": {
-    "mtime": 1793127296.5678947,
-    "seen": 1793127326.7373443,
-    "ast_hash": "0b19b2dd4a73af42ff00bdab4c6f64db",
+    "mtime": 1793694375.7961648,
+    "seen": 1793694423.5759275,
+    "ast_hash": "6d3ba8d913a6a0d945d866978848cc3d",
     "semantic_hash": ""
   },
   "src/domain/recipe-consumption.ts": {
@@ -1149,9 +1149,9 @@
     "semantic_hash": ""
   },
   "docs/tables/derivative-movement-summary.md": {
-    "mtime": 1793127297.3198445,
-    "seen": 1793127326.7384608,
-    "ast_hash": "49446b4566e57ab9f4aac0289dcbfa37",
+    "mtime": 1793694387.2581296,
+    "seen": 1793694423.57694,
+    "ast_hash": "43fdcf30c02fba245947ec599a8fa087",
     "semantic_hash": ""
   },
   "src/app/derivative-movement/plan/page.tsx": {

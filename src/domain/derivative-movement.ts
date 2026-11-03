@@ -29,6 +29,30 @@ export type DerivativeMovementRow = {
   deleted: boolean;
   /** Остаток на начало: инвентаризация конца прошлого месяца, тысячные доли. */
   openingQuantity: number;
+  /**
+   * План прихода (выпуска) на месяц: рекомендуемый объём.
+   * Отдельного журнала выпуска производных нет.
+   */
+  planReceiptQuantity: number;
+  /** Плановая цена 1 единицы прихода — как плановая цена расхода. */
+  planReceiptPrice: MaterialMoney;
+  /** Плановая стоимость прихода: плановая цена × план прихода. */
+  planReceiptCost: MaterialMoney;
+  /**
+   * Факт прихода (выпуска) на месяц.
+   * Пока журнала нет — тот же рекомендуемый объём, что и в плане (как в расчётном остатке на конец).
+   */
+  factReceiptQuantity: number;
+  /** Фактическая цена 1 единицы прихода — как фактическая цена расхода. */
+  factReceiptPrice: MaterialMoney;
+  /** Фактическая стоимость прихода: фактическая цена × факт прихода. */
+  factReceiptCost: MaterialMoney;
+  /** Отклонение количества прихода: факт − план. */
+  receiptDeviationQuantity: number;
+  /** Отклонение цены прихода: факт − план. */
+  receiptDeviationPrice: MaterialMoney;
+  /** Отклонение стоимости прихода: факт − план. */
+  receiptDeviationCost: MaterialMoney;
   /** План расхода на выпуск месяца, тысячные доли единицы производной. */
   planConsumptionQuantity: number;
   /** Плановая цена 1 единицы производной (шт или кг) по плановым ценам сырья. */
@@ -48,11 +72,11 @@ export type DerivativeMovementRow = {
   /** Отклонение стоимости расхода: факт − план. */
   consumptionDeviationCost: MaterialMoney;
   /**
-   * План остатка на конец: начало + рекомендуемый объём − план расхода
-   * (целевой норматив (мин + макс) / 2, если рекомендуемый объём не упирается в ноль).
+   * План остатка на конец: начало + план прихода − план расхода
+   * (приход = рекомендуемый объём; целевой норматив (мин + макс) / 2, если объём не упирается в ноль).
    */
   bookClosingQuantity: number;
-  /** Расчётный факт конца: начало + рекомендуемый объём − факт расхода. */
+  /** Расчётный факт конца: начало + факт прихода − факт расхода. */
   currentClosingQuantity: number;
   /** Отклонение расчётного конца: расчётный факт − план. */
   currentClosingDeviationQuantity: number;
@@ -93,6 +117,12 @@ export type DerivativeMovementSection = {
   workshopId: DerivativeWorkshopId;
   name: string;
   rows: DerivativeMovementRow[];
+  /** Сумма плановой стоимости прихода по цеху. */
+  planReceiptCost: MaterialMoney;
+  /** Сумма фактической стоимости прихода по цеху. */
+  factReceiptCost: MaterialMoney;
+  /** Сумма отклонения стоимости прихода по цеху. */
+  receiptDeviationCost: MaterialMoney;
   /** Сумма плановой стоимости расхода по цеху. */
   planConsumptionCost: MaterialMoney;
   /** Сумма фактической стоимости расхода по цеху. */
@@ -551,8 +581,14 @@ function buildRow(
     norm.minQuantity,
     norm.maxQuantity,
   );
-  const bookClosingQuantity = openingQuantity + recommendedQuantity - planConsumptionQuantity;
-  const currentClosingQuantity = openingQuantity + recommendedQuantity - factConsumptionQuantity;
+  const planReceiptQuantity = recommendedQuantity;
+  const planReceiptPrice = planConsumptionPrice;
+  const planReceiptCost = costForQuantity(planReceiptPrice, planReceiptQuantity);
+  const factReceiptQuantity = recommendedQuantity;
+  const factReceiptPrice = factConsumptionPrice;
+  const factReceiptCost = costForQuantity(factReceiptPrice, factReceiptQuantity);
+  const bookClosingQuantity = openingQuantity + planReceiptQuantity - planConsumptionQuantity;
+  const currentClosingQuantity = openingQuantity + factReceiptQuantity - factConsumptionQuantity;
   const currentClosingDeviationQuantity = currentClosingQuantity - bookClosingQuantity;
   const currentClosingDeviationCost = costForQuantity(factConsumptionPrice, currentClosingDeviationQuantity);
   const closingDeviationQuantity = hasInventoryLine ? inventoryClosingQuantity - bookClosingQuantity : 0;
@@ -575,6 +611,15 @@ function buildRow(
     unit: item.unit,
     deleted: item.deletedAt !== null,
     openingQuantity,
+    planReceiptQuantity,
+    planReceiptPrice,
+    planReceiptCost,
+    factReceiptQuantity,
+    factReceiptPrice,
+    factReceiptCost,
+    receiptDeviationQuantity: factReceiptQuantity - planReceiptQuantity,
+    receiptDeviationPrice: subtractMoney(factReceiptPrice, planReceiptPrice),
+    receiptDeviationCost: subtractMoney(factReceiptCost, planReceiptCost),
     planConsumptionQuantity,
     planConsumptionPrice,
     planConsumptionCost,
@@ -610,6 +655,9 @@ export function derivativeMovementMonth(document: PrototypeDocument, month: stri
         workshopId: section.workshopId,
         name: section.name,
         rows,
+        planReceiptCost: rows.reduce((sum, row) => sumMoney(sum, row.planReceiptCost), ZERO_MONEY),
+        factReceiptCost: rows.reduce((sum, row) => sumMoney(sum, row.factReceiptCost), ZERO_MONEY),
+        receiptDeviationCost: rows.reduce((sum, row) => sumMoney(sum, row.receiptDeviationCost), ZERO_MONEY),
         planConsumptionCost: rows.reduce((sum, row) => sumMoney(sum, row.planConsumptionCost), ZERO_MONEY),
         factConsumptionCost: rows.reduce((sum, row) => sumMoney(sum, row.factConsumptionCost), ZERO_MONEY),
         consumptionDeviationCost: rows.reduce((sum, row) => sumMoney(sum, row.consumptionDeviationCost), ZERO_MONEY),

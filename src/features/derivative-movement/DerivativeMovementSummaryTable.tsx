@@ -8,6 +8,7 @@ import { QuantityRead } from '@/features/materials/QuantityCell';
 import {
   MATERIALS_CLOSING_SUB_BANNERS,
   MATERIALS_CONSUMPTION_SUB_BANNERS,
+  MATERIALS_RECEIPT_SUB_BANNERS,
   ReportSubBannerColumnHeaders,
 } from '@/features/movement/FinishedGoodsNormativeColumnHeading';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
@@ -33,6 +34,15 @@ import {
 
 type ColumnKey =
   | 'opening'
+  | 'planReceipt'
+  | 'planReceiptPrice'
+  | 'planReceiptCost'
+  | 'factReceipt'
+  | 'factReceiptPrice'
+  | 'factReceiptCost'
+  | 'receiptDeviation'
+  | 'receiptDeviationPrice'
+  | 'receiptDeviationCost'
   | 'planConsumption'
   | 'planConsumptionPrice'
   | 'planConsumptionCost'
@@ -58,6 +68,36 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
   {
     label: 'Остаток на начало',
     columns: [{ key: 'opening', label: 'Факт', hint: 'по данным инвентаризации прошлого месяца' }],
+  },
+  {
+    label: 'Приход',
+    columns: [
+      {
+        key: 'planReceipt',
+        label: 'Кол-во',
+        hint: 'Рекомендуемый объём выпуска из ввода плана',
+      },
+      {
+        key: 'planReceiptPrice',
+        label: 'Цена',
+        hint: 'Себестоимость единицы по плановым ценам сырья',
+      },
+      { key: 'planReceiptCost', label: 'Стоимость' },
+      {
+        key: 'factReceipt',
+        label: 'Кол-во',
+        hint: 'Пока журнала выпуска нет — тот же рекомендуемый объём',
+      },
+      {
+        key: 'factReceiptPrice',
+        label: 'Цена',
+        hint: 'Себестоимость единицы по фактическим ценам расхода сырья',
+      },
+      { key: 'factReceiptCost', label: 'Стоимость' },
+      { key: 'receiptDeviation', label: 'Кол-во' },
+      { key: 'receiptDeviationPrice', label: 'Цена' },
+      { key: 'receiptDeviationCost', label: 'Стоимость' },
+    ],
   },
   {
     label: 'Расход в производство',
@@ -101,7 +141,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
       {
         key: 'bookClosing',
         label: 'План',
-        hint: 'остаток на начало + рекомендуемый объём − план расхода',
+        hint: 'остаток на начало + план прихода − план расхода',
       },
       { key: 'currentClosing', label: 'Факт' },
       { key: 'currentClosingDeviation', label: 'Откл.' },
@@ -121,13 +161,26 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
   },
 ];
 
-const DERIVATIVE_SUMMARY_SUB_BANNERS = [...MATERIALS_CONSUMPTION_SUB_BANNERS, ...MATERIALS_CLOSING_SUB_BANNERS];
+const DERIVATIVE_SUMMARY_SUB_BANNERS = [
+  ...MATERIALS_RECEIPT_SUB_BANNERS,
+  ...MATERIALS_CONSUMPTION_SUB_BANNERS,
+  ...MATERIALS_CLOSING_SUB_BANNERS,
+];
 
 const COLUMNS = COLUMN_GROUPS.flatMap((group) => group.columns);
 const GROUP_END_KEYS = new Set(COLUMN_GROUPS.slice(0, -1).map((group) => group.columns.at(-1)?.key));
 
 const COLUMN_KIND: Record<ColumnKey, CellKind> = {
   opening: 'repeated',
+  planReceipt: 'computed',
+  planReceiptPrice: 'computed',
+  planReceiptCost: 'computed',
+  factReceipt: 'computed',
+  factReceiptPrice: 'computed',
+  factReceiptCost: 'computed',
+  receiptDeviation: 'computed',
+  receiptDeviationPrice: 'computed',
+  receiptDeviationCost: 'computed',
   planConsumption: 'computed',
   planConsumptionPrice: 'computed',
   planConsumptionCost: 'computed',
@@ -158,7 +211,7 @@ export function DerivativeMovementSummaryTable({ sections }: { sections: readonl
   return (
     <div className={tableFrameClassName}>
       <table className={tableClassName}>
-        <caption className="sr-only">Движение производных: остатки, расход и норматив</caption>
+        <caption className="sr-only">Движение производных: остатки, приход, расход и норматив</caption>
         <thead className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
@@ -245,6 +298,35 @@ function WorkshopBlock({ section }: { section: DerivativeMovementSection }) {
 }
 
 function WorkshopCell({ column, section }: { column: ColumnKey; section: DerivativeMovementSection }) {
+  if (column === 'planReceiptCost') {
+    return (
+      <VatMoneyCell
+        label="Плановая стоимость прихода"
+        withVat={section.planReceiptCost.withVat}
+        exVat={section.planReceiptCost.exVat}
+      />
+    );
+  }
+  if (column === 'factReceiptCost') {
+    return (
+      <VatMoneyCell
+        label="Фактическая стоимость прихода"
+        withVat={section.factReceiptCost.withVat}
+        exVat={section.factReceiptCost.exVat}
+      />
+    );
+  }
+  if (column === 'receiptDeviationCost') {
+    return (
+      <VatMoneyCell
+        label="Отклонение стоимости прихода"
+        withVat={section.receiptDeviationCost.withVat}
+        exVat={section.receiptDeviationCost.exVat}
+        signed
+        sense="cost"
+      />
+    );
+  }
   if (column === 'planConsumptionCost') {
     return (
       <VatMoneyCell
@@ -333,6 +415,64 @@ function RowCell({ column, row }: { column: ColumnKey; row: DerivativeMovementRo
   switch (column) {
     case 'opening':
       return <QuantityRead value={row.openingQuantity} unit={unit} signed />;
+    case 'planReceipt':
+      return <QuantityRead value={row.planReceiptQuantity} unit={unit} />;
+    case 'planReceiptPrice':
+      return (
+        <VatMoneyCell
+          label="Плановая цена прихода"
+          withVat={row.planReceiptPrice.withVat}
+          exVat={row.planReceiptPrice.exVat}
+        />
+      );
+    case 'planReceiptCost':
+      return (
+        <VatMoneyCell
+          label="Плановая стоимость прихода"
+          withVat={row.planReceiptCost.withVat}
+          exVat={row.planReceiptCost.exVat}
+        />
+      );
+    case 'factReceipt':
+      return <QuantityRead value={row.factReceiptQuantity} unit={unit} />;
+    case 'factReceiptPrice':
+      return (
+        <VatMoneyCell
+          label="Фактическая цена прихода"
+          withVat={row.factReceiptPrice.withVat}
+          exVat={row.factReceiptPrice.exVat}
+        />
+      );
+    case 'factReceiptCost':
+      return (
+        <VatMoneyCell
+          label="Фактическая стоимость прихода"
+          withVat={row.factReceiptCost.withVat}
+          exVat={row.factReceiptCost.exVat}
+        />
+      );
+    case 'receiptDeviation':
+      return <QuantityRead value={row.receiptDeviationQuantity} unit={unit} signed />;
+    case 'receiptDeviationPrice':
+      return (
+        <VatMoneyCell
+          label="Отклонение цены прихода"
+          withVat={row.receiptDeviationPrice.withVat}
+          exVat={row.receiptDeviationPrice.exVat}
+          signed
+          sense="cost"
+        />
+      );
+    case 'receiptDeviationCost':
+      return (
+        <VatMoneyCell
+          label="Отклонение стоимости прихода"
+          withVat={row.receiptDeviationCost.withVat}
+          exVat={row.receiptDeviationCost.exVat}
+          signed
+          sense="cost"
+        />
+      );
     case 'planConsumption':
       return <QuantityRead value={row.planConsumptionQuantity} unit={unit} />;
     case 'planConsumptionPrice':
