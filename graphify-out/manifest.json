@@ -537,9 +537,9 @@
     "semantic_hash": "94d2fc52d7ddaaab1b82c8f35f6f42cc"
   },
   "src/features/shell/Icons.tsx": {
-    "mtime": 1793697320.7533028,
-    "seen": 1793697481.833535,
-    "ast_hash": "457d9c9bb683fa946ff9accf57d9cee6",
+    "mtime": 1793711589.5658293,
+    "seen": 1793711621.3955011,
+    "ast_hash": "dd8006b16fbddc1a973dae2c664733ed",
     "semantic_hash": ""
   },
   "src/features/shell/MonthStep.tsx": {
@@ -999,9 +999,9 @@
     "semantic_hash": ""
   },
   "src/features/recipes/DerivativeFormTable.tsx": {
-    "mtime": 1793697379.1090198,
-    "seen": 1793697481.833535,
-    "ast_hash": "a142c7d68d703047c905cbf30e378f59",
+    "mtime": 1793711714.5330458,
+    "seen": 1793711729.59375,
+    "ast_hash": "2a90663ee50eea079056b42a782916ae",
     "semantic_hash": ""
   },
   "src/features/recipes/DerivativesScreen.tsx": {

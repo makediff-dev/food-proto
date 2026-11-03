@@ -107,6 +107,15 @@ export function IconMenu() {
   );
 }
 
+export function IconSearch() {
+  return (
+    <Glyph>
+      <circle cx="8.5" cy="8.5" r="4.5" />
+      <path d="M12 12l4 4" />
+    </Glyph>
+  );
+}
+
 // Не вызывается: каталог сырья, производных и отдельных экранов плана/факта убран.
 // export function IconMaterial() {
 //   return (

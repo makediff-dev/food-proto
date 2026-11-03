@@ -3,8 +3,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Derivative } from '@/domain/document';
 import { MATERIAL_GROUPS, type Material } from '@/domain/document';
-import { fieldClassName } from '@/features/sales/fields';
-import { IconChevronDown, IconChevronRight, IconTrash } from '@/features/shell/Icons';
+import { IconChevronDown, IconChevronRight, IconSearch, IconTrash } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
   blockHeadingClassName,
@@ -254,6 +253,7 @@ function RecipeComponentSearch({
   onAdd: (key: string) => void;
 }) {
   const listboxId = useId();
+  const searchFieldId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -310,30 +310,41 @@ function RecipeComponentSearch({
   }
 
   return (
-    <div ref={rootRef} className="relative z-50 w-full max-w-xl">
-      <input
-        type="search"
-        value={query}
-        autoComplete="off"
-        aria-label="Найти сырьё или производную"
-        aria-expanded={open}
-        aria-controls={listboxId}
-        aria-haspopup="listbox"
-        role="combobox"
-        placeholder="Найти сырьё или производную"
-        onChange={(event) => {
-          setQuery(event.target.value);
-          setOpen(true);
-        }}
-        onFocus={() => setOpen(true)}
-        className={fieldClassName}
-      />
+    <div ref={rootRef} className="relative z-50 w-full max-w-xl border border-ink bg-sheet p-3">
+      <label htmlFor={searchFieldId} className="mb-2 block text-sm text-ink">
+        Добавить позицию
+      </label>
+      <div className="relative">
+        <span
+          className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-ink"
+          aria-hidden="true"
+        >
+          <IconSearch />
+        </span>
+        <input
+          id={searchFieldId}
+          type="search"
+          value={query}
+          autoComplete="off"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          aria-haspopup="listbox"
+          role="combobox"
+          placeholder="Найти сырьё или производную"
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          className="h-12 w-full border border-ink bg-paper py-2 pl-10 pr-3 text-base text-ink outline-none placeholder:text-muted focus-visible:bg-sheet focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        />
+      </div>
       {open ? (
         <div
           id={listboxId}
           role="listbox"
           aria-label="Доступные позиции"
-          className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto border border-line bg-sheet shadow-sm"
+          className="absolute inset-x-3 top-full z-50 mt-1 max-h-[28rem] overflow-y-auto border border-ink bg-sheet shadow-sm"
         >
           {!hasAnyAvailable ? (
             <p className="px-3 py-2 text-sm text-muted">Все позиции уже выбраны.</p>
@@ -342,7 +353,9 @@ function RecipeComponentSearch({
           ) : (
             filteredGroups.map((group) => (
               <div key={group.groupId}>
-                <p className="border-y border-line px-3 py-1.5 text-xs text-muted">{group.groupName}</p>
+                <p className="border-y border-line bg-paper px-3 py-2 text-sm font-semibold text-ink">
+                  {group.groupName}
+                </p>
                 {group.rows.map((row) => (
                   <button
                     key={row.key}
