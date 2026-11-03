@@ -12,15 +12,10 @@ import {
 } from '@/domain/document';
 import { isQuantityThousandths } from '@/domain/quantity';
 import { validateRecipeYield } from '@/domain/recipe-yield';
-import { MAX_PRICE_KOPECKS } from '@/domain/units';
 
-export type FieldRejection = NameRejection | 'cost' | 'missing' | 'category' | 'warehouse';
+export type FieldRejection = NameRejection | 'missing' | 'category' | 'warehouse';
 
 export type ProductRecipeRejection = 'missing' | 'quantity' | 'component' | 'warehouse' | 'output' | 'yield' | 'pieces';
-
-function isUnitCost(value: number): boolean {
-  return Number.isInteger(value) && value >= 0 && value <= MAX_PRICE_KOPECKS;
-}
 
 function isWarehouseId(value: string): value is MaterialWarehouseId {
   return MATERIAL_WAREHOUSES.some((item) => item.id === value);
@@ -124,22 +119,6 @@ export function productVatRejection(document: PrototypeDocument, id: string): Fi
   return product ? null : 'missing';
 }
 
-export function productUnitCostRejection(
-  document: PrototypeDocument,
-  id: string,
-  unitCostWithVat: number,
-): FieldRejection | null {
-  const product = document.products.find((item) => item.id === id);
-  if (!product) {
-    return 'missing';
-  }
-  if (!isUnitCost(unitCostWithVat)) {
-    return 'cost';
-  }
-
-  return null;
-}
-
 function lineKey(kind: ProductRecipeLine['componentKind'], id: string): string {
   return `${kind}:${id}`;
 }
@@ -189,9 +168,8 @@ export function addProduct(document: PrototypeDocument, product: Product): Proto
   }
 
   const vatPercent = product.vatPercent ?? 20;
-  const unitCostWithVat = product.unitCostWithVat ?? 0;
   const category = document.categories.find((item) => item.id === product.categoryId && item.deletedAt === null);
-  if (!category || !isUnitCost(unitCostWithVat)) {
+  if (!category) {
     return document;
   }
   if (!isWarehouseId(product.warehouseId)) {
@@ -209,7 +187,6 @@ export function addProduct(document: PrototypeDocument, product: Product): Proto
     categoryId: product.categoryId,
     warehouseId: product.warehouseId,
     vatPercent,
-    unitCostWithVat,
     outputKilogramThousandths: product.outputKilogramThousandths ?? 0,
     outputPieceThousandths,
     lines: (product.lines ?? []).map((line) => ({ ...line })),
@@ -365,26 +342,6 @@ export function setProductVat(document: PrototypeDocument, id: string, vatPercen
   return {
     ...document,
     products: document.products.map((item) => (item.id === id ? { ...item, vatPercent } : item)),
-  };
-}
-
-export function setProductUnitCost(
-  document: PrototypeDocument,
-  id: string,
-  unitCostWithVat: number,
-): PrototypeDocument {
-  if (productUnitCostRejection(document, id, unitCostWithVat)) {
-    return document;
-  }
-
-  const current = document.products.find((item) => item.id === id);
-  if (!current || current.unitCostWithVat === unitCostWithVat) {
-    return document;
-  }
-
-  return {
-    ...document,
-    products: document.products.map((item) => (item.id === id ? { ...item, unitCostWithVat } : item)),
   };
 }
 

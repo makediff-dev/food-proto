@@ -207,16 +207,11 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
                   plan: planEditable,
                   vat: catalogEditable,
                   catalog: catalogEditable,
-                  cost: catalogEditable,
                   onPlanLine: (lineId, priceWithVat, volumePieces) => {
                     return sales.updateMonthLine(month, lineId, priceWithVat, volumePieces);
                   },
                   onProductVat: (productId, vatPercent) => {
                     const rejection = sales.updateProductVat(productId, vatPercent);
-                    return rejection ? FIELD_ERROR[rejection] : null;
-                  },
-                  onProductCost: (productId, unitCostWithVat) => {
-                    const rejection = sales.updateProductCost(productId, unitCostWithVat);
                     return rejection ? FIELD_ERROR[rejection] : null;
                   },
                   onRenameProduct: (productId, name) => {

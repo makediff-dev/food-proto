@@ -15,7 +15,7 @@ import {
 
 /**
  * Мок: два салата, одно горячее, гамбургер и сэндвич без рецепта.
- * Себестоимость 1 шт с НДС округлена до целых десятков рублей.
+ * Себестоимость 1 шт продаж считается из рецепта, в документ не пишется.
  * План продаж и план выпуска сентября и октября 2026 одинаковые: 500, 600, 800 и 1 000 шт (сэндвич — 0).
  * Факт продаж сентября чуть выше плана: 550, 650, 900 и 1 100.
  * Выпуск сентября чуть выше продаж у салатов и гуляша (650, 800, 1 050) — расчётный перенос на октябрь 140, 200 и 220 шт.
@@ -37,8 +37,6 @@ const caesar: Product = {
   categoryId: 'category-salads',
   warehouseId: 'warehouse-1',
   vatPercent: 20,
-  /** 40 ₽. В книге строки салата нет. */
-  unitCostWithVat: 4_000,
   /** Партия ×1000: 80 + 15 + лоток 0 кг → 95 кг / 1000 шт. */
   outputKilogramThousandths: q(95),
   outputPieceThousandths: q(1000),
@@ -71,8 +69,6 @@ const olivier: Product = {
   categoryId: 'category-salads',
   warehouseId: 'warehouse-2',
   vatPercent: 20,
-  /** 30 ₽. В книге строки салата нет. */
-  unitCostWithVat: 3_000,
   /** Партия ×1000: 20 + 5 + лоток 0 кг → 25 кг / 1000 шт. */
   outputKilogramThousandths: q(25),
   outputPieceThousandths: q(1000),
@@ -105,8 +101,6 @@ const goulash: Product = {
   categoryId: 'category-hot',
   warehouseId: 'warehouse-1',
   vatPercent: 20,
-  /** 50 ₽. `Svod!D31` в файле 0. */
-  unitCostWithVat: 5_000,
   /** Партия ×100: 15 бульона + 12 курицы + лоток 0 кг → 27 кг / 100 шт. */
   outputKilogramThousandths: q(27),
   outputPieceThousandths: q(100),
@@ -139,8 +133,6 @@ const burger: Product = {
   categoryId: 'category-rolls',
   warehouseId: 'warehouse-1',
   vatPercent: 20,
-  /** 40 ₽. */
-  unitCostWithVat: 4_000,
   /** Партия ×1000: котлета 97 + булочка 65 + кетчуп 20 + этикетка 0 → 182 кг / 1000 шт. */
   outputKilogramThousandths: q(182),
   outputPieceThousandths: q(1000),
@@ -180,8 +172,6 @@ const sandwich: Product = {
   categoryId: 'category-rolls',
   warehouseId: 'warehouse-2',
   vatPercent: 20,
-  /** 35 ₽. */
-  unitCostWithVat: 3_500,
   outputKilogramThousandths: 0,
   outputPieceThousandths: q(1),
   lines: [],

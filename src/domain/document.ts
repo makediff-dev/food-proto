@@ -42,7 +42,7 @@ export interface ProductRecipeLine {
 }
 
 /**
- * Конечный товар. Себестоимость единицы с НДС вводится во «Вводе плана» продаж.
+ * Конечный товар. Себестоимость 1 шт в документ не пишется: её считает рецепт.
  * Склад производства задают при создании и не меняют. Рецепт правят в журнале готовой продукции.
  */
 export interface Product extends DeletableRecord {
@@ -55,8 +55,6 @@ export interface Product extends DeletableRecord {
   warehouseId: MaterialWarehouseId;
   /** НДС продажи, целые проценты. `Svod!N`. */
   vatPercent: number;
-  /** Ручная себестоимость 1 шт с НДС, копейки. */
-  unitCostWithVat: number;
   /**
    * На сколько кг рассчитан рецепт, тысячные доли кг.
    * Должен совпадать с суммой кг компонентов с допуском 1 г.

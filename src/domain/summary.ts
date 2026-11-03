@@ -1,4 +1,4 @@
-import { type UnitCost, unitCost } from '@/domain/cost';
+import { type UnitCost } from '@/domain/cost';
 import {
   isMonthKey,
   PROFIT_TAX_PERCENT,
@@ -7,6 +7,7 @@ import {
   type PrototypeDocument,
   type SalesPlan,
 } from '@/domain/document';
+import { productCostPerPiece } from '@/domain/finished-product-cost';
 import { averageAmount, percentHundredths, ratioRound, vatPercentHundredths } from '@/domain/money';
 import { periodGridCategories, periodGridProducts } from '@/domain/period-grid';
 import { type SalesFactRow, salesFactMonth } from '@/domain/sales-fact';
@@ -265,6 +266,7 @@ function planSide(
 function factFromRows(
   document: PrototypeDocument,
   product: Product,
+  month: string,
   rows: readonly SalesFactRow[],
   days: number,
 ): SummarySide {
@@ -276,7 +278,7 @@ function factFromRows(
   let contributionSum = 0;
   let costComplete = true;
   let revenueComplete = true;
-  const cost = unitCost(document, product.id);
+  const cost = productCostPerPiece(document, product.id, month, 'fact');
 
   for (const row of rows) {
     volume += row.salesPieces;
@@ -334,8 +336,8 @@ function factFromRows(
   };
 }
 
-function emptyFactSide(document: PrototypeDocument, product: Product, days: number): SummarySide {
-  return factFromRows(document, product, [], days);
+function emptyFactSide(document: PrototypeDocument, product: Product, month: string, days: number): SummarySide {
+  return factFromRows(document, product, month, [], days);
 }
 
 function totalsFromSides(sides: readonly SummarySide[], days: number): SummarySide {
@@ -580,7 +582,9 @@ export function monthSummary(
     const planned = plan ? planSide(document, plan, product) : null;
     const dayRows = factDays.flatMap((day) => day.rows.filter((row) => row.productId === product.id));
     const factSide =
-      dayRows.length > 0 ? factFromRows(document, product, dayRows, days) : emptyFactSide(document, product, days);
+      dayRows.length > 0
+        ? factFromRows(document, product, month, dayRows, days)
+        : emptyFactSide(document, product, month, days);
     const planMetrics = planned?.side ?? null;
 
     rowByProduct.set(product.id, {

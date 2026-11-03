@@ -1,5 +1,6 @@
-import { type UnitCost, unitCost } from '@/domain/cost';
+import { type UnitCost } from '@/domain/cost';
 import { isOccurredOn, type Product, type PrototypeDocument } from '@/domain/document';
+import { productCostPerPiece } from '@/domain/finished-product-cost';
 import { amountExVat, averageAmount, percentHundredths, vatPercentHundredths } from '@/domain/money';
 import { dayGridProducts, periodGridCategories, periodGridProducts } from '@/domain/period-grid';
 import { workingSales } from '@/domain/sales';
@@ -150,9 +151,9 @@ export function salesFactGridProducts(document: PrototypeDocument, month: string
   return periodGridProducts(document, month);
 }
 
-function rowMetrics(document: PrototypeDocument, product: Product, sold: SaleDayProduct): SalesFactRow {
+function rowMetrics(document: PrototypeDocument, product: Product, month: string, sold: SaleDayProduct): SalesFactRow {
   const vat = product.vatPercent;
-  const cost = unitCost(document, product.id);
+  const cost = productCostPerPiece(document, product.id, month, 'fact');
   const salesPieces = sold.pieces;
   const revenueWith = sold.revenueWithVat;
   const revenueEx = sold.revenueExVat;
@@ -280,7 +281,7 @@ export function salesFactMonth(document: PrototypeDocument, month: string): Sale
     const dayProducts = dayGridProducts(products, (product) => (soldByProduct.get(product.id)?.pieces ?? 0) > 0);
     const rows = dayProducts.map((product) => {
       const sold = soldByProduct.get(product.id);
-      return rowMetrics(document, product, sold ?? { pieces: 0, revenueWithVat: null, revenueExVat: null });
+      return rowMetrics(document, product, month, sold ?? { pieces: 0, revenueWithVat: null, revenueExVat: null });
     });
     const groups = salesFactGroups(document, dayProducts, rows);
     const groupedRows = groups.flatMap((group) => group.rows);

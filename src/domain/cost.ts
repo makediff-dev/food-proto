@@ -1,4 +1,3 @@
-import type { PrototypeDocument } from '@/domain/document';
 import { amountExVat, amountWithVat } from '@/domain/money';
 
 export interface UnitCost {
@@ -17,30 +16,9 @@ export function costExVat(withVat: number, vatPercent: number): number | null {
 }
 
 /**
- * Себестоимость с НДС, копейки.
- * Обратно к `costExVat`: ввод без НДС на сводке пересчитывает хранимую сумму.
+ * Сумма с НДС, копейки.
+ * Обратно к `costExVat`.
  */
 export function costWithVat(exVat: number, vatPercent: number): number | null {
   return amountWithVat(exVat, vatPercent);
-}
-
-/**
- * Себестоимость 1 шт. С НДС хранится у товара, без НДС считается.
- * Нулевая себестоимость допустима. Нет товара — `null`.
- */
-export function unitCost(document: PrototypeDocument, productId: string): UnitCost | null {
-  const product = document.products.find((item) => item.id === productId);
-  if (!product) {
-    return null;
-  }
-
-  const exVat = costExVat(product.unitCostWithVat, product.vatPercent);
-  if (exVat === null) {
-    return null;
-  }
-
-  return {
-    withVat: product.unitCostWithVat,
-    exVat,
-  };
 }

@@ -14,7 +14,6 @@ export const FIELD_ERROR: Record<FieldRejection, string> = {
   empty: 'Укажите название.',
   'too-long': 'Слишком длинное название.',
   duplicate: 'Такое название уже есть.',
-  cost: 'Укажите себестоимость.',
   missing: 'Запись не найдена.',
   category: 'Выберите категорию.',
   warehouse: 'Выберите склад.',

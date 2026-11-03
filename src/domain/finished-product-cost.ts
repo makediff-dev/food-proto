@@ -3,7 +3,7 @@ import { derivativeByIdOrNull } from '@/domain/derivatives';
 import type { MaterialWarehouseId, Product, PrototypeDocument } from '@/domain/document';
 import { type MaterialMoney, materialById, materialConsumptionPrice, materialPlanPrice } from '@/domain/materials';
 import { ratioRound } from '@/domain/money';
-import { activeProducts, productByIdOrNull, productRecipeSections } from '@/domain/products';
+import { productByIdOrNull, productRecipeSections } from '@/domain/products';
 import { QUANTITY_SCALE } from '@/domain/quantity';
 
 export type FinishedProductCostMode = 'plan' | 'fact';
@@ -55,7 +55,7 @@ export function productBatchCost(
   month: string,
   mode: FinishedProductCostMode,
 ): MaterialMoney {
-  const product = activeProducts(document).find((item) => item.id === productId);
+  const product = productByIdOrNull(document, productId);
   if (!product) {
     return ZERO_MONEY;
   }
@@ -83,7 +83,7 @@ export function productCostPerPiece(
   month: string,
   mode: FinishedProductCostMode,
 ): MaterialMoney {
-  const product = activeProducts(document).find((item) => item.id === productId);
+  const product = productByIdOrNull(document, productId);
   if (!product || product.outputPieceThousandths <= 0) {
     return ZERO_MONEY;
   }

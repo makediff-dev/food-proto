@@ -16,12 +16,10 @@ import {
   type FieldRejection,
   productCategoryRejection,
   productNameRejection,
-  productUnitCostRejection,
   productVatRejection,
   productWarehouseRejection,
   renameProduct,
   restoreProduct,
-  setProductUnitCost,
   setProductVat,
 } from '@/domain/products';
 import { QUANTITY_SCALE } from '@/domain/quantity';
@@ -126,7 +124,6 @@ export function useSales() {
           categoryId,
           warehouseId,
           vatPercent: 20,
-          unitCostWithVat: 0,
           outputKilogramThousandths: 0,
           outputPieceThousandths: QUANTITY_SCALE,
           lines: [],
@@ -149,14 +146,6 @@ export function useSales() {
         return rejection;
       }
       updateDocument((current) => setProductVat(current, id, vatPercent));
-      return null;
-    },
-    updateProductCost(id: string, unitCostWithVat: number): FieldRejection | null {
-      const rejection = productUnitCostRejection(document, id, unitCostWithVat);
-      if (rejection) {
-        return rejection;
-      }
-      updateDocument((current) => setProductUnitCost(current, id, unitCostWithVat));
       return null;
     },
     deleteProduct(id: string) {

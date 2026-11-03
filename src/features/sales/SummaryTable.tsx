@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { costWithVat, type UnitCost } from '@/domain/cost';
+import type { UnitCost } from '@/domain/cost';
 import { amountExVat } from '@/domain/money';
 import { priceWithVatFromExVat, type SalesPlanRejection } from '@/domain/sales-plan';
 import type { SummaryGroup, SummaryLens, SummaryRow, SummarySide, SummaryVariance } from '@/domain/summary';
@@ -77,11 +77,12 @@ const VARIANCE_COLUMNS: { key: VarianceKey; label: string }[] = [
 const LAST_PLAN_KEY = SIDE_COLUMNS.at(-1)?.key;
 const LAST_FACT_KEY = SIDE_COLUMNS.at(-1)?.key;
 
-const PLAN_ASSIGNED = new Set<SideKey>(['unitCost', 'price', 'volume', 'vat']);
+const PLAN_ASSIGNED = new Set<SideKey>(['price', 'volume', 'vat']);
+const PLAN_REPEATED = new Set<SideKey>(['unitCost']);
 const FACT_REPEATED = new Set<SideKey>(['unitCost', 'vat']);
 
 function planColumnKind(column: SideKey, part: 'full' | 'plan'): CellKind {
-  if (part === 'full') {
+  if (part === 'full' || PLAN_REPEATED.has(column)) {
     return 'repeated';
   }
   return PLAN_ASSIGNED.has(column) ? 'assigned' : 'computed';
@@ -109,10 +110,8 @@ export type SummaryTableEdit = {
   plan: boolean;
   vat: boolean;
   catalog: boolean;
-  cost?: boolean;
   onPlanLine: (lineId: string, priceWithVat: number, volumePieces: number) => SalesPlanRejection | null;
   onProductVat: (productId: string, vatPercent: number) => string | null;
-  onProductCost?: (productId: string, unitCostWithVat: number) => string | null;
   onRenameProduct: (productId: string, name: string) => string | null;
   onDeleteProduct: (productId: string, name: string) => void;
   onRenameCategory: (categoryId: string, name: string) => string | null;
@@ -423,8 +422,7 @@ function ProductRow({
       {SIDE_COLUMNS.map((column) => {
         const canEdit =
           (planEditable && row.planLineId !== null && (column.key === 'price' || column.key === 'volume')) ||
-          (vatEditable && column.key === 'vat') ||
-          (edit?.cost === true && column.key === 'unitCost');
+          (vatEditable && column.key === 'vat');
         return (
           <td
             key={`plan:${column.key}`}
@@ -507,32 +505,7 @@ function PlanCell({ column, row, edit }: { column: SideKey; row: SummaryRow; edi
 
   if (column === 'unitCost') {
     const side = row.plan ?? row.fact;
-    const costEditable = edit?.cost === true && edit.onProductCost;
-    if (!costEditable || !side.unitCost) {
-      return <SideCell column={column} side={side} kind="row" />;
-    }
-
-    const vatPercent = side.vatPercent;
-    return (
-      <VatMoneyCell
-        label={`Себестоимость, ${row.name}`}
-        withVat={side.unitCost.withVat}
-        exVat={side.unitCost.exVat}
-        invalidMessage={FIELD_ERROR.cost}
-        onChangeWithVat={(next) => edit.onProductCost?.(row.productId, next) ?? null}
-        onChangeExVat={
-          vatPercent === null
-            ? undefined
-            : (next) => {
-                const withVat = costWithVat(next, vatPercent);
-                if (withVat === null) {
-                  return FIELD_ERROR.cost;
-                }
-                return edit.onProductCost?.(row.productId, withVat) ?? null;
-              }
-        }
-      />
-    );
+    return <SideCell column={column} side={side} kind="row" />;
   }
 
   if (!row.plan) {
@@ -614,7 +587,7 @@ function SideCell({ column, side, kind }: { column: SideKey; side: SummarySide; 
 
         return <VatMoneyCell withVat={side.averageCostWithVat} exVat={side.averageCostExVat} />;
       }
-      return <UnitCostValue cost={side.unitCost} />;
+      return <UnitCostValue cost={side.unitCost ?? averagedUnitCost(side)} />;
     case 'profitability':
       if (kind === 'total' && !side.costComplete) {
         return <Empty />;
@@ -679,6 +652,13 @@ function VarianceCell({ column, variance }: { column: VarianceKey; variance: Sum
   }
 
   return <MoneyCell whole value={variance.contribution} signed />;
+}
+
+function averagedUnitCost(side: SummarySide): UnitCost | null {
+  if (side.averageCostWithVat === null || side.averageCostExVat === null) {
+    return null;
+  }
+  return { withVat: side.averageCostWithVat, exVat: side.averageCostExVat };
 }
 
 function UnitCostValue({ cost }: { cost: UnitCost | null }) {

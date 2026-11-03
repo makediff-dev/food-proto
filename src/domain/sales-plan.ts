@@ -1,4 +1,4 @@
-import { type UnitCost, unitCost } from '@/domain/cost';
+import { type UnitCost } from '@/domain/cost';
 import {
   isMonthKey,
   type Product,
@@ -6,6 +6,7 @@ import {
   type SalesPlan,
   type SalesPlanLine,
 } from '@/domain/document';
+import { productCostPerPiece } from '@/domain/finished-product-cost';
 import { amountWithVat, averageAmount, percentHundredths, ratioRound } from '@/domain/money';
 import { activeProducts } from '@/domain/products';
 import { MAX_PRICE_KOPECKS } from '@/domain/units';
@@ -261,7 +262,7 @@ export function salesPlanLineMetrics(
   const perDay = days > 0 ? line.volumePieces / days : 0;
   const product = document.products.find((item) => item.id === line.productId);
   const vat = product?.vatPercent ?? null;
-  const cost = product ? unitCost(document, product.id) : null;
+  const cost = product ? productCostPerPiece(document, product.id, plan.month, 'plan') : null;
   const revenueWith = revenueWithVat(line.priceWithVat, line.volumePieces);
   const revenueEx =
     vat === null ? (line.volumePieces === 0 ? 0 : null) : revenueExVat(line.priceWithVat, vat, line.volumePieces);

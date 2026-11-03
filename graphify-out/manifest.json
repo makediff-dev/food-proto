@@ -84,9 +84,9 @@
     "semantic_hash": "66c2951a711a3c1f4596fa8fff571b2d"
   },
   "src/data/mock-document.ts": {
-    "mtime": 1793031527.270425,
-    "seen": 1793031707.1647987,
-    "ast_hash": "e6321627806bf33f1424609a2e43da36",
+    "mtime": 1793712865.8334281,
+    "seen": 1793713061.3755891,
+    "ast_hash": "4eca90dd37f1cd6ccd1b8f77a8251488",
     "semantic_hash": ""
   },
   "src/domain/categories.ts": {
@@ -96,10 +96,10 @@
     "semantic_hash": "11a9ee597fdf77742472f287484580d1"
   },
   "src/domain/cost.ts": {
-    "mtime": 1791466518.5092237,
-    "seen": 1792057892.1467483,
-    "ast_hash": "2bf6557618d86c3e5b0fea5edbaa432e",
-    "semantic_hash": "2bf6557618d86c3e5b0fea5edbaa432e"
+    "mtime": 1793712783.1705751,
+    "seen": 1793713061.3755891,
+    "ast_hash": "45a02974dc8208f9c20ccddf36b29464",
+    "semantic_hash": ""
   },
   "src/domain/directory.ts": {
     "mtime": 1791460580.8574874,
@@ -108,9 +108,9 @@
     "semantic_hash": "724f33ff464c09fb3fcdf0af0a576d9d"
   },
   "src/domain/document.ts": {
-    "mtime": 1793706182.361177,
-    "seen": 1793706212.119036,
-    "ast_hash": "11ca465a543984f3e6bcf3a5950ea087",
+    "mtime": 1793712801.0174522,
+    "seen": 1793713061.3755891,
+    "ast_hash": "f0848db85e8592f8b69a84f02982f776",
     "semantic_hash": ""
   },
   "src/domain/money.ts": {
@@ -126,21 +126,21 @@
     "semantic_hash": ""
   },
   "src/domain/products.ts": {
-    "mtime": 1793004954.1946974,
-    "seen": 1793004966.3635683,
-    "ast_hash": "0134883cca6e8e45cf6b6a0820e36bc4",
+    "mtime": 1793712820.8956423,
+    "seen": 1793713061.3755891,
+    "ast_hash": "a2e932397362add85535db375f682979",
     "semantic_hash": ""
   },
   "src/domain/sales-fact.ts": {
-    "mtime": 1791819539.6945083,
-    "seen": 1792057892.1467483,
-    "ast_hash": "7c89faac52b7891e8557cb32bf0722be",
+    "mtime": 1793713023.2387972,
+    "seen": 1793713061.3755891,
+    "ast_hash": "2635ff38edbfd610149569353ddf77e6",
     "semantic_hash": ""
   },
   "src/domain/sales-plan.ts": {
-    "mtime": 1792567087.4070508,
-    "seen": 1792567846.6235266,
-    "ast_hash": "da596f75321a4dc7f16eb25a52ed6070",
+    "mtime": 1793713023.2563417,
+    "seen": 1793713061.3755891,
+    "ast_hash": "a66e7f1c57ccc24d496c5ad24c30dda8",
     "semantic_hash": ""
   },
   "src/domain/sales.ts": {
@@ -150,9 +150,9 @@
     "semantic_hash": "f1509dbf0b6c9dd96e99ad72151cb276"
   },
   "src/domain/summary.ts": {
-    "mtime": 1791802304.2869627,
-    "seen": 1792057892.1467483,
-    "ast_hash": "468cea48301ee17eb341dbeddcc136d9",
+    "mtime": 1793713023.297536,
+    "seen": 1793713061.3755891,
+    "ast_hash": "1cdc2c33920fa65d2ead96580c8f9c55",
     "semantic_hash": ""
   },
   "src/domain/units.ts": {
@@ -186,9 +186,9 @@
     "semantic_hash": "0204134afd00b4aa5357caa8160dbe0b"
   },
   "src/features/sales/fields.ts": {
-    "mtime": 1792772351.4834683,
-    "seen": 1792772568.920581,
-    "ast_hash": "90340da1af74cd2974da56a8b508c44c",
+    "mtime": 1793712823.6604626,
+    "seen": 1793713061.3755891,
+    "ast_hash": "9e94d73b22244099384f5a76cab5508c",
     "semantic_hash": ""
   },
   "src/features/sales/paths.ts": {
@@ -204,9 +204,9 @@
     "semantic_hash": "b774cac65ce710be0e25a3860e11d15c"
   },
   "src/features/sales/use-sales.ts": {
-    "mtime": 1793004872.4187405,
-    "seen": 1793004966.3635683,
-    "ast_hash": "0faae3c6143608eb3802a1d868afa825",
+    "mtime": 1793712823.0257099,
+    "seen": 1793713061.3755891,
+    "ast_hash": "d09937ea2c9475d157489ca0278475a8",
     "semantic_hash": ""
   },
   "src/features/shell/dialog.tsx": {
@@ -256,21 +256,21 @@
     "semantic_hash": ""
   },
   "docs/architecture.md": {
-    "mtime": 1793031693.464547,
-    "seen": 1793031707.1647987,
-    "ast_hash": "a7039e476791736e9d1c7b1c16c5420f",
+    "mtime": 1793712965.18129,
+    "seen": 1793713061.3755891,
+    "ast_hash": "737736959e6f51cff888071f239f0f74",
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1793708174.2673562,
-    "seen": 1793708205.095293,
-    "ast_hash": "66a9c9f5250b9263afa101a8818064dd",
+    "mtime": 1793713505.7176764,
+    "seen": 1793713535.3266032,
+    "ast_hash": "e2b4362268c1b4635f1f84722a7258ea",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
-    "mtime": 1793706189.8692317,
-    "seen": 1793706212.119036,
-    "ast_hash": "96537d3df95d635ec4d4efaa0285e7a7",
+    "mtime": 1793712963.8131816,
+    "seen": 1793713061.3755891,
+    "ast_hash": "4a693168c918db866e71c987a340f0f8",
     "semantic_hash": ""
   },
   "inputs/README.md": {
@@ -405,9 +405,9 @@
     "semantic_hash": ""
   },
   "src/features/planning/PlanningScreen.tsx": {
-    "mtime": 1792772378.6560218,
-    "seen": 1792772568.920581,
-    "ast_hash": "ef987fa3dfa913ca92ca9463f0f0bc79",
+    "mtime": 1793712825.520159,
+    "seen": 1793713061.3755891,
+    "ast_hash": "0df4ff7a9592cf42a1c4d7ceb363eb3c",
     "semantic_hash": ""
   },
   "src/features/production/ProductionEntryFormTable.tsx": {
@@ -519,9 +519,9 @@
     "semantic_hash": ""
   },
   "src/features/sales/SummaryTable.tsx": {
-    "mtime": 1792663436.3786538,
-    "seen": 1792743010.5104587,
-    "ast_hash": "401461d7974941f3c7e028dbcd5cbc71",
+    "mtime": 1793712853.9883056,
+    "seen": 1793713061.3755891,
+    "ast_hash": "a9155db54d7cb2672368af58d9d36385",
     "semantic_hash": ""
   },
   "src/features/shell/AppShell.tsx": {
@@ -693,9 +693,9 @@
     "semantic_hash": ""
   },
   "docs/flow.md": {
-    "mtime": 1793706186.153429,
-    "seen": 1793706212.119036,
-    "ast_hash": "186eac843a7f64bad6ebce7025ec2db4",
+    "mtime": 1793712939.1537373,
+    "seen": 1793713061.3755891,
+    "ast_hash": "4f868a291f570e1c8de398b8151dcba3",
     "semantic_hash": ""
   },
   "docs/tables/inventory.md": {
@@ -735,9 +735,9 @@
     "semantic_hash": ""
   },
   "docs/tables/production-plan.md": {
-    "mtime": 1792567087.3829226,
-    "seen": 1792567846.6235266,
-    "ast_hash": "d0f391b3ede75194541047c6f86bac4c",
+    "mtime": 1793712946.3502634,
+    "seen": 1793713061.3755891,
+    "ast_hash": "120994d4774710dfddbb5d100a9e7e3d",
     "semantic_hash": ""
   },
   "docs/tables/production-summary.md": {
@@ -753,21 +753,21 @@
     "semantic_hash": ""
   },
   "docs/tables/sales-daily.md": {
-    "mtime": 1792567087.3829226,
-    "seen": 1792567846.6235266,
-    "ast_hash": "f7c4d2115ec35ffb968613289b346992",
+    "mtime": 1793712944.1305158,
+    "seen": 1793713061.3755891,
+    "ast_hash": "892057c28596cac80dd3857562fd50ab",
     "semantic_hash": ""
   },
   "docs/tables/sales-plan.md": {
-    "mtime": 1792567087.3829226,
-    "seen": 1792567846.6235266,
-    "ast_hash": "435238f3f0a89d0f20074e1f8689ef9b",
+    "mtime": 1793712943.5770688,
+    "seen": 1793713061.3755891,
+    "ast_hash": "c19b39f96c3e084f72cf6bf135af30c6",
     "semantic_hash": ""
   },
   "docs/tables/sales-summary.md": {
-    "mtime": 1791875418.1164255,
-    "seen": 1792057892.1467483,
-    "ast_hash": "bc081e3b2d3ec165397cb5af35b3a5ea",
+    "mtime": 1793712944.9823508,
+    "seen": 1793713061.3755891,
+    "ast_hash": "311bb16612f2b603b1f57dcc5f922555",
     "semantic_hash": ""
   },
   "src/app/materials/inventory/page.tsx": {
@@ -1263,15 +1263,15 @@
     "semantic_hash": ""
   },
   "src/domain/finished-product-cost.ts": {
-    "mtime": 1793706215.4575553,
-    "seen": 1793706974.3409894,
-    "ast_hash": "fbdfe651244677f45718b39730277c11",
+    "mtime": 1793712780.6426015,
+    "seen": 1793713061.3755891,
+    "ast_hash": "563f5f0f28616cf6880c46415b253d9e",
     "semantic_hash": ""
   },
   "src/features/recipes/FinishedProductCostDetailScreen.tsx": {
-    "mtime": 1793708179.49277,
-    "seen": 1793708205.0942538,
-    "ast_hash": "b2d8e2e177ef53f4e6ef753862572b50",
+    "mtime": 1793713513.215351,
+    "seen": 1793713535.3266032,
+    "ast_hash": "8a66f7321583c65cb3c56ae45a38ed2f",
     "semantic_hash": ""
   },
   "src/features/recipes/FinishedProductCostScreen.tsx": {
@@ -1287,14 +1287,14 @@
     "semantic_hash": ""
   },
   "docs/tables/finished-product-cost.md": {
-    "mtime": 1793708171.334157,
-    "seen": 1793708205.095293,
-    "ast_hash": "d374b1604d46e8fd3fe434b000f70e1f",
+    "mtime": 1793713504.2206595,
+    "seen": 1793713535.3266032,
+    "ast_hash": "5ba2bf5e8b4385c832f335f4381241db",
     "semantic_hash": ""
   },
   "src/features/recipes/RecipeCostDetailTable.tsx": {
-    "mtime": 1793708179.5060954,
-    "seen": 1793708205.0942538,
+    "mtime": 1793713513.7956586,
+    "seen": 1793713535.3266032,
     "ast_hash": "8f1589e5cc57b0103c5a668039fcd6a9",
     "semantic_hash": ""
   }
