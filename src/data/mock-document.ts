@@ -1,4 +1,5 @@
 import { mockMaterials } from '@/data/mock-materials';
+import { mockHrPositions, mockTransportCarriers } from '@/data/mock-opex';
 import {
   catalogCategories,
   type Derivative,
@@ -27,7 +28,7 @@ import {
  * у салатов и гуляша счёт рядом с журналом, у гамбургера остаток не ниже нуля.
  * Факт ноября — одна отгрузка 2 ноября: продажи 45, 90, 80 и 100; выпуск 50, 85, 90 и 110.
  * Это около десятой плана (3 дня из 30), чтобы прогноз месяца не раздувался. Инвентаризации ноября нет.
- * Операционные расходы пустые. Нормативы движения — сентябрь, октябрь и ноябрь.
+ * Операционные расходы, HR и транспорт — справочники из книги, суммы нулевые. Нормативы движения — сентябрь, октябрь и ноябрь.
  * Плановые цены с НДС: салаты — мок, гуляш `Svod!F31`, гамбургер `Svod!F63`.
  * Факт продаж — круглые и полукруглые: 95, 70, 100 и 85 ₽ с НДС.
  * НДС у всех товаров 20%. В книге у горячих `Svod!N31` 10%, у роллов `Svod!N63` 20%.
@@ -766,7 +767,18 @@ export const mockDocument: PrototypeDocument = {
   productionPlans,
   sales: salesFromOrders(orders),
   productionEntries: productionFromOrders(productionOrders),
-  operatingExpenses: [],
+  hrPositions: mockHrPositions,
+  hrMonthPlans: [],
+  hrAdminFacts: [],
+  hrDayFacts: [],
+  hrOutsourcingRates: [],
+  hrTaxRates: [],
+  transportCarriers: mockTransportCarriers,
+  transportHireMonthPlans: [],
+  transportHireDayFacts: [],
+  transportOwnMonthPlans: [],
+  transportOwnDayFacts: [],
+  opexMonthLines: [],
   finishedGoodsOpenings,
   finishedGoodsNorms,
   materials: mockMaterials.materials,
@@ -803,8 +815,46 @@ export function createMockDocument(): PrototypeDocument {
       ...item,
       lines: item.lines.map((line) => ({ ...line })),
     })),
-    operatingExpenses: mockDocument.operatingExpenses.map((item) => ({
+    hrPositions: mockDocument.hrPositions.map((item) => ({ ...item })),
+    hrMonthPlans: mockDocument.hrMonthPlans.map((item) => ({
       ...item,
+      staffLines: item.staffLines.map((line) => ({ ...line })),
+      outsourcingLines: item.outsourcingLines.map((line) => ({ ...line })),
+    })),
+    hrAdminFacts: mockDocument.hrAdminFacts.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    hrDayFacts: mockDocument.hrDayFacts.map((item) => ({
+      ...item,
+      staffLines: item.staffLines.map((line) => ({ ...line })),
+      outsourcingLines: item.outsourcingLines.map((line) => ({ ...line })),
+    })),
+    hrOutsourcingRates: mockDocument.hrOutsourcingRates.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    hrTaxRates: mockDocument.hrTaxRates.map((item) => ({ ...item })),
+    transportCarriers: mockDocument.transportCarriers.map((item) => ({ ...item })),
+    transportHireMonthPlans: mockDocument.transportHireMonthPlans.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    transportHireDayFacts: mockDocument.transportHireDayFacts.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    transportOwnMonthPlans: mockDocument.transportOwnMonthPlans.map((item) => ({
+      ...item,
+      vehicles: item.vehicles.map((line) => ({ ...line })),
+    })),
+    transportOwnDayFacts: mockDocument.transportOwnDayFacts.map((item) => ({
+      ...item,
+      vehicles: item.vehicles.map((line) => ({ ...line })),
+    })),
+    opexMonthLines: mockDocument.opexMonthLines.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
     })),
     finishedGoodsOpenings: mockDocument.finishedGoodsOpenings.map((item) => ({
       ...item,

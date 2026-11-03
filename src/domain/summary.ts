@@ -1,6 +1,5 @@
 import { type UnitCost } from '@/domain/cost';
 import {
-  isMonthKey,
   PROFIT_TAX_PERCENT,
   type Product,
   type ProductCategory,
@@ -9,6 +8,7 @@ import {
 } from '@/domain/document';
 import { productCostPerPiece } from '@/domain/finished-product-cost';
 import { averageAmount, percentHundredths, ratioRound, vatPercentHundredths } from '@/domain/money';
+import { monthOperatingExpenseAmounts } from '@/domain/operating-expense';
 import { periodGridCategories, periodGridProducts } from '@/domain/period-grid';
 import { type SalesFactRow, salesFactMonth } from '@/domain/sales-fact';
 import {
@@ -24,6 +24,8 @@ import {
   salesPlanTotals,
   shiftMonth,
 } from '@/domain/sales-plan';
+
+export { monthOperatingExpenseAmounts } from '@/domain/operating-expense';
 
 export interface SummarySide {
   volumePieces: number | null;
@@ -131,14 +133,10 @@ export interface SummaryHeadline {
   taxPercent: number;
 }
 
-export type OperatingExpenseSide = 'plan' | 'fact';
-
 /** Фактическая сводка урезает план; прогноз растягивает факт. */
 export type SummaryLens = 'current' | 'forecast';
 
 type VolumeScale = { kind: 'identity' } | { kind: 'zero' } | { kind: 'ratio'; numerator: number; denominator: number };
-
-export type OperatingExpenseRejection = 'month' | 'amount';
 
 function minus(left: number | null, right: number | null): number | null {
   if (left === null || right === null) {
@@ -441,18 +439,6 @@ function planTotalsAsSide(totals: SalesPlanTotals): SummarySide {
   };
 }
 
-/** Операционные расходы месяца. Нет записи — ноль. */
-export function monthOperatingExpenseAmounts(
-  document: PrototypeDocument,
-  month: string,
-): { planExVat: number; factExVat: number } {
-  const row = document.operatingExpenses.find((item) => item.month === month);
-  return {
-    planExVat: row?.planExVat ?? 0,
-    factExVat: row?.factExVat ?? 0,
-  };
-}
-
 function headlineSide(totals: SummarySide | null, operatingExpenseExVat: number): SummaryHeadlineSide {
   const revenueWithVat = totals?.revenueWithVat ?? null;
   const revenueExVat = totals?.revenueExVat ?? null;
@@ -476,8 +462,8 @@ function headlineSide(totals: SummarySide | null, operatingExpenseExVat: number)
 /**
  * Верхний блок свода `Svod!D2:L8`.
  * Выручка и Т-проток — суммы по товарам, без вычета Factoring.
- * Операционные расходы в документе — за весь месяц. План во «Вводе плана», факт в отчете общем.
- * На фактической сводке обе суммы показываются за прошедшие дни.
+ * Операционные расходы — итог таблицы статей (`Operation Expense!E62` / `F62`).
+ * На фактической сводке план расходов — доля прошедших дней; факт — сумма месяца как есть.
  */
 export function summaryHeadline(
   planTotals: SummarySide | null,
@@ -501,66 +487,6 @@ export function summaryHeadline(
       netProfitabilityHundredths: minus(fact.netProfitabilityHundredths, plan.netProfitabilityHundredths),
     },
     taxPercent: PROFIT_TAX_PERCENT,
-  };
-}
-
-export function setOperatingExpenseRejection(
-  document: PrototypeDocument,
-  month: string,
-  side: OperatingExpenseSide,
-  amountExVat: number,
-): OperatingExpenseRejection | null {
-  void document;
-  void side;
-
-  if (!isMonthKey(month) || month < '2000-01' || month > '2100-12') {
-    return 'month';
-  }
-
-  if (!Number.isInteger(amountExVat) || amountExVat < 0) {
-    return 'amount';
-  }
-
-  return null;
-}
-
-/**
- * Пишет план или факт операционных расходов месяца.
- * Обе суммы ноль — запись из документа убирается.
- */
-export function setOperatingExpense(
-  document: PrototypeDocument,
-  month: string,
-  side: OperatingExpenseSide,
-  amountExVat: number,
-): PrototypeDocument {
-  if (setOperatingExpenseRejection(document, month, side, amountExVat)) {
-    return document;
-  }
-
-  const current = monthOperatingExpenseAmounts(document, month);
-  const nextPlan = side === 'plan' ? amountExVat : current.planExVat;
-  const nextFact = side === 'fact' ? amountExVat : current.factExVat;
-  const withoutMonth = document.operatingExpenses.filter((item) => item.month !== month);
-
-  if (nextPlan === 0 && nextFact === 0) {
-    if (withoutMonth.length === document.operatingExpenses.length) {
-      return document;
-    }
-
-    return { ...document, operatingExpenses: withoutMonth };
-  }
-
-  return {
-    ...document,
-    operatingExpenses: [
-      ...withoutMonth,
-      {
-        month,
-        planExVat: nextPlan,
-        factExVat: nextFact,
-      },
-    ],
   };
 }
 
@@ -626,7 +552,12 @@ export function monthSummary(
   const planTotals = plan ? salesPlanTotals(document, plan) : null;
   const planTotalsSide = planTotals ? planTotalsAsSide(planTotals) : null;
   const factTotals = factTotalsFromRows(rows, days);
-  const opex = monthOperatingExpenseAmounts(document, month);
+  const opex = monthOperatingExpenseAmounts(
+    document,
+    month,
+    planTotalsSide?.revenueWithVat ?? 0,
+    planTotalsSide?.revenueExVat ?? 0,
+  );
 
   return {
     from: month,
@@ -905,10 +836,10 @@ function factVolumeScale(month: string, today: Date, lens: SummaryLens): VolumeS
 }
 
 /**
- * Операционные расходы в документе — за весь месяц.
- * Фактическая сводка показывает долю прошедших дней, прогноз — сумму месяца.
+ * План операционных расходов на фактической сводке — доля прошедших дней.
+ * Факт не раздувается и не урезается: дневные и помесячные статьи уже за месяц.
  */
-function operatingExpenseDisplayScale(month: string, today: Date, lens: SummaryLens): VolumeScale {
+function operatingExpensePlanDisplayScale(month: string, today: Date, lens: SummaryLens): VolumeScale {
   if (lens !== 'current') {
     return { kind: 'identity' };
   }
@@ -918,40 +849,6 @@ function operatingExpenseDisplayScale(month: string, today: Date, lens: SummaryL
 
 function scaleOperatingExpense(amount: number, scale: VolumeScale): number {
   return scaleAmount(amount, scale) ?? 0;
-}
-
-/** Сумма операционных расходов месяца так, как она стоит на сводке этого режима. */
-export function displayedOperatingExpense(storedExVat: number, month: string, lens: SummaryLens, today: Date): number {
-  return scaleOperatingExpense(storedExVat, operatingExpenseDisplayScale(month, today, lens));
-}
-
-/**
- * Ввод факта операционных расходов → сумма месяца в документе.
- * В прогнозе ввод уже за месяц. В фактической — за прошедшие дни.
- */
-export function factOperatingExpenseStoredFromInput(
-  amountExVat: number,
-  month: string,
-  lens: SummaryLens,
-  today: Date,
-): number | null {
-  if (!Number.isInteger(amountExVat) || amountExVat < 0) {
-    return null;
-  }
-  if (lens !== 'current') {
-    return amountExVat;
-  }
-
-  const elapsed = elapsedDaysInMonth(month, today);
-  const days = daysInMonth(month);
-  if (elapsed <= 0) {
-    return null;
-  }
-  if (elapsed >= days) {
-    return amountExVat;
-  }
-
-  return ratioRound(amountExVat * days, elapsed);
 }
 
 function scaleInteger(value: number, numerator: number, denominator: number): number | null {
@@ -1064,14 +961,14 @@ function applyFactScale(side: SummarySide, scale: VolumeScale, monthDays: number
 /**
  * Текущая сводка: план × прошедшие дни / дни месяца.
  * Прогнозируемая: факт × дни месяца / прошедшие дни.
- * Операционные расходы в фактической — та же доля прошедших дней; в прогнозе сумма месяца.
+ * План операционных расходов в фактической — доля прошедших дней; факт — сумма месяца.
  * В документ не пишет.
  */
 export function applySummaryLens(view: SummaryView, lens: SummaryLens, today: Date): SummaryView {
   const planScale = planVolumeScale(view.month, today, lens);
   const factScale = factVolumeScale(view.month, today, lens);
-  const opexScale = operatingExpenseDisplayScale(view.month, today, lens);
-  if (planScale.kind === 'identity' && factScale.kind === 'identity' && opexScale.kind === 'identity') {
+  const opexPlanScale = operatingExpensePlanDisplayScale(view.month, today, lens);
+  if (planScale.kind === 'identity' && factScale.kind === 'identity' && opexPlanScale.kind === 'identity') {
     return view;
   }
 
@@ -1115,8 +1012,8 @@ export function applySummaryLens(view: SummaryView, lens: SummaryLens, today: Da
     headline: summaryHeadline(
       planTotalsSide,
       factTotals,
-      scaleOperatingExpense(view.headline.plan.operatingExpenseExVat, opexScale),
-      scaleOperatingExpense(view.headline.fact.operatingExpenseExVat, opexScale),
+      scaleOperatingExpense(view.headline.plan.operatingExpenseExVat, opexPlanScale),
+      view.headline.fact.operatingExpenseExVat,
     ),
   };
 }

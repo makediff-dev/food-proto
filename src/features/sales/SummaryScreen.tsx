@@ -7,12 +7,9 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { activeCategories } from '@/domain/categories';
 import { monthKeyFromDate, planMonthOpen } from '@/domain/sales-plan';
 import {
-  displayedOperatingExpense,
   elapsedDaysInMonth,
   ensureRangeIncludesMonth,
-  factOperatingExpenseStoredFromInput,
   lastHorizonMonth,
-  monthOperatingExpenseAmounts,
   monthsInRange,
   normalizeMonthRange,
   type SummaryLens,
@@ -24,7 +21,7 @@ import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fi
 import { summaryHref } from '@/features/sales/paths';
 import { SummaryHeadlineTable } from '@/features/sales/SummaryHeadlineTable';
 import { SummaryTable } from '@/features/sales/SummaryTable';
-import { daysPhrase, formatMonth, formatMonthNameGenitive, OPERATING_EXPENSE_ERROR } from '@/features/sales/text';
+import { daysPhrase, formatMonth, formatMonthNameGenitive } from '@/features/sales/text';
 import { useSales } from '@/features/sales/use-sales';
 import { IconFact, IconFullscreen, IconFullscreenExit, IconPlan } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
@@ -51,7 +48,7 @@ function Workspace({
   view: SummaryLens;
 }) {
   const sales = useSales();
-  const { canEditSalesOpex, canViewSalesFinance } = useRole();
+  const { canViewSalesFinance } = useRole();
   const router = useRouter();
   const fromFieldId = useId();
   const toFieldId = useId();
@@ -66,7 +63,6 @@ function Workspace({
     [sales.document, periodFrom, periodTo, today, view],
   );
   const categories = activeCategories(sales.document);
-  const factOpexEditable = sales.hydrated && singleMonth && canEditSalesOpex;
   const horizonEnd = lastHorizonMonth(today);
   const hasTable = summary.groups.length > 0;
   const tableExpanded = fullscreen && hasTable;
@@ -221,22 +217,6 @@ function Workspace({
               periodClosed={periodClosed}
               expenseBasis={isActual ? 'elapsed' : 'month'}
               showFinance={canViewSalesFinance}
-              onFactOperatingExpense={
-                factOpexEditable
-                  ? (amountExVat) => {
-                      const storedNow = monthOperatingExpenseAmounts(sales.document, periodFrom).factExVat;
-                      if (displayedOperatingExpense(storedNow, periodFrom, view, today) === amountExVat) {
-                        return null;
-                      }
-                      const stored = factOperatingExpenseStoredFromInput(amountExVat, periodFrom, view, today);
-                      if (stored === null) {
-                        return OPERATING_EXPENSE_ERROR.amount;
-                      }
-                      const rejection = sales.updateOperatingExpense(periodFrom, 'fact', stored);
-                      return rejection ? OPERATING_EXPENSE_ERROR[rejection] : null;
-                    }
-                  : undefined
-              }
             />
           </div>
         }

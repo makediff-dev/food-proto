@@ -1,7 +1,6 @@
 'use client';
 
-import type { SummaryHeadline as Headline, OperatingExpenseSide, SummaryLens } from '@/domain/summary';
-import { OPERATING_EXPENSE_ERROR, parseOperatingExpense } from '@/features/sales/text';
+import type { SummaryHeadline as Headline, SummaryLens } from '@/domain/summary';
 import {
   type CellKind,
   ColumnLabel,
@@ -25,14 +24,9 @@ const valueCellClassName = `border-b border-b-line px-1.5 py-2 text-right align-
 
 type HeadlineRowId = 'revenue' | 'contribution' | 'opex' | 'profit' | 'tax' | 'net' | 'rentability';
 
-function headlineKind(id: HeadlineRowId, side: 'plan' | 'fact' | 'variance', opexAssigned: boolean): CellKind {
-  if (side === 'variance' || id !== 'opex') {
-    return 'computed';
-  }
-  if (opexAssigned) {
-    return 'assigned';
-  }
-  return side === 'plan' ? 'repeated' : 'computed';
+function headlineKind(side: 'plan' | 'fact' | 'variance'): CellKind {
+  void side;
+  return 'computed';
 }
 
 const ROWS: { id: HeadlineRowId; label: string }[] = [
@@ -70,23 +64,19 @@ export function SummaryHeadlineTable({
   periodClosed = false,
   expenseBasis = 'month',
   showFinance = true,
-  onFactOperatingExpense,
 }: {
   headline: Headline;
   periodLabel: string;
   view: SummaryLens;
   periodClosed?: boolean;
-  /** Прогноз — сумма месяца. Фактическая — доля прошедших дней. */
+  /** Прогноз — сумма месяца. Фактическая — доля прошедших дней только у плана. */
   expenseBasis?: 'month' | 'elapsed';
   /** Т-проток, opex, прибыль и налог — для экономиста и админа. */
   showFinance?: boolean;
-  /** Фактические операционные расходы при одном месяце. План здесь не правят. */
-  onFactOperatingExpense?: (amountExVat: number) => string | null;
 }) {
   const planLabel = view === 'current' ? 'План (корр.)' : 'План';
   const factIsForecast = view === 'forecast' && !periodClosed;
   const factLabel = factIsForecast ? 'Факт (прогноз)' : 'Факт';
-  const factOpexEditable = onFactOperatingExpense !== undefined;
   const rows = visibleHeadlineRows(showFinance);
 
   return (
@@ -94,7 +84,7 @@ export function SummaryHeadlineTable({
       <table className={tableClassName}>
         <caption className="sr-only">
           {view === 'current'
-            ? 'Свод периода: план (корр.), факт и отклонение. Операционные расходы без НДС за прошедшие дни.'
+            ? 'Свод периода: план (корр.), факт и отклонение. Операционные расходы без НДС: план за прошедшие дни, факт за месяц.'
             : factIsForecast
               ? 'Свод периода: план, факт (прогноз) и отклонение. Операционные расходы без НДС за месяц.'
               : 'Свод периода: план, факт и отклонение. Операционные расходы без НДС за месяц.'}
@@ -115,10 +105,7 @@ export function SummaryHeadlineTable({
               {planLabel}
             </th>
             {rows.map((row) => (
-              <td
-                key={row.id}
-                className={`${valueCellClassName} ${cellKindClassName[headlineKind(row.id, 'plan', false)]}`}
-              >
+              <td key={row.id} className={`${valueCellClassName} ${cellKindClassName[headlineKind('plan')]}`}>
                 <HeadlineValue
                   row={row.id}
                   side="plan"
@@ -134,21 +121,13 @@ export function SummaryHeadlineTable({
               {factLabel}
             </th>
             {rows.map((row) => (
-              <td
-                key={row.id}
-                className={`${valueCellClassName} ${cellKindClassName[headlineKind(row.id, 'fact', factOpexEditable)]}`}
-              >
+              <td key={row.id} className={`${valueCellClassName} ${cellKindClassName[headlineKind('fact')]}`}>
                 <HeadlineValue
                   row={row.id}
                   side="fact"
                   headline={headline}
                   periodLabel={periodLabel}
-                  expenseBasis={expenseBasis}
-                  onOperatingExpense={
-                    row.id === 'opex' && onFactOperatingExpense
-                      ? (_side, amountExVat) => onFactOperatingExpense(amountExVat)
-                      : undefined
-                  }
+                  expenseBasis="month"
                 />
               </td>
             ))}
@@ -175,14 +154,12 @@ function HeadlineValue({
   headline,
   periodLabel,
   expenseBasis = 'month',
-  onOperatingExpense,
 }: {
   row: HeadlineRowId;
-  side: OperatingExpenseSide;
+  side: 'plan' | 'fact';
   headline: Headline;
   periodLabel: string;
   expenseBasis?: 'month' | 'elapsed';
-  onOperatingExpense?: (side: OperatingExpenseSide, amountExVat: number) => string | null;
 }) {
   const values = side === 'plan' ? headline.plan : headline.fact;
 
@@ -196,9 +173,6 @@ function HeadlineValue({
             : `Операционные расходы, факт ${span}, ${periodLabel}`
         }
         value={values.operatingExpenseExVat}
-        invalidMessage={OPERATING_EXPENSE_ERROR.amount}
-        parse={parseOperatingExpense}
-        onChange={onOperatingExpense ? (next) => onOperatingExpense(side, next) : undefined}
       />
     );
   }
@@ -251,15 +225,11 @@ function VarianceValue({ row, headline }: { row: HeadlineRowId; headline: Headli
 export function PlanHeadlineTable({
   headline,
   periodLabel,
-  editable,
   showFinance = true,
-  onOperatingExpense,
 }: {
   headline: Headline;
   periodLabel: string;
-  editable: boolean;
   showFinance?: boolean;
-  onOperatingExpense: (amountExVat: number) => string | null;
 }) {
   const rows = visibleHeadlineRows(showFinance);
 
@@ -283,19 +253,8 @@ export function PlanHeadlineTable({
               План
             </th>
             {rows.map((row) => (
-              <td
-                key={row.id}
-                className={`${valueCellClassName} ${cellKindClassName[headlineKind(row.id, 'plan', editable)]}`}
-              >
-                <HeadlineValue
-                  row={row.id}
-                  side="plan"
-                  headline={headline}
-                  periodLabel={periodLabel}
-                  onOperatingExpense={
-                    row.id === 'opex' && editable ? (_side, amountExVat) => onOperatingExpense(amountExVat) : undefined
-                  }
-                />
+              <td key={row.id} className={`${valueCellClassName} ${cellKindClassName[headlineKind('plan')]}`}>
+                <HeadlineValue row={row.id} side="plan" headline={headline} periodLabel={periodLabel} />
               </td>
             ))}
           </tr>

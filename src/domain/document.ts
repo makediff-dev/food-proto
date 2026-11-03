@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 53 as const;
+export const SCHEMA_VERSION = 54 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -165,21 +165,344 @@ export interface ProductionEntry {
 }
 
 /**
- * Операционные расходы месяца одной суммой.
- * В книге это итог `Operation Expense!E62` / `F62` на своде `Svod!G4` / `I4`.
- * Сумма без НДС: прибыль = Т-проток − эта сумма.
+ * Подразделения листа `HR`. Не склады сырья и не цеха рецептов «1/2».
+ * У администрации нет строки аутсорсинга.
  */
-export interface MonthOperatingExpense {
-  /** `ГГГГ-ММ`. На один месяц — одна запись. */
+export type HrDepartmentId = 'admin' | 'bakery' | 'meat' | 'vegetables' | 'assembly' | 'dc';
+
+export const HR_DEPARTMENT_IDS = [
+  'admin',
+  'bakery',
+  'meat',
+  'vegetables',
+  'assembly',
+  'dc',
+] as const satisfies readonly HrDepartmentId[];
+
+/** Производственные цеха и РЦ — есть аутсорсинг и дневной факт. */
+export const HR_SHOP_DEPARTMENT_IDS = [
+  'bakery',
+  'meat',
+  'vegetables',
+  'assembly',
+  'dc',
+] as const satisfies readonly Exclude<HrDepartmentId, 'admin'>[];
+
+export type HrShopDepartmentId = (typeof HR_SHOP_DEPARTMENT_IDS)[number];
+
+export function isHrShopDepartmentId(value: string): value is HrShopDepartmentId {
+  return (HR_SHOP_DEPARTMENT_IDS as readonly string[]).includes(value);
+}
+
+export function isHrDepartmentId(value: string): value is HrDepartmentId {
+  return (HR_DEPARTMENT_IDS as readonly string[]).includes(value);
+}
+
+/**
+ * Должность или фиксированная строка аутсорсинга подразделения.
+ * Мягкое удаление только у штатных должностей.
+ */
+export interface HrPosition {
+  id: string;
+  departmentId: HrDepartmentId;
+  name: string;
+  /** `staff` — обычная должность; `outsourcing` — одна на цех/РЦ, не удаляется. */
+  kind: 'staff' | 'outsourcing';
+  deletedAt: string | null;
+}
+
+/** Плановая строка должности месяца. `HR!D/E/F`. */
+export interface HrMonthPlanStaffLine {
+  id: string;
+  positionId: string;
+  /** Численность, чел. */
+  headcount: number;
+  /** Зарплата на одного, копейки без НДС. */
+  salaryExVat: number;
+}
+
+/** План аутсорсинга цеха/РЦ на месяц (расширение книги: в листе план был пуст). */
+export interface HrMonthPlanOutsourcingLine {
+  id: string;
+  departmentId: HrShopDepartmentId;
+  /** Часы периода, тысячные доли часа. */
+  hourThousandths: number;
+  /** Ставка, копейки за 1 час без НДС. */
+  rateExVat: number;
+}
+
+/** План HR на календарный месяц. На один месяц — одна запись. */
+export interface HrMonthPlan {
+  id: string;
   month: string;
-  /** Копейки без НДС. План за весь месяц. На фактической сводке — доля прошедших дней. */
-  planExVat: number;
+  staffLines: HrMonthPlanStaffLine[];
+  outsourcingLines: HrMonthPlanOutsourcingLine[];
+}
+
+/** Факт администрации за месяц без разбивки по дням. `HR!G/H/I` блока администрации. */
+export interface HrAdminFactStaffLine {
+  id: string;
+  positionId: string;
+  headcount: number;
+  salaryExVat: number;
+}
+
+export interface HrAdminFactMonth {
+  id: string;
+  month: string;
+  lines: HrAdminFactStaffLine[];
+}
+
+/** Дневной факт штатной должности цеха/РЦ: часы и сумма отдельно. */
+export interface HrDayStaffLine {
+  id: string;
+  positionId: string;
+  hourThousandths: number;
+  /** Выплаченная сумма, копейки без НДС. */
+  amountExVat: number;
+}
+
+/** Дневные часы аутсорсинга; сумма = ставка факта месяца × часы. */
+export interface HrDayOutsourcingLine {
+  id: string;
+  departmentId: HrShopDepartmentId;
+  hourThousandths: number;
+}
+
+/** Ставка аутсорсинга цеха/РЦ на месяц (факт). `HR!H` строки аутсорсинга. */
+export interface HrOutsourcingRateMonthLine {
+  id: string;
+  departmentId: HrShopDepartmentId;
+  rateExVat: number;
+}
+
+export interface HrOutsourcingRatesMonth {
+  id: string;
+  month: string;
+  lines: HrOutsourcingRateMonthLine[];
+}
+
+export interface HrDayFact {
+  id: string;
+  /** `ГГГГ-ММ-ДД`. */
+  occurredOn: string;
+  staffLines: HrDayStaffLine[];
+  outsourcingLines: HrDayOutsourcingLine[];
+}
+
+/**
+ * Ставки зарплатных налогов месяца, сотые доли процента: 13 % → 1300, 0,2 % → 20.
+ * План и факт раздельно, как `HR!E86:H88`.
+ */
+export interface HrTaxRatesMonth {
+  id: string;
+  month: string;
+  planNdflHundredths: number;
+  planSocialHundredths: number;
+  planInjuryHundredths: number;
+  factNdflHundredths: number;
+  factSocialHundredths: number;
+  factInjuryHundredths: number;
+}
+
+/** Три вида наёмного транспорта на листе `Transport`. */
+export type TransportHireKind = 'finishedDelivery' | 'finishedTransfer' | 'materialDelivery';
+
+export const TRANSPORT_HIRE_KINDS = [
+  'finishedDelivery',
+  'finishedTransfer',
+  'materialDelivery',
+] as const satisfies readonly TransportHireKind[];
+
+export function isTransportHireKind(value: string): value is TransportHireKind {
+  return (TRANSPORT_HIRE_KINDS as readonly string[]).includes(value);
+}
+
+/** Контрагент наёмного транспорта. Мягкое удаление. */
+export interface TransportCarrier {
+  id: string;
+  kind: TransportHireKind;
+  name: string;
+  deletedAt: string | null;
+}
+
+export interface TransportHireMonthPlanLine {
+  id: string;
+  carrierId: string;
   /**
-   * Копейки без НДС. Факт за весь месяц.
-   * На фактической сводке показывается доля прошедших дней;
-   * ввод за эти дни пересчитывается в эту сумму.
+   * Количество: шт (доставка/перемещение готовой) или кг (сырьё), тысячные доли.
+   * `Transport!D`.
    */
+  quantityThousandths: number;
+  /** Цена за 1 шт или 1 кг без НДС, копейки. `Transport!E`. */
+  unitPriceExVat: number;
+}
+
+export interface TransportHireMonthPlan {
+  id: string;
+  month: string;
+  lines: TransportHireMonthPlanLine[];
+}
+
+export interface TransportHireDayLine {
+  id: string;
+  carrierId: string;
+  quantityThousandths: number;
+  /** Сумма дня без НДС, копейки. */
+  amountExVat: number;
+}
+
+export interface TransportHireDayFact {
+  id: string;
+  occurredOn: string;
+  lines: TransportHireDayLine[];
+}
+
+/** Три фиксированные машины листа `Transport`. */
+export type TransportVehicleId = 'vehicle-1' | 'vehicle-2' | 'vehicle-3';
+
+export const TRANSPORT_VEHICLE_IDS = [
+  'vehicle-1',
+  'vehicle-2',
+  'vehicle-3',
+] as const satisfies readonly TransportVehicleId[];
+
+export function isTransportVehicleId(value: string): value is TransportVehicleId {
+  return (TRANSPORT_VEHICLE_IDS as readonly string[]).includes(value);
+}
+
+/** План своего транспорта на месяц: норма, цена литра, км. */
+export interface TransportOwnMonthPlanVehicle {
+  id: string;
+  vehicleId: TransportVehicleId;
+  /** Норма л/100 км, тысячные доли литра. */
+  litersPer100KmThousandths: number;
+  /** Цена 1 л без НДС, копейки. */
+  fuelPriceExVat: number;
+  /** План км, тысячные доли км. */
+  planKmThousandths: number;
+}
+
+export interface TransportOwnMonthPlan {
+  id: string;
+  month: string;
+  vehicles: TransportOwnMonthPlanVehicle[];
+}
+
+/** Показание спидометра на утро и цена литра дня. */
+export interface TransportOwnDayVehicle {
+  id: string;
+  vehicleId: TransportVehicleId;
+  /** Одометр на утро, тысячные доли км. */
+  odometerThousandths: number;
+  fuelPriceExVat: number;
+}
+
+export interface TransportOwnDayFact {
+  id: string;
+  occurredOn: string;
+  vehicles: TransportOwnDayVehicle[];
+}
+
+/**
+ * Редактируемые статьи `Operation Expense` (без HR и без 7.1/7.2 из Transport).
+ * Агентское соглашение: план считает формула, факт вводят.
+ */
+export type OpexEditableLineId =
+  | 'electricity'
+  | 'water'
+  | 'sewage'
+  | 'garbage'
+  | 'pellets'
+  | 'internetFixed'
+  | 'internetMobile'
+  | 'glonass'
+  | 'trashBags'
+  | 'gloves'
+  | 'workwear'
+  | 'staffMeals'
+  | 'deratization'
+  | 'haccp'
+  | 'detergents'
+  | 'hygiene'
+  | 'cartridges'
+  | 'stationery'
+  | 'remoteWarehouse'
+  | 'factoryRent'
+  | 'tbankFee'
+  | 'consulting'
+  | 'agency'
+  | 'certification'
+  | 'maintenance'
+  | 'insurance'
+  | 'leasing'
+  | 'otherTransportMaterials'
+  | 'gazelleRent'
+  | 'fridgeService'
+  | 'waterPrepService'
+  | 'waterPrepMaterials'
+  | 'plumbing'
+  | 'bakeryParts'
+  | 'meatParts'
+  | 'assemblyParts'
+  | 'buildings';
+
+export const OPEX_EDITABLE_LINE_IDS = [
+  'electricity',
+  'water',
+  'sewage',
+  'garbage',
+  'pellets',
+  'internetFixed',
+  'internetMobile',
+  'glonass',
+  'trashBags',
+  'gloves',
+  'workwear',
+  'staffMeals',
+  'deratization',
+  'haccp',
+  'detergents',
+  'hygiene',
+  'cartridges',
+  'stationery',
+  'remoteWarehouse',
+  'factoryRent',
+  'tbankFee',
+  'consulting',
+  'agency',
+  'certification',
+  'maintenance',
+  'insurance',
+  'leasing',
+  'otherTransportMaterials',
+  'gazelleRent',
+  'fridgeService',
+  'waterPrepService',
+  'waterPrepMaterials',
+  'plumbing',
+  'bakeryParts',
+  'meatParts',
+  'assemblyParts',
+  'buildings',
+] as const satisfies readonly OpexEditableLineId[];
+
+export function isOpexEditableLineId(value: string): value is OpexEditableLineId {
+  return (OPEX_EDITABLE_LINE_IDS as readonly string[]).includes(value);
+}
+
+export interface OpexMonthLine {
+  id: string;
+  lineId: OpexEditableLineId;
+  planExVat: number;
   factExVat: number;
+}
+
+/** Ввод прочих операционных статей месяца. */
+export interface OpexMonthLines {
+  id: string;
+  month: string;
+  lines: OpexMonthLine[];
 }
 
 /** Строка инвентаризации на конец месяца на производстве. */
@@ -501,7 +824,26 @@ export interface PrototypeDocument {
   productionPlans: ProductionPlan[];
   sales: Sale[];
   productionEntries: ProductionEntry[];
-  operatingExpenses: MonthOperatingExpense[];
+  /** Должности и строки аутсорсинга листа `HR`. */
+  hrPositions: HrPosition[];
+  /** План численности и зарплат по месяцам. */
+  hrMonthPlans: HrMonthPlan[];
+  /** Факт администрации за месяц. */
+  hrAdminFacts: HrAdminFactMonth[];
+  /** Дневной факт часов и выплат цехов и РЦ. */
+  hrDayFacts: HrDayFact[];
+  /** Ставки аутсорсинга цехов/РЦ по месяцам (факт). */
+  hrOutsourcingRates: HrOutsourcingRatesMonth[];
+  /** Ставки НДФЛ, соцстраха и травматизма по месяцам. */
+  hrTaxRates: HrTaxRatesMonth[];
+  /** Контрагенты наёмного транспорта. */
+  transportCarriers: TransportCarrier[];
+  transportHireMonthPlans: TransportHireMonthPlan[];
+  transportHireDayFacts: TransportHireDayFact[];
+  transportOwnMonthPlans: TransportOwnMonthPlan[];
+  transportOwnDayFacts: TransportOwnDayFact[];
+  /** Ввод прочих статей `Operation Expense` (без HR и 7.1/7.2). */
+  opexMonthLines: OpexMonthLines[];
   /**
    * Инвентаризация на конец месяца на производстве (факт, шт).
    * Старый документ без поля читается как пустой массив.

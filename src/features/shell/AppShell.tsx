@@ -28,6 +28,16 @@ import {
   MOVEMENT_SECTION_TITLE,
   MOVEMENT_SUMMARY_TITLE,
 } from '@/features/movement/paths';
+import {
+  OPEX_HR_FACT_TITLE,
+  OPEX_HR_PLAN_TITLE,
+  OPEX_HR_TITLE,
+  OPEX_SECTION_TITLE,
+  OPEX_SUMMARY_TITLE,
+  OPEX_TRANSPORT_FACT_TITLE,
+  OPEX_TRANSPORT_PLAN_TITLE,
+  OPEX_TRANSPORT_TITLE,
+} from '@/features/opex/paths';
 import { PLANNING_SECTION_TITLE } from '@/features/planning/paths';
 import {
   PRODUCTION_FACT_TITLE,
@@ -121,6 +131,16 @@ const MATERIALS_NAV: readonly NavItem[] = [
   { href: '/materials/receipts', label: MATERIALS_RECEIPTS_TITLE, navKind: 'input' },
 ];
 
+const OPEX_NAV: readonly NavItem[] = [
+  { href: '/opex', label: OPEX_SUMMARY_TITLE, exact: true, navKind: 'report' },
+  { href: '/opex/hr', label: OPEX_HR_TITLE, exact: true, navKind: 'report' },
+  { href: '/opex/transport', label: OPEX_TRANSPORT_TITLE, exact: true, navKind: 'report' },
+  { href: '/opex/hr/plan', label: `HR · ${OPEX_HR_PLAN_TITLE}`, navKind: 'input' },
+  { href: '/opex/hr/fact', label: `HR · ${OPEX_HR_FACT_TITLE}`, navKind: 'input' },
+  { href: '/opex/transport/plan', label: `Транспорт · ${OPEX_TRANSPORT_PLAN_TITLE}`, navKind: 'input' },
+  { href: '/opex/transport/fact', label: `Транспорт · ${OPEX_TRANSPORT_FACT_TITLE}`, navKind: 'input' },
+];
+
 function sectionIsCurrent(pathname: string, href: string): boolean {
   if (href === '/') {
     return pathname === '/';
@@ -184,6 +204,12 @@ function currentNavLabel(pathname: string): string | undefined {
   }
 
   for (const item of MATERIALS_NAV) {
+    if (navItemIsCurrent(pathname, item)) {
+      return item.label;
+    }
+  }
+
+  for (const item of OPEX_NAV) {
     if (navItemIsCurrent(pathname, item)) {
       return item.label;
     }
@@ -294,6 +320,7 @@ const NAV_GROUPS: readonly { section: NavSectionId; title: string; items: readon
   { section: 'recipes', title: RECIPES_SECTION_TITLE, items: RECIPES_NAV },
   { section: 'derivativeMovement', title: DERIVATIVE_MOVEMENT_SECTION_TITLE, items: DERIVATIVE_MOVEMENT_NAV },
   { section: 'materials', title: MATERIALS_SECTION_TITLE, items: MATERIALS_NAV },
+  { section: 'opex', title: OPEX_SECTION_TITLE, items: OPEX_NAV },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {

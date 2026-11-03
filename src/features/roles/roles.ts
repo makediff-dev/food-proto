@@ -9,6 +9,7 @@ export type NavSectionId =
   | 'recipes'
   | 'derivativeMovement'
   | 'materials'
+  | 'opex'
   | 'roles';
 
 export const ALL_NAV_SECTIONS: readonly NavSectionId[] = [
@@ -18,6 +19,7 @@ export const ALL_NAV_SECTIONS: readonly NavSectionId[] = [
   'recipes',
   'derivativeMovement',
   'materials',
+  'opex',
   'roles',
 ];
 
@@ -139,6 +141,7 @@ export const PERMISSION_MATRIX_ROWS: readonly PermissionMatrixRow[] = [
   { kind: 'section', section: 'recipes', label: 'Раздел «Рецептурные журналы»' },
   { kind: 'section', section: 'derivativeMovement', label: 'Раздел «Движение производных»' },
   { kind: 'section', section: 'materials', label: 'Раздел «Сырьё и материалы»' },
+  { kind: 'section', section: 'opex', label: 'Раздел «Операционные расходы»' },
   { kind: 'flag', key: 'canEditSalesPlan', label: 'Правит план продаж' },
   { kind: 'flag', key: 'canEditSalesFact', label: 'Правит факт продаж' },
   { kind: 'flag', key: 'canEditSalesCatalog', label: 'Правит товары и категории' },

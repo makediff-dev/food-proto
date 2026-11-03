@@ -31,13 +31,6 @@ import {
   updateSalesPlanLineRejection,
   workingSalesPlan,
 } from '@/domain/sales-plan';
-import {
-  type OperatingExpenseRejection,
-  type OperatingExpenseSide,
-  setOperatingExpense,
-  setOperatingExpenseRejection,
-} from '@/domain/summary';
-
 export function useSales() {
   const { document, hydrated, updateDocument } = useDocumentStore();
 
@@ -162,18 +155,6 @@ export function useSales() {
         return rejection;
       }
       updateDocument((next) => restoreProduct(next, id));
-      return null;
-    },
-    updateOperatingExpense(
-      month: string,
-      side: OperatingExpenseSide,
-      amountExVat: number,
-    ): OperatingExpenseRejection | null {
-      const rejection = setOperatingExpenseRejection(document, month, side, amountExVat);
-      if (rejection) {
-        return rejection;
-      }
-      updateDocument((current) => setOperatingExpense(current, month, side, amountExVat));
       return null;
     },
     addMissing(planId: string, lines: readonly { id: string; productId: string }[]) {

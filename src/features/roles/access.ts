@@ -19,6 +19,7 @@ const SECTION_HOME: Record<NavSectionId, string> = {
   recipes: RECIPES_DERIVATIVES_HREF,
   derivativeMovement: DERIVATIVE_MOVEMENT_SUMMARY_HREF,
   materials: '/materials',
+  opex: '/opex',
   roles: ROLES_HREF,
 };
 
@@ -30,6 +31,7 @@ const HOME_SECTION_ORDER: readonly NavSectionId[] = [
   'recipes',
   'derivativeMovement',
   'materials',
+  'opex',
   'roles',
 ];
 
@@ -73,6 +75,10 @@ export function pathnameSection(pathname: string): NavSectionId | null {
 
   if (pathname === '/materials' || pathname.startsWith('/materials/')) {
     return 'materials';
+  }
+
+  if (pathname === '/opex' || pathname.startsWith('/opex/')) {
+    return 'opex';
   }
 
   if (pathname === '/movement' || pathname.startsWith('/movement/')) {

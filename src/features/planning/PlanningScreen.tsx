@@ -21,7 +21,7 @@ import { useRole } from '@/features/roles/RoleProvider';
 import { FIELD_ERROR, fieldClassName, monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { PlanHeadlineTable } from '@/features/sales/SummaryHeadlineTable';
 import { SummaryTable } from '@/features/sales/SummaryTable';
-import { OPERATING_EXPENSE_ERROR, SALES_PLAN_ERROR } from '@/features/sales/text';
+import { SALES_PLAN_ERROR } from '@/features/sales/text';
 import { useSales } from '@/features/sales/use-sales';
 import { Dialog } from '@/features/shell/Dialog';
 import { IconFullscreen, IconFullscreenExit, IconPlus, IconTrash } from '@/features/shell/Icons';
@@ -38,7 +38,7 @@ export function PlanningScreen({ month }: { month: string }) {
 
 function Workspace({ month, currentMonth, today }: { month: string; currentMonth: string; today: Date }) {
   const sales = useSales();
-  const { canEditSalesPlan, canEditSalesCatalog, canEditSalesVat, canEditSalesOpex, canViewSalesFinance } = useRole();
+  const { canEditSalesPlan, canEditSalesCatalog, canEditSalesVat, canViewSalesFinance } = useRole();
   const router = useRouter();
   const [fullscreen, setFullscreen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -53,7 +53,6 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
   const catalogEditable = sales.hydrated && canEditSalesCatalog;
   const planEditable = sales.hydrated && canEditSalesPlan && products.length > 0;
   const vatEditable = sales.hydrated && canEditSalesVat;
-  const opexEditable = sales.hydrated && canEditSalesOpex;
   const missing = planEditable && storedPlan ? missingPlanProducts(sales.document, storedPlan) : [];
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
@@ -137,16 +136,7 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
                 />
               </div>
             </div>
-            <PlanHeadlineTable
-              headline={summary.headline}
-              periodLabel={month}
-              editable={opexEditable}
-              showFinance={canViewSalesFinance}
-              onOperatingExpense={(amountExVat) => {
-                const rejection = sales.updateOperatingExpense(month, 'plan', amountExVat);
-                return rejection ? OPERATING_EXPENSE_ERROR[rejection] : null;
-              }}
-            />
+            <PlanHeadlineTable headline={summary.headline} periodLabel={month} showFinance={canViewSalesFinance} />
           </div>
         }
         aside={
