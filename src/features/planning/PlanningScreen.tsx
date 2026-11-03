@@ -17,6 +17,7 @@ import {
 } from '@/domain/sales-plan';
 import { lastHorizonMonth, monthSummary } from '@/domain/summary';
 import { PLANNING_SECTION_TITLE, planningArchiveHref, planningHref } from '@/features/planning/paths';
+import { useRole } from '@/features/roles/RoleProvider';
 import { FIELD_ERROR, fieldClassName, monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { PlanHeadlineTable } from '@/features/sales/SummaryHeadlineTable';
 import { SummaryTable } from '@/features/sales/SummaryTable';
@@ -37,6 +38,7 @@ export function PlanningScreen({ month }: { month: string }) {
 
 function Workspace({ month, currentMonth, today }: { month: string; currentMonth: string; today: Date }) {
   const sales = useSales();
+  const { canEditSalesPlan, canEditSalesCatalog, canEditSalesVat, canEditSalesOpex, canViewSalesFinance } = useRole();
   const router = useRouter();
   const [fullscreen, setFullscreen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -48,8 +50,10 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
   const products = activeProducts(sales.document);
   const categories = activeCategories(sales.document);
   const hasArchive = deletedProducts(sales.document).length > 0 || deletedCategories(sales.document).length > 0;
-  const catalogEditable = sales.hydrated;
-  const planEditable = sales.hydrated && products.length > 0;
+  const catalogEditable = sales.hydrated && canEditSalesCatalog;
+  const planEditable = sales.hydrated && canEditSalesPlan && products.length > 0;
+  const vatEditable = sales.hydrated && canEditSalesVat;
+  const opexEditable = sales.hydrated && canEditSalesOpex;
   const missing = planEditable && storedPlan ? missingPlanProducts(sales.document, storedPlan) : [];
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
@@ -136,7 +140,8 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
             <PlanHeadlineTable
               headline={summary.headline}
               periodLabel={month}
-              editable={sales.hydrated}
+              editable={opexEditable}
+              showFinance={canViewSalesFinance}
               onOperatingExpense={(amountExVat) => {
                 const rejection = sales.updateOperatingExpense(month, 'plan', amountExVat);
                 return rejection ? OPERATING_EXPENSE_ERROR[rejection] : null;
@@ -145,35 +150,37 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
           </div>
         }
         aside={
-          <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-            <button
-              type="button"
-              disabled={!sales.hydrated || categories.length === 0}
-              onClick={() => {
-                setAddCategoryId(null);
-                setAddOpen(true);
-              }}
-              className={categories.length === 0 ? quietButtonClassName : primaryButtonClassName}
-            >
-              <IconPlus />
-              Добавить товар
-            </button>
-            <button
-              type="button"
-              disabled={!sales.hydrated}
-              onClick={() => setAddCategoryOpen(true)}
-              className={categories.length === 0 ? primaryButtonClassName : quietButtonClassName}
-            >
-              <IconPlus />
-              Добавить категорию
-            </button>
-            {hasArchive ? (
-              <Link href={planningArchiveHref()} className={quietButtonClassName}>
-                <IconTrash />
-                Архив
-              </Link>
-            ) : null}
-          </div>
+          catalogEditable ? (
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              <button
+                type="button"
+                disabled={!sales.hydrated || categories.length === 0}
+                onClick={() => {
+                  setAddCategoryId(null);
+                  setAddOpen(true);
+                }}
+                className={categories.length === 0 ? quietButtonClassName : primaryButtonClassName}
+              >
+                <IconPlus />
+                Добавить товар
+              </button>
+              <button
+                type="button"
+                disabled={!sales.hydrated}
+                onClick={() => setAddCategoryOpen(true)}
+                className={categories.length === 0 ? primaryButtonClassName : quietButtonClassName}
+              >
+                <IconPlus />
+                Добавить категорию
+              </button>
+              {hasArchive ? (
+                <Link href={planningArchiveHref()} className={quietButtonClassName}>
+                  <IconTrash />
+                  Архив
+                </Link>
+              ) : null}
+            </div>
+          ) : null
         }
       >
         <div className="flex flex-col gap-4">
@@ -203,46 +210,52 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
                 view="forecast"
                 part="plan"
                 expanded={tableExpanded}
-                edit={{
-                  plan: planEditable,
-                  vat: catalogEditable,
-                  catalog: catalogEditable,
-                  onPlanLine: (lineId, priceWithVat, volumePieces) => {
-                    return sales.updateMonthLine(month, lineId, priceWithVat, volumePieces);
-                  },
-                  onProductVat: (productId, vatPercent) => {
-                    const rejection = sales.updateProductVat(productId, vatPercent);
-                    return rejection ? FIELD_ERROR[rejection] : null;
-                  },
-                  onRenameProduct: (productId, name) => {
-                    const rejection = sales.renameProduct(productId, name);
-                    return rejection ? FIELD_ERROR[rejection] : null;
-                  },
-                  onRenameCategory: (categoryId, name) => {
-                    const rejection = sales.renameCategory(categoryId, name);
-                    return rejection ? FIELD_ERROR[rejection] : null;
-                  },
-                  onDeleteCategory: (categoryId, name) => {
-                    const confirmed = window.confirm(
-                      `Удалить категорию «${name}»? Она и её товары пропадут из рабочего списка. Вернуть можно в архиве.`,
-                    );
-                    if (confirmed) {
-                      sales.deleteCategory(categoryId);
-                    }
-                  },
-                  onDeleteProduct: (productId, name) => {
-                    const confirmed = window.confirm(
-                      `Удалить товар «${name}»? Он пропадёт из рабочего списка. Вернуть можно в архиве.`,
-                    );
-                    if (confirmed) {
-                      sales.deleteProduct(productId);
-                    }
-                  },
-                  onAddProduct: (categoryId) => {
-                    setAddCategoryId(categoryId);
-                    setAddOpen(true);
-                  },
-                }}
+                showFinance={canViewSalesFinance}
+                showTotals={canViewSalesFinance}
+                edit={
+                  planEditable || vatEditable || catalogEditable
+                    ? {
+                        plan: planEditable,
+                        vat: vatEditable,
+                        catalog: catalogEditable,
+                        onPlanLine: (lineId, priceWithVat, volumePieces) => {
+                          return sales.updateMonthLine(month, lineId, priceWithVat, volumePieces);
+                        },
+                        onProductVat: (productId, vatPercent) => {
+                          const rejection = sales.updateProductVat(productId, vatPercent);
+                          return rejection ? FIELD_ERROR[rejection] : null;
+                        },
+                        onRenameProduct: (productId, name) => {
+                          const rejection = sales.renameProduct(productId, name);
+                          return rejection ? FIELD_ERROR[rejection] : null;
+                        },
+                        onRenameCategory: (categoryId, name) => {
+                          const rejection = sales.renameCategory(categoryId, name);
+                          return rejection ? FIELD_ERROR[rejection] : null;
+                        },
+                        onDeleteCategory: (categoryId, name) => {
+                          const confirmed = window.confirm(
+                            `Удалить категорию «${name}»? Она и её товары пропадут из рабочего списка. Вернуть можно в архиве.`,
+                          );
+                          if (confirmed) {
+                            sales.deleteCategory(categoryId);
+                          }
+                        },
+                        onDeleteProduct: (productId, name) => {
+                          const confirmed = window.confirm(
+                            `Удалить товар «${name}»? Он пропадёт из рабочего списка. Вернуть можно в архиве.`,
+                          );
+                          if (confirmed) {
+                            sales.deleteProduct(productId);
+                          }
+                        },
+                        onAddProduct: (categoryId) => {
+                          setAddCategoryId(categoryId);
+                          setAddOpen(true);
+                        },
+                      }
+                    : undefined
+                }
               />
             </section>
           ) : (

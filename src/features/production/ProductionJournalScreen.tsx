@@ -16,6 +16,7 @@ import {
   productionJournalHref,
 } from '@/features/production/paths';
 import { formatProductionEntryDate } from '@/features/production/text';
+import { useRole } from '@/features/roles/RoleProvider';
 import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { formatPieces } from '@/features/sales/text';
 import { IconPlus } from '@/features/shell/Icons';
@@ -32,6 +33,7 @@ export function ProductionJournalScreen({ month }: { month: string }) {
 
 function Workspace({ month, currentMonth, today }: { month: string; currentMonth: string; today: Date }) {
   const store = useDocumentStore();
+  const { canEditProduction } = useRole();
   const router = useRouter();
   const items = workingProductionEntriesInMonth(store.document, month);
   const days = groupEntriesByDay(items);
@@ -51,10 +53,12 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
       title={PRODUCTION_JOURNAL_TITLE}
       full
       aside={
-        <Link href={productionEntryNewHref()} className={primaryButtonClassName}>
-          <IconPlus />
-          Добавить запись
-        </Link>
+        canEditProduction ? (
+          <Link href={productionEntryNewHref()} className={primaryButtonClassName}>
+            <IconPlus />
+            Добавить запись
+          </Link>
+        ) : null
       }
     >
       <div className="flex flex-col gap-4">
@@ -91,8 +95,9 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
 
         {items.length === 0 ? (
           <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-            За этот месяц записей выпуска нет. Добавьте запись: дата и штуки по товарам. Пока она не попадает в сводку и
-            фактическое производство.
+            {canEditProduction
+              ? 'За этот месяц записей выпуска нет. Добавьте запись: дата и штуки по товарам. Пока она не попадает в сводку и фактическое производство.'
+              : 'За этот месяц записей выпуска нет.'}
           </p>
         ) : (
           <div className="border border-line bg-sheet">

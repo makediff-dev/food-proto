@@ -176,7 +176,7 @@ export function MaterialReceiptFormTable({
 }: {
   materials: readonly Material[];
   drafts: Readonly<Record<string, MaterialReceiptLineDraft>>;
-  onChange: (materialId: string, field: MaterialReceiptLineField, raw: string) => void;
+  onChange?: (materialId: string, field: MaterialReceiptLineField, raw: string) => void;
 }) {
   const groups = buildGroups(materials, drafts);
   const totals = groupTotals(groups.flatMap((group) => group.rows));
@@ -269,7 +269,7 @@ function GroupBlock({
   group: EntryFormGroup;
   open: boolean;
   onToggle: () => void;
-  onChange: (materialId: string, field: MaterialReceiptLineField, raw: string) => void;
+  onChange?: (materialId: string, field: MaterialReceiptLineField, raw: string) => void;
 }) {
   const materialCount = group.rows.length;
 
@@ -322,7 +322,7 @@ function MaterialRow({
 }: {
   row: EntryFormRow;
   index: number;
-  onChange: (materialId: string, field: MaterialReceiptLineField, raw: string) => void;
+  onChange?: (materialId: string, field: MaterialReceiptLineField, raw: string) => void;
 }) {
   return (
     <tr>
@@ -340,7 +340,11 @@ function MaterialRow({
             column.key === 'quantity' ? 'h-px p-0' : 'px-1.5 py-2'
           }`}
         >
-          <RowCell column={column.key} row={row} onChange={(field, raw) => onChange(row.material.id, field, raw)} />
+          <RowCell
+            column={column.key}
+            row={row}
+            onChange={onChange ? (field, raw) => onChange(row.material.id, field, raw) : undefined}
+          />
         </td>
       ))}
     </tr>
@@ -354,7 +358,7 @@ function RowCell({
 }: {
   column: ColumnKey;
   row: EntryFormRow;
-  onChange: (field: MaterialReceiptLineField, raw: string) => void;
+  onChange?: (field: MaterialReceiptLineField, raw: string) => void;
 }) {
   if (column === 'price') {
     return (
@@ -370,7 +374,7 @@ function RowCell({
             inputMode="decimal"
             unit="₽"
             format={formatKopecks(parseMoneyInput)}
-            onChange={(raw) => onChange('price', raw)}
+            onChange={onChange ? (raw) => onChange('price', raw) : undefined}
           />
         }
         bottom={row.priceExVat === null ? <Empty /> : <MoneyAmount amount={row.priceExVat} />}
@@ -386,7 +390,7 @@ function RowCell({
           value={row.draft.quantity}
           inputMode="decimal"
           unit={row.material.unit}
-          onChange={(raw) => onChange('quantity', raw)}
+          onChange={onChange ? (raw) => onChange('quantity', raw) : undefined}
         />
       </MergedTwoStory>
     );
@@ -435,28 +439,38 @@ function GridInput({
   inputMode: 'decimal' | 'numeric';
   unit?: string;
   format?: (raw: string) => string | null;
-  onChange: (raw: string) => void;
+  onChange?: (raw: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const readOnly = onChange === undefined;
   const formatted = format?.(value) ?? null;
-  const shown = editing ? value : (formatted ?? value);
+  const shown = editing && !readOnly ? value : (formatted ?? value);
 
   return (
-    <div data-editable-field="" className="min-w-0">
+    <div data-editable-field={readOnly ? undefined : ''} className="min-w-0">
       <div className="flex items-baseline justify-end gap-1">
         <input
           value={shown}
           inputMode={inputMode}
           autoComplete="off"
           aria-label={label}
-          onFocus={() => setEditing(true)}
+          readOnly={readOnly}
+          onFocus={() => {
+            if (!readOnly) {
+              setEditing(true);
+            }
+          }}
           onBlur={() => {
             setEditing(false);
-            if (formatted && formatted !== value) {
+            if (!readOnly && formatted && formatted !== value) {
               onChange(formatted);
             }
           }}
-          onChange={(event) => onChange(sanitizeDraft(event.target.value, inputMode))}
+          onChange={(event) => {
+            if (!readOnly) {
+              onChange(sanitizeDraft(event.target.value, inputMode));
+            }
+          }}
           className={`${gridFieldClassName} text-ink`}
           placeholder={value ? undefined : '—'}
         />

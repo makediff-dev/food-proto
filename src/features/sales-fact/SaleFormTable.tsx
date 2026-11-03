@@ -154,7 +154,7 @@ export function SaleFormTable({
   categories: readonly ProductCategory[];
   products: readonly Product[];
   drafts: Readonly<Record<string, SaleLineDraft>>;
-  onChange: (productId: string, field: SaleLineField, raw: string) => void;
+  onChange?: (productId: string, field: SaleLineField, raw: string) => void;
 }) {
   const groups = buildGroups(categories, products, drafts);
   const totals = groupTotals(groups.flatMap((group) => group.rows));
@@ -250,7 +250,7 @@ function CategoryBlock({
   group: SaleFormGroup;
   open: boolean;
   onToggle: () => void;
-  onChange: (productId: string, field: SaleLineField, raw: string) => void;
+  onChange?: (productId: string, field: SaleLineField, raw: string) => void;
 }) {
   const productCount = group.rows.length;
   const deleted = group.category.deletedAt !== null;
@@ -307,11 +307,11 @@ function ProductRow({
 }: {
   row: SaleFormRow;
   index: number;
-  onChange: (productId: string, field: SaleLineField, raw: string) => void;
+  onChange?: (productId: string, field: SaleLineField, raw: string) => void;
 }) {
   return (
     <tr>
-      <th scope="row" className={entityNameRowClassName('repeated')}>
+      <th scope="row" className={entityNameRowClassName(onChange ? 'assigned' : 'repeated')}>
         <div className="flex items-center gap-2">
           <ProductIndex index={index} />
           <span className="text-sm text-ink">{row.product.name}</span>
@@ -321,11 +321,15 @@ function ProductRow({
       {COLUMNS.map((column) => (
         <td
           key={column.key}
-          className={`w-px border-b border-b-line text-right align-middle ${columnDividerClassName} ${cellKindClassName[COLUMN_KIND[column.key]]} ${
+          className={`w-px border-b border-b-line text-right align-middle ${columnDividerClassName} ${cellKindClassName[onChange ? COLUMN_KIND[column.key] : 'repeated']} ${
             column.key === 'pieces' ? 'h-px p-0' : 'px-1.5 py-2'
           }`}
         >
-          <RowCell column={column.key} row={row} onChange={(field, raw) => onChange(row.product.id, field, raw)} />
+          <RowCell
+            column={column.key}
+            row={row}
+            onChange={onChange ? (field, raw) => onChange(row.product.id, field, raw) : undefined}
+          />
         </td>
       ))}
     </tr>
@@ -339,12 +343,12 @@ function RowCell({
 }: {
   column: ColumnKey;
   row: SaleFormRow;
-  onChange: (field: SaleLineField, raw: string) => void;
+  onChange?: (field: SaleLineField, raw: string) => void;
 }) {
   if (column === 'price') {
     return (
       <StackedPair
-        topKind="assigned"
+        topKind={onChange ? 'assigned' : 'repeated'}
         bottomKind="computed"
         topLabel="с НДС"
         bottomLabel="без НДС"
@@ -355,7 +359,7 @@ function RowCell({
             inputMode="decimal"
             unit="₽"
             format={formatKopecks(parseSalePrice)}
-            onChange={(raw) => onChange('price', raw)}
+            onChange={onChange ? (raw) => onChange('price', raw) : undefined}
           />
         }
         bottom={row.priceExVat === null ? <Empty /> : <MoneyAmount amount={row.priceExVat} />}
@@ -365,14 +369,14 @@ function RowCell({
 
   if (column === 'pieces') {
     return (
-      <MergedTwoStory kind="assigned">
+      <MergedTwoStory kind={onChange ? 'assigned' : 'repeated'}>
         <GridInput
           label={`Штуки, ${row.product.name}`}
           value={row.draft.pieces}
           inputMode="numeric"
           unit="шт"
           invalid={hasAmountWithoutPieces(row.draft.pieces, row.draft.amount)}
-          onChange={(raw) => onChange('pieces', raw)}
+          onChange={onChange ? (raw) => onChange('pieces', raw) : undefined}
         />
       </MergedTwoStory>
     );
@@ -380,7 +384,7 @@ function RowCell({
 
   return (
     <StackedPair
-      topKind="assigned"
+      topKind={onChange ? 'assigned' : 'repeated'}
       bottomKind="computed"
       topLabel="с НДС"
       bottomLabel="без НДС"
@@ -391,7 +395,7 @@ function RowCell({
           inputMode="decimal"
           unit="₽"
           format={formatKopecks(parseSaleAmount)}
-          onChange={(raw) => onChange('amount', raw)}
+          onChange={onChange ? (raw) => onChange('amount', raw) : undefined}
         />
       }
       bottom={row.amountExVat === null ? <Empty /> : <MoneyAmount amount={row.amountExVat} />}
@@ -446,15 +450,16 @@ function GridInput({
   unit?: string;
   invalid?: boolean;
   format?: (raw: string) => string | null;
-  onChange: (raw: string) => void;
+  onChange?: (raw: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const readOnly = onChange === undefined;
   const formatted = format?.(value) ?? null;
-  const shown = editing ? value : (formatted ?? value);
+  const shown = editing && !readOnly ? value : (formatted ?? value);
   const tone = invalid ? 'text-negative' : 'text-ink';
 
   return (
-    <div data-editable-field="" className="min-w-0">
+    <div data-editable-field={readOnly ? undefined : ''} className="min-w-0">
       <div className="flex items-baseline justify-end gap-1">
         <input
           value={shown}
@@ -462,14 +467,23 @@ function GridInput({
           autoComplete="off"
           aria-label={label}
           aria-invalid={invalid || undefined}
-          onFocus={() => setEditing(true)}
+          readOnly={readOnly}
+          onFocus={() => {
+            if (!readOnly) {
+              setEditing(true);
+            }
+          }}
           onBlur={() => {
             setEditing(false);
-            if (formatted && formatted !== value) {
+            if (!readOnly && formatted && formatted !== value) {
               onChange(formatted);
             }
           }}
-          onChange={(event) => onChange(sanitizeDraft(event.target.value, inputMode))}
+          onChange={(event) => {
+            if (!readOnly) {
+              onChange(sanitizeDraft(event.target.value, inputMode));
+            }
+          }}
           className={`${gridFieldClassName} ${tone}`}
           placeholder={value ? undefined : '—'}
         />

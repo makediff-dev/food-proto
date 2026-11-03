@@ -12,6 +12,7 @@ import { MaterialsWarehouseBlocks } from '@/features/materials/MaterialsWarehous
 import { MATERIALS_INVENTORY_TITLE, materialsInventoryHref } from '@/features/materials/paths';
 import { MATERIAL_OPENING_ERROR } from '@/features/materials/text';
 import { useMaterials } from '@/features/materials/use-materials';
+import { useRole } from '@/features/roles/RoleProvider';
 import { PageFrame } from '@/features/shell/PageFrame';
 
 export function MaterialsInventoryScreen({ month }: { month: string }) {
@@ -19,6 +20,7 @@ export function MaterialsInventoryScreen({ month }: { month: string }) {
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = resolveMaterialMonth(month, today, currentMonth);
   const materials = useMaterials();
+  const { canEditInventory } = useRole();
   const router = useRouter();
   const view = useMemo(
     () => materialMovementMonth(materials.document, selectedMonth),
@@ -50,7 +52,7 @@ export function MaterialsInventoryScreen({ month }: { month: string }) {
             caption={`${group.name}, ${warehouse.name}, инвентаризация`}
             rows={warehouse.rows}
             totals={warehouse.totals}
-            editable={materials.hydrated}
+            editable={materials.hydrated && canEditInventory}
             onClosing={(materialId, quantity) => closingError(warehouse.warehouseId, materialId, quantity)}
           />
         )}

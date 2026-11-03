@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { deletedCategories } from '@/domain/categories';
 import { deletedProducts } from '@/domain/products';
 import { PLANNING_ARCHIVE_TITLE, planningHref } from '@/features/planning/paths';
+import { useRole } from '@/features/roles/RoleProvider';
 import { FIELD_ERROR } from '@/features/sales/fields';
 import { useSales } from '@/features/sales/use-sales';
 import { IconArrowLeft, IconUndo } from '@/features/shell/Icons';
@@ -13,10 +14,12 @@ import { PageFrame } from '@/features/shell/PageFrame';
 
 export function PlanningArchiveScreen() {
   const sales = useSales();
+  const { canEditSalesCatalog } = useRole();
   const [error, setError] = useState<string | null>(null);
   const categories = deletedCategories(sales.document);
   const products = deletedProducts(sales.document);
   const empty = categories.length === 0 && products.length === 0;
+  const canRestore = canEditSalesCatalog;
 
   return (
     <PageFrame
@@ -47,18 +50,20 @@ export function PlanningArchiveScreen() {
                   {categories.map((item) => (
                     <li key={item.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm text-ink">{item.name}</p>
-                      <button
-                        type="button"
-                        disabled={!sales.hydrated}
-                        onClick={() => {
-                          const rejection = sales.restoreCategory(item.id);
-                          setError(rejection ? FIELD_ERROR[rejection] : null);
-                        }}
-                        className={restoreButtonClassName}
-                      >
-                        <IconUndo />
-                        Вернуть
-                      </button>
+                      {canRestore ? (
+                        <button
+                          type="button"
+                          disabled={!sales.hydrated}
+                          onClick={() => {
+                            const rejection = sales.restoreCategory(item.id);
+                            setError(rejection ? FIELD_ERROR[rejection] : null);
+                          }}
+                          className={restoreButtonClassName}
+                        >
+                          <IconUndo />
+                          Вернуть
+                        </button>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
@@ -71,18 +76,20 @@ export function PlanningArchiveScreen() {
                   {products.map((item) => (
                     <li key={item.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm text-ink">{item.name}</p>
-                      <button
-                        type="button"
-                        disabled={!sales.hydrated}
-                        onClick={() => {
-                          const rejection = sales.restoreProduct(item.id);
-                          setError(rejection ? FIELD_ERROR[rejection] : null);
-                        }}
-                        className={restoreButtonClassName}
-                      >
-                        <IconUndo />
-                        Вернуть
-                      </button>
+                      {canRestore ? (
+                        <button
+                          type="button"
+                          disabled={!sales.hydrated}
+                          onClick={() => {
+                            const rejection = sales.restoreProduct(item.id);
+                            setError(rejection ? FIELD_ERROR[rejection] : null);
+                          }}
+                          className={restoreButtonClassName}
+                        >
+                          <IconUndo />
+                          Вернуть
+                        </button>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

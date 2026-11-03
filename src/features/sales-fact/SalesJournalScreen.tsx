@@ -9,6 +9,7 @@ import type { PrototypeDocument, Sale } from '@/domain/document';
 import { saleTotals, workingSalesInMonth } from '@/domain/sales';
 import { monthKeyFromDate, planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { lastHorizonMonth } from '@/domain/summary';
+import { useRole } from '@/features/roles/RoleProvider';
 import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { formatPieces } from '@/features/sales/text';
 import { SALES_JOURNAL_TITLE, saleHref, saleNewHref, salesJournalHref } from '@/features/sales-fact/paths';
@@ -28,6 +29,7 @@ export function SalesJournalScreen({ month }: { month: string }) {
 
 function Workspace({ month, currentMonth, today }: { month: string; currentMonth: string; today: Date }) {
   const store = useDocumentStore();
+  const { canEditSalesFact } = useRole();
   const router = useRouter();
   const items = workingSalesInMonth(store.document, month);
   const days = groupSalesByDay(items);
@@ -47,10 +49,12 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
       title={SALES_JOURNAL_TITLE}
       full
       aside={
-        <Link href={saleNewHref()} className={primaryButtonClassName}>
-          <IconPlus />
-          Добавить продажу
-        </Link>
+        canEditSalesFact ? (
+          <Link href={saleNewHref()} className={primaryButtonClassName}>
+            <IconPlus />
+            Добавить продажу
+          </Link>
+        ) : null
       }
     >
       <div className="flex flex-col gap-4">
@@ -87,8 +91,9 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
 
         {items.length === 0 ? (
           <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-            За этот месяц рабочих продаж нет. Добавьте продажу: заказчик, дата и товары. Она попадёт в таблицу факта за
-            этот день.
+            {canEditSalesFact
+              ? 'За этот месяц рабочих продаж нет. Добавьте продажу: заказчик, дата и товары. Она попадёт в таблицу факта за этот день.'
+              : 'За этот месяц рабочих продаж нет.'}
           </p>
         ) : (
           <div className="border border-line bg-sheet">

@@ -17,6 +17,7 @@ import {
 import { formatQuantity } from '@/features/materials/text';
 import { useMaterials } from '@/features/materials/use-materials';
 import { formatProductionEntryDate } from '@/features/production/text';
+import { useRole } from '@/features/roles/RoleProvider';
 import { primaryButtonClassName } from '@/features/sales/fields';
 import { IconPlus } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
@@ -26,6 +27,7 @@ export function MaterialJournalScreen({ month }: { month: string }) {
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = resolveMaterialMonth(month, today, currentMonth);
   const materials = useMaterials();
+  const { canEditMaterialReceipts } = useRole();
   const router = useRouter();
   const items = materialReceiptsInMonth(materials.document, selectedMonth);
 
@@ -35,10 +37,12 @@ export function MaterialJournalScreen({ month }: { month: string }) {
       full
       lede="Приход от поставщика на склад 1 или склад 2. В отчёте это факт прихода."
       aside={
-        <Link href={materialReceiptNewHref()} className={primaryButtonClassName}>
-          <IconPlus />
-          Добавить приход
-        </Link>
+        canEditMaterialReceipts ? (
+          <Link href={materialReceiptNewHref()} className={primaryButtonClassName}>
+            <IconPlus />
+            Добавить приход
+          </Link>
+        ) : null
       }
       intro={
         <MaterialMonthBar
@@ -50,7 +54,9 @@ export function MaterialJournalScreen({ month }: { month: string }) {
     >
       {items.length === 0 ? (
         <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-          За этот месяц приходов нет. Добавьте поступление: склад, поставщик, дата и количество.
+          {canEditMaterialReceipts
+            ? 'За этот месяц приходов нет. Добавьте поступление: склад, поставщик, дата и количество.'
+            : 'За этот месяц приходов нет.'}
         </p>
       ) : (
         <div className="border border-line bg-sheet">

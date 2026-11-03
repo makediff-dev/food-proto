@@ -1,7 +1,7 @@
 'use client';
 
 import { ROLES_TITLE } from '@/features/roles/paths';
-import { PERMISSION_MATRIX_ROWS, ROLES } from '@/features/roles/roles';
+import { PERMISSION_MATRIX_ROWS, permissionAllowed, ROLES } from '@/features/roles/roles';
 import { IconCheck, IconCross } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
 
@@ -25,12 +25,15 @@ export function RolesScreen() {
           </thead>
           <tbody>
             {PERMISSION_MATRIX_ROWS.map((row) => (
-              <tr key={row.key} className="border-b border-line last:border-b-0">
+              <tr
+                key={row.kind === 'section' ? `section:${row.section}` : `flag:${row.key}`}
+                className="border-b border-line last:border-b-0"
+              >
                 <th scope="row" className="px-3 py-2 text-left font-normal text-ink">
                   {row.label}
                 </th>
                 {ROLES.map((role) => {
-                  const allowed = role[row.key];
+                  const allowed = permissionAllowed(role, row);
                   return (
                     <td key={role.id} className="px-3 py-2 text-center">
                       {allowed ? (

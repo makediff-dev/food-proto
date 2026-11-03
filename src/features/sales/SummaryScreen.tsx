@@ -19,6 +19,7 @@ import {
   summaryForLens,
 } from '@/domain/summary';
 import { planningHref } from '@/features/planning/paths';
+import { useRole } from '@/features/roles/RoleProvider';
 import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { summaryHref } from '@/features/sales/paths';
 import { SummaryHeadlineTable } from '@/features/sales/SummaryHeadlineTable';
@@ -50,6 +51,7 @@ function Workspace({
   view: SummaryLens;
 }) {
   const sales = useSales();
+  const { canEditSalesOpex, canViewSalesFinance } = useRole();
   const router = useRouter();
   const fromFieldId = useId();
   const toFieldId = useId();
@@ -64,7 +66,7 @@ function Workspace({
     [sales.document, periodFrom, periodTo, today, view],
   );
   const categories = activeCategories(sales.document);
-  const factOpexEditable = sales.hydrated && singleMonth;
+  const factOpexEditable = sales.hydrated && singleMonth && canEditSalesOpex;
   const horizonEnd = lastHorizonMonth(today);
   const hasTable = summary.groups.length > 0;
   const tableExpanded = fullscreen && hasTable;
@@ -218,6 +220,7 @@ function Workspace({
               view={view}
               periodClosed={periodClosed}
               expenseBasis={isActual ? 'elapsed' : 'month'}
+              showFinance={canViewSalesFinance}
               onFactOperatingExpense={
                 factOpexEditable
                   ? (amountExVat) => {
@@ -252,6 +255,8 @@ function Workspace({
                 view={view}
                 periodClosed={periodClosed}
                 expanded={tableExpanded}
+                showFinance={canViewSalesFinance}
+                showTotals={canViewSalesFinance}
               />
             </section>
           ) : (

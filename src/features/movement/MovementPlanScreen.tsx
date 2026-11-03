@@ -11,6 +11,7 @@ import { lastHorizonMonth } from '@/domain/summary';
 import { MovementPlanTable, movementPlanNormRangeInvalid } from '@/features/movement/MovementPlanTable';
 import { MOVEMENT_PLAN_TITLE, movementPlanHref } from '@/features/movement/paths';
 import { useMovementPlan } from '@/features/movement/use-movement-plan';
+import { useRole } from '@/features/roles/RoleProvider';
 import { monthFieldClassName } from '@/features/sales/fields';
 import { IconFullscreen, IconFullscreenExit } from '@/features/shell/Icons';
 import { MonthStep } from '@/features/shell/MonthStep';
@@ -26,12 +27,13 @@ export function MovementPlanScreen({ month }: { month: string }) {
 
 function Workspace({ month, currentMonth, today }: { month: string; currentMonth: string; today: Date }) {
   const movementPlan = useMovementPlan();
+  const { canEditMovementPlan } = useRole();
   const router = useRouter();
   const [fullscreen, setFullscreen] = useState(false);
   const view = useMemo(() => movementPlanMonthView(movementPlan.document, month), [movementPlan.document, month]);
   const products = activeProducts(movementPlan.document);
   const categories = activeCategories(movementPlan.document);
-  const normEditable = movementPlan.hydrated && products.length > 0;
+  const normEditable = movementPlan.hydrated && canEditMovementPlan && products.length > 0;
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);
   const horizonEnd = lastHorizonMonth(today);

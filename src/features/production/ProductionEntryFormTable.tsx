@@ -179,7 +179,7 @@ export function ProductionEntryFormTable({
   categories: readonly ProductCategory[];
   products: readonly Product[];
   drafts: Readonly<Record<string, ProductionEntryLineDraft>>;
-  onChange: (productId: string, field: ProductionEntryLineField, raw: string) => void;
+  onChange?: (productId: string, field: ProductionEntryLineField, raw: string) => void;
 }) {
   const groups = buildGroups(categories, products, drafts);
   const totals = groupTotals(groups.flatMap((group) => group.rows));
@@ -275,7 +275,7 @@ function CategoryBlock({
   group: EntryFormGroup;
   open: boolean;
   onToggle: () => void;
-  onChange: (productId: string, field: ProductionEntryLineField, raw: string) => void;
+  onChange?: (productId: string, field: ProductionEntryLineField, raw: string) => void;
 }) {
   const productCount = group.rows.length;
   const deleted = group.category.deletedAt !== null;
@@ -332,7 +332,7 @@ function ProductRow({
 }: {
   row: EntryFormRow;
   index: number;
-  onChange: (productId: string, field: ProductionEntryLineField, raw: string) => void;
+  onChange?: (productId: string, field: ProductionEntryLineField, raw: string) => void;
 }) {
   return (
     <tr>
@@ -350,7 +350,11 @@ function ProductRow({
             column.key === 'pieces' ? 'h-px p-0' : 'px-1.5 py-2'
           }`}
         >
-          <RowCell column={column.key} row={row} onChange={(field, raw) => onChange(row.product.id, field, raw)} />
+          <RowCell
+            column={column.key}
+            row={row}
+            onChange={onChange ? (field, raw) => onChange(row.product.id, field, raw) : undefined}
+          />
         </td>
       ))}
     </tr>
@@ -364,7 +368,7 @@ function RowCell({
 }: {
   column: ColumnKey;
   row: EntryFormRow;
-  onChange: (field: ProductionEntryLineField, raw: string) => void;
+  onChange?: (field: ProductionEntryLineField, raw: string) => void;
 }) {
   if (column === 'price') {
     return (
@@ -380,7 +384,7 @@ function RowCell({
             inputMode="decimal"
             unit="₽"
             format={formatKopecks(parseProductionEntryPrice)}
-            onChange={(raw) => onChange('price', raw)}
+            onChange={onChange ? (raw) => onChange('price', raw) : undefined}
           />
         }
         bottom={row.priceExVat === null ? <Empty /> : <MoneyAmount amount={row.priceExVat} />}
@@ -396,7 +400,7 @@ function RowCell({
           value={row.draft.pieces}
           inputMode="numeric"
           unit="шт"
-          onChange={(raw) => onChange('pieces', raw)}
+          onChange={onChange ? (raw) => onChange('pieces', raw) : undefined}
         />
       </MergedTwoStory>
     );
@@ -450,28 +454,38 @@ function GridInput({
   inputMode: 'decimal' | 'numeric';
   unit?: string;
   format?: (raw: string) => string | null;
-  onChange: (raw: string) => void;
+  onChange?: (raw: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const readOnly = onChange === undefined;
   const formatted = format?.(value) ?? null;
-  const shown = editing ? value : (formatted ?? value);
+  const shown = editing && !readOnly ? value : (formatted ?? value);
 
   return (
-    <div data-editable-field="" className="min-w-0">
+    <div data-editable-field={readOnly ? undefined : ''} className="min-w-0">
       <div className="flex items-baseline justify-end gap-1">
         <input
           value={shown}
           inputMode={inputMode}
           autoComplete="off"
           aria-label={label}
-          onFocus={() => setEditing(true)}
+          readOnly={readOnly}
+          onFocus={() => {
+            if (!readOnly) {
+              setEditing(true);
+            }
+          }}
           onBlur={() => {
             setEditing(false);
-            if (formatted && formatted !== value) {
+            if (!readOnly && formatted && formatted !== value) {
               onChange(formatted);
             }
           }}
-          onChange={(event) => onChange(sanitizeDraft(event.target.value, inputMode))}
+          onChange={(event) => {
+            if (!readOnly) {
+              onChange(sanitizeDraft(event.target.value, inputMode));
+            }
+          }}
           className={`${gridFieldClassName} text-ink`}
           placeholder={value ? undefined : '—'}
         />

@@ -13,6 +13,7 @@ import { DERIVATIVE_MOVEMENT_PLAN_TITLE, derivativeMovementPlanHref } from '@/fe
 import { DERIVATIVE_NORM_ERROR } from '@/features/derivative-movement/text';
 import { useDerivativeMovement } from '@/features/derivative-movement/use-derivative-movement';
 import { MaterialMonthBar, resolveMaterialMonth } from '@/features/materials/MaterialMonthBar';
+import { useRole } from '@/features/roles/RoleProvider';
 import { PageFrame } from '@/features/shell/PageFrame';
 
 export function DerivativeMovementPlanScreen({ month }: { month: string }) {
@@ -20,6 +21,7 @@ export function DerivativeMovementPlanScreen({ month }: { month: string }) {
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = resolveMaterialMonth(month, today, currentMonth);
   const movement = useDerivativeMovement();
+  const { canEditMovementPlan } = useRole();
   const router = useRouter();
   const view = useMemo(
     () => derivativeMovementMonth(movement.document, selectedMonth),
@@ -59,7 +61,11 @@ export function DerivativeMovementPlanScreen({ month }: { month: string }) {
             Производных пока нет. Добавьте их в рецептурных журналах.
           </p>
         ) : (
-          <DerivativeMovementPlanTable sections={view.sections} editable={movement.hydrated} onNorm={normError} />
+          <DerivativeMovementPlanTable
+            sections={view.sections}
+            editable={movement.hydrated && canEditMovementPlan}
+            onNorm={normError}
+          />
         )}
       </div>
     </PageFrame>

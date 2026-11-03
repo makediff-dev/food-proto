@@ -13,6 +13,7 @@ import {
 import { DERIVATIVE_OPENING_ERROR } from '@/features/derivative-movement/text';
 import { useDerivativeMovement } from '@/features/derivative-movement/use-derivative-movement';
 import { MaterialMonthBar, resolveMaterialMonth } from '@/features/materials/MaterialMonthBar';
+import { useRole } from '@/features/roles/RoleProvider';
 import { PageFrame } from '@/features/shell/PageFrame';
 
 export function DerivativeMovementInventoryScreen({ month }: { month: string }) {
@@ -20,6 +21,7 @@ export function DerivativeMovementInventoryScreen({ month }: { month: string }) 
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = resolveMaterialMonth(month, today, currentMonth);
   const movement = useDerivativeMovement();
+  const { canEditInventory } = useRole();
   const router = useRouter();
   const view = useMemo(
     () => derivativeMovementMonth(movement.document, selectedMonth),
@@ -53,7 +55,7 @@ export function DerivativeMovementInventoryScreen({ month }: { month: string }) 
       ) : (
         <DerivativeMovementInventoryTable
           sections={view.sections}
-          editable={movement.hydrated}
+          editable={movement.hydrated && canEditInventory}
           onClosing={closingError}
         />
       )}

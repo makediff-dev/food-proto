@@ -21,6 +21,7 @@ import {
 } from '@/domain/sales';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { planningHref } from '@/features/planning/paths';
+import { useRole } from '@/features/roles/RoleProvider';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { NEW_SALE_TITLE, SALES_JOURNAL_TITLE, salesJournalHref } from '@/features/sales-fact/paths';
 import {
@@ -158,6 +159,7 @@ function SaleForm({
   initialDrafts: Record<string, SaleLineDraft>;
 }) {
   const journal = useSalesJournal();
+  const { canEditSalesFact } = useRole();
   const router = useRouter();
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
@@ -169,6 +171,13 @@ function SaleForm({
   const [drafts, setDrafts] = useState(initialDrafts);
   const [saveError, setSaveError] = useState<string | null>(null);
   const month = occurredOn.slice(0, 7);
+  const readOnly = !canEditSalesFact;
+
+  useEffect(() => {
+    if (readOnly && !saleId) {
+      router.replace(salesJournalHref({ month: currentMonth, currentMonth }));
+    }
+  }, [readOnly, saleId, router, currentMonth]);
 
   const filledProductIds = useMemo(
     () =>
@@ -335,7 +344,12 @@ function SaleForm({
               .
             </p>
           ) : (
-            <SaleFormTable categories={categories} products={products} drafts={drafts} onChange={setLine} />
+            <SaleFormTable
+              categories={categories}
+              products={products}
+              drafts={drafts}
+              onChange={readOnly ? undefined : setLine}
+            />
           )}
 
           <div className="sticky top-16 z-20 flex w-72 shrink-0 flex-col gap-4 self-start border border-line bg-sheet p-4 lg:top-4">
@@ -349,6 +363,7 @@ function SaleForm({
                 min="2000-01-01"
                 max={maxDay}
                 value={occurredOn}
+                disabled={readOnly}
                 onChange={(event) => setOccurredOn(event.target.value)}
                 className={`mt-2 ${fieldClassName}`}
               />
@@ -360,20 +375,23 @@ function SaleForm({
               <input
                 id={customerId}
                 value={customer}
+                disabled={readOnly}
                 onChange={(event) => setCustomer(event.target.value)}
                 className={`mt-2 ${fieldClassName}`}
               />
             </div>
-            <button
-              type="button"
-              disabled={!journal.hydrated}
-              onClick={save}
-              className={`${primaryButtonClassName} w-full`}
-            >
-              <IconCheck />
-              Сохранить
-            </button>
-            {saleId ? (
+            {readOnly ? null : (
+              <button
+                type="button"
+                disabled={!journal.hydrated}
+                onClick={save}
+                className={`${primaryButtonClassName} w-full`}
+              >
+                <IconCheck />
+                Сохранить
+              </button>
+            )}
+            {saleId && !readOnly ? (
               <button
                 type="button"
                 aria-label="Удалить продажу"

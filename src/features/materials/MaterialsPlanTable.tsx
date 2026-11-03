@@ -64,8 +64,8 @@ export function MaterialsPlanTable({
   totals: MaterialMovementTotals;
   editable: boolean;
   onField: (materialId: string, field: MaterialPlanField, value: number) => string | null;
-  onEdit: (materialId: string) => void;
-  onDelete: (materialId: string, name: string) => void;
+  onEdit?: (materialId: string) => void;
+  onDelete?: (materialId: string, name: string) => void;
 }) {
   return (
     <div className={tableFrameClassName}>
@@ -99,7 +99,7 @@ export function MaterialsPlanTable({
                     {row.deleted ? <span className="text-muted"> (архив)</span> : null}
                     <span className="text-muted"> · {materialUnitHint(row)}</span>
                   </span>
-                  {editable && !row.deleted ? (
+                  {editable && !row.deleted && onEdit && onDelete ? (
                     <span className="ml-auto inline-flex shrink-0 items-center">
                       <button
                         type="button"

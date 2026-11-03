@@ -26,6 +26,7 @@ import {
   parseQuantityInput,
 } from '@/features/materials/text';
 import { useMaterials } from '@/features/materials/use-materials';
+import { useRole } from '@/features/roles/RoleProvider';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { Dialog } from '@/features/shell/Dialog';
 import { IconPlus } from '@/features/shell/Icons';
@@ -40,12 +41,14 @@ export function MaterialsPlanScreen({ month }: { month: string }) {
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = resolveMaterialMonth(month, today, currentMonth);
   const materials = useMaterials();
+  const { canEditMaterialsPlan } = useRole();
   const router = useRouter();
   const view = useMemo(
     () => materialMovementMonth(materials.document, selectedMonth),
     [materials.document, selectedMonth],
   );
   const [dialog, setDialog] = useState<MaterialDialogState | null>(null);
+  const planEditable = materials.hydrated && canEditMaterialsPlan;
 
   function fieldError(
     warehouseId: MaterialWarehouseId,
@@ -72,39 +75,53 @@ export function MaterialsPlanScreen({ month }: { month: string }) {
     >
       <MaterialsWarehouseBlocks
         groups={view.groups}
-        renderWarehouseExtra={(group, warehouse) => (
-          <button
-            type="button"
-            onClick={() => setDialog({ mode: 'create', groupId: group.groupId, warehouseId: warehouse.warehouseId })}
-            className={primaryButtonClassName}
-          >
-            <IconPlus />
-            Добавить
-          </button>
-        )}
+        renderWarehouseExtra={
+          planEditable
+            ? (group, warehouse) => (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDialog({ mode: 'create', groupId: group.groupId, warehouseId: warehouse.warehouseId })
+                  }
+                  className={primaryButtonClassName}
+                >
+                  <IconPlus />
+                  Добавить
+                </button>
+              )
+            : undefined
+        }
         renderWarehouse={(group, warehouse) => (
           <MaterialsPlanTable
             caption={`${group.name}, ${warehouse.name}, план`}
             rows={warehouse.rows}
             totals={warehouse.totals}
-            editable={materials.hydrated}
+            editable={planEditable}
             onField={(materialId, field, value) => fieldError(warehouse.warehouseId, materialId, field, value)}
-            onEdit={(materialId) => {
-              const material = materialById(materials.document, materialId);
-              if (material && material.deletedAt === null) {
-                setDialog({ mode: 'edit', material });
-              }
-            }}
-            onDelete={(materialId, name) => {
-              const confirmed = window.confirm(`Удалить «${name}»? Позиция пропадёт из рабочего списка.`);
-              if (confirmed) {
-                materials.remove(materialId);
-              }
-            }}
+            onEdit={
+              planEditable
+                ? (materialId) => {
+                    const material = materialById(materials.document, materialId);
+                    if (material && material.deletedAt === null) {
+                      setDialog({ mode: 'edit', material });
+                    }
+                  }
+                : undefined
+            }
+            onDelete={
+              planEditable
+                ? (materialId, name) => {
+                    const confirmed = window.confirm(`Удалить «${name}»? Позиция пропадёт из рабочего списка.`);
+                    if (confirmed) {
+                      materials.remove(materialId);
+                    }
+                  }
+                : undefined
+            }
           />
         )}
       />
-      {dialog ? (
+      {dialog && planEditable ? (
         <MaterialDialog
           state={dialog}
           onClose={() => setDialog(null)}

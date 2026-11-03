@@ -47,9 +47,11 @@ import {
   RECIPES_FINISHED_TITLE,
   RECIPES_SECTION_TITLE,
 } from '@/features/recipes/paths';
+import { roleHomeHref } from '@/features/roles/access';
 import { ROLES_HREF, ROLES_TITLE } from '@/features/roles/paths';
+import { RoleGate } from '@/features/roles/RoleGate';
 import { useRole } from '@/features/roles/RoleProvider';
-import { isRoleId, ROLES } from '@/features/roles/roles';
+import { isRoleId, type NavSectionId, ROLES, roleHasSection } from '@/features/roles/roles';
 import { SUMMARY_SECTION_TITLE } from '@/features/sales/paths';
 import { SALES_FACT_TITLE, SALES_JOURNAL_TITLE, SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
 import { IconChevronDown, IconChevronRight, IconMenu, IconUndo } from '@/features/shell/Icons';
@@ -285,10 +287,21 @@ function RolesNavLink({ pathname, onNavigate }: { pathname: string; onNavigate: 
   );
 }
 
+const NAV_GROUPS: readonly { section: NavSectionId; title: string; items: readonly NavItem[] }[] = [
+  { section: 'sales', title: SALES_SECTION_TITLE, items: SALES_NAV },
+  { section: 'production', title: PRODUCTION_SECTION_TITLE, items: PRODUCTION_NAV },
+  { section: 'movement', title: MOVEMENT_SECTION_TITLE, items: MOVEMENT_NAV },
+  { section: 'recipes', title: RECIPES_SECTION_TITLE, items: RECIPES_NAV },
+  { section: 'derivativeMovement', title: DERIVATIVE_MOVEMENT_SECTION_TITLE, items: DERIVATIVE_MOVEMENT_NAV },
+  { section: 'materials', title: MATERIALS_SECTION_TITLE, items: MATERIALS_NAV },
+];
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { role } = useRole();
   const [menuOpen, setMenuOpen] = useState(false);
   const currentLabel = currentNavLabel(pathname);
+  const homeHref = roleHomeHref(role);
 
   useEffect(() => {
     if (!menuOpen) {
@@ -333,7 +346,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         <div className="px-4 pt-5 pb-4">
           <Link
-            href="/"
+            href={homeHref}
             onClick={closeMenu}
             className="font-figure text-lg leading-tight tracking-tight text-white outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
           >
@@ -344,23 +357,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         <nav aria-label="Разделы" className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2">
-          <NavGroup title={SALES_SECTION_TITLE} items={SALES_NAV} pathname={pathname} onNavigate={closeMenu} />
-          <NavGroup
-            title={PRODUCTION_SECTION_TITLE}
-            items={PRODUCTION_NAV}
-            pathname={pathname}
-            onNavigate={closeMenu}
-          />
-          <NavGroup title={MOVEMENT_SECTION_TITLE} items={MOVEMENT_NAV} pathname={pathname} onNavigate={closeMenu} />
-          <NavGroup title={RECIPES_SECTION_TITLE} items={RECIPES_NAV} pathname={pathname} onNavigate={closeMenu} />
-          <NavGroup
-            title={DERIVATIVE_MOVEMENT_SECTION_TITLE}
-            items={DERIVATIVE_MOVEMENT_NAV}
-            pathname={pathname}
-            onNavigate={closeMenu}
-          />
-          <NavGroup title={MATERIALS_SECTION_TITLE} items={MATERIALS_NAV} pathname={pathname} onNavigate={closeMenu} />
-          <RolesNavLink pathname={pathname} onNavigate={closeMenu} />
+          {NAV_GROUPS.filter((group) => roleHasSection(role, group.section)).map((group) => (
+            <NavGroup
+              key={group.section}
+              title={group.title}
+              items={group.items}
+              pathname={pathname}
+              onNavigate={closeMenu}
+            />
+          ))}
+          {roleHasSection(role, 'roles') ? <RolesNavLink pathname={pathname} onNavigate={closeMenu} /> : null}
         </nav>
 
         <div className="border-t border-sidebar-line">
@@ -383,7 +389,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
           <p className="text-sm text-ink">{currentLabel}</p>
         </header>
-        <div className="app-scroll min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <div className="app-scroll min-h-0 flex-1 overflow-y-auto">
+          <RoleGate>{children}</RoleGate>
+        </div>
       </div>
     </div>
   );

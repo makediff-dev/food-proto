@@ -16,6 +16,7 @@ import { lastHorizonMonth } from '@/domain/summary';
 import { ProductionPlanTable } from '@/features/production/ProductionPlanTable';
 import { PRODUCTION_PLAN_TITLE, productionPlanHref } from '@/features/production/paths';
 import { useProductionPlan } from '@/features/production/use-production-plan';
+import { useRole } from '@/features/roles/RoleProvider';
 import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { IconFullscreen, IconFullscreenExit, IconPlus } from '@/features/shell/Icons';
 import { MonthStep } from '@/features/shell/MonthStep';
@@ -31,6 +32,7 @@ export function ProductionPlanScreen({ month }: { month: string }) {
 
 function Workspace({ month, currentMonth, today }: { month: string; currentMonth: string; today: Date }) {
   const production = useProductionPlan();
+  const { canEditProduction } = useRole();
   const router = useRouter();
   const [fullscreen, setFullscreen] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
@@ -50,7 +52,7 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
   );
   const products = activeProducts(production.document);
   const categories = activeCategories(production.document);
-  const planEditable = production.hydrated && products.length > 0;
+  const planEditable = production.hydrated && canEditProduction && products.length > 0;
   const missing = planEditable && storedPlan ? missingProductionPlanProducts(production.document, storedPlan) : [];
   const previousMonth = shiftMonth(month, -1);
   const nextMonth = shiftMonth(month, 1);

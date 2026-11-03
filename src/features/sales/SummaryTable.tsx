@@ -74,8 +74,21 @@ const VARIANCE_COLUMNS: { key: VarianceKey; label: string }[] = [
   { key: 'contribution', label: 'Т-проток' },
 ];
 
-const LAST_PLAN_KEY = SIDE_COLUMNS.at(-1)?.key;
-const LAST_FACT_KEY = SIDE_COLUMNS.at(-1)?.key;
+const FINANCE_SIDE_KEYS = new Set<SideKey>(['unitCost', 'profitability', 'contribution', 'volumeCost']);
+
+function visibleSideColumns(showFinance: boolean): { key: SideKey; label: string }[] {
+  if (showFinance) {
+    return SIDE_COLUMNS;
+  }
+  return SIDE_COLUMNS.filter((column) => !FINANCE_SIDE_KEYS.has(column.key));
+}
+
+function visibleVarianceColumns(showFinance: boolean): { key: VarianceKey; label: string }[] {
+  if (showFinance) {
+    return VARIANCE_COLUMNS;
+  }
+  return VARIANCE_COLUMNS.filter((column) => column.key === 'revenue');
+}
 
 const PLAN_ASSIGNED = new Set<SideKey>(['price', 'volume', 'vat']);
 const PLAN_REPEATED = new Set<SideKey>(['unitCost']);
@@ -92,14 +105,20 @@ function factColumnKind(column: SideKey): CellKind {
   return FACT_REPEATED.has(column) ? 'repeated' : 'computed';
 }
 
-function sectionRightClass(kind: 'plan' | 'fact' | 'variance', key: string, part: 'full' | 'plan'): string {
+function sectionRightClass(
+  kind: 'plan' | 'fact' | 'variance',
+  key: string,
+  part: 'full' | 'plan',
+  lastPlanKey: SideKey | undefined,
+  lastFactKey: SideKey | undefined,
+): string {
   if (part === 'plan') {
     return tableBorder.rightThin;
   }
-  if (kind === 'plan' && key === LAST_PLAN_KEY) {
+  if (kind === 'plan' && key === lastPlanKey) {
     return tableBorder.rightThick;
   }
-  if (kind === 'fact' && key === LAST_FACT_KEY) {
+  if (kind === 'fact' && key === lastFactKey) {
     return tableBorder.rightThick;
   }
 
@@ -128,6 +147,8 @@ export function SummaryTable({
   periodClosed = false,
   part = 'full',
   expanded = false,
+  showFinance = true,
+  showTotals = true,
   edit,
 }: {
   groups: SummaryGroup[];
@@ -138,10 +159,18 @@ export function SummaryTable({
   periodClosed?: boolean;
   part?: 'full' | 'plan';
   expanded?: boolean;
+  /** Себестоимость, Т-проток и рентабельность — для экономиста и админа. */
+  showFinance?: boolean;
+  /** Строка «Всего» внизу сетки. */
+  showTotals?: boolean;
   /** Правка плана и справочника. Без него таблица только для просмотра. */
   edit?: SummaryTableEdit;
 }) {
   const showFact = part === 'full';
+  const sideColumns = visibleSideColumns(showFinance);
+  const varianceColumns = visibleVarianceColumns(showFinance);
+  const lastPlanKey = sideColumns.at(-1)?.key;
+  const lastFactKey = sideColumns.at(-1)?.key;
   const factIsForecast = view === 'forecast' && !periodClosed;
   const planHeader =
     part === 'plan'
@@ -166,7 +195,7 @@ export function SummaryTable({
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             <th
-              colSpan={SIDE_COLUMNS.length}
+              colSpan={sideColumns.length}
               scope="colgroup"
               className={`${blockHeadingClassName} ${showFact ? tableBorder.rightThick : ''}`}
             >
@@ -175,13 +204,13 @@ export function SummaryTable({
             {showFact ? (
               <>
                 <th
-                  colSpan={SIDE_COLUMNS.length}
+                  colSpan={sideColumns.length}
                   scope="colgroup"
                   className={`${blockHeadingClassName} ${tableBorder.rightThick}`}
                 >
                   {keepWithNext(factIsForecast ? 'Фактические показатели (прогноз)' : 'Фактические показатели')}
                 </th>
-                <th colSpan={VARIANCE_COLUMNS.length} scope="colgroup" className={blockHeadingClassName}>
+                <th colSpan={varianceColumns.length} scope="colgroup" className={blockHeadingClassName}>
                   Отклонение
                 </th>
               </>
@@ -191,28 +220,28 @@ export function SummaryTable({
             <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               Товар
             </th>
-            {SIDE_COLUMNS.map((column) => (
+            {sideColumns.map((column) => (
               <th
                 key={`plan:${column.key}`}
                 scope="col"
-                className={`${columnHeadingClassName} last:border-r-0 ${sectionRightClass('plan', column.key, part)}`}
+                className={`${columnHeadingClassName} last:border-r-0 ${sectionRightClass('plan', column.key, part, lastPlanKey, lastFactKey)}`}
               >
                 <ColumnLabel label={column.label} />
               </th>
             ))}
             {showFact
-              ? SIDE_COLUMNS.map((column) => (
+              ? sideColumns.map((column) => (
                   <th
                     key={`fact:${column.key}`}
                     scope="col"
-                    className={`${columnHeadingClassName} last:border-r-0 ${sectionRightClass('fact', column.key, part)}`}
+                    className={`${columnHeadingClassName} last:border-r-0 ${sectionRightClass('fact', column.key, part, lastPlanKey, lastFactKey)}`}
                   >
                     <ColumnLabel label={column.label} />
                   </th>
                 ))
               : null}
             {showFact
-              ? VARIANCE_COLUMNS.map((column) => (
+              ? varianceColumns.map((column) => (
                   <th
                     key={`var:${column.key}`}
                     scope="col"
@@ -226,45 +255,72 @@ export function SummaryTable({
         </thead>
         <tbody>
           {groups.map((group) => (
-            <CategoryBlock key={group.categoryId} group={group} part={part} edit={edit} />
+            <CategoryBlock
+              key={group.categoryId}
+              group={group}
+              part={part}
+              edit={edit}
+              sideColumns={sideColumns}
+              varianceColumns={varianceColumns}
+              lastPlanKey={lastPlanKey}
+              lastFactKey={lastFactKey}
+            />
           ))}
-          <tr>
-            <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
-              Всего
-            </th>
-            {SIDE_COLUMNS.map((column) => (
-              <td
-                key={`plan-total:${column.key}`}
-                className={`${totalValueClassName} last:border-r-0 ${sectionRightClass('plan', column.key, part)}`}
-              >
-                {planTotals ? <SideCell column={column.key} side={planTotals} kind="total" /> : <Empty />}
-              </td>
-            ))}
-            {showFact
-              ? SIDE_COLUMNS.map((column) => (
-                  <td
-                    key={`fact-total:${column.key}`}
-                    className={`${totalValueClassName} last:border-r-0 ${sectionRightClass('fact', column.key, part)}`}
-                  >
-                    <SideCell column={column.key} side={factTotals} kind="total" />
-                  </td>
-                ))
-              : null}
-            {showFact
-              ? VARIANCE_COLUMNS.map((column) => (
-                  <td key={`var-total:${column.key}`} className={`${totalValueClassName} ${columnDividerClassName}`}>
-                    <VarianceCell column={column.key} variance={variance} />
-                  </td>
-                ))
-              : null}
-          </tr>
+          {showTotals ? (
+            <tr>
+              <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
+                Всего
+              </th>
+              {sideColumns.map((column) => (
+                <td
+                  key={`plan-total:${column.key}`}
+                  className={`${totalValueClassName} last:border-r-0 ${sectionRightClass('plan', column.key, part, lastPlanKey, lastFactKey)}`}
+                >
+                  {planTotals ? <SideCell column={column.key} side={planTotals} kind="total" /> : <Empty />}
+                </td>
+              ))}
+              {showFact
+                ? sideColumns.map((column) => (
+                    <td
+                      key={`fact-total:${column.key}`}
+                      className={`${totalValueClassName} last:border-r-0 ${sectionRightClass('fact', column.key, part, lastPlanKey, lastFactKey)}`}
+                    >
+                      <SideCell column={column.key} side={factTotals} kind="total" />
+                    </td>
+                  ))
+                : null}
+              {showFact
+                ? varianceColumns.map((column) => (
+                    <td key={`var-total:${column.key}`} className={`${totalValueClassName} ${columnDividerClassName}`}>
+                      <VarianceCell column={column.key} variance={variance} />
+                    </td>
+                  ))
+                : null}
+            </tr>
+          ) : null}
         </tbody>
       </table>
     </div>
   );
 }
 
-function CategoryBlock({ group, part, edit }: { group: SummaryGroup; part: 'full' | 'plan'; edit?: SummaryTableEdit }) {
+function CategoryBlock({
+  group,
+  part,
+  edit,
+  sideColumns,
+  varianceColumns,
+  lastPlanKey,
+  lastFactKey,
+}: {
+  group: SummaryGroup;
+  part: 'full' | 'plan';
+  edit?: SummaryTableEdit;
+  sideColumns: readonly { key: SideKey; label: string }[];
+  varianceColumns: readonly { key: VarianceKey; label: string }[];
+  lastPlanKey: SideKey | undefined;
+  lastFactKey: SideKey | undefined;
+}) {
   const header = categoryBandClassName;
   const [open, setOpen] = useState(true);
   const productCount = group.rows.length;
@@ -333,26 +389,26 @@ function CategoryBlock({ group, part, edit }: { group: SummaryGroup; part: 'full
             ) : null}
           </div>
         </th>
-        {SIDE_COLUMNS.map((column) => (
+        {sideColumns.map((column) => (
           <td
             key={`plan-group:${column.key}`}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header} ${sectionRightClass('plan', column.key, part)}`}
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header} ${sectionRightClass('plan', column.key, part, lastPlanKey, lastFactKey)}`}
           >
             {group.plan ? <SideCell column={column.key} side={group.plan} kind="total" /> : <Empty />}
           </td>
         ))}
         {showFact
-          ? SIDE_COLUMNS.map((column) => (
+          ? sideColumns.map((column) => (
               <td
                 key={`fact-group:${column.key}`}
-                className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header} ${sectionRightClass('fact', column.key, part)}`}
+                className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header} ${sectionRightClass('fact', column.key, part, lastPlanKey, lastFactKey)}`}
               >
                 <SideCell column={column.key} side={group.fact} kind="total" />
               </td>
             ))
           : null}
         {showFact
-          ? VARIANCE_COLUMNS.map((column) => (
+          ? varianceColumns.map((column) => (
               <td
                 key={`var-group:${column.key}`}
                 className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${header} ${columnDividerClassName}`}
@@ -364,7 +420,17 @@ function CategoryBlock({ group, part, edit }: { group: SummaryGroup; part: 'full
       </tr>
       {open
         ? group.rows.map((row, index) => (
-            <ProductRow key={row.productId} row={row} index={index + 1} part={part} edit={edit} />
+            <ProductRow
+              key={row.productId}
+              row={row}
+              index={index + 1}
+              part={part}
+              edit={edit}
+              sideColumns={sideColumns}
+              varianceColumns={varianceColumns}
+              lastPlanKey={lastPlanKey}
+              lastFactKey={lastFactKey}
+            />
           ))
         : null}
     </>
@@ -376,11 +442,19 @@ function ProductRow({
   index,
   part,
   edit,
+  sideColumns,
+  varianceColumns,
+  lastPlanKey,
+  lastFactKey,
 }: {
   row: SummaryRow;
   index: number;
   part: 'full' | 'plan';
   edit?: SummaryTableEdit;
+  sideColumns: readonly { key: SideKey; label: string }[];
+  varianceColumns: readonly { key: VarianceKey; label: string }[];
+  lastPlanKey: SideKey | undefined;
+  lastFactKey: SideKey | undefined;
 }) {
   const showFact = part === 'full';
   const catalogEditable = edit?.catalog === true;
@@ -419,14 +493,14 @@ function ProductRow({
           )}
         </div>
       </th>
-      {SIDE_COLUMNS.map((column) => {
+      {sideColumns.map((column) => {
         const canEdit =
           (planEditable && row.planLineId !== null && (column.key === 'price' || column.key === 'volume')) ||
           (vatEditable && column.key === 'vat');
         return (
           <td
             key={`plan:${column.key}`}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('plan', column.key, part)} ${cellKindClassName[planColumnKind(column.key, part)]}`}
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('plan', column.key, part, lastPlanKey, lastFactKey)} ${cellKindClassName[planColumnKind(column.key, part)]}`}
             onClick={(event) => {
               if (!canEdit) {
                 return;
@@ -460,17 +534,17 @@ function ProductRow({
         );
       })}
       {showFact
-        ? SIDE_COLUMNS.map((column) => (
+        ? sideColumns.map((column) => (
             <td
               key={`fact:${column.key}`}
-              className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('fact', column.key, part)} ${cellKindClassName[factColumnKind(column.key)]}`}
+              className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${sectionRightClass('fact', column.key, part, lastPlanKey, lastFactKey)} ${cellKindClassName[factColumnKind(column.key)]}`}
             >
               <SideCell column={column.key} side={row.fact} kind="row" />
             </td>
           ))
         : null}
       {showFact
-        ? VARIANCE_COLUMNS.map((column) => (
+        ? varianceColumns.map((column) => (
             <td
               key={`var:${column.key}`}
               className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName} ${cellKindClassName.computed}`}

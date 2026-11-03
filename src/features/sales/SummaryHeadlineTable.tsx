@@ -45,6 +45,15 @@ const ROWS: { id: HeadlineRowId; label: string }[] = [
   { id: 'rentability', label: 'Рентабельность' },
 ];
 
+const SALES_OPS_HEADLINE_ROWS: readonly HeadlineRowId[] = ['revenue'];
+
+function visibleHeadlineRows(showFinance: boolean): { id: HeadlineRowId; label: string }[] {
+  if (showFinance) {
+    return ROWS;
+  }
+  return ROWS.filter((row) => SALES_OPS_HEADLINE_ROWS.includes(row.id));
+}
+
 function IndicatorHead({ id, label, taxPercent }: { id: HeadlineRowId; label: string; taxPercent: number }) {
   return (
     <th scope="col" className={valueHeadClassName}>
@@ -60,6 +69,7 @@ export function SummaryHeadlineTable({
   view,
   periodClosed = false,
   expenseBasis = 'month',
+  showFinance = true,
   onFactOperatingExpense,
 }: {
   headline: Headline;
@@ -68,6 +78,8 @@ export function SummaryHeadlineTable({
   periodClosed?: boolean;
   /** Прогноз — сумма месяца. Фактическая — доля прошедших дней. */
   expenseBasis?: 'month' | 'elapsed';
+  /** Т-проток, opex, прибыль и налог — для экономиста и админа. */
+  showFinance?: boolean;
   /** Фактические операционные расходы при одном месяце. План здесь не правят. */
   onFactOperatingExpense?: (amountExVat: number) => string | null;
 }) {
@@ -75,6 +87,7 @@ export function SummaryHeadlineTable({
   const factIsForecast = view === 'forecast' && !periodClosed;
   const factLabel = factIsForecast ? 'Факт (прогноз)' : 'Факт';
   const factOpexEditable = onFactOperatingExpense !== undefined;
+  const rows = visibleHeadlineRows(showFinance);
 
   return (
     <div className={tableFrameClassName}>
@@ -91,7 +104,7 @@ export function SummaryHeadlineTable({
             <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               <span className="sr-only">Показатель</span>
             </th>
-            {ROWS.map((row) => (
+            {rows.map((row) => (
               <IndicatorHead key={row.id} id={row.id} label={row.label} taxPercent={headline.taxPercent} />
             ))}
           </tr>
@@ -101,7 +114,7 @@ export function SummaryHeadlineTable({
             <th scope="row" className={labelCellClassName}>
               {planLabel}
             </th>
-            {ROWS.map((row) => (
+            {rows.map((row) => (
               <td
                 key={row.id}
                 className={`${valueCellClassName} ${cellKindClassName[headlineKind(row.id, 'plan', false)]}`}
@@ -120,7 +133,7 @@ export function SummaryHeadlineTable({
             <th scope="row" className={labelCellClassName}>
               {factLabel}
             </th>
-            {ROWS.map((row) => (
+            {rows.map((row) => (
               <td
                 key={row.id}
                 className={`${valueCellClassName} ${cellKindClassName[headlineKind(row.id, 'fact', factOpexEditable)]}`}
@@ -144,7 +157,7 @@ export function SummaryHeadlineTable({
             <th scope="row" className={labelCellClassName}>
               Откл.
             </th>
-            {ROWS.map((row) => (
+            {rows.map((row) => (
               <td key={row.id} className={`${valueCellClassName} ${cellKindClassName.computed}`}>
                 <VarianceValue row={row.id} headline={headline} />
               </td>
@@ -239,13 +252,17 @@ export function PlanHeadlineTable({
   headline,
   periodLabel,
   editable,
+  showFinance = true,
   onOperatingExpense,
 }: {
   headline: Headline;
   periodLabel: string;
   editable: boolean;
+  showFinance?: boolean;
   onOperatingExpense: (amountExVat: number) => string | null;
 }) {
+  const rows = visibleHeadlineRows(showFinance);
+
   return (
     <div className={tableFrameClassName}>
       <table className={tableClassName}>
@@ -255,7 +272,7 @@ export function PlanHeadlineTable({
             <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               <span className="sr-only">Показатель</span>
             </th>
-            {ROWS.map((row) => (
+            {rows.map((row) => (
               <IndicatorHead key={row.id} id={row.id} label={row.label} taxPercent={headline.taxPercent} />
             ))}
           </tr>
@@ -265,7 +282,7 @@ export function PlanHeadlineTable({
             <th scope="row" className={labelCellClassName}>
               План
             </th>
-            {ROWS.map((row) => (
+            {rows.map((row) => (
               <td
                 key={row.id}
                 className={`${valueCellClassName} ${cellKindClassName[headlineKind(row.id, 'plan', editable)]}`}

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 
 import { MATERIAL_WAREHOUSES, type MaterialWarehouseId } from '@/domain/document';
 import { activeMaterials, materialReceiptById, materialReceiptRejection } from '@/domain/materials';
@@ -21,6 +21,7 @@ import {
 } from '@/features/materials/paths';
 import { formatQuantityDraft, MATERIAL_DOCUMENT_ERROR, parseQuantityInput } from '@/features/materials/text';
 import { useMaterials } from '@/features/materials/use-materials';
+import { useRole } from '@/features/roles/RoleProvider';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { IconArrowLeft, IconCheck, IconTrash } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
@@ -65,12 +66,20 @@ function DocumentForm({
   today: Date;
 }) {
   const materials = useMaterials();
+  const { canEditMaterialReceipts } = useRole();
   const router = useRouter();
   const dateId = useId();
   const supplierId = useId();
   const receipt = documentId ? materialReceiptById(materials.document, documentId) : null;
   const listMonth = receipt?.occurredOn.slice(0, 7) ?? currentMonth;
   const listHref = materialsReceiptsHref({ month: listMonth, currentMonth });
+  const readOnly = !canEditMaterialReceipts;
+
+  useEffect(() => {
+    if (readOnly && !documentId) {
+      router.replace(listHref);
+    }
+  }, [readOnly, documentId, router, listHref]);
 
   const [warehouseId, setWarehouseId] = useState<MaterialWarehouseId>(receipt?.warehouseId ?? 'warehouse-1');
   const [occurredOn, setOccurredOn] = useState(
@@ -175,7 +184,7 @@ function DocumentForm({
     >
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-start gap-4">
-          <MaterialReceiptFormTable materials={rows} drafts={drafts} onChange={setLine} />
+          <MaterialReceiptFormTable materials={rows} drafts={drafts} onChange={readOnly ? undefined : setLine} />
 
           <div className="sticky top-16 z-20 flex w-72 shrink-0 flex-col gap-4 self-start border border-line bg-sheet p-4 lg:top-4">
             <div>
@@ -188,6 +197,7 @@ function DocumentForm({
                 min="2000-01-01"
                 max={maxProductionEntryOccurredOn(today)}
                 value={occurredOn}
+                disabled={readOnly}
                 onChange={(event) => setOccurredOn(event.target.value)}
                 className={`mt-2 ${fieldClassName}`}
               />
@@ -198,6 +208,7 @@ function DocumentForm({
                 <select
                   aria-label="Склад"
                   value={warehouseId}
+                  disabled={readOnly}
                   onChange={(event) => changeWarehouse(event.target.value as MaterialWarehouseId)}
                   className={`mt-2 ${fieldClassName}`}
                 >
@@ -216,20 +227,23 @@ function DocumentForm({
               <input
                 id={supplierId}
                 value={supplierName}
+                disabled={readOnly}
                 onChange={(event) => setSupplierName(event.target.value)}
                 className={`mt-2 ${fieldClassName}`}
               />
             </div>
-            <button
-              type="button"
-              onClick={save}
-              disabled={!materials.hydrated}
-              className={`${primaryButtonClassName} w-full`}
-            >
-              <IconCheck />
-              Сохранить
-            </button>
-            {documentId ? (
+            {readOnly ? null : (
+              <button
+                type="button"
+                onClick={save}
+                disabled={!materials.hydrated}
+                className={`${primaryButtonClassName} w-full`}
+              >
+                <IconCheck />
+                Сохранить
+              </button>
+            )}
+            {documentId && !readOnly ? (
               <button
                 type="button"
                 aria-label="Удалить приход"
