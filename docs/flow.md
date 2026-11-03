@@ -195,3 +195,5 @@
 | Движение → Отчет подневный | `/movement/fact` | [movement-daily.md](tables/movement-daily.md) |
 | Движение → Ввод плана | `/movement/plan` | [movement-plan.md](tables/movement-plan.md) |
 | Движение → Инвентаризация | `/movement/inventory` | [inventory.md](tables/inventory.md) |
+| Рецептурные журналы → Себестоимость производных | `/recipes/cost` | [derivative-cost.md](tables/derivative-cost.md) |
+| Рецептурные журналы → Себестоимость готовой | `/recipes/finished/cost` | [finished-product-cost.md](tables/finished-product-cost.md) |

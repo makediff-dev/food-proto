@@ -1,4 +1,5 @@
-import { derivativeByIdOrNull, derivativeSections, derivativesList } from '@/domain/derivatives';
+import { derivativeConsumptionPrice } from '@/domain/derivative-cost';
+import { derivativeByIdOrNull, derivativeSections } from '@/domain/derivatives';
 import type {
   DerivativeNorm,
   DerivativeNormLine,
@@ -10,11 +11,13 @@ import type {
 } from '@/domain/document';
 import { isMonthKey } from '@/domain/document';
 import { plannedProductionVolumePieces } from '@/domain/finished-goods';
-import { type MaterialMoney, materialConsumptionPrice, materialPlanPrice } from '@/domain/materials';
+import type { MaterialMoney } from '@/domain/materials';
 import { ratioRound } from '@/domain/money';
 import { isQuantityThousandths, QUANTITY_SCALE } from '@/domain/quantity';
-import { consumptionQuantityForComponent, derivativeBatchThousandths } from '@/domain/recipe-consumption';
+import { consumptionQuantityForComponent } from '@/domain/recipe-consumption';
 import { planMonthOpen, shiftMonth } from '@/domain/sales-plan';
+
+export { derivativeConsumptionPrice } from '@/domain/derivative-cost';
 
 export type DerivativeOpeningRejection = 'month' | 'closed' | 'derivative' | 'locked' | 'quantity';
 
@@ -149,61 +152,6 @@ function costForQuantity(price: MaterialMoney, quantityThousandths: number): Mat
     withVat: ratioRound(price.withVat * quantityThousandths, QUANTITY_SCALE) ?? 0,
     exVat: ratioRound(price.exVat * quantityThousandths, QUANTITY_SCALE) ?? 0,
   };
-}
-
-function derivativePriceInternal(
-  document: PrototypeDocument,
-  derivativeId: string,
-  month: string,
-  mode: 'plan' | 'fact',
-  visiting: Set<string>,
-): MaterialMoney {
-  if (visiting.has(derivativeId)) {
-    return ZERO_MONEY;
-  }
-  const derivative = derivativesList(document).find((item) => item.id === derivativeId);
-  if (!derivative) {
-    return ZERO_MONEY;
-  }
-  const batch = derivativeBatchThousandths(derivative);
-  if (batch <= 0) {
-    return ZERO_MONEY;
-  }
-
-  visiting.add(derivativeId);
-  let batchWithVat = 0;
-  let batchExVat = 0;
-
-  for (const line of derivative.lines) {
-    if (line.quantity <= 0) {
-      continue;
-    }
-    const componentPrice =
-      line.componentKind === 'material'
-        ? mode === 'plan'
-          ? materialPlanPrice(document, month, line.componentId)
-          : materialConsumptionPrice(document, month, line.componentId)
-        : derivativePriceInternal(document, line.componentId, month, mode, visiting);
-    const lineCost = costForQuantity(componentPrice, line.quantity);
-    batchWithVat += lineCost.withVat;
-    batchExVat += lineCost.exVat;
-  }
-
-  visiting.delete(derivativeId);
-  return {
-    withVat: ratioRound(batchWithVat * QUANTITY_SCALE, batch) ?? 0,
-    exVat: ratioRound(batchExVat * QUANTITY_SCALE, batch) ?? 0,
-  };
-}
-
-/** Расчётная цена 1 единицы производной (шт или кг) из цен компонентов рецепта. */
-export function derivativeConsumptionPrice(
-  document: PrototypeDocument,
-  derivativeId: string,
-  month: string,
-  mode: 'plan' | 'fact',
-): MaterialMoney {
-  return derivativePriceInternal(document, derivativeId, month, mode, new Set());
 }
 
 /**

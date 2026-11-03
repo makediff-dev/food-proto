@@ -37,8 +37,12 @@ import {
   PRODUCTION_SUMMARY_TITLE,
 } from '@/features/production/paths';
 import {
+  RECIPES_COST_HREF,
+  RECIPES_COST_TITLE,
   RECIPES_DERIVATIVES_HREF,
   RECIPES_DERIVATIVES_TITLE,
+  RECIPES_FINISHED_COST_HREF,
+  RECIPES_FINISHED_COST_TITLE,
   RECIPES_FINISHED_HREF,
   RECIPES_FINISHED_TITLE,
   RECIPES_SECTION_TITLE,
@@ -76,8 +80,10 @@ const PRODUCTION_NAV: readonly NavItem[] = [
 ];
 
 const RECIPES_NAV: readonly NavItem[] = [
+  { href: RECIPES_COST_HREF, label: RECIPES_COST_TITLE, navKind: 'report' },
+  { href: RECIPES_FINISHED_COST_HREF, label: RECIPES_FINISHED_COST_TITLE, navKind: 'report' },
   { href: RECIPES_DERIVATIVES_HREF, label: RECIPES_DERIVATIVES_TITLE, exact: true, navKind: 'input' },
-  { href: RECIPES_FINISHED_HREF, label: RECIPES_FINISHED_TITLE, navKind: 'input' },
+  { href: RECIPES_FINISHED_HREF, label: RECIPES_FINISHED_TITLE, exact: true, navKind: 'input' },
 ];
 
 const MOVEMENT_NAV: readonly NavItem[] = [

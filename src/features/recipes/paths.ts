@@ -4,6 +4,14 @@ import type { DerivativeWorkshopId } from '@/domain/document';
 /** Block header in the sidebar; not a page link. */
 export const RECIPES_SECTION_TITLE = 'Рецептурные журналы';
 
+export const RECIPES_COST_TITLE = 'Себестоимость производных';
+
+export const RECIPES_COST_HREF = '/recipes/cost';
+
+export const RECIPES_FINISHED_COST_TITLE = 'Себестоимость готовой';
+
+export const RECIPES_FINISHED_COST_HREF = '/recipes/finished/cost';
+
 export const RECIPES_DERIVATIVES_TITLE = 'Производные';
 
 export const RECIPES_DERIVATIVES_HREF = '/recipes';
@@ -34,4 +42,42 @@ export function parseDerivativeWorkshopQuery(value: string | undefined): Derivat
     return null;
   }
   return value;
+}
+
+export function parseRecipesCostMonthQuery(params: { month?: string }): { month: string } {
+  return { month: params.month ?? '' };
+}
+
+export function recipesCostHref(options: { month: string; currentMonth: string }): string {
+  if (!options.month || options.month === options.currentMonth) {
+    return RECIPES_COST_HREF;
+  }
+  return `${RECIPES_COST_HREF}?month=${options.month}`;
+}
+
+export function recipesCostDetailHref(id: string, options: { month: string; currentMonth: string }): string {
+  const base = `${RECIPES_COST_HREF}/${encodeURIComponent(id)}`;
+  if (!options.month || options.month === options.currentMonth) {
+    return base;
+  }
+  return `${base}?month=${options.month}`;
+}
+
+export function parseRecipesFinishedCostMonthQuery(params: { month?: string }): { month: string } {
+  return { month: params.month ?? '' };
+}
+
+export function recipesFinishedCostHref(options: { month: string; currentMonth: string }): string {
+  if (!options.month || options.month === options.currentMonth) {
+    return RECIPES_FINISHED_COST_HREF;
+  }
+  return `${RECIPES_FINISHED_COST_HREF}?month=${options.month}`;
+}
+
+export function recipesFinishedCostDetailHref(id: string, options: { month: string; currentMonth: string }): string {
+  const base = `${RECIPES_FINISHED_COST_HREF}/${encodeURIComponent(id)}`;
+  if (!options.month || options.month === options.currentMonth) {
+    return base;
+  }
+  return `${base}?month=${options.month}`;
 }

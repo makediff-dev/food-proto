@@ -108,9 +108,9 @@
     "semantic_hash": "724f33ff464c09fb3fcdf0af0a576d9d"
   },
   "src/domain/document.ts": {
-    "mtime": 1793129698.8450344,
-    "seen": 1793694423.5759275,
-    "ast_hash": "67244da17c8e79095bdca778f2b5d7bf",
+    "mtime": 1793706182.361177,
+    "seen": 1793706212.119036,
+    "ast_hash": "11ca465a543984f3e6bcf3a5950ea087",
     "semantic_hash": ""
   },
   "src/domain/money.ts": {
@@ -262,15 +262,15 @@
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1793694399.12091,
-    "seen": 1793694423.57694,
-    "ast_hash": "787bdcea1404379565b526d7f9809c79",
+    "mtime": 1793708174.2673562,
+    "seen": 1793708205.095293,
+    "ast_hash": "66a9c9f5250b9263afa101a8818064dd",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
-    "mtime": 1793697459.3588853,
-    "seen": 1793697481.833535,
-    "ast_hash": "6e6ea35a088d7c754fde3277ebdfe8d8",
+    "mtime": 1793706189.8692317,
+    "seen": 1793706212.119036,
+    "ast_hash": "96537d3df95d635ec4d4efaa0285e7a7",
     "semantic_hash": ""
   },
   "inputs/README.md": {
@@ -525,9 +525,9 @@
     "semantic_hash": ""
   },
   "src/features/shell/AppShell.tsx": {
-    "mtime": 1793699369.2195163,
-    "seen": 1793699405.436092,
-    "ast_hash": "9b1bcf4d6483b83c312cae4644d4c85f",
+    "mtime": 1793706156.1967201,
+    "seen": 1793706212.119036,
+    "ast_hash": "b06d55e5cf3231fda9d0e70e4f366f22",
     "semantic_hash": ""
   },
   "src/features/shell/Dialog.tsx": {
@@ -693,9 +693,9 @@
     "semantic_hash": ""
   },
   "docs/flow.md": {
-    "mtime": 1792742948.0608265,
-    "seen": 1792743010.5104587,
-    "ast_hash": "41d2d14d610d011f1aba54aa06934536",
+    "mtime": 1793706186.153429,
+    "seen": 1793706212.119036,
+    "ast_hash": "186eac843a7f64bad6ebce7025ec2db4",
     "semantic_hash": ""
   },
   "docs/tables/inventory.md": {
@@ -975,9 +975,9 @@
     "semantic_hash": ""
   },
   "src/features/recipes/paths.ts": {
-    "mtime": 1792772448.6787882,
-    "seen": 1792772568.920581,
-    "ast_hash": "8f3b4814ac1015d863b141af8d0bf775",
+    "mtime": 1793706152.9447157,
+    "seen": 1793706212.119036,
+    "ast_hash": "ad1e6d11355a376e133c5717d0b495be",
     "semantic_hash": ""
   },
   "src/app/recipes/new/page.tsx": {
@@ -1077,15 +1077,15 @@
     "semantic_hash": ""
   },
   "src/domain/derivative-movement.ts": {
-    "mtime": 1793694340.8536768,
-    "seen": 1793694423.5759275,
-    "ast_hash": "34001a06e0f12bc3729f86d1ebda3ca5",
+    "mtime": 1793704457.1341197,
+    "seen": 1793704609.9640691,
+    "ast_hash": "0027b4ced3137b088d90775f7448dd34",
     "semantic_hash": ""
   },
   "src/features/derivative-movement/DerivativeMovementSummaryTable.tsx": {
-    "mtime": 1793694375.7961648,
-    "seen": 1793694423.5759275,
-    "ast_hash": "6d3ba8d913a6a0d945d866978848cc3d",
+    "mtime": 1793699867.9832113,
+    "seen": 1793704609.9640691,
+    "ast_hash": "31c1af39884358bd66446795b814aa98",
     "semantic_hash": ""
   },
   "src/domain/recipe-consumption.ts": {
@@ -1206,6 +1206,96 @@
     "mtime": 1793697305.952171,
     "seen": 1793697481.833535,
     "ast_hash": "a5b8dec7695b357fdf0b2128b9f7fe11",
+    "semantic_hash": ""
+  },
+  "src/app/recipes/cost/[id]/page.tsx": {
+    "mtime": 1793704521.2486782,
+    "seen": 1793704609.9640691,
+    "ast_hash": "90abbe8216c3c473e4a678b432d1f569",
+    "semantic_hash": ""
+  },
+  "src/app/recipes/cost/page.tsx": {
+    "mtime": 1793704519.886961,
+    "seen": 1793704609.9640691,
+    "ast_hash": "9f9af29c4454ff6c895efe16e81687e6",
+    "semantic_hash": ""
+  },
+  "src/domain/derivative-cost.ts": {
+    "mtime": 1793704618.8938043,
+    "seen": 1793706212.119036,
+    "ast_hash": "8756139ec389240fd1f74a5f509e907e",
+    "semantic_hash": ""
+  },
+  "src/features/recipes/DerivativeCostDetailScreen.tsx": {
+    "mtime": 1793708179.49277,
+    "seen": 1793708205.0942538,
+    "ast_hash": "42a00b6443b260891ffbcc0046350c87",
+    "semantic_hash": ""
+  },
+  "src/features/recipes/DerivativeCostScreen.tsx": {
+    "mtime": 1793704537.6356714,
+    "seen": 1793704609.9640691,
+    "ast_hash": "b5458e91e98148d6f77b9c65e83e840a",
+    "semantic_hash": ""
+  },
+  "src/features/recipes/DerivativeCostTable.tsx": {
+    "mtime": 1793706954.1344757,
+    "seen": 1793706974.3409894,
+    "ast_hash": "d036bb1628b08ac6d63c03b803273280",
+    "semantic_hash": ""
+  },
+  "docs/tables/derivative-cost.md": {
+    "mtime": 1793708169.8992243,
+    "seen": 1793708205.095293,
+    "ast_hash": "cb2e6c49149ed8312662e1cf753c13fd",
+    "semantic_hash": ""
+  },
+  "src/app/recipes/finished/cost/[id]/page.tsx": {
+    "mtime": 1793706147.7982557,
+    "seen": 1793706212.119036,
+    "ast_hash": "9d8b0b65525e75477e701ab92c45cae9",
+    "semantic_hash": ""
+  },
+  "src/app/recipes/finished/cost/page.tsx": {
+    "mtime": 1793706227.6980965,
+    "seen": 1793706974.3409894,
+    "ast_hash": "16c04e56627f216cdb78761a2cab6e8c",
+    "semantic_hash": ""
+  },
+  "src/domain/finished-product-cost.ts": {
+    "mtime": 1793706215.4575553,
+    "seen": 1793706974.3409894,
+    "ast_hash": "fbdfe651244677f45718b39730277c11",
+    "semantic_hash": ""
+  },
+  "src/features/recipes/FinishedProductCostDetailScreen.tsx": {
+    "mtime": 1793708179.49277,
+    "seen": 1793708205.0942538,
+    "ast_hash": "b2d8e2e177ef53f4e6ef753862572b50",
+    "semantic_hash": ""
+  },
+  "src/features/recipes/FinishedProductCostScreen.tsx": {
+    "mtime": 1793706215.4484534,
+    "seen": 1793706974.3409894,
+    "ast_hash": "43495133c4590b54b35aa29c4f6b7653",
+    "semantic_hash": ""
+  },
+  "src/features/recipes/FinishedProductCostTable.tsx": {
+    "mtime": 1793706957.276971,
+    "seen": 1793706974.3409894,
+    "ast_hash": "8bc94ff123a49330158cc15ead90a8fe",
+    "semantic_hash": ""
+  },
+  "docs/tables/finished-product-cost.md": {
+    "mtime": 1793708171.334157,
+    "seen": 1793708205.095293,
+    "ast_hash": "d374b1604d46e8fd3fe434b000f70e1f",
+    "semantic_hash": ""
+  },
+  "src/features/recipes/RecipeCostDetailTable.tsx": {
+    "mtime": 1793708179.5060954,
+    "seen": 1793708205.0942538,
+    "ast_hash": "8f1589e5cc57b0103c5a668039fcd6a9",
     "semantic_hash": ""
   }
 }
