@@ -1,20 +1,16 @@
-import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
-import { FinishedProductCostDetailScreen } from '@/features/recipes/FinishedProductCostDetailScreen';
-import { parseRecipesFinishedCostMonthQuery, RECIPES_FINISHED_COST_TITLE } from '@/features/recipes/paths';
+import { parseRecipesFinishedCostMonthQuery, RECIPES_FINISHED_COST_HREF } from '@/features/recipes/paths';
 
-export const metadata: Metadata = {
-  title: RECIPES_FINISHED_COST_TITLE,
-};
-
+/** Старый URL карточки — состав раскрывается в своде. */
 export default async function RecipesFinishedCostDetailPage({
-  params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ month?: string }>;
 }) {
-  const { id } = await params;
   const query = parseRecipesFinishedCostMonthQuery(await searchParams);
-  return <FinishedProductCostDetailScreen productId={decodeURIComponent(id)} month={query.month} />;
+  redirect(
+    query.month ? `${RECIPES_FINISHED_COST_HREF}?month=${encodeURIComponent(query.month)}` : RECIPES_FINISHED_COST_HREF,
+  );
 }

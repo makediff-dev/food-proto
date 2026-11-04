@@ -1,25 +1,31 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useMemo } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 
+import type { HrShopDepartmentId } from '@/domain/document';
 import { isOccurredOn } from '@/domain/document';
 import { HR_DEPARTMENT_LABELS, HR_SHOP_DEPARTMENT_IDS, hrDayOutsourcingHours, hrDayStaffValue } from '@/domain/hr';
 import { defaultSalesFactDay, monthDates } from '@/domain/sales-fact';
 import { monthKeyFromDate } from '@/domain/sales-plan';
-import { QuantityCell } from '@/features/materials/QuantityCell';
+import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
 import { OpexMonthBar, resolveOpexMonth } from '@/features/opex/OpexMonthBar';
 import { OPEX_HR_FACT_TITLE, opexHrFactHref } from '@/features/opex/paths';
 import { HR_ERROR, parseOpexMoney } from '@/features/opex/text';
 import { useOpex } from '@/features/opex/use-opex';
 import { useRole } from '@/features/roles/RoleProvider';
 import { monthFieldClassName } from '@/features/sales/fields';
+import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
   ColumnLabel,
+  categoryBandClassName,
+  categoryNameClassName,
+  categoryNameRowClassName,
   cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
+  entityNameRowClassName,
   MoneyAmount,
   MoneyCell,
   nameHeadingClassName,
@@ -29,8 +35,12 @@ import {
 
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
 const valueCell = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
-const nameCell =
-  'sticky left-0 z-10 border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle text-sm';
+
+type ShopDepartment = {
+  departmentId: HrShopDepartmentId;
+  name: string;
+  positions: { id: string; name: string }[];
+};
 
 export function HrFactScreen({ month, day }: { month: string; day: string }) {
   const today = useMemo(() => new Date(), []);
@@ -43,11 +53,11 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
   const router = useRouter();
   const editable = opex.hydrated && canEditSalesOpex;
 
-  const shopDepartments = useMemo(() => {
+  const shopDepartments = useMemo((): ShopDepartment[] => {
     return HR_SHOP_DEPARTMENT_IDS.map((departmentId) => {
-      const positions = opex.document.hrPositions.filter(
-        (item) => item.departmentId === departmentId && item.kind === 'staff' && item.deletedAt === null,
-      );
+      const positions = opex.document.hrPositions
+        .filter((item) => item.departmentId === departmentId && item.kind === 'staff' && item.deletedAt === null)
+        .map((item) => ({ id: item.id, name: item.name }));
       return { departmentId, name: HR_DEPARTMENT_LABELS[departmentId], positions };
     });
   }, [opex.document]);
@@ -71,7 +81,7 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
     <PageFrame
       title={OPEX_HR_FACT_TITLE}
       full
-      lede="Дневной факт цехов и РЦ: часы и суммы штатных, часы аутсорсинга. Администрацию правят в отчёте HR."
+      lede="Дневной факт цехов и РЦ: численность и суммы штатных, часы аутсорсинга. Администрацию правят в отчёте HR."
       intro={
         <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
           <OpexMonthBar month={selectedMonth} today={today} onOpen={(next) => open({ month: next })} />
@@ -94,108 +104,149 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
         </div>
       }
     >
-      <div className="flex flex-col gap-6">
-        {shopDepartments.map((department) => (
-          <section key={department.departmentId} className="flex flex-col gap-2">
-            <h2 className="px-1 text-sm font-medium">{department.name}</h2>
-            <div className={tableFrameClassName}>
-              <table className={tableClassName}>
-                <caption className="sr-only">{`Факт HR, ${department.name}, ${selectedDay}`}</caption>
-                <thead>
-                  <tr>
-                    <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                      <ColumnLabel label="Наименование" />
-                    </th>
-                    <th scope="col" className={valueHead}>
-                      <ColumnLabel label="Часы" />
-                    </th>
-                    <th scope="col" className={valueHead}>
-                      <ColumnLabel label="Сумма" />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {department.positions.map((position) => {
-                    const values = hrDayStaffValue(opex.document, selectedDay, position.id);
-                    return (
-                      <tr key={position.id}>
-                        <th scope="row" className={nameCell}>
-                          {position.name}
-                        </th>
-                        <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-                          {editable ? (
-                            <QuantityCell
-                              label={`Часы, ${position.name}`}
-                              value={values.hourThousandths}
-                              unit="ч"
-                              blankIfZero
-                              onChange={(next) => {
-                                const rejection = opex.setHrDayStaff(
-                                  selectedDay,
-                                  position.id,
-                                  next,
-                                  values.amountExVat,
-                                );
-                                return rejection ? HR_ERROR[rejection] : null;
-                              }}
-                            />
-                          ) : (
-                            values.hourThousandths
-                          )}
-                        </td>
-                        <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-                          {editable ? (
-                            <MoneyCell
-                              label={`Сумма, ${position.name}`}
-                              value={values.amountExVat}
-                              parse={parseOpexMoney}
-                              invalidMessage={HR_ERROR.amount}
-                              onChange={(next) => {
-                                const rejection = opex.setHrDayStaff(
-                                  selectedDay,
-                                  position.id,
-                                  values.hourThousandths,
-                                  next,
-                                );
-                                return rejection ? HR_ERROR[rejection] : null;
-                              }}
-                            />
-                          ) : (
-                            <MoneyAmount amount={values.amountExVat} />
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  <tr>
-                    <th scope="row" className={nameCell}>
-                      Аутсорсинговый персонал
-                    </th>
-                    <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-                      {editable ? (
-                        <QuantityCell
-                          label={`Часы аутсорсинга, ${department.name}`}
-                          value={hrDayOutsourcingHours(opex.document, selectedDay, department.departmentId)}
-                          unit="ч"
-                          blankIfZero
-                          onChange={(next) => {
-                            const rejection = opex.setHrDayOutsourcing(selectedDay, department.departmentId, next);
-                            return rejection ? HR_ERROR[rejection] : null;
-                          }}
-                        />
-                      ) : (
-                        hrDayOutsourcingHours(opex.document, selectedDay, department.departmentId)
-                      )}
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`} />
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-        ))}
+      <div className={tableFrameClassName}>
+        <table className={tableClassName}>
+          <caption className="sr-only">{`Факт HR на ${selectedDay}`}</caption>
+          <thead>
+            <tr>
+              <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                <ColumnLabel label="Наименование" />
+              </th>
+              <th scope="col" className={valueHead}>
+                <ColumnLabel label="Кол-во" />
+              </th>
+              <th scope="col" className={valueHead}>
+                <ColumnLabel label="Сумма" />
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {shopDepartments.map((department) => (
+              <DepartmentBlock
+                key={department.departmentId}
+                department={department}
+                editable={editable}
+                staff={(positionId) => hrDayStaffValue(opex.document, selectedDay, positionId)}
+                outsourcingHours={() => hrDayOutsourcingHours(opex.document, selectedDay, department.departmentId)}
+                onStaff={(positionId, headcountThousandths, amountExVat) => {
+                  const rejection = opex.setHrDayStaff(selectedDay, positionId, headcountThousandths, amountExVat);
+                  return rejection ? HR_ERROR[rejection] : null;
+                }}
+                onOutsourcing={(hourThousandths) => {
+                  const rejection = opex.setHrDayOutsourcing(selectedDay, department.departmentId, hourThousandths);
+                  return rejection ? HR_ERROR[rejection] : null;
+                }}
+              />
+            ))}
+          </tbody>
+        </table>
       </div>
     </PageFrame>
+  );
+}
+
+function DepartmentBlock({
+  department,
+  editable,
+  staff,
+  outsourcingHours,
+  onStaff,
+  onOutsourcing,
+}: {
+  department: ShopDepartment;
+  editable: boolean;
+  staff: (positionId: string) => { headcountThousandths: number; amountExVat: number };
+  outsourcingHours: () => number;
+  onStaff: (positionId: string, headcountThousandths: number, amountExVat: number) => string | null;
+  onOutsourcing: (hourThousandths: number) => string | null;
+}) {
+  const [open, setOpen] = useState(true);
+  const count = department.positions.length + 1;
+  const outHours = outsourcingHours();
+
+  return (
+    <Fragment>
+      <tr>
+        <th scope="row" className={categoryNameRowClassName(false)}>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-label={open ? `Свернуть ${department.name}` : `Развернуть ${department.name}`}
+              title={open ? 'Свернуть' : 'Развернуть'}
+              onClick={() => setOpen((current) => !current)}
+              className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              {open ? <IconChevronDown /> : <IconChevronRight />}
+            </button>
+            <span className={categoryNameClassName}>
+              {department.name} ({count})
+            </span>
+          </div>
+        </th>
+        <td className={`${valueCell} ${categoryBandClassName}`} />
+        <td className={`${valueCell} ${categoryBandClassName}`} />
+      </tr>
+      {open
+        ? department.positions.map((position) => {
+            const values = staff(position.id);
+            return (
+              <tr key={position.id}>
+                <th scope="row" className={entityNameRowClassName('repeated')}>
+                  {position.name}
+                </th>
+                <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
+                  {editable ? (
+                    <QuantityCell
+                      label={`Численность, ${position.name}`}
+                      value={values.headcountThousandths}
+                      unit="чел"
+                      blankIfZero
+                      onChange={(next) => onStaff(position.id, next, values.amountExVat)}
+                    />
+                  ) : (
+                    <QuantityRead value={values.headcountThousandths} unit="чел" />
+                  )}
+                </td>
+                <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
+                  {editable ? (
+                    <MoneyCell
+                      label={`Сумма, ${position.name}`}
+                      value={values.amountExVat}
+                      parse={parseOpexMoney}
+                      invalidMessage={HR_ERROR.amount}
+                      onChange={(next) => onStaff(position.id, values.headcountThousandths, next)}
+                    />
+                  ) : (
+                    <MoneyAmount amount={values.amountExVat} />
+                  )}
+                </td>
+              </tr>
+            );
+          })
+        : null}
+      {open ? (
+        <tr>
+          <th scope="row" className={entityNameRowClassName('repeated')}>
+            Аутсорсинговый персонал
+          </th>
+          <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
+            {editable ? (
+              <QuantityCell
+                label={`Часы аутсорсинга, ${department.name}`}
+                value={outHours}
+                unit="ч"
+                blankIfZero
+                onChange={(next) => onOutsourcing(next)}
+              />
+            ) : (
+              <QuantityRead value={outHours} unit="ч" />
+            )}
+          </td>
+          <td className={`${valueCell} ${cellKindClassName.computed}`} />
+        </tr>
+      ) : null}
+    </Fragment>
   );
 }
 

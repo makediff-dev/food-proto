@@ -67,6 +67,7 @@ export function RecipeCostDetailTable({
   lines,
   unitCost,
   extraUnitRows = [],
+  embedded = false,
 }: {
   caption: string;
   lines: readonly RecipeCostDetailLine[];
@@ -74,6 +75,8 @@ export function RecipeCostDetailTable({
   unitCost: RecipeCostDetailUnitCost;
   /** Доп. единица (например «За шт»), только цены. */
   extraUnitRows?: readonly RecipeCostDetailExtraUnitRow[];
+  /** Вложенная таблица под строкой свода: без собственной рамки и sticky-шапки, в край ячейки. */
+  embedded?: boolean;
 }) {
   const quantityTotal = sumQuantity(lines);
   const planContribution = sumMoney(lines.map((line) => line.planContribution));
@@ -81,10 +84,10 @@ export function RecipeCostDetailTable({
   const contributionDeviation = sumMoney(lines.map((line) => line.contributionDeviation));
 
   return (
-    <div className={tableFrameClassName}>
+    <div className={embedded ? 'overflow-x-auto bg-sheet' : tableFrameClassName}>
       <table className={tableClassName}>
         <caption className="sr-only">{caption}</caption>
-        <thead className={stickyHeadClassName}>
+        <thead className={embedded ? undefined : stickyHeadClassName}>
           <tr>
             <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               Ингредиент

@@ -168,21 +168,21 @@ export interface ProductionEntry {
  * Подразделения листа `HR`. Не склады сырья и не цеха рецептов «1/2».
  * У администрации нет строки аутсорсинга.
  */
-export type HrDepartmentId = 'admin' | 'bakery' | 'meat' | 'vegetables' | 'assembly' | 'dc';
+export type HrDepartmentId = 'admin' | 'meat' | 'bakery' | 'vegetables' | 'assembly' | 'dc';
 
 export const HR_DEPARTMENT_IDS = [
   'admin',
-  'bakery',
   'meat',
+  'bakery',
   'vegetables',
   'assembly',
   'dc',
 ] as const satisfies readonly HrDepartmentId[];
 
-/** Производственные цеха и РЦ — есть аутсорсинг и дневной факт. */
+/** Производственные цеха и РЦ — есть аутсорсинг и дневной факт. Порядок как у сырья и производных: мясо, пекарня… */
 export const HR_SHOP_DEPARTMENT_IDS = [
-  'bakery',
   'meat',
+  'bakery',
   'vegetables',
   'assembly',
   'dc',
@@ -253,11 +253,12 @@ export interface HrAdminFactMonth {
   lines: HrAdminFactStaffLine[];
 }
 
-/** Дневной факт штатной должности цеха/РЦ: часы и сумма отдельно. */
+/** Дневной факт штатной должности цеха/РЦ: численность и сумма отдельно. `HR!J` штатной строки. */
 export interface HrDayStaffLine {
   id: string;
   positionId: string;
-  hourThousandths: number;
+  /** Люди за день, тысячные доли. 2,64 чел → 2640. */
+  headcountThousandths: number;
   /** Выплаченная сумма, копейки без НДС. */
   amountExVat: number;
 }
@@ -845,7 +846,7 @@ export interface PrototypeDocument {
   hrMonthPlans: HrMonthPlan[];
   /** Факт администрации за месяц. */
   hrAdminFacts: HrAdminFactMonth[];
-  /** Дневной факт часов и выплат цехов и РЦ. */
+  /** Дневной факт цехов и РЦ: численность и выплаты штатных, часы аутсорсинга. */
   hrDayFacts: HrDayFact[];
   /** Ставки аутсорсинга цехов/РЦ по месяцам (факт). */
   hrOutsourcingRates: HrOutsourcingRatesMonth[];

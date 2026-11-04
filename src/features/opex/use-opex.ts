@@ -165,14 +165,14 @@ export function useOpex() {
     setHrDayStaff(
       occurredOn: string,
       positionId: string,
-      hourThousandths: number,
+      headcountThousandths: number,
       amountExVat: number,
     ): HrFieldRejection | null {
-      const rejection = setHrDayStaffRejection(document, occurredOn, positionId, hourThousandths, amountExVat);
+      const rejection = setHrDayStaffRejection(document, occurredOn, positionId, headcountThousandths, amountExVat);
       if (rejection) {
         return rejection;
       }
-      updateDocument((current) => setHrDayStaff(current, occurredOn, positionId, hourThousandths, amountExVat));
+      updateDocument((current) => setHrDayStaff(current, occurredOn, positionId, headcountThousandths, amountExVat));
       return null;
     },
     setHrDayOutsourcing(

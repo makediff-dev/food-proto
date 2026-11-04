@@ -37,7 +37,7 @@ export function DerivativeCostScreen({ month }: { month: string }) {
           Производных пока нет. Добавьте их в рецептурных журналах.
         </p>
       ) : (
-        <DerivativeCostTable sections={view.sections} month={selectedMonth} currentMonth={currentMonth} />
+        <DerivativeCostTable sections={view.sections} month={selectedMonth} />
       )}
     </PageFrame>
   );

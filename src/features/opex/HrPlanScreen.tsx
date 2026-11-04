@@ -3,8 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { Fragment, useMemo, useState } from 'react';
 
-import type { HrDepartmentId } from '@/domain/document';
-import { HR_DEPARTMENT_LABELS, hrMonthView } from '@/domain/hr';
+import type { HrDepartmentId, HrShopDepartmentId } from '@/domain/document';
+import { HR_DEPARTMENT_LABELS, type HrDepartmentView, hrMonthView } from '@/domain/hr';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { QuantityCell } from '@/features/materials/QuantityCell';
 import { OpexMonthBar, resolveOpexMonth } from '@/features/opex/OpexMonthBar';
@@ -14,13 +14,17 @@ import { useOpex } from '@/features/opex/use-opex';
 import { useRole } from '@/features/roles/RoleProvider';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { Dialog } from '@/features/shell/Dialog';
-import { IconPlus, IconTrash } from '@/features/shell/Icons';
+import { IconChevronDown, IconChevronRight, IconPlus, IconTrash } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
   ColumnLabel,
+  categoryBandClassName,
+  categoryNameClassName,
+  categoryNameRowClassName,
   cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
+  entityNameRowClassName,
   IntegerCell,
   MoneyAmount,
   MoneyCell,
@@ -34,8 +38,6 @@ const deleteIconButtonClassName =
 
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
 const valueCell = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
-const nameCell =
-  'sticky left-0 z-10 border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle text-sm';
 
 export function HrPlanScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);
@@ -61,189 +63,56 @@ export function HrPlanScreen({ month }: { month: string }) {
         />
       }
     >
-      <div className="flex flex-col gap-6">
-        {view.departments.map((department) => {
-          const outsourcing = department.outsourcing;
-          return (
-            <section key={department.departmentId} className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-                <h2 className="text-sm font-medium">{department.name}</h2>
-                {editable ? (
-                  <button
-                    type="button"
-                    className={primaryButtonClassName}
-                    onClick={() => setAddDepartment(department.departmentId)}
-                  >
-                    <IconPlus />
-                    Добавить должность
-                  </button>
-                ) : null}
-              </div>
-              <div className={tableFrameClassName}>
-                <table className={tableClassName}>
-                  <caption className="sr-only">{`План HR, ${department.name}`}</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                        <ColumnLabel label="Наименование" />
-                      </th>
-                      <th scope="col" className={valueHead}>
-                        <ColumnLabel label="План, чел" />
-                      </th>
-                      <th scope="col" className={valueHead}>
-                        <ColumnLabel label="План, зарплата" />
-                      </th>
-                      <th scope="col" className={valueHead}>
-                        <ColumnLabel label="План, ФОТ" />
-                      </th>
-                      {editable ? (
-                        <th scope="col" className={`${valueHead} w-12`}>
-                          <span className="sr-only">Действия</span>
-                        </th>
-                      ) : null}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {department.staff.map((row) => (
-                      <tr key={row.positionId}>
-                        <th scope="row" className={nameCell}>
-                          {row.name}
-                          {row.deleted ? ' (архив)' : ''}
-                        </th>
-                        <td
-                          className={`${valueCell} ${cellKindClassName[editable && !row.deleted ? 'assigned' : 'computed']}`}
-                        >
-                          {editable && !row.deleted ? (
-                            <IntegerCell
-                              label={`План, чел, ${row.name}`}
-                              value={row.plan.headcount}
-                              onChange={(next) => {
-                                const rejection = opex.setHrStaffPlan(
-                                  selectedMonth,
-                                  row.positionId,
-                                  next,
-                                  row.plan.salaryExVat,
-                                );
-                                return rejection ? HR_ERROR[rejection] : null;
-                              }}
-                            />
-                          ) : (
-                            row.plan.headcount
-                          )}
-                        </td>
-                        <td
-                          className={`${valueCell} ${cellKindClassName[editable && !row.deleted ? 'assigned' : 'computed']}`}
-                        >
-                          {editable && !row.deleted ? (
-                            <MoneyCell
-                              label={`План, зарплата, ${row.name}`}
-                              value={row.plan.salaryExVat}
-                              parse={parseOpexMoney}
-                              invalidMessage={HR_ERROR.salary}
-                              onChange={(next) => {
-                                const rejection = opex.setHrStaffPlan(
-                                  selectedMonth,
-                                  row.positionId,
-                                  row.plan.headcount,
-                                  next,
-                                );
-                                return rejection ? HR_ERROR[rejection] : null;
-                              }}
-                            />
-                          ) : (
-                            <MoneyAmount amount={row.plan.salaryExVat} />
-                          )}
-                        </td>
-                        <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                          <MoneyAmount amount={row.plan.fotExVat} />
-                        </td>
-                        {editable ? (
-                          <td className={`${valueCell} text-center`}>
-                            {!row.deleted ? (
-                              <button
-                                type="button"
-                                aria-label={`Удалить ${row.name}`}
-                                className={deleteIconButtonClassName}
-                                onClick={() => {
-                                  const confirmed = window.confirm(
-                                    `Удалить «${row.name}»? Должность пропадёт из рабочего списка.`,
-                                  );
-                                  if (confirmed) {
-                                    opex.deleteHrPosition(row.positionId);
-                                  }
-                                }}
-                              >
-                                <IconTrash />
-                              </button>
-                            ) : null}
-                          </td>
-                        ) : null}
-                      </tr>
-                    ))}
-                    {outsourcing ? (
-                      <Fragment key={`${department.departmentId}-out`}>
-                        <tr>
-                          <th scope="row" className={nameCell}>
-                            {outsourcing.name}
-                          </th>
-                          <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-                            {editable ? (
-                              <QuantityCell
-                                label={`План, часы, ${department.name}`}
-                                value={outsourcing.planHoursThousandths}
-                                unit="ч"
-                                blankIfZero
-                                onChange={(next) => {
-                                  const rejection = opex.setHrOutsourcingPlan(
-                                    selectedMonth,
-                                    outsourcing.departmentId,
-                                    next,
-                                    outsourcing.planRateExVat,
-                                  );
-                                  return rejection ? HR_ERROR[rejection] : null;
-                                }}
-                              />
-                            ) : (
-                              `${formatHours(outsourcing.planHoursThousandths)} ч`
-                            )}
-                          </td>
-                          <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-                            {editable ? (
-                              <MoneyCell
-                                label={`Ставка аутсорсинга, ${department.name}`}
-                                value={outsourcing.planRateExVat}
-                                parse={parseOpexMoney}
-                                invalidMessage={HR_ERROR.rate}
-                                onChange={(next) => {
-                                  const rejection = opex.setHrOutsourcingPlan(
-                                    selectedMonth,
-                                    outsourcing.departmentId,
-                                    outsourcing.planHoursThousandths,
-                                    next,
-                                  );
-                                  return rejection ? HR_ERROR[rejection] : null;
-                                }}
-                              />
-                            ) : (
-                              <>
-                                <MoneyAmount amount={outsourcing.planRateExVat} />
-                                <span className="text-muted"> /ч</span>
-                              </>
-                            )}
-                          </td>
-                          <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                            <MoneyAmount amount={outsourcing.planAmountExVat} />
-                          </td>
-                          {editable ? <td className={valueCell} /> : null}
-                        </tr>
-                      </Fragment>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          );
-        })}
+      <div className={tableFrameClassName}>
+        <table className={tableClassName}>
+          <caption className="sr-only">{`План HR за ${selectedMonth}`}</caption>
+          <thead>
+            <tr>
+              <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                <ColumnLabel label="Наименование" />
+              </th>
+              <th scope="col" className={valueHead}>
+                <ColumnLabel label="План, чел" />
+              </th>
+              <th scope="col" className={valueHead}>
+                <ColumnLabel label="План, зарплата" />
+              </th>
+              <th scope="col" className={valueHead}>
+                <ColumnLabel label="План, ФОТ" />
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {view.departments.map((department) => (
+              <DepartmentBlock
+                key={department.departmentId}
+                department={department}
+                editable={editable}
+                onAdd={
+                  editable
+                    ? () => {
+                        setAddDepartment(department.departmentId);
+                      }
+                    : undefined
+                }
+                onStaffPlan={(positionId, headcount, salaryExVat) => {
+                  const rejection = opex.setHrStaffPlan(selectedMonth, positionId, headcount, salaryExVat);
+                  return rejection ? HR_ERROR[rejection] : null;
+                }}
+                onOutsourcingPlan={(departmentId, hoursThousandths, rateExVat) => {
+                  const rejection = opex.setHrOutsourcingPlan(selectedMonth, departmentId, hoursThousandths, rateExVat);
+                  return rejection ? HR_ERROR[rejection] : null;
+                }}
+                onDelete={(positionId, name) => {
+                  const confirmed = window.confirm(`Удалить «${name}»? Должность пропадёт из рабочего списка.`);
+                  if (confirmed) {
+                    opex.deleteHrPosition(positionId);
+                  }
+                }}
+              />
+            ))}
+          </tbody>
+        </table>
       </div>
       {addDepartment && editable ? (
         <AddPositionDialog
@@ -260,6 +129,162 @@ export function HrPlanScreen({ month }: { month: string }) {
         />
       ) : null}
     </PageFrame>
+  );
+}
+
+function DepartmentBlock({
+  department,
+  editable,
+  onAdd,
+  onStaffPlan,
+  onOutsourcingPlan,
+  onDelete,
+}: {
+  department: HrDepartmentView;
+  editable: boolean;
+  onAdd?: () => void;
+  onStaffPlan: (positionId: string, headcount: number, salaryExVat: number) => string | null;
+  onOutsourcingPlan: (departmentId: HrShopDepartmentId, hoursThousandths: number, rateExVat: number) => string | null;
+  onDelete: (positionId: string, name: string) => void;
+}) {
+  const [open, setOpen] = useState(true);
+  const outsourcing = department.outsourcing;
+  const count = department.staff.length + (outsourcing ? 1 : 0);
+
+  return (
+    <Fragment>
+      <tr>
+        <th scope="row" className={categoryNameRowClassName(false)}>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-label={open ? `Свернуть ${department.name}` : `Развернуть ${department.name}`}
+              title={open ? 'Свернуть' : 'Развернуть'}
+              onClick={() => setOpen((current) => !current)}
+              className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              {open ? <IconChevronDown /> : <IconChevronRight />}
+            </button>
+            <span className={categoryNameClassName}>
+              {department.name} ({count})
+            </span>
+            {onAdd ? (
+              <button
+                type="button"
+                aria-label={`Добавить должность в ${department.name}`}
+                title="Добавить должность"
+                onClick={() => {
+                  setOpen(true);
+                  onAdd();
+                }}
+                className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              >
+                <IconPlus />
+              </button>
+            ) : null}
+          </div>
+        </th>
+        <td className={`${valueCell} ${categoryBandClassName}`}>{department.plan.headcount}</td>
+        <td className={`${valueCell} ${categoryBandClassName}`}>
+          <MoneyAmount amount={department.plan.salaryExVat} />
+        </td>
+        <td className={`${valueCell} ${categoryBandClassName}`}>
+          <MoneyAmount amount={department.plan.fotExVat} />
+        </td>
+      </tr>
+      {open
+        ? department.staff.map((row) => (
+            <tr key={row.positionId}>
+              <th scope="row" className={entityNameRowClassName('repeated')}>
+                <div className="flex w-full items-center gap-2">
+                  <span className="min-w-0 flex-1">
+                    {row.name}
+                    {row.deleted ? ' (архив)' : ''}
+                  </span>
+                  {editable && !row.deleted ? (
+                    <button
+                      type="button"
+                      aria-label={`Удалить ${row.name}`}
+                      title="Удалить"
+                      className={`${deleteIconButtonClassName} shrink-0`}
+                      onClick={() => onDelete(row.positionId, row.name)}
+                    >
+                      <IconTrash />
+                    </button>
+                  ) : null}
+                </div>
+              </th>
+              <td className={`${valueCell} ${cellKindClassName[editable && !row.deleted ? 'assigned' : 'computed']}`}>
+                {editable && !row.deleted ? (
+                  <IntegerCell
+                    label={`План, чел, ${row.name}`}
+                    value={row.plan.headcount}
+                    onChange={(next) => onStaffPlan(row.positionId, next, row.plan.salaryExVat)}
+                  />
+                ) : (
+                  row.plan.headcount
+                )}
+              </td>
+              <td className={`${valueCell} ${cellKindClassName[editable && !row.deleted ? 'assigned' : 'computed']}`}>
+                {editable && !row.deleted ? (
+                  <MoneyCell
+                    label={`План, зарплата, ${row.name}`}
+                    value={row.plan.salaryExVat}
+                    parse={parseOpexMoney}
+                    invalidMessage={HR_ERROR.salary}
+                    onChange={(next) => onStaffPlan(row.positionId, row.plan.headcount, next)}
+                  />
+                ) : (
+                  <MoneyAmount amount={row.plan.salaryExVat} />
+                )}
+              </td>
+              <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                <MoneyAmount amount={row.plan.fotExVat} />
+              </td>
+            </tr>
+          ))
+        : null}
+      {open && outsourcing ? (
+        <tr>
+          <th scope="row" className={entityNameRowClassName('repeated')}>
+            {outsourcing.name}
+          </th>
+          <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
+            {editable ? (
+              <QuantityCell
+                label={`План, часы, ${department.name}`}
+                value={outsourcing.planHoursThousandths}
+                unit="ч"
+                blankIfZero
+                onChange={(next) => onOutsourcingPlan(outsourcing.departmentId, next, outsourcing.planRateExVat)}
+              />
+            ) : (
+              `${formatHours(outsourcing.planHoursThousandths)} ч`
+            )}
+          </td>
+          <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
+            {editable ? (
+              <MoneyCell
+                label={`Ставка аутсорсинга, ${department.name}`}
+                value={outsourcing.planRateExVat}
+                parse={parseOpexMoney}
+                invalidMessage={HR_ERROR.rate}
+                onChange={(next) => onOutsourcingPlan(outsourcing.departmentId, outsourcing.planHoursThousandths, next)}
+              />
+            ) : (
+              <>
+                <MoneyAmount amount={outsourcing.planRateExVat} />
+                <span className="text-muted"> /ч</span>
+              </>
+            )}
+          </td>
+          <td className={`${valueCell} ${cellKindClassName.computed}`}>
+            <MoneyAmount amount={outsourcing.planAmountExVat} />
+          </td>
+        </tr>
+      ) : null}
+    </Fragment>
   );
 }
 

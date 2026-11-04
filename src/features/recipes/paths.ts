@@ -55,14 +55,6 @@ export function recipesCostHref(options: { month: string; currentMonth: string }
   return `${RECIPES_COST_HREF}?month=${options.month}`;
 }
 
-export function recipesCostDetailHref(id: string, options: { month: string; currentMonth: string }): string {
-  const base = `${RECIPES_COST_HREF}/${encodeURIComponent(id)}`;
-  if (!options.month || options.month === options.currentMonth) {
-    return base;
-  }
-  return `${base}?month=${options.month}`;
-}
-
 export function parseRecipesFinishedCostMonthQuery(params: { month?: string }): { month: string } {
   return { month: params.month ?? '' };
 }
@@ -72,12 +64,4 @@ export function recipesFinishedCostHref(options: { month: string; currentMonth: 
     return RECIPES_FINISHED_COST_HREF;
   }
   return `${RECIPES_FINISHED_COST_HREF}?month=${options.month}`;
-}
-
-export function recipesFinishedCostDetailHref(id: string, options: { month: string; currentMonth: string }): string {
-  const base = `${RECIPES_FINISHED_COST_HREF}/${encodeURIComponent(id)}`;
-  if (!options.month || options.month === options.currentMonth) {
-    return base;
-  }
-  return `${base}?month=${options.month}`;
 }

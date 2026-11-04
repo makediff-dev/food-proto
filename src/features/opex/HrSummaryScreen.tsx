@@ -1,21 +1,27 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Fragment, useMemo } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 
-import { type HrTaxRateField, hrMonthView, hrTaxRatesOrDefault } from '@/domain/hr';
+import type { HrShopDepartmentId } from '@/domain/document';
+import { type HrDepartmentView, type HrTaxRateField, hrMonthView, hrTaxRatesOrDefault } from '@/domain/hr';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { OpexMonthBar, resolveOpexMonth } from '@/features/opex/OpexMonthBar';
 import { OPEX_HR_TITLE, opexHrHref } from '@/features/opex/paths';
-import { formatHours, formatTaxRate, HR_ERROR, parseOpexMoney } from '@/features/opex/text';
+import { formatHours, formatQuantity, formatTaxRate, HR_ERROR, parseOpexMoney } from '@/features/opex/text';
 import { useOpex } from '@/features/opex/use-opex';
 import { useRole } from '@/features/roles/RoleProvider';
+import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
   ColumnLabel,
+  categoryBandClassName,
+  categoryNameClassName,
+  categoryNameRowClassName,
   cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
+  entityNameRowClassName,
   HundredthsCell,
   IntegerCell,
   MoneyAmount,
@@ -27,15 +33,6 @@ import {
 
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
 const valueCell = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
-const nameCell =
-  'sticky left-0 z-10 border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle text-sm';
-
-function formatHeadcount(value: number, mode: 'people' | 'hoursPerDay'): string {
-  if (mode === 'people') {
-    return String(value);
-  }
-  return formatHours(value);
-}
 
 export function HrSummaryScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);
@@ -57,7 +54,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_HR_TITLE}
       full
-      lede="План и факт по подразделениям и должностям. Факт цехов собран из дневных часов; администрацию правят здесь за месяц. Ниже — зарплатные налоги."
+      lede="План и факт по подразделениям и должностям. Факт цехов собран из дневной численности; администрацию правят здесь за месяц. Ниже — зарплатные налоги."
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -85,7 +82,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
                   <ColumnLabel label="План, ФОТ" />
                 </th>
                 <th scope="col" className={valueHead}>
-                  <ColumnLabel label="Факт, чел" hint="У цехов — сумма часов штатных / дни месяца" />
+                  <ColumnLabel label="Факт, чел" hint="У цехов — сумма людей по дням / дни месяца" />
                 </th>
                 <th scope="col" className={valueHead}>
                   <ColumnLabel label="Факт, зарплата" />
@@ -97,146 +94,23 @@ export function HrSummaryScreen({ month }: { month: string }) {
             </thead>
             <tbody>
               {view.departments.map((department) => (
-                <Fragment key={department.departmentId}>
-                  <tr className="font-medium">
-                    <th scope="row" className={nameCell}>
-                      {department.name}
-                    </th>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>{department.plan.headcount}</td>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={department.plan.salaryExVat} />
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={department.plan.fotExVat} />
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      {department.departmentId === 'admin'
-                        ? department.fact.headcount
-                        : formatHeadcount(department.fact.headcount, 'hoursPerDay')}
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={department.fact.salaryExVat} />
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={department.fact.fotExVat} />
-                    </td>
-                  </tr>
-                  {department.staff.map((row) => (
-                    <tr key={row.positionId}>
-                      <th scope="row" className={nameCell}>
-                        {row.name}
-                        {row.deleted ? ' (архив)' : ''}
-                      </th>
-                      <td className={`${valueCell} ${cellKindClassName.computed}`}>{row.plan.headcount}</td>
-                      <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                        <MoneyAmount amount={row.plan.salaryExVat} />
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                        <MoneyAmount amount={row.plan.fotExVat} />
-                      </td>
-                      <td
-                        className={`${valueCell} ${cellKindClassName[department.departmentId === 'admin' && editable ? 'assigned' : 'computed']}`}
-                      >
-                        {department.departmentId === 'admin' && editable ? (
-                          <IntegerCell
-                            label={`Факт, чел, ${row.name}`}
-                            value={row.fact.headcount}
-                            onChange={(next) => {
-                              const rejection = opex.setHrAdminFact(
-                                selectedMonth,
-                                row.positionId,
-                                next,
-                                row.fact.salaryExVat,
-                              );
-                              return rejection ? HR_ERROR[rejection] : null;
-                            }}
-                          />
-                        ) : department.departmentId === 'admin' ? (
-                          row.fact.headcount
-                        ) : (
-                          formatHeadcount(row.fact.headcount, 'hoursPerDay')
-                        )}
-                      </td>
-                      <td
-                        className={`${valueCell} ${cellKindClassName[department.departmentId === 'admin' && editable ? 'assigned' : 'computed']}`}
-                      >
-                        {department.departmentId === 'admin' && editable ? (
-                          <MoneyCell
-                            label={`Факт, зарплата, ${row.name}`}
-                            value={row.fact.salaryExVat}
-                            parse={parseOpexMoney}
-                            invalidMessage={HR_ERROR.salary}
-                            onChange={(next) => {
-                              const rejection = opex.setHrAdminFact(
-                                selectedMonth,
-                                row.positionId,
-                                row.fact.headcount,
-                                next,
-                              );
-                              return rejection ? HR_ERROR[rejection] : null;
-                            }}
-                          />
-                        ) : (
-                          <MoneyAmount amount={row.fact.salaryExVat} />
-                        )}
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                        <MoneyAmount amount={row.fact.fotExVat} />
-                      </td>
-                    </tr>
-                  ))}
-                  {department.outsourcing ? (
-                    <tr key={`${department.departmentId}-out`}>
-                      <th scope="row" className={nameCell}>
-                        {department.outsourcing.name}
-                      </th>
-                      <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                        {formatHours(department.outsourcing.planHoursThousandths)} ч
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                        <MoneyAmount amount={department.outsourcing.planRateExVat} />
-                        <span className="text-muted"> /ч</span>
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                        <MoneyAmount amount={department.outsourcing.planAmountExVat} />
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                        {formatHours(department.outsourcing.factHoursThousandths)} ч
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-                        {editable ? (
-                          <MoneyCell
-                            label={`Ставка аутсорсинга, ${department.name}`}
-                            value={department.outsourcing.factRateExVat}
-                            parse={parseOpexMoney}
-                            invalidMessage={HR_ERROR.rate}
-                            onChange={(next) => {
-                              const outsourcing = department.outsourcing;
-                              if (!outsourcing) {
-                                return HR_ERROR.missing;
-                              }
-                              const rejection = opex.setHrOutsourcingRate(
-                                selectedMonth,
-                                outsourcing.departmentId,
-                                next,
-                              );
-                              return rejection ? HR_ERROR[rejection] : null;
-                            }}
-                          />
-                        ) : (
-                          <MoneyAmount amount={department.outsourcing.factRateExVat} />
-                        )}
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                        <MoneyAmount amount={department.outsourcing.factAmountExVat} />
-                      </td>
-                    </tr>
-                  ) : null}
-                </Fragment>
+                <DepartmentBlock
+                  key={department.departmentId}
+                  department={department}
+                  editable={editable}
+                  onAdminFact={(positionId, headcount, salaryExVat) => {
+                    const rejection = opex.setHrAdminFact(selectedMonth, positionId, headcount, salaryExVat);
+                    return rejection ? HR_ERROR[rejection] : null;
+                  }}
+                  onOutsourcingRate={(departmentId, rateExVat) => {
+                    const rejection = opex.setHrOutsourcingRate(selectedMonth, departmentId, rateExVat);
+                    return rejection ? HR_ERROR[rejection] : null;
+                  }}
+                />
               ))}
               <tr className="font-medium">
-                <th scope="row" className={nameCell}>
-                  ВСЕГО
+                <th scope="row" className={categoryNameRowClassName(false)}>
+                  <span className={categoryNameClassName}>ВСЕГО</span>
                 </th>
                 <td className={`${valueCell} ${cellKindClassName.computed}`}>{view.total.plan.headcount}</td>
                 <td className={`${valueCell} ${cellKindClassName.computed}`}>
@@ -246,7 +120,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
                   <MoneyAmount amount={view.total.plan.fotExVat} />
                 </td>
                 <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                  {formatHours(view.total.fact.headcount)}
+                  {formatQuantity(view.total.fact.headcount)}
                 </td>
                 <td className={`${valueCell} ${cellKindClassName.computed}`}>
                   <MoneyAmount amount={view.total.fact.salaryExVat} />
@@ -303,7 +177,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
                       : 'factInjuryHundredths';
                 return (
                   <tr key={tax.id}>
-                    <th scope="row" className={nameCell}>
+                    <th scope="row" className={entityNameRowClassName('repeated')}>
                       {tax.name}
                     </th>
                     <td className={`${valueCell} ${cellKindClassName.computed}`}>
@@ -346,8 +220,8 @@ export function HrSummaryScreen({ month }: { month: string }) {
                 );
               })}
               <tr className="font-medium">
-                <th scope="row" className={nameCell}>
-                  ВСЕГО
+                <th scope="row" className={categoryNameRowClassName(false)}>
+                  <span className={categoryNameClassName}>ВСЕГО</span>
                 </th>
                 <td className={`${valueCell} ${cellKindClassName.computed}`} />
                 <td className={`${valueCell} ${cellKindClassName.computed}`}>
@@ -373,5 +247,144 @@ export function HrSummaryScreen({ month }: { month: string }) {
         </div>
       </div>
     </PageFrame>
+  );
+}
+
+function DepartmentBlock({
+  department,
+  editable,
+  onAdminFact,
+  onOutsourcingRate,
+}: {
+  department: HrDepartmentView;
+  editable: boolean;
+  onAdminFact: (positionId: string, headcount: number, salaryExVat: number) => string | null;
+  onOutsourcingRate: (departmentId: HrShopDepartmentId, rateExVat: number) => string | null;
+}) {
+  const [open, setOpen] = useState(true);
+  const outsourcing = department.outsourcing;
+  const count = department.staff.length + (outsourcing ? 1 : 0);
+  const isAdmin = department.departmentId === 'admin';
+
+  return (
+    <Fragment>
+      <tr>
+        <th scope="row" className={categoryNameRowClassName(false)}>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-label={open ? `Свернуть ${department.name}` : `Развернуть ${department.name}`}
+              title={open ? 'Свернуть' : 'Развернуть'}
+              onClick={() => setOpen((current) => !current)}
+              className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              {open ? <IconChevronDown /> : <IconChevronRight />}
+            </button>
+            <span className={categoryNameClassName}>
+              {department.name} ({count})
+            </span>
+          </div>
+        </th>
+        <td className={`${valueCell} ${categoryBandClassName}`}>{department.plan.headcount}</td>
+        <td className={`${valueCell} ${categoryBandClassName}`}>
+          <MoneyAmount amount={department.plan.salaryExVat} />
+        </td>
+        <td className={`${valueCell} ${categoryBandClassName}`}>
+          <MoneyAmount amount={department.plan.fotExVat} />
+        </td>
+        <td className={`${valueCell} ${categoryBandClassName}`}>
+          {isAdmin ? department.fact.headcount : formatQuantity(department.fact.headcount)}
+        </td>
+        <td className={`${valueCell} ${categoryBandClassName}`}>
+          <MoneyAmount amount={department.fact.salaryExVat} />
+        </td>
+        <td className={`${valueCell} ${categoryBandClassName}`}>
+          <MoneyAmount amount={department.fact.fotExVat} />
+        </td>
+      </tr>
+      {open
+        ? department.staff.map((row) => (
+            <tr key={row.positionId}>
+              <th scope="row" className={entityNameRowClassName('repeated')}>
+                {row.name}
+                {row.deleted ? ' (архив)' : ''}
+              </th>
+              <td className={`${valueCell} ${cellKindClassName.computed}`}>{row.plan.headcount}</td>
+              <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                <MoneyAmount amount={row.plan.salaryExVat} />
+              </td>
+              <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                <MoneyAmount amount={row.plan.fotExVat} />
+              </td>
+              <td className={`${valueCell} ${cellKindClassName[isAdmin && editable ? 'assigned' : 'computed']}`}>
+                {isAdmin && editable ? (
+                  <IntegerCell
+                    label={`Факт, чел, ${row.name}`}
+                    value={row.fact.headcount}
+                    onChange={(next) => onAdminFact(row.positionId, next, row.fact.salaryExVat)}
+                  />
+                ) : isAdmin ? (
+                  row.fact.headcount
+                ) : (
+                  formatQuantity(row.fact.headcount)
+                )}
+              </td>
+              <td className={`${valueCell} ${cellKindClassName[isAdmin && editable ? 'assigned' : 'computed']}`}>
+                {isAdmin && editable ? (
+                  <MoneyCell
+                    label={`Факт, зарплата, ${row.name}`}
+                    value={row.fact.salaryExVat}
+                    parse={parseOpexMoney}
+                    invalidMessage={HR_ERROR.salary}
+                    onChange={(next) => onAdminFact(row.positionId, row.fact.headcount, next)}
+                  />
+                ) : (
+                  <MoneyAmount amount={row.fact.salaryExVat} />
+                )}
+              </td>
+              <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                <MoneyAmount amount={row.fact.fotExVat} />
+              </td>
+            </tr>
+          ))
+        : null}
+      {open && outsourcing ? (
+        <tr key={`${department.departmentId}-out`}>
+          <th scope="row" className={entityNameRowClassName('repeated')}>
+            {outsourcing.name}
+          </th>
+          <td className={`${valueCell} ${cellKindClassName.computed}`}>
+            {formatHours(outsourcing.planHoursThousandths)} ч
+          </td>
+          <td className={`${valueCell} ${cellKindClassName.computed}`}>
+            <MoneyAmount amount={outsourcing.planRateExVat} />
+            <span className="text-muted"> /ч</span>
+          </td>
+          <td className={`${valueCell} ${cellKindClassName.computed}`}>
+            <MoneyAmount amount={outsourcing.planAmountExVat} />
+          </td>
+          <td className={`${valueCell} ${cellKindClassName.computed}`}>
+            {formatHours(outsourcing.factHoursThousandths)} ч
+          </td>
+          <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
+            {editable ? (
+              <MoneyCell
+                label={`Ставка аутсорсинга, ${department.name}`}
+                value={outsourcing.factRateExVat}
+                parse={parseOpexMoney}
+                invalidMessage={HR_ERROR.rate}
+                onChange={(next) => onOutsourcingRate(outsourcing.departmentId, next)}
+              />
+            ) : (
+              <MoneyAmount amount={outsourcing.factRateExVat} />
+            )}
+          </td>
+          <td className={`${valueCell} ${cellKindClassName.computed}`}>
+            <MoneyAmount amount={outsourcing.factAmountExVat} />
+          </td>
+        </tr>
+      ) : null}
+    </Fragment>
   );
 }

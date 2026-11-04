@@ -37,7 +37,7 @@ export function FinishedProductCostScreen({ month }: { month: string }) {
           Товаров пока нет. Заведите их во «Вводе плана» продаж.
         </p>
       ) : (
-        <FinishedProductCostTable sections={view.sections} month={selectedMonth} currentMonth={currentMonth} />
+        <FinishedProductCostTable sections={view.sections} month={selectedMonth} />
       )}
     </PageFrame>
   );

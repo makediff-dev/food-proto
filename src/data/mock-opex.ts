@@ -33,18 +33,18 @@ export const mockHrPositions: HrPosition[] = [
   staff('hr-admin-cleaner', 'admin', 'Мастер чистоты'),
   staff('hr-admin-storekeeper', 'admin', 'Кладовщик'),
 
+  staff('hr-meat-foreman', 'meat', 'Бригадир цеха'),
+  staff('hr-meat-mince', 'meat', 'Оператор фаршесоставления'),
+  staff('hr-meat-former', 'meat', 'Формовщик'),
+  staff('hr-meat-heat', 'meat', 'Оператор термообработки'),
+  outsourcing('meat'),
+
   staff('hr-bakery-foreman', 'bakery', 'Бригадир цеха'),
   staff('hr-bakery-dough', 'bakery', 'Оператор тестомеса'),
   staff('hr-bakery-divider', 'bakery', 'Оператор тестоделителя-округлителя'),
   staff('hr-bakery-heat', 'bakery', 'Оператор термообработки'),
   staff('hr-bakery-cool', 'bakery', 'Оператор охлаждения'),
   outsourcing('bakery'),
-
-  staff('hr-meat-foreman', 'meat', 'Бригадир цеха'),
-  staff('hr-meat-mince', 'meat', 'Оператор фаршесоставления'),
-  staff('hr-meat-former', 'meat', 'Формовщик'),
-  staff('hr-meat-heat', 'meat', 'Оператор термообработки'),
-  outsourcing('meat'),
 
   staff('hr-veg-operator', 'vegetables', 'Оператор овощного цеха'),
   outsourcing('vegetables'),

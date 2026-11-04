@@ -1,20 +1,14 @@
-import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
-import { DerivativeCostDetailScreen } from '@/features/recipes/DerivativeCostDetailScreen';
-import { parseRecipesCostMonthQuery, RECIPES_COST_TITLE } from '@/features/recipes/paths';
+import { parseRecipesCostMonthQuery, RECIPES_COST_HREF } from '@/features/recipes/paths';
 
-export const metadata: Metadata = {
-  title: RECIPES_COST_TITLE,
-};
-
+/** Старый URL карточки — состав раскрывается в своде. */
 export default async function RecipesCostDetailPage({
-  params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ month?: string }>;
 }) {
-  const { id } = await params;
   const query = parseRecipesCostMonthQuery(await searchParams);
-  return <DerivativeCostDetailScreen derivativeId={decodeURIComponent(id)} month={query.month} />;
+  redirect(query.month ? `${RECIPES_COST_HREF}?month=${encodeURIComponent(query.month)}` : RECIPES_COST_HREF);
 }

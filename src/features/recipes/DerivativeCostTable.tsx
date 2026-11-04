@@ -1,10 +1,11 @@
 'use client';
 
-import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import type { DerivativeCostRow, DerivativeCostSection } from '@/domain/derivative-cost';
-import { recipesCostDetailHref } from '@/features/recipes/paths';
+import { useDocumentStore } from '@/data/DocumentProvider';
+import { type DerivativeCostRow, type DerivativeCostSection, derivativeCostDetail } from '@/domain/derivative-cost';
+import { type RecipeCostDetailExtraUnitRow } from '@/features/recipes/RecipeCostDetailTable';
+import { RecipeCostExpandedDetail } from '@/features/recipes/RecipeCostExpandedDetail';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
@@ -73,6 +74,8 @@ const COLUMN_KIND: Record<ColumnKey, CellKind> = {
   costPerPieceDeviation: 'computed',
 };
 
+const DETAIL_COL_SPAN = COLUMNS.length + 1;
+
 function columnEdgeClass(key: ColumnKey): string {
   return GROUP_END_KEYS.has(key) ? tableBorder.rightThick : columnDividerClassName;
 }
@@ -80,11 +83,9 @@ function columnEdgeClass(key: ColumnKey): string {
 export function DerivativeCostTable({
   sections,
   month,
-  currentMonth,
 }: {
   sections: readonly DerivativeCostSection[];
   month: string;
-  currentMonth: string;
 }) {
   return (
     <div className={tableFrameClassName}>
@@ -121,7 +122,7 @@ export function DerivativeCostTable({
         </thead>
         <tbody>
           {sections.map((section) => (
-            <WorkshopBlock key={section.workshopId} section={section} month={month} currentMonth={currentMonth} />
+            <WorkshopBlock key={section.workshopId} section={section} month={month} />
           ))}
         </tbody>
       </table>
@@ -129,15 +130,7 @@ export function DerivativeCostTable({
   );
 }
 
-function WorkshopBlock({
-  section,
-  month,
-  currentMonth,
-}: {
-  section: DerivativeCostSection;
-  month: string;
-  currentMonth: string;
-}) {
+function WorkshopBlock({ section, month }: { section: DerivativeCostSection; month: string }) {
   const [open, setOpen] = useState(true);
   const count = section.rows.length;
 
@@ -169,47 +162,82 @@ function WorkshopBlock({
         ))}
       </tr>
       {open
-        ? section.rows.map((row, index) => (
-            <CostRow key={row.derivativeId} row={row} index={index + 1} month={month} currentMonth={currentMonth} />
-          ))
+        ? section.rows.map((row, index) => <CostRow key={row.derivativeId} row={row} index={index + 1} month={month} />)
         : null}
     </>
   );
 }
 
-function CostRow({
-  row,
-  index,
-  month,
-  currentMonth,
-}: {
-  row: DerivativeCostRow;
-  index: number;
-  month: string;
-  currentMonth: string;
-}) {
-  const href = recipesCostDetailHref(row.derivativeId, { month, currentMonth });
+function CostRow({ row, index, month }: { row: DerivativeCostRow; index: number; month: string }) {
+  const [open, setOpen] = useState(false);
+  const store = useDocumentStore();
+  const detail = useMemo(
+    () => (open ? derivativeCostDetail(store.document, row.derivativeId, month) : null),
+    [open, store.document, row.derivativeId, month],
+  );
+
+  const extraUnitRows: RecipeCostDetailExtraUnitRow[] = [];
+  if (detail?.hasPieceCost && detail.planCostPerPiece && detail.factCostPerPiece && detail.costPerPieceDeviation) {
+    extraUnitRows.push({
+      label: 'За шт',
+      plan: detail.planCostPerPiece,
+      fact: detail.factCostPerPiece,
+      deviation: detail.costPerPieceDeviation,
+    });
+  }
 
   return (
-    <tr>
-      <th scope="row" className={entityNameRowClassName('repeated')}>
-        <Link
-          href={href}
-          className="inline-flex w-full min-w-0 items-center gap-2 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
-          <ProductIndex index={index} />
-          <span className="min-w-0 flex-1 text-left text-sm leading-none text-ink">{row.name}</span>
-        </Link>
-      </th>
-      {COLUMNS.map((column) => (
-        <td
-          key={column.key}
-          className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${cellKindClassName[COLUMN_KIND[column.key]]} ${columnEdgeClass(column.key)}`}
-        >
-          <CostCell column={column.key} row={row} />
-        </td>
-      ))}
-    </tr>
+    <>
+      <tr>
+        <th scope="row" className={entityNameRowClassName('repeated')}>
+          <div className="flex w-full min-w-0 items-center gap-2">
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-label={open ? `Свернуть состав ${row.name}` : `Развернуть состав ${row.name}`}
+              title={open ? 'Свернуть состав' : 'Развернуть состав'}
+              onClick={() => setOpen((current) => !current)}
+              className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              {open ? <IconChevronDown /> : <IconChevronRight />}
+            </button>
+            <button
+              type="button"
+              aria-expanded={open}
+              onClick={() => setOpen((current) => !current)}
+              className="inline-flex min-w-0 flex-1 items-center gap-2 text-left outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              <ProductIndex index={index} />
+              <span className="min-w-0 flex-1 text-sm leading-none text-ink">{row.name}</span>
+            </button>
+          </div>
+        </th>
+        {COLUMNS.map((column) => (
+          <td
+            key={column.key}
+            className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${cellKindClassName[COLUMN_KIND[column.key]]} ${columnEdgeClass(column.key)}`}
+          >
+            <CostCell column={column.key} row={row} />
+          </td>
+        ))}
+      </tr>
+      {open ? (
+        <tr>
+          <td colSpan={DETAIL_COL_SPAN} className="border-b border-b-line bg-sheet p-0">
+            {detail ? (
+              <RecipeCostExpandedDetail
+                name={detail.name}
+                lines={detail.lines}
+                unitCost={{ plan: detail.planCostPerKg, fact: detail.factCostPerKg }}
+                extraUnitRows={extraUnitRows}
+              />
+            ) : (
+              <p className="px-3 py-3 text-sm leading-6 text-muted">Производная не найдена.</p>
+            )}
+          </td>
+        </tr>
+      ) : null}
+    </>
   );
 }
 
