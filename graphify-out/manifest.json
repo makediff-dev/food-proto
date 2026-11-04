@@ -24,9 +24,9 @@
     "semantic_hash": "e9d66e1263ec6f84f9c7f4b88b00e4f9"
   },
   "src/app/layout.tsx": {
-    "mtime": 1793697322.1288955,
-    "seen": 1793697481.831998,
-    "ast_hash": "8a9348af46f7ab5badf1a6a7b06d32cd",
+    "mtime": 1793799917.205531,
+    "seen": 1793799926.4271972,
+    "ast_hash": "be3d4e8f6c896dbb3e6cbb1dc7182df7",
     "semantic_hash": ""
   },
   "src/app/page.tsx": {
@@ -525,9 +525,9 @@
     "semantic_hash": ""
   },
   "src/features/shell/AppShell.tsx": {
-    "mtime": 1793783411.3666587,
-    "seen": 1793783507.033258,
-    "ast_hash": "54c9834b671254ef65b0f81c9f2cc623",
+    "mtime": 1793799908.985424,
+    "seen": 1793799926.4271972,
+    "ast_hash": "639ea03c200d4912c82a4063067c905a",
     "semantic_hash": ""
   },
   "src/features/shell/Dialog.tsx": {

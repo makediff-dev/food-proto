@@ -359,7 +359,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="app-shell flex h-dvh flex-col overflow-hidden bg-paper">
+    <div className="app-shell flex h-full min-h-0 flex-col overflow-hidden bg-paper">
       {menuOpen ? (
         <button
           type="button"

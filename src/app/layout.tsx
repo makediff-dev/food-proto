@@ -28,8 +28,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
-    <html lang="ru" className={`${onest.variable} ${unbounded.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col font-sans">
+    <html lang="ru" className={`${onest.variable} ${unbounded.variable} h-dvh overflow-hidden antialiased`}>
+      <body className="flex h-full flex-col overflow-hidden font-sans">
         <DocumentProvider>
           <RoleProvider>
             <AppShell>{children}</AppShell>
