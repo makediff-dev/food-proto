@@ -4,10 +4,11 @@ import { useRouter } from 'next/navigation';
 import { Fragment, useMemo, useState } from 'react';
 
 import { HR_DEPARTMENT_IDS, type HrDepartmentId, isHrShopDepartmentId, isOccurredOn } from '@/domain/document';
-import { HR_DEPARTMENT_LABELS, hrDayOutsourcingValue, hrDayStaffValue } from '@/domain/hr';
+import { HR_DEPARTMENT_LABELS, hrDayOutsourcingValue, hrDayStaffValue, hrMonthView } from '@/domain/hr';
 import { defaultSalesFactDay, monthDates } from '@/domain/sales-fact';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
+import { HrTaxRateBlock } from '@/features/opex/HrTaxRateBlock';
 import { OpexMonthBar, resolveOpexMonth } from '@/features/opex/OpexMonthBar';
 import { OPEX_HR_FACT_TITLE, opexHrFactHref } from '@/features/opex/paths';
 import { HR_ERROR, parseOpexMoney } from '@/features/opex/text';
@@ -52,6 +53,7 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
   const { canEditSalesOpex } = useRole();
   const router = useRouter();
   const editable = opex.hydrated && canEditSalesOpex;
+  const taxes = useMemo(() => hrMonthView(opex.document, selectedMonth).taxes, [opex.document, selectedMonth]);
 
   const departments = useMemo((): FactDepartment[] => {
     return HR_DEPARTMENT_IDS.map((departmentId) => {
@@ -86,7 +88,7 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
     <PageFrame
       title={OPEX_HR_FACT_TITLE}
       full
-      lede="Дневной факт подразделений: численность и суммы штатных. У цехов и РЦ — часы и сумма аутсорсинга."
+      lede="Дневной факт подразделений: численность и суммы штатных. У цехов и РЦ — часы и сумма аутсорсинга. Ставки налогов — на месяц, под сеткой дня."
       intro={
         <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
           <OpexMonthBar month={selectedMonth} today={today} onOpen={(next) => open({ month: next })} />
@@ -109,54 +111,65 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
         </div>
       }
     >
-      <div className={tableFrameClassName}>
-        <table className={tableClassName}>
-          <caption className="sr-only">{`Факт HR на ${selectedDay}`}</caption>
-          <thead>
-            <tr>
-              <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                <ColumnLabel label="Наименование" />
-              </th>
-              <th scope="col" className={valueHead}>
-                <ColumnLabel label="Кол-во" />
-              </th>
-              <th scope="col" className={valueHead}>
-                <ColumnLabel label="Сумма" />
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {departments.map((department) => (
-              <DepartmentBlock
-                key={department.departmentId}
-                department={department}
-                editable={editable}
-                staff={(positionId) => hrDayStaffValue(opex.document, selectedDay, positionId)}
-                outsourcing={() =>
-                  department.hasOutsourcing && isHrShopDepartmentId(department.departmentId)
-                    ? hrDayOutsourcingValue(opex.document, selectedDay, department.departmentId)
-                    : { hourThousandths: 0, amountExVat: 0 }
-                }
-                onStaff={(positionId, headcountThousandths, amountExVat) => {
-                  const rejection = opex.setHrDayStaff(selectedDay, positionId, headcountThousandths, amountExVat);
-                  return rejection ? HR_ERROR[rejection] : null;
-                }}
-                onOutsourcing={(hourThousandths, amountExVat) => {
-                  if (!isHrShopDepartmentId(department.departmentId)) {
-                    return null;
+      <div className="flex flex-col gap-6">
+        <div className={tableFrameClassName}>
+          <table className={tableClassName}>
+            <caption className="sr-only">{`Факт HR на ${selectedDay}`}</caption>
+            <thead>
+              <tr>
+                <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                  <ColumnLabel label="Наименование" />
+                </th>
+                <th scope="col" className={valueHead}>
+                  <ColumnLabel label="Кол-во" />
+                </th>
+                <th scope="col" className={valueHead}>
+                  <ColumnLabel label="Сумма" />
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {departments.map((department) => (
+                <DepartmentBlock
+                  key={department.departmentId}
+                  department={department}
+                  editable={editable}
+                  staff={(positionId) => hrDayStaffValue(opex.document, selectedDay, positionId)}
+                  outsourcing={() =>
+                    department.hasOutsourcing && isHrShopDepartmentId(department.departmentId)
+                      ? hrDayOutsourcingValue(opex.document, selectedDay, department.departmentId)
+                      : { hourThousandths: 0, amountExVat: 0 }
                   }
-                  const rejection = opex.setHrDayOutsourcing(
-                    selectedDay,
-                    department.departmentId,
-                    hourThousandths,
-                    amountExVat,
-                  );
-                  return rejection ? HR_ERROR[rejection] : null;
-                }}
-              />
-            ))}
-          </tbody>
-        </table>
+                  onStaff={(positionId, headcountThousandths, amountExVat) => {
+                    const rejection = opex.setHrDayStaff(selectedDay, positionId, headcountThousandths, amountExVat);
+                    return rejection ? HR_ERROR[rejection] : null;
+                  }}
+                  onOutsourcing={(hourThousandths, amountExVat) => {
+                    if (!isHrShopDepartmentId(department.departmentId)) {
+                      return null;
+                    }
+                    const rejection = opex.setHrDayOutsourcing(
+                      selectedDay,
+                      department.departmentId,
+                      hourThousandths,
+                      amountExVat,
+                    );
+                    return rejection ? HR_ERROR[rejection] : null;
+                  }}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <HrTaxRateBlock
+          side="fact"
+          taxes={taxes}
+          editable={editable}
+          onRate={(field, rateHundredths) => {
+            const rejection = opex.setHrTaxRate(selectedMonth, field, rateHundredths);
+            return rejection ? HR_ERROR[rejection] : null;
+          }}
+        />
       </div>
     </PageFrame>
   );

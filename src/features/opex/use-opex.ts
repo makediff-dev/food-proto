@@ -43,6 +43,8 @@ import {
   addTransportCarrier,
   addTransportCarrierRejection,
   deleteTransportCarrier,
+  renameTransportCarrier,
+  renameTransportCarrierRejection,
   restoreTransportCarrier,
   setTransportHireDay,
   setTransportHireDayRejection,
@@ -195,6 +197,14 @@ export function useOpex() {
     },
     deleteTransportCarrier(carrierId: string) {
       updateDocument((current) => deleteTransportCarrier(current, carrierId, new Date().toISOString()));
+    },
+    renameTransportCarrier(carrierId: string, name: string): TransportFieldRejection | null {
+      const rejection = renameTransportCarrierRejection(document, carrierId, name);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => renameTransportCarrier(current, carrierId, name));
+      return null;
     },
     restoreTransportCarrier(carrierId: string): TransportFieldRejection | null {
       const carrier = document.transportCarriers.find((item) => item.id === carrierId);

@@ -3,13 +3,12 @@
 import { useRouter } from 'next/navigation';
 import { Fragment, useMemo, useState } from 'react';
 
-import { type HrDepartmentView, type HrTaxRateField, hrMonthView, hrTaxRatesOrDefault } from '@/domain/hr';
+import { type HrDepartmentView, hrMonthView } from '@/domain/hr';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { OpexMonthBar, resolveOpexMonth } from '@/features/opex/OpexMonthBar';
 import { OPEX_HR_TITLE, opexHrHref } from '@/features/opex/paths';
-import { formatHours, formatQuantity, formatTaxRate, HR_ERROR } from '@/features/opex/text';
+import { formatHours, formatQuantity, formatTaxRate } from '@/features/opex/text';
 import { useOpex } from '@/features/opex/use-opex';
-import { useRole } from '@/features/roles/RoleProvider';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
@@ -21,7 +20,6 @@ import {
   columnDividerClassName,
   columnHeadingClassName,
   entityNameRowClassName,
-  HundredthsCell,
   MoneyAmount,
   nameHeadingClassName,
   tableClassName,
@@ -36,22 +34,14 @@ export function HrSummaryScreen({ month }: { month: string }) {
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = resolveOpexMonth(month, today, currentMonth);
   const opex = useOpex();
-  const { canEditSalesOpex } = useRole();
   const router = useRouter();
-  const editable = opex.hydrated && canEditSalesOpex;
   const view = useMemo(() => hrMonthView(opex.document, selectedMonth), [opex.document, selectedMonth]);
-  const taxRates = hrTaxRatesOrDefault(opex.document, selectedMonth);
-
-  function setTax(field: HrTaxRateField, rateHundredths: number): string | null {
-    const rejection = opex.setHrTaxRate(selectedMonth, field, rateHundredths);
-    return rejection ? HR_ERROR[rejection] : null;
-  }
 
   return (
     <PageFrame
       title={OPEX_HR_TITLE}
       full
-      lede="План и факт по подразделениям и должностям. Факт собран из дневных строк. Ниже — зарплатные налоги."
+      lede="План и факт по подразделениям и должностям. Факт собран из дневных строк. Зарплатные налоги только показывают."
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -147,63 +137,31 @@ export function HrSummaryScreen({ month }: { month: string }) {
               </tr>
             </thead>
             <tbody>
-              {view.taxes.map((tax) => {
-                const planField =
-                  tax.id === 'ndfl'
-                    ? 'planNdflHundredths'
-                    : tax.id === 'social'
-                      ? 'planSocialHundredths'
-                      : 'planInjuryHundredths';
-                const factField =
-                  tax.id === 'ndfl'
-                    ? 'factNdflHundredths'
-                    : tax.id === 'social'
-                      ? 'factSocialHundredths'
-                      : 'factInjuryHundredths';
-                return (
-                  <tr key={tax.id}>
-                    <th scope="row" className={entityNameRowClassName('repeated')}>
-                      {tax.name}
-                    </th>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={tax.planBaseExVat} />
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-                      {editable ? (
-                        <HundredthsCell
-                          label={`План ставка, ${tax.name}`}
-                          value={tax.planRateHundredths}
-                          invalidMessage={HR_ERROR.taxRate}
-                          onChange={(next) => setTax(planField, next)}
-                        />
-                      ) : (
-                        formatTaxRate(tax.planRateHundredths)
-                      )}
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={tax.planAmountExVat} />
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={tax.factBaseExVat} />
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-                      {editable ? (
-                        <HundredthsCell
-                          label={`Факт ставка, ${tax.name}`}
-                          value={tax.factRateHundredths}
-                          invalidMessage={HR_ERROR.taxRate}
-                          onChange={(next) => setTax(factField, next)}
-                        />
-                      ) : (
-                        formatTaxRate(tax.factRateHundredths)
-                      )}
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={tax.factAmountExVat} />
-                    </td>
-                  </tr>
-                );
-              })}
+              {view.taxes.map((tax) => (
+                <tr key={tax.id}>
+                  <th scope="row" className={entityNameRowClassName('repeated')}>
+                    {tax.name}
+                  </th>
+                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                    <MoneyAmount amount={tax.planBaseExVat} />
+                  </td>
+                  <td className={`${valueCell} ${cellKindClassName.repeated}`}>
+                    {formatTaxRate(tax.planRateHundredths)}
+                  </td>
+                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                    <MoneyAmount amount={tax.planAmountExVat} />
+                  </td>
+                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                    <MoneyAmount amount={tax.factBaseExVat} />
+                  </td>
+                  <td className={`${valueCell} ${cellKindClassName.repeated}`}>
+                    {formatTaxRate(tax.factRateHundredths)}
+                  </td>
+                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                    <MoneyAmount amount={tax.factAmountExVat} />
+                  </td>
+                </tr>
+              ))}
               <tr className="font-medium">
                 <th scope="row" className={categoryNameRowClassName(false)}>
                   <span className={categoryNameClassName}>ВСЕГО</span>
@@ -225,10 +183,6 @@ export function HrSummaryScreen({ month }: { month: string }) {
               </tr>
             </tbody>
           </table>
-          <p className="sr-only">
-            Ставки по умолчанию {formatTaxRate(taxRates.planNdflHundredths)} /{' '}
-            {formatTaxRate(taxRates.planSocialHundredths)} / {formatTaxRate(taxRates.planInjuryHundredths)}.
-          </p>
         </div>
       </div>
     </PageFrame>

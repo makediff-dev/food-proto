@@ -20,6 +20,7 @@ import {
   cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
+  entityNameRowClassName,
   MoneyAmount,
   MoneyCell,
   nameHeadingClassName,
@@ -29,8 +30,6 @@ import {
 
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
 const valueCell = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
-const nameCell =
-  'sticky left-0 z-10 border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle text-sm';
 
 export function TransportFactScreen({ month, day }: { month: string; day: string }) {
   const today = useMemo(() => new Date(), []);
@@ -113,7 +112,7 @@ export function TransportFactScreen({ month, day }: { month: string; day: string
                       const values = transportHireDayValue(opex.document, selectedDay, carrier.carrierId);
                       return (
                         <tr key={carrier.carrierId}>
-                          <th scope="row" className={nameCell}>
+                          <th scope="row" className={entityNameRowClassName('repeated')}>
                             {carrier.name}
                           </th>
                           <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
@@ -190,7 +189,7 @@ export function TransportFactScreen({ month, day }: { month: string; day: string
                   const values = transportOwnDayValue(opex.document, selectedDay, vehicle.vehicleId);
                   return (
                     <tr key={vehicle.vehicleId}>
-                      <th scope="row" className={nameCell}>
+                      <th scope="row" className={entityNameRowClassName('repeated')}>
                         {vehicle.name}
                       </th>
                       <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>

@@ -7,6 +7,7 @@ import type { HrDepartmentId, HrShopDepartmentId } from '@/domain/document';
 import { HR_DEPARTMENT_LABELS, type HrDepartmentView, hrMonthView } from '@/domain/hr';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { QuantityCell } from '@/features/materials/QuantityCell';
+import { HrTaxRateBlock } from '@/features/opex/HrTaxRateBlock';
 import { OpexMonthBar, resolveOpexMonth } from '@/features/opex/OpexMonthBar';
 import { OPEX_HR_PLAN_TITLE, opexHrPlanHref } from '@/features/opex/paths';
 import { formatHours, HR_ERROR, parseOpexMoney } from '@/features/opex/text';
@@ -54,7 +55,7 @@ export function HrPlanScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_HR_PLAN_TITLE}
       full
-      lede="Плановая численность и зарплата по должностям. У цехов и РЦ — часы и ставка аутсорсинга на месяц."
+      lede="Плановая численность и зарплата по должностям. У цехов и РЦ — часы и ставка аутсорсинга на месяц. Ниже — ставки зарплатных налогов."
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -63,56 +64,72 @@ export function HrPlanScreen({ month }: { month: string }) {
         />
       }
     >
-      <div className={tableFrameClassName}>
-        <table className={tableClassName}>
-          <caption className="sr-only">{`План HR за ${selectedMonth}`}</caption>
-          <thead>
-            <tr>
-              <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                <ColumnLabel label="Наименование" />
-              </th>
-              <th scope="col" className={valueHead}>
-                <ColumnLabel label="План, чел" />
-              </th>
-              <th scope="col" className={valueHead}>
-                <ColumnLabel label="План, зарплата" />
-              </th>
-              <th scope="col" className={valueHead}>
-                <ColumnLabel label="План, ФОТ" />
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {view.departments.map((department) => (
-              <DepartmentBlock
-                key={department.departmentId}
-                department={department}
-                editable={editable}
-                onAdd={
-                  editable
-                    ? () => {
-                        setAddDepartment(department.departmentId);
-                      }
-                    : undefined
-                }
-                onStaffPlan={(positionId, headcount, salaryExVat) => {
-                  const rejection = opex.setHrStaffPlan(selectedMonth, positionId, headcount, salaryExVat);
-                  return rejection ? HR_ERROR[rejection] : null;
-                }}
-                onOutsourcingPlan={(departmentId, hoursThousandths, rateExVat) => {
-                  const rejection = opex.setHrOutsourcingPlan(selectedMonth, departmentId, hoursThousandths, rateExVat);
-                  return rejection ? HR_ERROR[rejection] : null;
-                }}
-                onDelete={(positionId, name) => {
-                  const confirmed = window.confirm(`Удалить «${name}»? Должность пропадёт из рабочего списка.`);
-                  if (confirmed) {
-                    opex.deleteHrPosition(positionId);
+      <div className="flex flex-col gap-6">
+        <div className={tableFrameClassName}>
+          <table className={tableClassName}>
+            <caption className="sr-only">{`План HR за ${selectedMonth}`}</caption>
+            <thead>
+              <tr>
+                <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                  <ColumnLabel label="Наименование" />
+                </th>
+                <th scope="col" className={valueHead}>
+                  <ColumnLabel label="План, чел" />
+                </th>
+                <th scope="col" className={valueHead}>
+                  <ColumnLabel label="План, зарплата" />
+                </th>
+                <th scope="col" className={valueHead}>
+                  <ColumnLabel label="План, ФОТ" />
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {view.departments.map((department) => (
+                <DepartmentBlock
+                  key={department.departmentId}
+                  department={department}
+                  editable={editable}
+                  onAdd={
+                    editable
+                      ? () => {
+                          setAddDepartment(department.departmentId);
+                        }
+                      : undefined
                   }
-                }}
-              />
-            ))}
-          </tbody>
-        </table>
+                  onStaffPlan={(positionId, headcount, salaryExVat) => {
+                    const rejection = opex.setHrStaffPlan(selectedMonth, positionId, headcount, salaryExVat);
+                    return rejection ? HR_ERROR[rejection] : null;
+                  }}
+                  onOutsourcingPlan={(departmentId, hoursThousandths, rateExVat) => {
+                    const rejection = opex.setHrOutsourcingPlan(
+                      selectedMonth,
+                      departmentId,
+                      hoursThousandths,
+                      rateExVat,
+                    );
+                    return rejection ? HR_ERROR[rejection] : null;
+                  }}
+                  onDelete={(positionId, name) => {
+                    const confirmed = window.confirm(`Удалить «${name}»? Должность пропадёт из рабочего списка.`);
+                    if (confirmed) {
+                      opex.deleteHrPosition(positionId);
+                    }
+                  }}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <HrTaxRateBlock
+          side="plan"
+          taxes={view.taxes}
+          editable={editable}
+          onRate={(field, rateHundredths) => {
+            const rejection = opex.setHrTaxRate(selectedMonth, field, rateHundredths);
+            return rejection ? HR_ERROR[rejection] : null;
+          }}
+        />
       </div>
       {addDepartment && editable ? (
         <AddPositionDialog

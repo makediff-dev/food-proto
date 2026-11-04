@@ -348,6 +348,45 @@ export function deleteTransportCarrier(
   };
 }
 
+export function renameTransportCarrierRejection(
+  document: PrototypeDocument,
+  carrierId: string,
+  name: string,
+): TransportFieldRejection | null {
+  const carrier = document.transportCarriers.find((item) => item.id === carrierId);
+  if (!carrier || carrier.deletedAt !== null) {
+    return 'missing';
+  }
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return 'name';
+  }
+  const taken = activeTransportCarriers(document).some(
+    (item) => item.kind === carrier.kind && item.name === trimmed && item.id !== carrierId,
+  );
+  if (taken) {
+    return 'name';
+  }
+  return null;
+}
+
+export function renameTransportCarrier(
+  document: PrototypeDocument,
+  carrierId: string,
+  name: string,
+): PrototypeDocument {
+  if (renameTransportCarrierRejection(document, carrierId, name)) {
+    return document;
+  }
+  const trimmed = name.trim();
+  return {
+    ...document,
+    transportCarriers: document.transportCarriers.map((item) =>
+      item.id === carrierId ? { ...item, name: trimmed } : item,
+    ),
+  };
+}
+
 export function restoreTransportCarrier(document: PrototypeDocument, carrierId: string): PrototypeDocument {
   const carrier = document.transportCarriers.find((item) => item.id === carrierId);
   if (!carrier || carrier.deletedAt === null) {
