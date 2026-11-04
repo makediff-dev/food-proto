@@ -31,6 +31,9 @@ import {
   OPEX_HR_FACT_TITLE,
   OPEX_HR_PLAN_TITLE,
   OPEX_HR_TITLE,
+  OPEX_OTHER_FACT_TITLE,
+  OPEX_OTHER_PLAN_TITLE,
+  OPEX_OTHER_TITLE,
   OPEX_SECTION_TITLE,
   OPEX_SUMMARY_TITLE,
   OPEX_TRANSPORT_FACT_TITLE,
@@ -138,6 +141,8 @@ const OPEX_NAV: readonly NavItem[] = [
   { href: '/opex/hr/fact', label: `HR · ${OPEX_HR_FACT_TITLE}`, navKind: 'input' },
   { href: '/opex/transport/plan', label: `Транспорт · ${OPEX_TRANSPORT_PLAN_TITLE}`, navKind: 'input' },
   { href: '/opex/transport/fact', label: `Транспорт · ${OPEX_TRANSPORT_FACT_TITLE}`, navKind: 'input' },
+  { href: '/opex/other/plan', label: `${OPEX_OTHER_TITLE} · ${OPEX_OTHER_PLAN_TITLE}`, navKind: 'input' },
+  { href: '/opex/other/fact', label: `${OPEX_OTHER_TITLE} · ${OPEX_OTHER_FACT_TITLE}`, navKind: 'input' },
 ];
 
 function sectionIsCurrent(pathname: string, href: string): boolean {

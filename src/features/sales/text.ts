@@ -1,5 +1,4 @@
 import type { SalesPlanRejection } from '@/domain/sales-plan';
-import type { OperatingExpenseRejection } from '@/domain/summary';
 import { parseDecimal } from '@/domain/units';
 
 export const SALES_PLAN_ERROR: Record<SalesPlanRejection, string> = {
@@ -11,11 +10,6 @@ export const SALES_PLAN_ERROR: Record<SalesPlanRejection, string> = {
   volume: 'Укажите объём целым числом штук.',
   locked: 'Удалённый товар в плане не меняется.',
   closed: 'Этот план сейчас нельзя править.',
-};
-
-export const OPERATING_EXPENSE_ERROR: Record<OperatingExpenseRejection, string> = {
-  month: 'Этот месяц выбрать нельзя.',
-  amount: 'Укажите сумму операционных расходов без НДС.',
 };
 
 const MONTHS = [

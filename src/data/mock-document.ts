@@ -2,6 +2,7 @@ import { mockMaterials } from '@/data/mock-materials';
 import { mockHrPositions, mockTransportCarriers } from '@/data/mock-opex';
 import {
   catalogCategories,
+  catalogOpexOtherLines,
   type Derivative,
   type FinishedGoodsNorm,
   type FinishedGoodsOpening,
@@ -778,6 +779,7 @@ export const mockDocument: PrototypeDocument = {
   transportHireDayFacts: [],
   transportOwnMonthPlans: [],
   transportOwnDayFacts: [],
+  opexOtherLines: catalogOpexOtherLines(),
   opexMonthLines: [],
   finishedGoodsOpenings,
   finishedGoodsNorms,
@@ -852,6 +854,7 @@ export function createMockDocument(): PrototypeDocument {
       ...item,
       vehicles: item.vehicles.map((line) => ({ ...line })),
     })),
+    opexOtherLines: mockDocument.opexOtherLines.map((item) => ({ ...item })),
     opexMonthLines: mockDocument.opexMonthLines.map((item) => ({
       ...item,
       lines: item.lines.map((line) => ({ ...line })),

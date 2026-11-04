@@ -1,10 +1,12 @@
+import { type NameRejection, rejectName } from '@/domain/directory';
 import {
+  isDeletionMark,
   isMonthKey,
-  isOpexEditableLineId,
-  OPEX_EDITABLE_LINE_IDS,
-  type OpexEditableLineId,
+  isOpexGroupCode,
+  type OpexGroupCode,
   type OpexMonthLine,
   type OpexMonthLines,
+  type OpexOtherLine,
   type PrototypeDocument,
 } from '@/domain/document';
 import { hrMonthView } from '@/domain/hr';
@@ -12,56 +14,99 @@ import { ratioRound } from '@/domain/money';
 import { transportMonthView } from '@/domain/transport';
 
 const MAX_MONEY = 100_000_000_000;
+const MAX_NAME = 120;
 
 /** Доля агентского соглашения от выручки с НДС. `Operation Expense!E41 = Svod!G2*0.07`. */
 export const AGENCY_FEE_PERCENT = 7;
 
-export type OpexFieldRejection = 'missing' | 'month' | 'amount' | 'line';
+export type OpexFieldRejection = 'missing' | 'month' | 'amount' | 'line' | 'group' | 'archived' | NameRejection;
 
-export type OpexRowKind = 'group' | 'derived' | 'editable';
+export type OpexRowKind = 'derived' | 'editable';
 
-export interface OpexRowView {
+export interface OpexLineView {
   id: string;
   kind: OpexRowKind;
   /** Номер/код как в книге: «1.1», «2». */
   code: string;
+  name: string;
+  deleted: boolean;
+  planExVat: number;
+  factExVat: number;
+  varianceExVat: number;
+  planShareHundredths: number;
+  factShareHundredths: number;
+}
+
+export interface OpexGroupView {
+  id: string;
+  code: OpexGroupCode;
   name: string;
   planExVat: number;
   factExVat: number;
   varianceExVat: number;
   planShareHundredths: number;
   factShareHundredths: number;
-  /** Можно править план и/или факт на экране отчёта. */
-  planEditable: boolean;
-  factEditable: boolean;
+  lines: OpexLineView[];
 }
 
 export interface OpexMonthView {
   month: string;
-  rows: OpexRowView[];
+  groups: OpexGroupView[];
   totalPlanExVat: number;
   totalFactExVat: number;
   totalVarianceExVat: number;
 }
 
-interface LineDef {
-  id: OpexEditableLineId | 'payroll' | 'payrollTax' | 'outsourcing' | 'hireTransport' | 'ownFuel';
+export type OpexOtherRowKind = 'derived' | OpexOtherLine['kind'];
+
+export interface OpexOtherLineView {
+  id: string;
   code: string;
   name: string;
-  source: 'hr-payroll' | 'hr-tax' | 'hr-outsourcing' | 'transport-hire' | 'transport-fuel' | 'editable' | 'agency';
+  kind: OpexOtherRowKind;
+  deleted: boolean;
+  planExVat: number;
+  factExVat: number;
+  varianceExVat: number;
+  planEditable: boolean;
+  factEditable: boolean;
+}
+
+export interface OpexOtherGroupView {
+  code: OpexGroupCode;
+  name: string;
+  lines: OpexOtherLineView[];
+  totalPlanExVat: number;
+  totalFactExVat: number;
+  totalVarianceExVat: number;
+}
+
+export interface OpexOtherMonthView {
+  month: string;
+  groups: OpexOtherGroupView[];
+  totalPlanExVat: number;
+  totalFactExVat: number;
+  totalVarianceExVat: number;
+}
+
+interface DerivedDef {
+  id: string;
+  code: string;
+  name: string;
+  source: 'hr-payroll' | 'hr-tax' | 'hr-outsourcing' | 'transport-hire' | 'transport-fuel';
 }
 
 interface GroupDef {
-  code: string;
+  code: OpexGroupCode;
   name: string;
-  lines: LineDef[];
+  derived: readonly DerivedDef[];
 }
 
 const GROUPS: readonly GroupDef[] = [
   {
     code: '1',
     name: 'Фонд оплаты персонала',
-    lines: [
+    derived: [
       { id: 'payroll', code: '1.1', name: 'Зарплата на руки штатным сотрудникам', source: 'hr-payroll' },
       { id: 'payrollTax', code: '1.2', name: 'Налоги от зарплаты', source: 'hr-tax' },
       { id: 'outsourcing', code: '1.3', name: 'Аутсорсинг персонала', source: 'hr-outsourcing' },
@@ -70,108 +115,46 @@ const GROUPS: readonly GroupDef[] = [
   {
     code: '2',
     name: 'Базовые ресурсы',
-    lines: [
-      { id: 'electricity', code: '2.1', name: 'Электроэнергия', source: 'editable' },
-      { id: 'water', code: '2.2', name: 'Водоснабжение', source: 'editable' },
-      { id: 'sewage', code: '2.3', name: 'Вывоз стоков', source: 'editable' },
-      { id: 'garbage', code: '2.4', name: 'Вывоз мусора', source: 'editable' },
-      { id: 'pellets', code: '2.5', name: 'Пелеты для отопления', source: 'editable' },
-    ],
+    derived: [],
   },
   {
     code: '3',
     name: 'Связь и коммуникации',
-    lines: [
-      { id: 'internetFixed', code: '3.1', name: 'Стационарный интернет', source: 'editable' },
-      { id: 'internetMobile', code: '3.2', name: 'Мобильный интернет', source: 'editable' },
-      { id: 'glonass', code: '3.3', name: 'Услуги ГЛОНАСС', source: 'editable' },
-    ],
+    derived: [],
   },
   {
     code: '4',
     name: 'Общепроизводственные расходы',
-    lines: [
-      { id: 'trashBags', code: '4.1', name: 'пакеты для мусора', source: 'editable' },
-      { id: 'gloves', code: '4.2', name: 'перчатки одноразовые', source: 'editable' },
-      { id: 'workwear', code: '4.3', name: 'спецодежда', source: 'editable' },
-      { id: 'staffMeals', code: '4.4', name: 'Питание персонала', source: 'editable' },
-      { id: 'deratization', code: '4.5', name: 'Дератизация', source: 'editable' },
-      { id: 'haccp', code: '4.6', name: 'Оснащение по ХАССП', source: 'editable' },
-      { id: 'detergents', code: '4.7', name: 'Моющие средства', source: 'editable' },
-      { id: 'hygiene', code: '4.8', name: 'Расходники по гигиене предприятия', source: 'editable' },
-    ],
+    derived: [],
   },
   {
     code: '5',
     name: 'Общехозяйственные расходы',
-    lines: [
-      { id: 'cartridges', code: '5.1', name: 'картриджи для принтеров', source: 'editable' },
-      { id: 'stationery', code: '5.2', name: 'канцелярские принадлежности и бумага', source: 'editable' },
-      { id: 'remoteWarehouse', code: '5.3', name: 'Аренда удаленного склада', source: 'editable' },
-      { id: 'factoryRent', code: '5.4', name: 'Аренда заводского здания', source: 'editable' },
-      { id: 'tbankFee', code: '5.5', name: 'Комиссия Т-Банка за денежные переводы', source: 'editable' },
-      { id: 'consulting', code: '5.6', name: 'Что Делать консалт', source: 'editable' },
-    ],
+    derived: [],
   },
   {
     code: '6',
     name: 'Коммерческие расходы',
-    lines: [
-      { id: 'agency', code: '6.1', name: 'Агентское соглашение', source: 'agency' },
-      { id: 'certification', code: '6.2', name: 'Регистрация и сертификация', source: 'editable' },
-    ],
+    derived: [],
   },
   {
     code: '7',
     name: 'Транспортные расходы',
-    lines: [
+    derived: [
       { id: 'hireTransport', code: '7.1', name: 'Наемный транспорт', source: 'transport-hire' },
       { id: 'ownFuel', code: '7.2', name: 'Топливо для собственного транспорта', source: 'transport-fuel' },
-      { id: 'maintenance', code: '7.3', name: 'ТО собственного транспорта', source: 'editable' },
-      { id: 'insurance', code: '7.4', name: 'Страхование транспорта', source: 'editable' },
-      { id: 'leasing', code: '7.5', name: 'Лизинговые платежи по собственному транспорту', source: 'editable' },
-      {
-        id: 'otherTransportMaterials',
-        code: '7.6',
-        name: 'Прочие материалы по собственному транспорту',
-        source: 'editable',
-      },
-      { id: 'gazelleRent', code: '7.7', name: 'Аренда Газели', source: 'editable' },
     ],
   },
   {
     code: '8',
     name: 'Ремонт и содержание оборудования',
-    lines: [
-      { id: 'fridgeService', code: '8.1', name: 'обслуживание холодильного оборудования', source: 'editable' },
-      { id: 'waterPrepService', code: '8.2', name: 'Обслуживание водоподготовки', source: 'editable' },
-      { id: 'waterPrepMaterials', code: '8.3', name: 'Материалы для водоподготовки', source: 'editable' },
-      {
-        id: 'plumbing',
-        code: '8.4',
-        name: 'Сантехника и электрика для нового оборудования',
-        source: 'editable',
-      },
-      { id: 'bakeryParts', code: '8.5', name: 'Запчасти для пекарни', source: 'editable' },
-      { id: 'meatParts', code: '8.6', name: 'Запчасти для мясного цеха', source: 'editable' },
-      {
-        id: 'assemblyParts',
-        code: '8.7',
-        name: 'Сервисные работы и Запчасти для сборки и упаковки',
-        source: 'editable',
-      },
-      { id: 'buildings', code: '8.8', name: 'Ремонт и содержание зданий и сооружений', source: 'editable' },
-    ],
+    derived: [],
   },
 ];
 
-export const OPEX_EDITABLE_LINE_LABELS: Record<OpexEditableLineId, string> = Object.fromEntries(
-  GROUPS.flatMap((group) =>
-    group.lines
-      .filter((line) => line.source === 'editable' || line.source === 'agency')
-      .map((line) => [line.id, line.name]),
-  ),
-) as Record<OpexEditableLineId, string>;
+export const OPEX_GROUP_LABELS: Record<OpexGroupCode, string> = Object.fromEntries(
+  GROUPS.map((group) => [group.code, group.name]),
+) as Record<OpexGroupCode, string>;
 
 function isMoney(value: number): boolean {
   return Number.isInteger(value) && value >= 0 && value <= MAX_MONEY;
@@ -188,12 +171,89 @@ function opexLines(document: PrototypeDocument, month: string): OpexMonthLines |
   return document.opexMonthLines.find((item) => item.month === month) ?? null;
 }
 
-function storedLine(lines: OpexMonthLines | null, lineId: OpexEditableLineId): OpexMonthLine | null {
+function storedLine(lines: OpexMonthLines | null, lineId: string): OpexMonthLine | null {
   return lines?.lines.find((item) => item.lineId === lineId) ?? null;
 }
 
 function agencyPlanExVat(revenueWithVat: number): number {
   return ratioRound(revenueWithVat * AGENCY_FEE_PERCENT, 100) ?? 0;
+}
+
+function activeOtherLines(document: PrototypeDocument): OpexOtherLine[] {
+  return document.opexOtherLines.filter((item) => item.deletedAt === null);
+}
+
+function otherLinesForGroup(document: PrototypeDocument, groupCode: OpexGroupCode): OpexOtherLine[] {
+  return activeOtherLines(document).filter((item) => item.groupCode === groupCode);
+}
+
+function catalogCode(group: GroupDef, catalogIndex: number): string {
+  const maxDerived = group.derived.reduce((max, line) => {
+    const suffix = Number(line.code.split('.')[1] ?? 0);
+    return Number.isFinite(suffix) ? Math.max(max, suffix) : max;
+  }, 0);
+  return `${group.code}.${maxDerived + 1 + catalogIndex}`;
+}
+
+function findOtherLine(document: PrototypeDocument, lineId: string): OpexOtherLine | null {
+  return document.opexOtherLines.find((item) => item.id === lineId) ?? null;
+}
+
+function amountsForOtherLine(
+  document: PrototypeDocument,
+  month: string,
+  line: OpexOtherLine,
+  revenueWithVat: number,
+): { planExVat: number; factExVat: number } {
+  const stored = storedLine(opexLines(document, month), line.id);
+  if (line.kind === 'agency') {
+    return {
+      planExVat: agencyPlanExVat(revenueWithVat),
+      factExVat: stored?.factExVat ?? 0,
+    };
+  }
+  return {
+    planExVat: stored?.planExVat ?? 0,
+    factExVat: stored?.factExVat ?? 0,
+  };
+}
+
+/** Рабочие статьи + удалённые с ненулевым планом или фактом месяца. */
+function otherLinesForGroupMonth(
+  document: PrototypeDocument,
+  groupCode: OpexGroupCode,
+  month: string,
+  revenueWithVat: number,
+): OpexOtherLine[] {
+  return document.opexOtherLines.filter((item) => {
+    if (item.groupCode !== groupCode) {
+      return false;
+    }
+    if (item.deletedAt === null) {
+      return true;
+    }
+    const amounts = amountsForOtherLine(document, month, item, revenueWithVat);
+    return amounts.planExVat !== 0 || amounts.factExVat !== 0;
+  });
+}
+
+function derivedLineAmounts(
+  source: DerivedDef['source'],
+  hr: ReturnType<typeof hrMonthView>,
+  transport: ReturnType<typeof transportMonthView>,
+): { planExVat: number; factExVat: number } {
+  switch (source) {
+    case 'hr-payroll':
+      return { planExVat: hr.total.planPayrollExVat, factExVat: hr.total.factPayrollExVat };
+    case 'hr-tax':
+      return { planExVat: hr.taxTotal.planAmountExVat, factExVat: hr.taxTotal.factAmountExVat };
+    case 'hr-outsourcing':
+      return { planExVat: hr.total.outsourcingPlanExVat, factExVat: hr.total.outsourcingFactExVat };
+    case 'transport-hire':
+      return { planExVat: transport.hireTotalPlanExVat, factExVat: transport.hireTotalFactExVat };
+    case 'transport-fuel':
+      return { planExVat: transport.ownTotalPlanExVat, factExVat: transport.ownTotalFactExVat };
+  }
 }
 
 /**
@@ -208,82 +268,50 @@ export function operatingExpenseMonthView(
 ): OpexMonthView {
   const hr = hrMonthView(document, month);
   const transport = transportMonthView(document, month);
-  const stored = opexLines(document, month);
-  const rows: OpexRowView[] = [];
+  const groups: OpexGroupView[] = [];
   let totalPlan = 0;
   let totalFact = 0;
 
   for (const group of GROUPS) {
-    const lineRows: OpexRowView[] = [];
-    for (const line of group.lines) {
-      let planExVat = 0;
-      let factExVat = 0;
-      let planEditable = false;
-      let factEditable = false;
-      let kind: OpexRowView['kind'] = 'derived';
+    const lineRows: OpexLineView[] = [];
 
-      switch (line.source) {
-        case 'hr-payroll':
-          planExVat = hr.total.planPayrollExVat;
-          factExVat = hr.total.factPayrollExVat;
-          break;
-        case 'hr-tax':
-          planExVat = hr.taxTotal.planAmountExVat;
-          factExVat = hr.taxTotal.factAmountExVat;
-          break;
-        case 'hr-outsourcing':
-          planExVat = hr.total.outsourcingPlanExVat;
-          factExVat = hr.total.outsourcingFactExVat;
-          break;
-        case 'transport-hire':
-          planExVat = transport.hireTotalPlanExVat;
-          factExVat = transport.hireTotalFactExVat;
-          break;
-        case 'transport-fuel':
-          planExVat = transport.ownTotalPlanExVat;
-          factExVat = transport.ownTotalFactExVat;
-          break;
-        case 'agency': {
-          const row = storedLine(stored, 'agency');
-          planExVat = agencyPlanExVat(revenueWithVat);
-          factExVat = row?.factExVat ?? 0;
-          planEditable = false;
-          factEditable = true;
-          kind = 'editable';
-          break;
-        }
-        case 'editable': {
-          const id = line.id as OpexEditableLineId;
-          const row = storedLine(stored, id);
-          planExVat = row?.planExVat ?? 0;
-          factExVat = row?.factExVat ?? 0;
-          planEditable = true;
-          factEditable = true;
-          kind = 'editable';
-          break;
-        }
-      }
-
+    for (const line of group.derived) {
+      const amounts = derivedLineAmounts(line.source, hr, transport);
       lineRows.push({
         id: line.id,
-        kind,
+        kind: 'derived',
         code: line.code,
         name: line.name,
-        planExVat,
-        factExVat,
-        varianceExVat: factExVat - planExVat,
-        planShareHundredths: shareHundredths(planExVat, revenueExVat),
-        factShareHundredths: shareHundredths(factExVat, revenueExVat),
-        planEditable,
-        factEditable,
+        deleted: false,
+        planExVat: amounts.planExVat,
+        factExVat: amounts.factExVat,
+        varianceExVat: amounts.factExVat - amounts.planExVat,
+        planShareHundredths: shareHundredths(amounts.planExVat, revenueExVat),
+        factShareHundredths: shareHundredths(amounts.factExVat, revenueExVat),
       });
     }
 
+    const catalog = otherLinesForGroupMonth(document, group.code, month, revenueWithVat);
+    catalog.forEach((line, index) => {
+      const amounts = amountsForOtherLine(document, month, line, revenueWithVat);
+      lineRows.push({
+        id: line.id,
+        kind: 'editable',
+        code: catalogCode(group, index),
+        name: line.name,
+        deleted: line.deletedAt !== null,
+        planExVat: amounts.planExVat,
+        factExVat: amounts.factExVat,
+        varianceExVat: amounts.factExVat - amounts.planExVat,
+        planShareHundredths: shareHundredths(amounts.planExVat, revenueExVat),
+        factShareHundredths: shareHundredths(amounts.factExVat, revenueExVat),
+      });
+    });
+
     const groupPlan = lineRows.reduce((sum, item) => sum + item.planExVat, 0);
     const groupFact = lineRows.reduce((sum, item) => sum + item.factExVat, 0);
-    rows.push({
+    groups.push({
       id: `group-${group.code}`,
-      kind: 'group',
       code: group.code,
       name: group.name,
       planExVat: groupPlan,
@@ -291,17 +319,87 @@ export function operatingExpenseMonthView(
       varianceExVat: groupFact - groupPlan,
       planShareHundredths: shareHundredths(groupPlan, revenueExVat),
       factShareHundredths: shareHundredths(groupFact, revenueExVat),
-      planEditable: false,
-      factEditable: false,
+      lines: lineRows,
     });
-    rows.push(...lineRows);
     totalPlan += groupPlan;
     totalFact += groupFact;
   }
 
   return {
     month,
-    rows,
+    groups,
+    totalPlanExVat: totalPlan,
+    totalFactExVat: totalFact,
+    totalVarianceExVat: totalFact - totalPlan,
+  };
+}
+
+/** Категории прочих статей — даже пустые, чтобы добавить расход. Строки HR и транспорта — только смотрят. */
+export function operatingExpenseOtherMonthView(
+  document: PrototypeDocument,
+  month: string,
+  revenueWithVat: number,
+): OpexOtherMonthView {
+  const hr = hrMonthView(document, month);
+  const transport = transportMonthView(document, month);
+  const groups: OpexOtherGroupView[] = [];
+  let totalPlan = 0;
+  let totalFact = 0;
+
+  for (const group of GROUPS) {
+    const lines: OpexOtherLineView[] = [];
+
+    for (const line of group.derived) {
+      const amounts = derivedLineAmounts(line.source, hr, transport);
+      lines.push({
+        id: line.id,
+        code: line.code,
+        name: line.name,
+        kind: 'derived',
+        deleted: false,
+        planExVat: amounts.planExVat,
+        factExVat: amounts.factExVat,
+        varianceExVat: amounts.factExVat - amounts.planExVat,
+        planEditable: false,
+        factEditable: false,
+      });
+    }
+
+    const catalog = otherLinesForGroupMonth(document, group.code, month, revenueWithVat);
+    catalog.forEach((line, index) => {
+      const amounts = amountsForOtherLine(document, month, line, revenueWithVat);
+      const deleted = line.deletedAt !== null;
+      lines.push({
+        id: line.id,
+        code: catalogCode(group, index),
+        name: line.name,
+        kind: line.kind,
+        deleted,
+        planExVat: amounts.planExVat,
+        factExVat: amounts.factExVat,
+        varianceExVat: amounts.factExVat - amounts.planExVat,
+        planEditable: !deleted && line.kind === 'standard',
+        factEditable: !deleted,
+      });
+    });
+
+    const groupPlan = lines.reduce((sum, item) => sum + item.planExVat, 0);
+    const groupFact = lines.reduce((sum, item) => sum + item.factExVat, 0);
+    groups.push({
+      code: group.code,
+      name: group.name,
+      lines,
+      totalPlanExVat: groupPlan,
+      totalFactExVat: groupFact,
+      totalVarianceExVat: groupFact - groupPlan,
+    });
+    totalPlan += groupPlan;
+    totalFact += groupFact;
+  }
+
+  return {
+    month,
+    groups,
     totalPlanExVat: totalPlan,
     totalFactExVat: totalFact,
     totalVarianceExVat: totalFact - totalPlan,
@@ -320,19 +418,23 @@ export function monthOperatingExpenseAmounts(
 }
 
 export function setOpexLineRejection(
-  _document: PrototypeDocument,
+  document: PrototypeDocument,
   month: string,
-  lineId: OpexEditableLineId,
+  lineId: string,
   side: 'plan' | 'fact',
   amountExVat: number,
 ): OpexFieldRejection | null {
   if (!isMonthKey(month)) {
     return 'month';
   }
-  if (!isOpexEditableLineId(lineId)) {
-    return 'line';
+  const line = findOtherLine(document, lineId);
+  if (!line) {
+    return 'missing';
   }
-  if (lineId === 'agency' && side === 'plan') {
+  if (line.deletedAt !== null) {
+    return 'archived';
+  }
+  if (line.kind === 'agency' && side === 'plan') {
     return 'line';
   }
   if (!isMoney(amountExVat)) {
@@ -344,7 +446,7 @@ export function setOpexLineRejection(
 export function setOpexLine(
   document: PrototypeDocument,
   month: string,
-  lineId: OpexEditableLineId,
+  lineId: string,
   side: 'plan' | 'fact',
   amountExVat: number,
 ): PrototypeDocument {
@@ -386,4 +488,95 @@ export function setOpexLine(
   };
 }
 
-export { GROUPS as OPEX_GROUPS, OPEX_EDITABLE_LINE_IDS };
+export function addOpexOtherLineRejection(
+  document: PrototypeDocument,
+  groupCode: OpexGroupCode,
+  name: string,
+): OpexFieldRejection | null {
+  if (!isOpexGroupCode(groupCode)) {
+    return 'group';
+  }
+  const trimmed = name.trim();
+  if (trimmed.length > MAX_NAME) {
+    return 'too-long';
+  }
+  return rejectName(trimmed, otherLinesForGroup(document, groupCode));
+}
+
+export function addOpexOtherLine(
+  document: PrototypeDocument,
+  line: Omit<OpexOtherLine, 'kind' | 'deletedAt' | 'name'> & { name: string },
+): PrototypeDocument {
+  if (addOpexOtherLineRejection(document, line.groupCode, line.name)) {
+    return document;
+  }
+  const next: OpexOtherLine = {
+    id: line.id,
+    groupCode: line.groupCode,
+    name: line.name.trim(),
+    kind: 'standard',
+    deletedAt: null,
+  };
+  return {
+    ...document,
+    opexOtherLines: [...document.opexOtherLines, next],
+  };
+}
+
+export function renameOpexOtherLineRejection(
+  document: PrototypeDocument,
+  lineId: string,
+  name: string,
+): OpexFieldRejection | null {
+  const line = findOtherLine(document, lineId);
+  if (!line || line.deletedAt !== null) {
+    return 'missing';
+  }
+  const trimmed = name.trim();
+  if (trimmed.length > MAX_NAME) {
+    return 'too-long';
+  }
+  return rejectName(trimmed, otherLinesForGroup(document, line.groupCode), lineId);
+}
+
+export function renameOpexOtherLine(document: PrototypeDocument, lineId: string, name: string): PrototypeDocument {
+  if (renameOpexOtherLineRejection(document, lineId, name)) {
+    return document;
+  }
+  const trimmed = name.trim();
+  return {
+    ...document,
+    opexOtherLines: document.opexOtherLines.map((item) => (item.id === lineId ? { ...item, name: trimmed } : item)),
+  };
+}
+
+export function deleteOpexOtherLine(document: PrototypeDocument, lineId: string, deletedAt: string): PrototypeDocument {
+  const line = findOtherLine(document, lineId);
+  if (!line || line.deletedAt !== null || !isDeletionMark(deletedAt)) {
+    return document;
+  }
+  return {
+    ...document,
+    opexOtherLines: document.opexOtherLines.map((item) => (item.id === lineId ? { ...item, deletedAt } : item)),
+  };
+}
+
+export function restoreOpexOtherLineRejection(document: PrototypeDocument, lineId: string): OpexFieldRejection | null {
+  const line = findOtherLine(document, lineId);
+  if (!line || line.deletedAt === null) {
+    return 'missing';
+  }
+  return rejectName(line.name, otherLinesForGroup(document, line.groupCode), lineId);
+}
+
+export function restoreOpexOtherLine(document: PrototypeDocument, lineId: string): PrototypeDocument {
+  if (restoreOpexOtherLineRejection(document, lineId)) {
+    return document;
+  }
+  return {
+    ...document,
+    opexOtherLines: document.opexOtherLines.map((item) => (item.id === lineId ? { ...item, deletedAt: null } : item)),
+  };
+}
+
+export { GROUPS as OPEX_GROUPS };

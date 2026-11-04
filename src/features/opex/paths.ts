@@ -14,6 +14,12 @@ export const OPEX_TRANSPORT_PLAN_TITLE = 'Ввод плана';
 
 export const OPEX_TRANSPORT_FACT_TITLE = 'Ввод факта';
 
+export const OPEX_OTHER_TITLE = 'Прочее';
+
+export const OPEX_OTHER_PLAN_TITLE = 'Ввод плана';
+
+export const OPEX_OTHER_FACT_TITLE = 'Ввод факта';
+
 export const OPEX_SUMMARY_HREF = '/opex';
 export const OPEX_HR_HREF = '/opex/hr';
 export const OPEX_HR_PLAN_HREF = '/opex/hr/plan';
@@ -21,6 +27,8 @@ export const OPEX_HR_FACT_HREF = '/opex/hr/fact';
 export const OPEX_TRANSPORT_HREF = '/opex/transport';
 export const OPEX_TRANSPORT_PLAN_HREF = '/opex/transport/plan';
 export const OPEX_TRANSPORT_FACT_HREF = '/opex/transport/fact';
+export const OPEX_OTHER_PLAN_HREF = '/opex/other/plan';
+export const OPEX_OTHER_FACT_HREF = '/opex/other/fact';
 
 export function parseOpexMonthQuery(params: { month?: string }): { month: string } {
   return { month: params.month ?? '' };
@@ -85,4 +93,12 @@ export function opexTransportFactHref(options: {
   todayDay: string;
 }): string {
   return dayHref(OPEX_TRANSPORT_FACT_HREF, options.month, options.day, options.currentMonth, options.todayDay);
+}
+
+export function opexOtherPlanHref(options: { month: string; currentMonth: string }): string {
+  return monthHref(OPEX_OTHER_PLAN_HREF, options.month, options.currentMonth);
+}
+
+export function opexOtherFactHref(options: { month: string; currentMonth: string }): string {
+  return monthHref(OPEX_OTHER_FACT_HREF, options.month, options.currentMonth);
 }

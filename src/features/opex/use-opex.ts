@@ -5,7 +5,7 @@ import type {
   HrDepartmentId,
   HrShopDepartmentId,
   HrTaxRatesMonth,
-  OpexEditableLineId,
+  OpexGroupCode,
   TransportHireKind,
   TransportVehicleId,
 } from '@/domain/document';
@@ -31,7 +31,18 @@ import {
   setHrTaxRate,
   setHrTaxRateRejection,
 } from '@/domain/hr';
-import { type OpexFieldRejection, setOpexLine, setOpexLineRejection } from '@/domain/operating-expense';
+import {
+  addOpexOtherLine,
+  addOpexOtherLineRejection,
+  deleteOpexOtherLine,
+  type OpexFieldRejection,
+  renameOpexOtherLine,
+  renameOpexOtherLineRejection,
+  restoreOpexOtherLine,
+  restoreOpexOtherLineRejection,
+  setOpexLine,
+  setOpexLineRejection,
+} from '@/domain/operating-expense';
 import {
   addTransportCarrier,
   addTransportCarrierRejection,
@@ -54,17 +65,40 @@ export function useOpex() {
   return {
     hydrated,
     document,
-    setOpexLine(
-      month: string,
-      lineId: OpexEditableLineId,
-      side: 'plan' | 'fact',
-      amountExVat: number,
-    ): OpexFieldRejection | null {
+    setOpexLine(month: string, lineId: string, side: 'plan' | 'fact', amountExVat: number): OpexFieldRejection | null {
       const rejection = setOpexLineRejection(document, month, lineId, side, amountExVat);
       if (rejection) {
         return rejection;
       }
       updateDocument((current) => setOpexLine(current, month, lineId, side, amountExVat));
+      return null;
+    },
+    addOpexOtherLine(groupCode: OpexGroupCode, name: string): OpexFieldRejection | null {
+      const id = `opex-other:${crypto.randomUUID()}`;
+      const rejection = addOpexOtherLineRejection(document, groupCode, name);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => addOpexOtherLine(current, { id, groupCode, name }));
+      return null;
+    },
+    renameOpexOtherLine(lineId: string, name: string): OpexFieldRejection | null {
+      const rejection = renameOpexOtherLineRejection(document, lineId, name);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => renameOpexOtherLine(current, lineId, name));
+      return null;
+    },
+    deleteOpexOtherLine(lineId: string) {
+      updateDocument((current) => deleteOpexOtherLine(current, lineId, new Date().toISOString()));
+    },
+    restoreOpexOtherLine(lineId: string): OpexFieldRejection | null {
+      const rejection = restoreOpexOtherLineRejection(document, lineId);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => restoreOpexOtherLine(current, lineId));
       return null;
     },
     addHrPosition(departmentId: HrDepartmentId, name: string): HrFieldRejection | null {

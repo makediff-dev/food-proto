@@ -9,6 +9,11 @@ export const OPEX_LINE_ERROR: Record<OpexFieldRejection, string> = {
   month: 'Укажите месяц.',
   amount: 'Укажите сумму без НДС.',
   line: 'Эту строку здесь не правят.',
+  group: 'Укажите категорию.',
+  archived: 'Сначала верните расход из архива.',
+  empty: 'Укажите название.',
+  'too-long': 'Слишком длинное название.',
+  duplicate: 'Такое название уже есть в категории.',
 };
 
 export const HR_ERROR: Record<HrFieldRejection, string> = {

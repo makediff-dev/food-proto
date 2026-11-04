@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 54 as const;
+export const SCHEMA_VERSION = 55 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -404,96 +404,111 @@ export interface TransportOwnDayFact {
   vehicles: TransportOwnDayVehicle[];
 }
 
+/** Код категории `Operation Expense` (группы 1–8). */
+export type OpexGroupCode = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8';
+
+export const OPEX_GROUP_CODES = ['1', '2', '3', '4', '5', '6', '7', '8'] as const satisfies readonly OpexGroupCode[];
+
+export function isOpexGroupCode(value: string): value is OpexGroupCode {
+  return (OPEX_GROUP_CODES as readonly string[]).includes(value);
+}
+
 /**
- * Редактируемые статьи `Operation Expense` (без HR и без 7.1/7.2 из Transport).
- * Агентское соглашение: план считает формула, факт вводят.
+ * Прочая статья `Operation Expense` (без HR и без 7.1/7.2 из Transport).
+ * `agency` — план считает формула от выручки, факт вводят; `standard` — план и факт вводят.
  */
-export type OpexEditableLineId =
-  | 'electricity'
-  | 'water'
-  | 'sewage'
-  | 'garbage'
-  | 'pellets'
-  | 'internetFixed'
-  | 'internetMobile'
-  | 'glonass'
-  | 'trashBags'
-  | 'gloves'
-  | 'workwear'
-  | 'staffMeals'
-  | 'deratization'
-  | 'haccp'
-  | 'detergents'
-  | 'hygiene'
-  | 'cartridges'
-  | 'stationery'
-  | 'remoteWarehouse'
-  | 'factoryRent'
-  | 'tbankFee'
-  | 'consulting'
-  | 'agency'
-  | 'certification'
-  | 'maintenance'
-  | 'insurance'
-  | 'leasing'
-  | 'otherTransportMaterials'
-  | 'gazelleRent'
-  | 'fridgeService'
-  | 'waterPrepService'
-  | 'waterPrepMaterials'
-  | 'plumbing'
-  | 'bakeryParts'
-  | 'meatParts'
-  | 'assemblyParts'
-  | 'buildings';
+export type OpexOtherLineKind = 'standard' | 'agency';
 
-export const OPEX_EDITABLE_LINE_IDS = [
-  'electricity',
-  'water',
-  'sewage',
-  'garbage',
-  'pellets',
-  'internetFixed',
-  'internetMobile',
-  'glonass',
-  'trashBags',
-  'gloves',
-  'workwear',
-  'staffMeals',
-  'deratization',
-  'haccp',
-  'detergents',
-  'hygiene',
-  'cartridges',
-  'stationery',
-  'remoteWarehouse',
-  'factoryRent',
-  'tbankFee',
-  'consulting',
-  'agency',
-  'certification',
-  'maintenance',
-  'insurance',
-  'leasing',
-  'otherTransportMaterials',
-  'gazelleRent',
-  'fridgeService',
-  'waterPrepService',
-  'waterPrepMaterials',
-  'plumbing',
-  'bakeryParts',
-  'meatParts',
-  'assemblyParts',
-  'buildings',
-] as const satisfies readonly OpexEditableLineId[];
+export interface OpexOtherLine extends DeletableRecord {
+  groupCode: OpexGroupCode;
+  kind: OpexOtherLineKind;
+}
 
-export function isOpexEditableLineId(value: string): value is OpexEditableLineId {
-  return (OPEX_EDITABLE_LINE_IDS as readonly string[]).includes(value);
+/** Мок прочих статей — имена и группы как в книге. */
+export const OPEX_OTHER_LINES: OpexOtherLine[] = [
+  { id: 'electricity', groupCode: '2', name: 'Электроэнергия', kind: 'standard', deletedAt: null },
+  { id: 'water', groupCode: '2', name: 'Водоснабжение', kind: 'standard', deletedAt: null },
+  { id: 'sewage', groupCode: '2', name: 'Вывоз стоков', kind: 'standard', deletedAt: null },
+  { id: 'garbage', groupCode: '2', name: 'Вывоз мусора', kind: 'standard', deletedAt: null },
+  { id: 'pellets', groupCode: '2', name: 'Пелеты для отопления', kind: 'standard', deletedAt: null },
+  { id: 'internetFixed', groupCode: '3', name: 'Стационарный интернет', kind: 'standard', deletedAt: null },
+  { id: 'internetMobile', groupCode: '3', name: 'Мобильный интернет', kind: 'standard', deletedAt: null },
+  { id: 'glonass', groupCode: '3', name: 'Услуги ГЛОНАСС', kind: 'standard', deletedAt: null },
+  { id: 'trashBags', groupCode: '4', name: 'пакеты для мусора', kind: 'standard', deletedAt: null },
+  { id: 'gloves', groupCode: '4', name: 'перчатки одноразовые', kind: 'standard', deletedAt: null },
+  { id: 'workwear', groupCode: '4', name: 'спецодежда', kind: 'standard', deletedAt: null },
+  { id: 'staffMeals', groupCode: '4', name: 'Питание персонала', kind: 'standard', deletedAt: null },
+  { id: 'deratization', groupCode: '4', name: 'Дератизация', kind: 'standard', deletedAt: null },
+  { id: 'haccp', groupCode: '4', name: 'Оснащение по ХАССП', kind: 'standard', deletedAt: null },
+  { id: 'detergents', groupCode: '4', name: 'Моющие средства', kind: 'standard', deletedAt: null },
+  { id: 'hygiene', groupCode: '4', name: 'Расходники по гигиене предприятия', kind: 'standard', deletedAt: null },
+  { id: 'cartridges', groupCode: '5', name: 'картриджи для принтеров', kind: 'standard', deletedAt: null },
+  { id: 'stationery', groupCode: '5', name: 'канцелярские принадлежности и бумага', kind: 'standard', deletedAt: null },
+  { id: 'remoteWarehouse', groupCode: '5', name: 'Аренда удаленного склада', kind: 'standard', deletedAt: null },
+  { id: 'factoryRent', groupCode: '5', name: 'Аренда заводского здания', kind: 'standard', deletedAt: null },
+  { id: 'tbankFee', groupCode: '5', name: 'Комиссия Т-Банка за денежные переводы', kind: 'standard', deletedAt: null },
+  { id: 'consulting', groupCode: '5', name: 'Что Делать консалт', kind: 'standard', deletedAt: null },
+  { id: 'agency', groupCode: '6', name: 'Агентское соглашение', kind: 'agency', deletedAt: null },
+  { id: 'certification', groupCode: '6', name: 'Регистрация и сертификация', kind: 'standard', deletedAt: null },
+  { id: 'maintenance', groupCode: '7', name: 'ТО собственного транспорта', kind: 'standard', deletedAt: null },
+  { id: 'insurance', groupCode: '7', name: 'Страхование транспорта', kind: 'standard', deletedAt: null },
+  {
+    id: 'leasing',
+    groupCode: '7',
+    name: 'Лизинговые платежи по собственному транспорту',
+    kind: 'standard',
+    deletedAt: null,
+  },
+  {
+    id: 'otherTransportMaterials',
+    groupCode: '7',
+    name: 'Прочие материалы по собственному транспорту',
+    kind: 'standard',
+    deletedAt: null,
+  },
+  { id: 'gazelleRent', groupCode: '7', name: 'Аренда Газели', kind: 'standard', deletedAt: null },
+  {
+    id: 'fridgeService',
+    groupCode: '8',
+    name: 'обслуживание холодильного оборудования',
+    kind: 'standard',
+    deletedAt: null,
+  },
+  { id: 'waterPrepService', groupCode: '8', name: 'Обслуживание водоподготовки', kind: 'standard', deletedAt: null },
+  { id: 'waterPrepMaterials', groupCode: '8', name: 'Материалы для водоподготовки', kind: 'standard', deletedAt: null },
+  {
+    id: 'plumbing',
+    groupCode: '8',
+    name: 'Сантехника и электрика для нового оборудования',
+    kind: 'standard',
+    deletedAt: null,
+  },
+  { id: 'bakeryParts', groupCode: '8', name: 'Запчасти для пекарни', kind: 'standard', deletedAt: null },
+  { id: 'meatParts', groupCode: '8', name: 'Запчасти для мясного цеха', kind: 'standard', deletedAt: null },
+  {
+    id: 'assemblyParts',
+    groupCode: '8',
+    name: 'Сервисные работы и Запчасти для сборки и упаковки',
+    kind: 'standard',
+    deletedAt: null,
+  },
+  {
+    id: 'buildings',
+    groupCode: '8',
+    name: 'Ремонт и содержание зданий и сооружений',
+    kind: 'standard',
+    deletedAt: null,
+  },
+];
+
+export function catalogOpexOtherLines(): OpexOtherLine[] {
+  return OPEX_OTHER_LINES.map((item) => ({ ...item }));
 }
 
 export interface OpexMonthLine {
   id: string;
-  lineId: OpexEditableLineId;
+  /** Id статьи из `opexOtherLines`. */
+  lineId: string;
   planExVat: number;
   factExVat: number;
 }
@@ -842,6 +857,8 @@ export interface PrototypeDocument {
   transportHireDayFacts: TransportHireDayFact[];
   transportOwnMonthPlans: TransportOwnMonthPlan[];
   transportOwnDayFacts: TransportOwnDayFact[];
+  /** Справочник прочих статей `Operation Expense` (без HR и 7.1/7.2). */
+  opexOtherLines: OpexOtherLine[];
   /** Ввод прочих статей `Operation Expense` (без HR и 7.1/7.2). */
   opexMonthLines: OpexMonthLines[];
   /**
