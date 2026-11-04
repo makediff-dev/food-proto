@@ -79,7 +79,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
       },
       {
         key: 'planReceiptPrice',
-        label: 'Цена',
+        label: 'Себест.',
         hint: 'Себестоимость единицы по плановым ценам сырья',
       },
       { key: 'planReceiptCost', label: 'Стоимость' },
@@ -90,12 +90,12 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
       },
       {
         key: 'factReceiptPrice',
-        label: 'Цена',
+        label: 'Себест.',
         hint: 'Себестоимость единицы по фактическим ценам расхода сырья',
       },
       { key: 'factReceiptCost', label: 'Стоимость' },
       { key: 'receiptDeviation', label: 'Кол-во' },
-      { key: 'receiptDeviationPrice', label: 'Цена' },
+      { key: 'receiptDeviationPrice', label: 'Себест.' },
       { key: 'receiptDeviationCost', label: 'Стоимость' },
     ],
   },
@@ -109,7 +109,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
       },
       {
         key: 'planConsumptionPrice',
-        label: 'Цена',
+        label: 'Себест.',
         hint: 'Себестоимость единицы по плановым ценам сырья',
       },
       {
@@ -123,7 +123,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
       },
       {
         key: 'factConsumptionPrice',
-        label: 'Цена',
+        label: 'Себест.',
         hint: 'Себестоимость единицы по фактическим ценам расхода сырья',
       },
       {
@@ -131,7 +131,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
         label: 'Стоимость',
       },
       { key: 'consumptionDeviation', label: 'Кол-во' },
-      { key: 'consumptionDeviationPrice', label: 'Цена' },
+      { key: 'consumptionDeviationPrice', label: 'Себест.' },
       { key: 'consumptionDeviationCost', label: 'Стоимость' },
     ],
   },

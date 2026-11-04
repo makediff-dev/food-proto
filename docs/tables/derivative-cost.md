@@ -17,7 +17,7 @@
 
 Стоимость партии = сумма по строкам рецепта с количеством > 0: количество × цена единицы компонента. Материал — `materialPlanPrice` / `materialConsumptionPrice`. Вложенная производная — рекурсивно цена её учётной единицы. Цикл → 0.
 
-Цена единицы производной на [своде движения](derivative-movement-summary.md) — та же арифметика (`derivativeConsumptionPrice`).
+Себест. единицы производной на [своде движения](derivative-movement-summary.md) — та же арифметика (`derivativeConsumptionPrice`).
 
 ## Состав строки
 

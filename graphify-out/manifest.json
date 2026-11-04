@@ -262,9 +262,9 @@
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1793790484.649887,
-    "seen": 1793790545.8394408,
-    "ast_hash": "3e793f8e951b4019de9732f0dc70da58",
+    "mtime": 1793791817.4829154,
+    "seen": 1793791834.1639168,
+    "ast_hash": "a84fd24245737d3b0f3bd33a4621e3d5",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
@@ -1083,9 +1083,9 @@
     "semantic_hash": ""
   },
   "src/features/derivative-movement/DerivativeMovementSummaryTable.tsx": {
-    "mtime": 1793699867.9832113,
-    "seen": 1793704609.9640691,
-    "ast_hash": "31c1af39884358bd66446795b814aa98",
+    "mtime": 1793791802.4421961,
+    "seen": 1793791834.1639168,
+    "ast_hash": "b69aea4e4ae6580d082bf2c7ee873554",
     "semantic_hash": ""
   },
   "src/domain/recipe-consumption.ts": {
@@ -1137,9 +1137,9 @@
     "semantic_hash": ""
   },
   "docs/tables/derivative-movement-summary.md": {
-    "mtime": 1793694387.2581296,
-    "seen": 1793694423.57694,
-    "ast_hash": "43fdcf30c02fba245947ec599a8fa087",
+    "mtime": 1793791823.6182363,
+    "seen": 1793791834.1639168,
+    "ast_hash": "f7f266bbdc29f4d29ddcd47eae9bed18",
     "semantic_hash": ""
   },
   "src/app/derivative-movement/plan/page.tsx": {
@@ -1233,9 +1233,9 @@
     "semantic_hash": ""
   },
   "docs/tables/derivative-cost.md": {
-    "mtime": 1793790486.931795,
-    "seen": 1793790545.8394408,
-    "ast_hash": "85881a27f5a09b64bf3415a1726c2d7d",
+    "mtime": 1793791812.1154516,
+    "seen": 1793791834.1639168,
+    "ast_hash": "ff5e177a430dc8066112054022f2790d",
     "semantic_hash": ""
   },
   "src/app/recipes/finished/cost/[id]/page.tsx": {
