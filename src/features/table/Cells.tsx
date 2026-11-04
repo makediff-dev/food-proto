@@ -13,7 +13,7 @@ import {
   parseSignedInteger,
   sanitizeDraft,
 } from '@/features/table/format';
-import { StackedPair } from '@/features/table/StackedPair';
+import { CaptionedCell, StackedPair } from '@/features/table/StackedPair';
 import { gridFieldClassName } from '@/features/table/styles';
 
 type CellCommit = (value: number) => string | null;
@@ -329,6 +329,43 @@ export function VatMoneyCell({
         />
       }
     />
+  );
+}
+
+/** Одноэтажная сумма только без НДС, с подписью в клетке. */
+export function ExVatMoneyCell({
+  label = 'Сумма',
+  value,
+  signed = false,
+  sense = 'income',
+  invalidMessage = DEFAULT_MONEY_ERROR,
+  whole = false,
+  onChange,
+}: {
+  label?: string;
+  value: number | null;
+  signed?: boolean;
+  sense?: VarianceSense;
+  invalidMessage?: string;
+  whole?: boolean;
+  onChange?: CellCommit;
+}) {
+  if (value === null && !onChange) {
+    return <Empty />;
+  }
+
+  return (
+    <CaptionedCell label="без НДС" kind={onChange ? 'assigned' : undefined}>
+      <MoneyCell
+        label={`${label} без НДС`}
+        value={value}
+        signed={signed}
+        sense={sense}
+        invalidMessage={invalidMessage}
+        whole={whole}
+        onChange={onChange}
+      />
+    </CaptionedCell>
   );
 }
 

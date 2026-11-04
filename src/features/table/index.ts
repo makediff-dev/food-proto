@@ -1,5 +1,6 @@
 export {
   Empty,
+  ExVatMoneyCell,
   HundredthsCell,
   IntegerCell,
   MoneyAmount,
@@ -12,7 +13,7 @@ export {
 export { ColumnLabel, keepWithNext } from '@/features/table/ColumnLabel';
 export { GridText } from '@/features/table/GridText';
 export { ProductIndex } from '@/features/table/ProductIndex';
-export { MergedTwoStory, StackedPair } from '@/features/table/StackedPair';
+export { CaptionedCell, MergedTwoStory, StackedPair } from '@/features/table/StackedPair';
 export type { CellKind, NameCellKind } from '@/features/table/styles';
 export {
   blockCornerClassName,

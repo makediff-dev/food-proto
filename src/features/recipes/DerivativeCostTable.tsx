@@ -19,6 +19,7 @@ import {
   columnDividerClassName,
   columnHeadingClassName,
   Empty,
+  ExVatMoneyCell,
   entityNameRowClassName,
   keepWithNext,
   nameHeadingClassName,
@@ -27,7 +28,6 @@ import {
   tableBorder,
   tableClassName,
   tableFrameClassName,
-  VatMoneyCell,
 } from '@/features/table';
 
 type ColumnKey =
@@ -244,38 +244,26 @@ function CostRow({ row, index, month }: { row: DerivativeCostRow; index: number;
 function CostCell({ column, row }: { column: ColumnKey; row: DerivativeCostRow }) {
   switch (column) {
     case 'planCostPerKg':
-      return <VatMoneyCell label="План за кг" withVat={row.planCostPerKg.withVat} exVat={row.planCostPerKg.exVat} />;
+      return <ExVatMoneyCell label="План за кг" value={row.planCostPerKg.exVat} />;
     case 'factCostPerKg':
-      return <VatMoneyCell label="Факт за кг" withVat={row.factCostPerKg.withVat} exVat={row.factCostPerKg.exVat} />;
+      return <ExVatMoneyCell label="Факт за кг" value={row.factCostPerKg.exVat} />;
     case 'costPerKgDeviation':
-      return (
-        <VatMoneyCell
-          label="Откл. за кг"
-          withVat={row.costPerKgDeviation.withVat}
-          exVat={row.costPerKgDeviation.exVat}
-          signed
-        />
-      );
+      return <ExVatMoneyCell label="Откл. за кг" value={row.costPerKgDeviation.exVat} signed />;
     case 'planCostPerPiece':
       return row.planCostPerPiece ? (
-        <VatMoneyCell label="План за шт" withVat={row.planCostPerPiece.withVat} exVat={row.planCostPerPiece.exVat} />
+        <ExVatMoneyCell label="План за шт" value={row.planCostPerPiece.exVat} />
       ) : (
         <Empty />
       );
     case 'factCostPerPiece':
       return row.factCostPerPiece ? (
-        <VatMoneyCell label="Факт за шт" withVat={row.factCostPerPiece.withVat} exVat={row.factCostPerPiece.exVat} />
+        <ExVatMoneyCell label="Факт за шт" value={row.factCostPerPiece.exVat} />
       ) : (
         <Empty />
       );
     case 'costPerPieceDeviation':
       return row.costPerPieceDeviation ? (
-        <VatMoneyCell
-          label="Откл. за шт"
-          withVat={row.costPerPieceDeviation.withVat}
-          exVat={row.costPerPieceDeviation.exVat}
-          signed
-        />
+        <ExVatMoneyCell label="Откл. за шт" value={row.costPerPieceDeviation.exVat} signed />
       ) : (
         <Empty />
       );

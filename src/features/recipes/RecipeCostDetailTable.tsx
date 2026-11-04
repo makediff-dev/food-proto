@@ -7,6 +7,7 @@ import {
   columnDividerClassName,
   columnHeadingClassName,
   Empty,
+  ExVatMoneyCell,
   entityNameRowClassName,
   nameHeadingClassName,
   ProductIndex,
@@ -16,7 +17,6 @@ import {
   tableFrameClassName,
   totalNameClassName,
   totalValueClassName,
-  VatMoneyCell,
 } from '@/features/table';
 
 export type RecipeCostDetailLine = {
@@ -116,40 +116,27 @@ export function RecipeCostDetailTable({
               <td
                 className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${cellKindClassName.computed} ${columnEdgeClass('planPrice')}`}
               >
-                <VatMoneyCell label="Цена план" withVat={line.planUnitPrice.withVat} exVat={line.planUnitPrice.exVat} />
+                <ExVatMoneyCell label="Цена план" value={line.planUnitPrice.exVat} />
               </td>
               <td
                 className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${cellKindClassName.computed} ${columnEdgeClass('factPrice')}`}
               >
-                <VatMoneyCell label="Цена факт" withVat={line.factUnitPrice.withVat} exVat={line.factUnitPrice.exVat} />
+                <ExVatMoneyCell label="Цена факт" value={line.factUnitPrice.exVat} />
               </td>
               <td
                 className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${cellKindClassName.computed} ${columnEdgeClass('planContribution')}`}
               >
-                <VatMoneyCell
-                  label="Вклад план"
-                  withVat={line.planContribution.withVat}
-                  exVat={line.planContribution.exVat}
-                />
+                <ExVatMoneyCell label="Вклад план" value={line.planContribution.exVat} />
               </td>
               <td
                 className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${cellKindClassName.computed} ${columnEdgeClass('factContribution')}`}
               >
-                <VatMoneyCell
-                  label="Вклад факт"
-                  withVat={line.factContribution.withVat}
-                  exVat={line.factContribution.exVat}
-                />
+                <ExVatMoneyCell label="Вклад факт" value={line.factContribution.exVat} />
               </td>
               <td
                 className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${cellKindClassName.computed} ${columnEdgeClass('deviation')}`}
               >
-                <VatMoneyCell
-                  label="Откл. вклада"
-                  withVat={line.contributionDeviation.withVat}
-                  exVat={line.contributionDeviation.exVat}
-                  signed
-                />
+                <ExVatMoneyCell label="Откл. вклада" value={line.contributionDeviation.exVat} signed />
               </td>
             </tr>
           ))}
@@ -161,32 +148,19 @@ export function RecipeCostDetailTable({
               {quantityTotal ? <QuantityRead value={quantityTotal.value} unit={quantityTotal.unit} /> : <Empty />}
             </td>
             <td className={`${totalValueClassName} ${columnEdgeClass('planPrice')}`}>
-              <VatMoneyCell label="Цена план всего" withVat={unitCost.plan.withVat} exVat={unitCost.plan.exVat} />
+              <ExVatMoneyCell label="Цена план всего" value={unitCost.plan.exVat} />
             </td>
             <td className={`${totalValueClassName} ${columnEdgeClass('factPrice')}`}>
-              <VatMoneyCell label="Цена факт всего" withVat={unitCost.fact.withVat} exVat={unitCost.fact.exVat} />
+              <ExVatMoneyCell label="Цена факт всего" value={unitCost.fact.exVat} />
             </td>
             <td className={`${totalValueClassName} ${columnEdgeClass('planContribution')}`}>
-              <VatMoneyCell
-                label="Вклад план всего"
-                withVat={planContribution.withVat}
-                exVat={planContribution.exVat}
-              />
+              <ExVatMoneyCell label="Вклад план всего" value={planContribution.exVat} />
             </td>
             <td className={`${totalValueClassName} ${columnEdgeClass('factContribution')}`}>
-              <VatMoneyCell
-                label="Вклад факт всего"
-                withVat={factContribution.withVat}
-                exVat={factContribution.exVat}
-              />
+              <ExVatMoneyCell label="Вклад факт всего" value={factContribution.exVat} />
             </td>
             <td className={`${totalValueClassName} ${columnEdgeClass('deviation')}`}>
-              <VatMoneyCell
-                label="Откл. вклада всего"
-                withVat={contributionDeviation.withVat}
-                exVat={contributionDeviation.exVat}
-                signed
-              />
+              <ExVatMoneyCell label="Откл. вклада всего" value={contributionDeviation.exVat} signed />
             </td>
           </tr>
           {extraUnitRows.map((row) => (
@@ -196,20 +170,15 @@ export function RecipeCostDetailTable({
               </th>
               <TotalEmpty edge="quantity" continued />
               <td className={`${totalValueClassName} border-t-0 ${columnEdgeClass('planPrice')}`}>
-                <VatMoneyCell label={`${row.label} план`} withVat={row.plan.withVat} exVat={row.plan.exVat} />
+                <ExVatMoneyCell label={`${row.label} план`} value={row.plan.exVat} />
               </td>
               <td className={`${totalValueClassName} border-t-0 ${columnEdgeClass('factPrice')}`}>
-                <VatMoneyCell label={`${row.label} факт`} withVat={row.fact.withVat} exVat={row.fact.exVat} />
+                <ExVatMoneyCell label={`${row.label} факт`} value={row.fact.exVat} />
               </td>
               <TotalEmpty edge="planContribution" continued />
               <TotalEmpty edge="factContribution" continued />
               <td className={`${totalValueClassName} border-t-0 ${columnEdgeClass('deviation')}`}>
-                <VatMoneyCell
-                  label={`${row.label} откл.`}
-                  withVat={row.deviation.withVat}
-                  exVat={row.deviation.exVat}
-                  signed
-                />
+                <ExVatMoneyCell label={`${row.label} откл.`} value={row.deviation.exVat} signed />
               </td>
             </tr>
           ))}

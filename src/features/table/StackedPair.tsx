@@ -47,3 +47,15 @@ export function MergedTwoStory({ kind, children }: { kind?: CellKind; children: 
     </div>
   );
 }
+
+/** Одноэтажная клетка с мелкой подписью (например «без НДС»). */
+export function CaptionedCell({ label, kind, children }: { label: string; kind?: CellKind; children: ReactNode }) {
+  return (
+    <div className="-mx-1.5 -my-2 flex min-w-18 flex-col">
+      <div data-editable-field="" className={`flex flex-col items-end px-1.5 py-1 ${kindClass(kind)}`}>
+        <span className="text-[0.5rem] leading-none text-muted">{label}</span>
+        {children}
+      </div>
+    </div>
+  );
+}
