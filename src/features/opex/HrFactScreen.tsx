@@ -3,9 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { Fragment, useMemo, useState } from 'react';
 
-import type { HrShopDepartmentId } from '@/domain/document';
-import { isOccurredOn } from '@/domain/document';
-import { HR_DEPARTMENT_LABELS, HR_SHOP_DEPARTMENT_IDS, hrDayOutsourcingHours, hrDayStaffValue } from '@/domain/hr';
+import { HR_DEPARTMENT_IDS, type HrDepartmentId, isHrShopDepartmentId, isOccurredOn } from '@/domain/document';
+import { HR_DEPARTMENT_LABELS, hrDayOutsourcingValue, hrDayStaffValue } from '@/domain/hr';
 import { defaultSalesFactDay, monthDates } from '@/domain/sales-fact';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
@@ -36,10 +35,11 @@ import {
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
 const valueCell = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
 
-type ShopDepartment = {
-  departmentId: HrShopDepartmentId;
+type FactDepartment = {
+  departmentId: HrDepartmentId;
   name: string;
   positions: { id: string; name: string }[];
+  hasOutsourcing: boolean;
 };
 
 export function HrFactScreen({ month, day }: { month: string; day: string }) {
@@ -53,12 +53,17 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
   const router = useRouter();
   const editable = opex.hydrated && canEditSalesOpex;
 
-  const shopDepartments = useMemo((): ShopDepartment[] => {
-    return HR_SHOP_DEPARTMENT_IDS.map((departmentId) => {
+  const departments = useMemo((): FactDepartment[] => {
+    return HR_DEPARTMENT_IDS.map((departmentId) => {
       const positions = opex.document.hrPositions
         .filter((item) => item.departmentId === departmentId && item.kind === 'staff' && item.deletedAt === null)
         .map((item) => ({ id: item.id, name: item.name }));
-      return { departmentId, name: HR_DEPARTMENT_LABELS[departmentId], positions };
+      return {
+        departmentId,
+        name: HR_DEPARTMENT_LABELS[departmentId],
+        positions,
+        hasOutsourcing: isHrShopDepartmentId(departmentId),
+      };
     });
   }, [opex.document]);
 
@@ -81,7 +86,7 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
     <PageFrame
       title={OPEX_HR_FACT_TITLE}
       full
-      lede="Дневной факт цехов и РЦ: численность и суммы штатных, часы аутсорсинга. Администрацию правят в отчёте HR."
+      lede="Дневной факт подразделений: численность и суммы штатных. У цехов и РЦ — часы и сумма аутсорсинга."
       intro={
         <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
           <OpexMonthBar month={selectedMonth} today={today} onOpen={(next) => open({ month: next })} />
@@ -121,19 +126,31 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
             </tr>
           </thead>
           <tbody>
-            {shopDepartments.map((department) => (
+            {departments.map((department) => (
               <DepartmentBlock
                 key={department.departmentId}
                 department={department}
                 editable={editable}
                 staff={(positionId) => hrDayStaffValue(opex.document, selectedDay, positionId)}
-                outsourcingHours={() => hrDayOutsourcingHours(opex.document, selectedDay, department.departmentId)}
+                outsourcing={() =>
+                  department.hasOutsourcing && isHrShopDepartmentId(department.departmentId)
+                    ? hrDayOutsourcingValue(opex.document, selectedDay, department.departmentId)
+                    : { hourThousandths: 0, amountExVat: 0 }
+                }
                 onStaff={(positionId, headcountThousandths, amountExVat) => {
                   const rejection = opex.setHrDayStaff(selectedDay, positionId, headcountThousandths, amountExVat);
                   return rejection ? HR_ERROR[rejection] : null;
                 }}
-                onOutsourcing={(hourThousandths) => {
-                  const rejection = opex.setHrDayOutsourcing(selectedDay, department.departmentId, hourThousandths);
+                onOutsourcing={(hourThousandths, amountExVat) => {
+                  if (!isHrShopDepartmentId(department.departmentId)) {
+                    return null;
+                  }
+                  const rejection = opex.setHrDayOutsourcing(
+                    selectedDay,
+                    department.departmentId,
+                    hourThousandths,
+                    amountExVat,
+                  );
                   return rejection ? HR_ERROR[rejection] : null;
                 }}
               />
@@ -149,20 +166,20 @@ function DepartmentBlock({
   department,
   editable,
   staff,
-  outsourcingHours,
+  outsourcing,
   onStaff,
   onOutsourcing,
 }: {
-  department: ShopDepartment;
+  department: FactDepartment;
   editable: boolean;
   staff: (positionId: string) => { headcountThousandths: number; amountExVat: number };
-  outsourcingHours: () => number;
+  outsourcing: () => { hourThousandths: number; amountExVat: number };
   onStaff: (positionId: string, headcountThousandths: number, amountExVat: number) => string | null;
-  onOutsourcing: (hourThousandths: number) => string | null;
+  onOutsourcing: (hourThousandths: number, amountExVat: number) => string | null;
 }) {
   const [open, setOpen] = useState(true);
-  const count = department.positions.length + 1;
-  const outHours = outsourcingHours();
+  const count = department.positions.length + (department.hasOutsourcing ? 1 : 0);
+  const outsource = outsourcing();
 
   return (
     <Fragment>
@@ -225,7 +242,7 @@ function DepartmentBlock({
             );
           })
         : null}
-      {open ? (
+      {open && department.hasOutsourcing ? (
         <tr>
           <th scope="row" className={entityNameRowClassName('repeated')}>
             Аутсорсинговый персонал
@@ -234,16 +251,28 @@ function DepartmentBlock({
             {editable ? (
               <QuantityCell
                 label={`Часы аутсорсинга, ${department.name}`}
-                value={outHours}
+                value={outsource.hourThousandths}
                 unit="ч"
                 blankIfZero
-                onChange={(next) => onOutsourcing(next)}
+                onChange={(next) => onOutsourcing(next, outsource.amountExVat)}
               />
             ) : (
-              <QuantityRead value={outHours} unit="ч" />
+              <QuantityRead value={outsource.hourThousandths} unit="ч" />
             )}
           </td>
-          <td className={`${valueCell} ${cellKindClassName.computed}`} />
+          <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
+            {editable ? (
+              <MoneyCell
+                label={`Сумма аутсорсинга, ${department.name}`}
+                value={outsource.amountExVat}
+                parse={parseOpexMoney}
+                invalidMessage={HR_ERROR.amount}
+                onChange={(next) => onOutsourcing(outsource.hourThousandths, next)}
+              />
+            ) : (
+              <MoneyAmount amount={outsource.amountExVat} />
+            )}
+          </td>
         </tr>
       ) : null}
     </Fragment>

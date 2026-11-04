@@ -770,9 +770,7 @@ export const mockDocument: PrototypeDocument = {
   productionEntries: productionFromOrders(productionOrders),
   hrPositions: mockHrPositions,
   hrMonthPlans: [],
-  hrAdminFacts: [],
   hrDayFacts: [],
-  hrOutsourcingRates: [],
   hrTaxRates: [],
   transportCarriers: mockTransportCarriers,
   transportHireMonthPlans: [],
@@ -823,18 +821,10 @@ export function createMockDocument(): PrototypeDocument {
       staffLines: item.staffLines.map((line) => ({ ...line })),
       outsourcingLines: item.outsourcingLines.map((line) => ({ ...line })),
     })),
-    hrAdminFacts: mockDocument.hrAdminFacts.map((item) => ({
-      ...item,
-      lines: item.lines.map((line) => ({ ...line })),
-    })),
     hrDayFacts: mockDocument.hrDayFacts.map((item) => ({
       ...item,
       staffLines: item.staffLines.map((line) => ({ ...line })),
       outsourcingLines: item.outsourcingLines.map((line) => ({ ...line })),
-    })),
-    hrOutsourcingRates: mockDocument.hrOutsourcingRates.map((item) => ({
-      ...item,
-      lines: item.lines.map((line) => ({ ...line })),
     })),
     hrTaxRates: mockDocument.hrTaxRates.map((item) => ({ ...item })),
     transportCarriers: mockDocument.transportCarriers.map((item) => ({ ...item })),

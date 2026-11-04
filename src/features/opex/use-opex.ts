@@ -16,16 +16,12 @@ import {
   type HrFieldRejection,
   type HrTaxRateField,
   restoreHrPosition,
-  setHrAdminFact,
-  setHrAdminFactRejection,
   setHrDayOutsourcing,
   setHrDayOutsourcingRejection,
   setHrDayStaff,
   setHrDayStaffRejection,
   setHrOutsourcingPlan,
   setHrOutsourcingPlanRejection,
-  setHrOutsourcingRate,
-  setHrOutsourcingRateRejection,
   setHrStaffPlan,
   setHrStaffPlanRejection,
   setHrTaxRate,
@@ -154,14 +150,6 @@ export function useOpex() {
       updateDocument((current) => setHrOutsourcingPlan(current, month, departmentId, hourThousandths, rateExVat));
       return null;
     },
-    setHrAdminFact(month: string, positionId: string, headcount: number, salaryExVat: number): HrFieldRejection | null {
-      const rejection = setHrAdminFactRejection(document, month, positionId, headcount, salaryExVat);
-      if (rejection) {
-        return rejection;
-      }
-      updateDocument((current) => setHrAdminFact(current, month, positionId, headcount, salaryExVat));
-      return null;
-    },
     setHrDayStaff(
       occurredOn: string,
       positionId: string,
@@ -179,20 +167,13 @@ export function useOpex() {
       occurredOn: string,
       departmentId: HrShopDepartmentId,
       hourThousandths: number,
+      amountExVat: number,
     ): HrFieldRejection | null {
-      const rejection = setHrDayOutsourcingRejection(document, occurredOn, departmentId, hourThousandths);
+      const rejection = setHrDayOutsourcingRejection(document, occurredOn, departmentId, hourThousandths, amountExVat);
       if (rejection) {
         return rejection;
       }
-      updateDocument((current) => setHrDayOutsourcing(current, occurredOn, departmentId, hourThousandths));
-      return null;
-    },
-    setHrOutsourcingRate(month: string, departmentId: HrShopDepartmentId, rateExVat: number): HrFieldRejection | null {
-      const rejection = setHrOutsourcingRateRejection(document, month, departmentId, rateExVat);
-      if (rejection) {
-        return rejection;
-      }
-      updateDocument((current) => setHrOutsourcingRate(current, month, departmentId, rateExVat));
+      updateDocument((current) => setHrDayOutsourcing(current, occurredOn, departmentId, hourThousandths, amountExVat));
       return null;
     },
     setHrTaxRate(month: string, field: HrTaxRateField, rateHundredths: number): HrFieldRejection | null {

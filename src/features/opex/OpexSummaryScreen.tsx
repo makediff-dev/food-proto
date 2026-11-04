@@ -11,6 +11,8 @@ import { useOpex } from '@/features/opex/use-opex';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
+  blockCornerClassName,
+  blockHeadingClassName,
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
@@ -19,15 +21,47 @@ import {
   columnDividerClassName,
   columnHeadingClassName,
   entityNameRowClassName,
+  keepWithNext,
   MoneyAmount,
   nameHeadingClassName,
   PercentCell,
+  stickyHeadClassName,
+  tableBorder,
   tableClassName,
   tableFrameClassName,
+  totalNameClassName,
+  totalValueClassName,
 } from '@/features/table';
 
-const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
-const valueCell = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
+type ColumnKey = 'plan' | 'fact' | 'variance' | 'planShare' | 'factShare';
+
+const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }[] }[] = [
+  {
+    label: 'Без НДС',
+    columns: [
+      { key: 'plan', label: 'План' },
+      { key: 'fact', label: 'Факт' },
+      { key: 'variance', label: 'Откл.' },
+    ],
+  },
+  {
+    label: 'Доля в выручке',
+    columns: [
+      { key: 'planShare', label: 'План, %' },
+      { key: 'factShare', label: 'Факт, %' },
+    ],
+  },
+];
+
+const COLUMNS = COLUMN_GROUPS.flatMap((group) => group.columns);
+
+const GROUP_END_KEYS = new Set<ColumnKey>(['variance']);
+
+function columnEdgeClass(key: ColumnKey): string {
+  return GROUP_END_KEYS.has(key) ? tableBorder.rightThick : columnDividerClassName;
+}
+
+const valueCell = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle`;
 
 export function OpexSummaryScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);
@@ -60,47 +94,54 @@ export function OpexSummaryScreen({ month }: { month: string }) {
       <div className={tableFrameClassName}>
         <table className={tableClassName}>
           <caption className="sr-only">{`Операционные расходы за ${selectedMonth}, без НДС`}</caption>
-          <thead>
+          <thead className={stickyHeadClassName}>
+            <tr>
+              <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
+              {COLUMN_GROUPS.map((group, index) => (
+                <th
+                  key={group.label}
+                  colSpan={group.columns.length}
+                  scope="colgroup"
+                  className={`${blockHeadingClassName} ${index < COLUMN_GROUPS.length - 1 ? tableBorder.rightThick : ''}`}
+                >
+                  {keepWithNext(group.label)}
+                </th>
+              ))}
+            </tr>
             <tr>
               <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                 <ColumnLabel label="Наименование" />
               </th>
-              <th scope="col" className={valueHead}>
-                <ColumnLabel label="План" />
-              </th>
-              <th scope="col" className={valueHead}>
-                <ColumnLabel label="Факт" />
-              </th>
-              <th scope="col" className={valueHead}>
-                <ColumnLabel label="Откл." />
-              </th>
-              <th scope="col" className={valueHead}>
-                <ColumnLabel label="Доля план, %" />
-              </th>
-              <th scope="col" className={valueHead}>
-                <ColumnLabel label="Доля факт, %" />
-              </th>
+              {COLUMNS.map((column) => (
+                <th
+                  key={column.key}
+                  scope="col"
+                  className={`${columnHeadingClassName} last:border-r-0 ${columnEdgeClass(column.key)}`}
+                >
+                  <ColumnLabel label={column.label} />
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {view.groups.map((group) => (
               <GroupBlock key={group.id} group={group} />
             ))}
-            <tr className="font-medium">
-              <th scope="row" className={categoryNameRowClassName(false)}>
-                <span className={categoryNameClassName}>ВСЕГО</span>
+            <tr>
+              <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
+                Всего
               </th>
-              <td className={`${valueCell} ${cellKindClassName.computed}`}>
+              <td className={`${totalValueClassName} ${columnEdgeClass('plan')}`}>
                 <MoneyAmount amount={view.totalPlanExVat} />
               </td>
-              <td className={`${valueCell} ${cellKindClassName.computed}`}>
+              <td className={`${totalValueClassName} ${columnEdgeClass('fact')}`}>
                 <MoneyAmount amount={view.totalFactExVat} />
               </td>
-              <td className={`${valueCell} ${cellKindClassName.computed}`}>
+              <td className={`${totalValueClassName} ${columnEdgeClass('variance')}`}>
                 <MoneyAmount amount={view.totalVarianceExVat} signed sense="cost" />
               </td>
-              <td className={`${valueCell} ${cellKindClassName.computed}`} />
-              <td className={`${valueCell} ${cellKindClassName.computed}`} />
+              <td className={`${totalValueClassName} ${columnEdgeClass('planShare')}`} />
+              <td className={`${totalValueClassName} ${columnEdgeClass('factShare')}`} />
             </tr>
           </tbody>
         </table>
@@ -136,19 +177,19 @@ function GroupBlock({ group }: { group: OpexGroupView }) {
             </span>
           </div>
         </th>
-        <td className={`${valueCell} ${categoryBandClassName}`}>
+        <td className={`${valueCell} ${categoryBandClassName} ${columnEdgeClass('plan')}`}>
           <MoneyAmount amount={group.planExVat} />
         </td>
-        <td className={`${valueCell} ${categoryBandClassName}`}>
+        <td className={`${valueCell} ${categoryBandClassName} ${columnEdgeClass('fact')}`}>
           <MoneyAmount amount={group.factExVat} />
         </td>
-        <td className={`${valueCell} ${categoryBandClassName}`}>
+        <td className={`${valueCell} ${categoryBandClassName} ${columnEdgeClass('variance')}`}>
           <MoneyAmount amount={group.varianceExVat} signed sense="cost" />
         </td>
-        <td className={`${valueCell} ${categoryBandClassName}`}>
+        <td className={`${valueCell} ${categoryBandClassName} ${columnEdgeClass('planShare')}`}>
           <PercentCell value={group.planShareHundredths} scale="hundredths" />
         </td>
-        <td className={`${valueCell} ${categoryBandClassName}`}>
+        <td className={`${valueCell} ${categoryBandClassName} ${columnEdgeClass('factShare')}`}>
           <PercentCell value={group.factShareHundredths} scale="hundredths" />
         </td>
       </tr>
@@ -164,19 +205,19 @@ function GroupBlock({ group }: { group: OpexGroupView }) {
                   </span>
                 </span>
               </th>
-              <td className={`${valueCell} ${cellKindClassName.computed}`}>
+              <td className={`${valueCell} ${cellKindClassName.computed} ${columnEdgeClass('plan')}`}>
                 <MoneyAmount amount={row.planExVat} />
               </td>
-              <td className={`${valueCell} ${cellKindClassName.computed}`}>
+              <td className={`${valueCell} ${cellKindClassName.computed} ${columnEdgeClass('fact')}`}>
                 <MoneyAmount amount={row.factExVat} />
               </td>
-              <td className={`${valueCell} ${cellKindClassName.computed}`}>
+              <td className={`${valueCell} ${cellKindClassName.computed} ${columnEdgeClass('variance')}`}>
                 <MoneyAmount amount={row.varianceExVat} signed sense="cost" />
               </td>
-              <td className={`${valueCell} ${cellKindClassName.computed}`}>
+              <td className={`${valueCell} ${cellKindClassName.computed} ${columnEdgeClass('planShare')}`}>
                 <PercentCell value={row.planShareHundredths} scale="hundredths" />
               </td>
-              <td className={`${valueCell} ${cellKindClassName.computed}`}>
+              <td className={`${valueCell} ${cellKindClassName.computed} ${columnEdgeClass('factShare')}`}>
                 <PercentCell value={row.factShareHundredths} scale="hundredths" />
               </td>
             </tr>

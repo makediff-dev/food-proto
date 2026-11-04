@@ -3,12 +3,11 @@
 import { useRouter } from 'next/navigation';
 import { Fragment, useMemo, useState } from 'react';
 
-import type { HrShopDepartmentId } from '@/domain/document';
 import { type HrDepartmentView, type HrTaxRateField, hrMonthView, hrTaxRatesOrDefault } from '@/domain/hr';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { OpexMonthBar, resolveOpexMonth } from '@/features/opex/OpexMonthBar';
 import { OPEX_HR_TITLE, opexHrHref } from '@/features/opex/paths';
-import { formatHours, formatQuantity, formatTaxRate, HR_ERROR, parseOpexMoney } from '@/features/opex/text';
+import { formatHours, formatQuantity, formatTaxRate, HR_ERROR } from '@/features/opex/text';
 import { useOpex } from '@/features/opex/use-opex';
 import { useRole } from '@/features/roles/RoleProvider';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
@@ -23,9 +22,7 @@ import {
   columnHeadingClassName,
   entityNameRowClassName,
   HundredthsCell,
-  IntegerCell,
   MoneyAmount,
-  MoneyCell,
   nameHeadingClassName,
   tableClassName,
   tableFrameClassName,
@@ -54,7 +51,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_HR_TITLE}
       full
-      lede="План и факт по подразделениям и должностям. Факт цехов собран из дневной численности; администрацию правят здесь за месяц. Ниже — зарплатные налоги."
+      lede="План и факт по подразделениям и должностям. Факт собран из дневных строк. Ниже — зарплатные налоги."
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -82,7 +79,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
                   <ColumnLabel label="План, ФОТ" />
                 </th>
                 <th scope="col" className={valueHead}>
-                  <ColumnLabel label="Факт, чел" hint="У цехов — сумма людей по дням / дни месяца" />
+                  <ColumnLabel label="Факт, чел" hint="Сумма людей по дням / дни месяца" />
                 </th>
                 <th scope="col" className={valueHead}>
                   <ColumnLabel label="Факт, зарплата" />
@@ -94,19 +91,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
             </thead>
             <tbody>
               {view.departments.map((department) => (
-                <DepartmentBlock
-                  key={department.departmentId}
-                  department={department}
-                  editable={editable}
-                  onAdminFact={(positionId, headcount, salaryExVat) => {
-                    const rejection = opex.setHrAdminFact(selectedMonth, positionId, headcount, salaryExVat);
-                    return rejection ? HR_ERROR[rejection] : null;
-                  }}
-                  onOutsourcingRate={(departmentId, rateExVat) => {
-                    const rejection = opex.setHrOutsourcingRate(selectedMonth, departmentId, rateExVat);
-                    return rejection ? HR_ERROR[rejection] : null;
-                  }}
-                />
+                <DepartmentBlock key={department.departmentId} department={department} />
               ))}
               <tr className="font-medium">
                 <th scope="row" className={categoryNameRowClassName(false)}>
@@ -250,21 +235,10 @@ export function HrSummaryScreen({ month }: { month: string }) {
   );
 }
 
-function DepartmentBlock({
-  department,
-  editable,
-  onAdminFact,
-  onOutsourcingRate,
-}: {
-  department: HrDepartmentView;
-  editable: boolean;
-  onAdminFact: (positionId: string, headcount: number, salaryExVat: number) => string | null;
-  onOutsourcingRate: (departmentId: HrShopDepartmentId, rateExVat: number) => string | null;
-}) {
+function DepartmentBlock({ department }: { department: HrDepartmentView }) {
   const [open, setOpen] = useState(true);
   const outsourcing = department.outsourcing;
   const count = department.staff.length + (outsourcing ? 1 : 0);
-  const isAdmin = department.departmentId === 'admin';
 
   return (
     <Fragment>
@@ -293,9 +267,7 @@ function DepartmentBlock({
         <td className={`${valueCell} ${categoryBandClassName}`}>
           <MoneyAmount amount={department.plan.fotExVat} />
         </td>
-        <td className={`${valueCell} ${categoryBandClassName}`}>
-          {isAdmin ? department.fact.headcount : formatQuantity(department.fact.headcount)}
-        </td>
+        <td className={`${valueCell} ${categoryBandClassName}`}>{formatQuantity(department.fact.headcount)}</td>
         <td className={`${valueCell} ${categoryBandClassName}`}>
           <MoneyAmount amount={department.fact.salaryExVat} />
         </td>
@@ -317,31 +289,9 @@ function DepartmentBlock({
               <td className={`${valueCell} ${cellKindClassName.computed}`}>
                 <MoneyAmount amount={row.plan.fotExVat} />
               </td>
-              <td className={`${valueCell} ${cellKindClassName[isAdmin && editable ? 'assigned' : 'computed']}`}>
-                {isAdmin && editable ? (
-                  <IntegerCell
-                    label={`Факт, чел, ${row.name}`}
-                    value={row.fact.headcount}
-                    onChange={(next) => onAdminFact(row.positionId, next, row.fact.salaryExVat)}
-                  />
-                ) : isAdmin ? (
-                  row.fact.headcount
-                ) : (
-                  formatQuantity(row.fact.headcount)
-                )}
-              </td>
-              <td className={`${valueCell} ${cellKindClassName[isAdmin && editable ? 'assigned' : 'computed']}`}>
-                {isAdmin && editable ? (
-                  <MoneyCell
-                    label={`Факт, зарплата, ${row.name}`}
-                    value={row.fact.salaryExVat}
-                    parse={parseOpexMoney}
-                    invalidMessage={HR_ERROR.salary}
-                    onChange={(next) => onAdminFact(row.positionId, row.fact.headcount, next)}
-                  />
-                ) : (
-                  <MoneyAmount amount={row.fact.salaryExVat} />
-                )}
+              <td className={`${valueCell} ${cellKindClassName.computed}`}>{formatQuantity(row.fact.headcount)}</td>
+              <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                <MoneyAmount amount={row.fact.salaryExVat} />
               </td>
               <td className={`${valueCell} ${cellKindClassName.computed}`}>
                 <MoneyAmount amount={row.fact.fotExVat} />
@@ -367,18 +317,9 @@ function DepartmentBlock({
           <td className={`${valueCell} ${cellKindClassName.computed}`}>
             {formatHours(outsourcing.factHoursThousandths)} ч
           </td>
-          <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-            {editable ? (
-              <MoneyCell
-                label={`Ставка аутсорсинга, ${department.name}`}
-                value={outsourcing.factRateExVat}
-                parse={parseOpexMoney}
-                invalidMessage={HR_ERROR.rate}
-                onChange={(next) => onOutsourcingRate(outsourcing.departmentId, next)}
-              />
-            ) : (
-              <MoneyAmount amount={outsourcing.factRateExVat} />
-            )}
+          <td className={`${valueCell} ${cellKindClassName.computed}`}>
+            <MoneyAmount amount={outsourcing.factRateExVat} />
+            <span className="text-muted"> /ч</span>
           </td>
           <td className={`${valueCell} ${cellKindClassName.computed}`}>
             <MoneyAmount amount={outsourcing.factAmountExVat} />

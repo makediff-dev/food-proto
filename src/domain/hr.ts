@@ -1,8 +1,6 @@
 import {
   HR_DEPARTMENT_IDS,
   HR_SHOP_DEPARTMENT_IDS,
-  type HrAdminFactMonth,
-  type HrAdminFactStaffLine,
   type HrDayFact,
   type HrDayOutsourcingLine,
   type HrDayStaffLine,
@@ -10,7 +8,6 @@ import {
   type HrMonthPlan,
   type HrMonthPlanOutsourcingLine,
   type HrMonthPlanStaffLine,
-  type HrOutsourcingRatesMonth,
   type HrPosition,
   type HrShopDepartmentId,
   type HrTaxRatesMonth,
@@ -157,9 +154,17 @@ function averageSalary(fotExVat: number, headcount: number): number {
   return ratioRound(fotExVat, headcount) ?? 0;
 }
 
-/** Сумма = часы × ставка / 1000. `HR` аутсорсинг: `$H * J`. */
+/** План аутсорсинга: сумма = часы × ставка / 1000. `HR` план: часы × ставка. */
 export function outsourcingAmountExVat(hourThousandths: number, rateExVat: number): number {
   return ratioRound(hourThousandths * rateExVat, QUANTITY_SCALE) ?? 0;
+}
+
+/** Ставка факта на экране HR: сумма дневных выплат / часы. */
+export function outsourcingFactRateExVat(amountExVat: number, hourThousandths: number): number {
+  if (hourThousandths === 0) {
+    return 0;
+  }
+  return ratioRound(amountExVat * QUANTITY_SCALE, hourThousandths) ?? 0;
 }
 
 /** Налог = база × ставка_сотых / 10_000. */
@@ -183,14 +188,6 @@ export function hrPositionsForDepartment(
 
 export function hrMonthPlan(document: PrototypeDocument, month: string): HrMonthPlan | null {
   return document.hrMonthPlans.find((item) => item.month === month) ?? null;
-}
-
-export function hrAdminFact(document: PrototypeDocument, month: string): HrAdminFactMonth | null {
-  return document.hrAdminFacts.find((item) => item.month === month) ?? null;
-}
-
-export function hrOutsourcingRates(document: PrototypeDocument, month: string): HrOutsourcingRatesMonth | null {
-  return document.hrOutsourcingRates.find((item) => item.month === month) ?? null;
 }
 
 export function hrTaxRatesOrDefault(document: PrototypeDocument, month: string): HrTaxRatesMonth {
@@ -219,14 +216,6 @@ function outsourcingPlanLine(
   departmentId: HrShopDepartmentId,
 ): HrMonthPlanOutsourcingLine | null {
   return plan?.outsourcingLines.find((line) => line.departmentId === departmentId) ?? null;
-}
-
-function adminFactLine(fact: HrAdminFactMonth | null, positionId: string): HrAdminFactStaffLine | null {
-  return fact?.lines.find((line) => line.positionId === positionId) ?? null;
-}
-
-function outsourcingRate(rates: HrOutsourcingRatesMonth | null, departmentId: HrShopDepartmentId): number {
-  return rates?.lines.find((line) => line.departmentId === departmentId)?.rateExVat ?? 0;
 }
 
 function dayFactsInMonth(document: PrototypeDocument, month: string): HrDayFact[] {
@@ -268,18 +257,6 @@ function staffPlanSide(line: HrMonthPlanStaffLine | null): HrMoneySide {
   };
 }
 
-function adminFactSide(line: HrAdminFactStaffLine | null): HrMoneySide {
-  if (!line) {
-    return emptySide();
-  }
-  const fotExVat = line.headcount * line.salaryExVat;
-  return {
-    headcount: line.headcount,
-    salaryExVat: line.salaryExVat,
-    fotExVat,
-  };
-}
-
 function sumStaffSides(rows: readonly HrStaffRowView[], side: 'plan' | 'fact'): HrMoneySide {
   let headcount = 0;
   let fotExVat = 0;
@@ -295,14 +272,68 @@ function sumStaffSides(rows: readonly HrStaffRowView[], side: 'plan' | 'fact'): 
 }
 
 /**
+ * Факт штатных подразделения из дневных строк: численность — среднее за месяц, ФОТ — сумма выплат.
+ */
+function staffFactFromDays(
+  document: PrototypeDocument,
+  departmentId: HrDepartmentId,
+  positions: readonly HrPosition[],
+  plan: HrMonthPlan | null,
+  dayFacts: readonly HrDayFact[],
+  days: number,
+): { staff: HrStaffRowView[]; headcountThousandths: number; amountExVat: number } {
+  let headcountThousandths = 0;
+  let amountExVat = 0;
+  const headcountByPosition = new Map<string, number>();
+  const amountByPosition = new Map<string, number>();
+
+  for (const day of dayFacts) {
+    for (const line of day.staffLines) {
+      const position = document.hrPositions.find((item) => item.id === line.positionId);
+      if (!position || position.departmentId !== departmentId || position.kind !== 'staff') {
+        continue;
+      }
+      headcountThousandths += line.headcountThousandths;
+      amountExVat += line.amountExVat;
+      headcountByPosition.set(
+        line.positionId,
+        (headcountByPosition.get(line.positionId) ?? 0) + line.headcountThousandths,
+      );
+      amountByPosition.set(line.positionId, (amountByPosition.get(line.positionId) ?? 0) + line.amountExVat);
+    }
+  }
+
+  const staff: HrStaffRowView[] = positions.map((position) => {
+    const planSide = staffPlanSide(staffPlanLine(plan, position.id));
+    const people = headcountByPosition.get(position.id) ?? 0;
+    const amount = amountByPosition.get(position.id) ?? 0;
+    const factHeadcount = factShopHeadcountThousandths(people, days);
+    const factSide: HrMoneySide = {
+      headcount: factHeadcount,
+      salaryExVat: factShopSalaryExVat(amount, factHeadcount),
+      fotExVat: amount,
+    };
+    return {
+      kind: 'staff',
+      positionId: position.id,
+      name: position.name,
+      deleted: position.deletedAt !== null,
+      plan: planSide,
+      fact: factSide,
+      variance: varianceSide(factSide, planSide),
+    };
+  });
+
+  return { staff, headcountThousandths, amountExVat };
+}
+
+/**
  * Свод HR месяца: подразделения, аутсорсинг, налоги.
- * Формулы — лист `HR`.
+ * Формулы — лист `HR`. Факт администрации считается из дней так же, как факт цеха.
  */
 export function hrMonthView(document: PrototypeDocument, month: string): HrMonthView {
   const days = daysInMonth(month);
   const plan = hrMonthPlan(document, month);
-  const adminFact = hrAdminFact(document, month);
-  const rates = hrOutsourcingRates(document, month);
   const dayFacts = dayFactsInMonth(document, month);
   const taxRates = hrTaxRatesOrDefault(document, month);
 
@@ -310,97 +341,48 @@ export function hrMonthView(document: PrototypeDocument, month: string): HrMonth
     const positions = hrPositionsForDepartment(document, departmentId, { includeDeleted: true }).filter(
       (item) => item.kind === 'staff' && (item.deletedAt === null || staffPlanLine(plan, item.id) !== null),
     );
+    const rolled = staffFactFromDays(document, departmentId, positions, plan, dayFacts, days);
 
     if (departmentId === 'admin') {
-      const staff: HrStaffRowView[] = positions.map((position) => {
-        const planSide = staffPlanSide(staffPlanLine(plan, position.id));
-        const factSide = adminFactSide(adminFactLine(adminFact, position.id));
-        return {
-          kind: 'staff',
-          positionId: position.id,
-          name: position.name,
-          deleted: position.deletedAt !== null,
-          plan: planSide,
-          fact: factSide,
-          variance: varianceSide(factSide, planSide),
-        };
-      });
-      const planSide = sumStaffSides(staff, 'plan');
-      const factSide = sumStaffSides(staff, 'fact');
+      const planSide = sumStaffSides(rolled.staff, 'plan');
+      const factHeadcount = factShopHeadcountThousandths(rolled.headcountThousandths, days);
+      const factSide: HrMoneySide = {
+        headcount: factHeadcount,
+        salaryExVat: factShopSalaryExVat(rolled.amountExVat, factHeadcount),
+        fotExVat: rolled.amountExVat,
+      };
       return {
         departmentId,
         name: HR_DEPARTMENT_LABELS[departmentId],
         hasOutsourcing: false,
-        staff,
+        staff: rolled.staff,
         outsourcing: null,
         plan: planSide,
         fact: factSide,
         planPayrollExVat: planSide.fotExVat,
-        factPayrollExVat: factSide.fotExVat,
+        factPayrollExVat: rolled.amountExVat,
         variance: varianceSide(factSide, planSide),
       };
     }
 
     const shopId = departmentId;
-    let staffHeadcountThousandths = 0;
-    let staffAmountExVat = 0;
-    const staffHeadcountByPosition = new Map<string, number>();
-    const staffAmountByPosition = new Map<string, number>();
-
-    for (const day of dayFacts) {
-      for (const line of day.staffLines) {
-        const position = document.hrPositions.find((item) => item.id === line.positionId);
-        if (!position || position.departmentId !== shopId || position.kind !== 'staff') {
-          continue;
-        }
-        staffHeadcountThousandths += line.headcountThousandths;
-        staffAmountExVat += line.amountExVat;
-        staffHeadcountByPosition.set(
-          line.positionId,
-          (staffHeadcountByPosition.get(line.positionId) ?? 0) + line.headcountThousandths,
-        );
-        staffAmountByPosition.set(
-          line.positionId,
-          (staffAmountByPosition.get(line.positionId) ?? 0) + line.amountExVat,
-        );
-      }
-    }
-
-    const staff: HrStaffRowView[] = positions.map((position) => {
-      const planSide = staffPlanSide(staffPlanLine(plan, position.id));
-      const people = staffHeadcountByPosition.get(position.id) ?? 0;
-      const amount = staffAmountByPosition.get(position.id) ?? 0;
-      const factHeadcount = factShopHeadcountThousandths(people, days);
-      const factSide: HrMoneySide = {
-        headcount: factHeadcount,
-        salaryExVat: factShopSalaryExVat(amount, factHeadcount),
-        fotExVat: amount,
-      };
-      return {
-        kind: 'staff',
-        positionId: position.id,
-        name: position.name,
-        deleted: position.deletedAt !== null,
-        plan: planSide,
-        fact: factSide,
-        variance: varianceSide(factSide, planSide),
-      };
-    });
+    const staff = rolled.staff;
 
     const outPlan = outsourcingPlanLine(plan, shopId);
-    const outRate = outsourcingRate(rates, shopId);
     let outHours = 0;
+    let factOutAmount = 0;
     for (const day of dayFacts) {
       for (const line of day.outsourcingLines) {
         if (line.departmentId === shopId) {
           outHours += line.hourThousandths;
+          factOutAmount += line.amountExVat ?? 0;
         }
       }
     }
     const planOutHours = outPlan?.hourThousandths ?? 0;
     const planOutRate = outPlan?.rateExVat ?? 0;
     const planOutAmount = outsourcingAmountExVat(planOutHours, planOutRate);
-    const factOutAmount = outsourcingAmountExVat(outHours, outRate);
+    const factOutRate = outsourcingFactRateExVat(factOutAmount, outHours);
     const outsourcing: HrOutsourcingRowView = {
       kind: 'outsourcing',
       departmentId: shopId,
@@ -409,7 +391,7 @@ export function hrMonthView(document: PrototypeDocument, month: string): HrMonth
       planRateExVat: planOutRate,
       planAmountExVat: planOutAmount,
       factHoursThousandths: outHours,
-      factRateExVat: outRate,
+      factRateExVat: factOutRate,
       factAmountExVat: factOutAmount,
       varianceHoursThousandths: outHours - planOutHours,
       varianceAmountExVat: factOutAmount - planOutAmount,
@@ -422,8 +404,8 @@ export function hrMonthView(document: PrototypeDocument, month: string): HrMonth
       fotExVat: planStaff.fotExVat + planOutAmount,
     };
 
-    const factHeadcount = factShopHeadcountThousandths(staffHeadcountThousandths, days);
-    const factPayroll = staffAmountExVat;
+    const factHeadcount = factShopHeadcountThousandths(rolled.headcountThousandths, days);
+    const factPayroll = rolled.amountExVat;
     const factFot = factPayroll + factOutAmount;
     const factSide: HrMoneySide = {
       headcount: factHeadcount,
@@ -468,10 +450,9 @@ export function hrMonthView(document: PrototypeDocument, month: string): HrMonth
     (dc?.outsourcing?.planAmountExVat ?? 0);
   const planFot = planPayroll + planOut;
 
-  // Факт «Кол-во» администрации — целые люди; у цехов — среднее по дням в тысячных долях человека.
-  // Итог как в книге складывает оба числа: людей администрации переводим в тысячные доли.
+  // Факт «Кол-во» всех подразделений — среднее по дням в тысячных долях человека.
   const factHeadcountThousandths =
-    (admin?.fact.headcount ?? 0) * QUANTITY_SCALE +
+    (admin?.fact.headcount ?? 0) +
     production.reduce((sum, item) => sum + item.fact.headcount, 0) +
     (dc?.fact.headcount ?? 0);
   const factPayroll =
@@ -781,63 +762,6 @@ export function setHrOutsourcingPlan(
   };
 }
 
-export function setHrAdminFactRejection(
-  document: PrototypeDocument,
-  month: string,
-  positionId: string,
-  headcount: number,
-  salaryExVat: number,
-): HrFieldRejection | null {
-  if (!isMonthKey(month)) {
-    return 'month';
-  }
-  const position = document.hrPositions.find((item) => item.id === positionId);
-  if (position?.kind !== 'staff' || position.departmentId !== 'admin') {
-    return 'missing';
-  }
-  if (position.deletedAt !== null) {
-    return 'archived';
-  }
-  if (!isHeadcount(headcount)) {
-    return 'headcount';
-  }
-  if (!isMoney(salaryExVat)) {
-    return 'salary';
-  }
-  return null;
-}
-
-export function setHrAdminFact(
-  document: PrototypeDocument,
-  month: string,
-  positionId: string,
-  headcount: number,
-  salaryExVat: number,
-): PrototypeDocument {
-  if (setHrAdminFactRejection(document, month, positionId, headcount, salaryExVat)) {
-    return document;
-  }
-  const existing = hrAdminFact(document, month);
-  const nextLine: HrAdminFactStaffLine = {
-    id: `hr-admin-fact:${month}:${positionId}`,
-    positionId,
-    headcount,
-    salaryExVat,
-  };
-  if (!existing) {
-    return {
-      ...document,
-      hrAdminFacts: [...document.hrAdminFacts, { id: `hr-admin:${month}`, month, lines: [nextLine] }],
-    };
-  }
-  const without = existing.lines.filter((line) => line.positionId !== positionId);
-  const lines = headcount === 0 && salaryExVat === 0 ? without : [...without, nextLine];
-  return {
-    ...document,
-    hrAdminFacts: document.hrAdminFacts.map((item) => (item.month === month ? { ...item, lines } : item)),
-  };
-}
-
 export function setHrDayStaffRejection(
   document: PrototypeDocument,
   occurredOn: string,
@@ -849,7 +773,7 @@ export function setHrDayStaffRejection(
     return 'day';
   }
   const position = document.hrPositions.find((item) => item.id === positionId);
-  if (position?.kind !== 'staff' || position.departmentId === 'admin') {
+  if (position?.kind !== 'staff') {
     return 'missing';
   }
   if (position.deletedAt !== null) {
@@ -912,6 +836,7 @@ export function setHrDayOutsourcingRejection(
   occurredOn: string,
   departmentId: HrShopDepartmentId,
   hourThousandths: number,
+  amountExVat: number,
 ): HrFieldRejection | null {
   if (!isOccurredOn(occurredOn)) {
     return 'day';
@@ -922,6 +847,9 @@ export function setHrDayOutsourcingRejection(
   if (!isHours(hourThousandths)) {
     return 'hours';
   }
+  if (!isMoney(amountExVat)) {
+    return 'amount';
+  }
   return null;
 }
 
@@ -930,8 +858,9 @@ export function setHrDayOutsourcing(
   occurredOn: string,
   departmentId: HrShopDepartmentId,
   hourThousandths: number,
+  amountExVat: number,
 ): PrototypeDocument {
-  if (setHrDayOutsourcingRejection(document, occurredOn, departmentId, hourThousandths)) {
+  if (setHrDayOutsourcingRejection(document, occurredOn, departmentId, hourThousandths, amountExVat)) {
     return document;
   }
   const existing = document.hrDayFacts.find((item) => item.occurredOn === occurredOn);
@@ -939,9 +868,10 @@ export function setHrDayOutsourcing(
     id: `hr-day-out:${occurredOn}:${departmentId}`,
     departmentId,
     hourThousandths,
+    amountExVat,
   };
   if (!existing) {
-    if (hourThousandths === 0) {
+    if (hourThousandths === 0 && amountExVat === 0) {
       return document;
     }
     return {
@@ -953,7 +883,7 @@ export function setHrDayOutsourcing(
     };
   }
   const without = existing.outsourcingLines.filter((line) => line.departmentId !== departmentId);
-  const outsourcingLines = hourThousandths === 0 ? without : [...without, nextLine];
+  const outsourcingLines = hourThousandths === 0 && amountExVat === 0 ? without : [...without, nextLine];
   if (existing.staffLines.length === 0 && outsourcingLines.length === 0) {
     return {
       ...document,
@@ -965,53 +895,6 @@ export function setHrDayOutsourcing(
     hrDayFacts: document.hrDayFacts.map((item) =>
       item.occurredOn === occurredOn ? { ...item, outsourcingLines } : item,
     ),
-  };
-}
-
-export function setHrOutsourcingRateRejection(
-  _document: PrototypeDocument,
-  month: string,
-  departmentId: HrShopDepartmentId,
-  rateExVat: number,
-): HrFieldRejection | null {
-  if (!isMonthKey(month)) {
-    return 'month';
-  }
-  if (!isHrShopDepartmentId(departmentId)) {
-    return 'department';
-  }
-  if (!isMoney(rateExVat)) {
-    return 'rate';
-  }
-  return null;
-}
-
-export function setHrOutsourcingRate(
-  document: PrototypeDocument,
-  month: string,
-  departmentId: HrShopDepartmentId,
-  rateExVat: number,
-): PrototypeDocument {
-  if (setHrOutsourcingRateRejection(document, month, departmentId, rateExVat)) {
-    return document;
-  }
-  const existing = hrOutsourcingRates(document, month);
-  const nextLine = {
-    id: `hr-out-rate:${month}:${departmentId}`,
-    departmentId,
-    rateExVat,
-  };
-  if (!existing) {
-    return {
-      ...document,
-      hrOutsourcingRates: [...document.hrOutsourcingRates, { id: `hr-out-rates:${month}`, month, lines: [nextLine] }],
-    };
-  }
-  const without = existing.lines.filter((line) => line.departmentId !== departmentId);
-  const lines = rateExVat === 0 ? without : [...without, nextLine];
-  return {
-    ...document,
-    hrOutsourcingRates: document.hrOutsourcingRates.map((item) => (item.month === month ? { ...item, lines } : item)),
   };
 }
 
@@ -1066,13 +949,17 @@ export function hrDayStaffValue(
   };
 }
 
-export function hrDayOutsourcingHours(
+export function hrDayOutsourcingValue(
   document: PrototypeDocument,
   occurredOn: string,
   departmentId: HrShopDepartmentId,
-): number {
+): { hourThousandths: number; amountExVat: number } {
   const day = document.hrDayFacts.find((item) => item.occurredOn === occurredOn);
-  return day?.outsourcingLines.find((item) => item.departmentId === departmentId)?.hourThousandths ?? 0;
+  const line = day?.outsourcingLines.find((item) => item.departmentId === departmentId);
+  return {
+    hourThousandths: line?.hourThousandths ?? 0,
+    amountExVat: line?.amountExVat ?? 0,
+  };
 }
 
 /** Для подписей дат ввода факта. */

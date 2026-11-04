@@ -239,21 +239,7 @@ export interface HrMonthPlan {
   outsourcingLines: HrMonthPlanOutsourcingLine[];
 }
 
-/** Факт администрации за месяц без разбивки по дням. `HR!G/H/I` блока администрации. */
-export interface HrAdminFactStaffLine {
-  id: string;
-  positionId: string;
-  headcount: number;
-  salaryExVat: number;
-}
-
-export interface HrAdminFactMonth {
-  id: string;
-  month: string;
-  lines: HrAdminFactStaffLine[];
-}
-
-/** Дневной факт штатной должности цеха/РЦ: численность и сумма отдельно. `HR!J` штатной строки. */
+/** Дневной факт штатной должности: численность и сумма отдельно. `HR!J` штатной строки. */
 export interface HrDayStaffLine {
   id: string;
   positionId: string;
@@ -263,24 +249,13 @@ export interface HrDayStaffLine {
   amountExVat: number;
 }
 
-/** Дневные часы аутсорсинга; сумма = ставка факта месяца × часы. */
+/** Дневной факт аутсорсинга цеха/РЦ: часы и выплаченная сумма отдельно. */
 export interface HrDayOutsourcingLine {
   id: string;
   departmentId: HrShopDepartmentId;
   hourThousandths: number;
-}
-
-/** Ставка аутсорсинга цеха/РЦ на месяц (факт). `HR!H` строки аутсорсинга. */
-export interface HrOutsourcingRateMonthLine {
-  id: string;
-  departmentId: HrShopDepartmentId;
-  rateExVat: number;
-}
-
-export interface HrOutsourcingRatesMonth {
-  id: string;
-  month: string;
-  lines: HrOutsourcingRateMonthLine[];
+  /** Выплаченная сумма, копейки без НДС. */
+  amountExVat: number;
 }
 
 export interface HrDayFact {
@@ -844,12 +819,8 @@ export interface PrototypeDocument {
   hrPositions: HrPosition[];
   /** План численности и зарплат по месяцам. */
   hrMonthPlans: HrMonthPlan[];
-  /** Факт администрации за месяц. */
-  hrAdminFacts: HrAdminFactMonth[];
-  /** Дневной факт цехов и РЦ: численность и выплаты штатных, часы аутсорсинга. */
+  /** Дневной факт подразделений: численность и выплаты штатных, часы и выплаты аутсорсинга цехов и РЦ. */
   hrDayFacts: HrDayFact[];
-  /** Ставки аутсорсинга цехов/РЦ по месяцам (факт). */
-  hrOutsourcingRates: HrOutsourcingRatesMonth[];
   /** Ставки НДФЛ, соцстраха и травматизма по месяцам. */
   hrTaxRates: HrTaxRatesMonth[];
   /** Контрагенты наёмного транспорта. */
