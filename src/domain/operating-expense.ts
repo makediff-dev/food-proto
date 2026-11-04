@@ -532,6 +532,9 @@ export function renameOpexOtherLineRejection(
   if (!line || line.deletedAt !== null) {
     return 'missing';
   }
+  if (line.kind === 'agency') {
+    return 'line';
+  }
   const trimmed = name.trim();
   if (trimmed.length > MAX_NAME) {
     return 'too-long';
@@ -552,7 +555,7 @@ export function renameOpexOtherLine(document: PrototypeDocument, lineId: string,
 
 export function deleteOpexOtherLine(document: PrototypeDocument, lineId: string, deletedAt: string): PrototypeDocument {
   const line = findOtherLine(document, lineId);
-  if (!line || line.deletedAt !== null || !isDeletionMark(deletedAt)) {
+  if (!line || line.deletedAt !== null || line.kind === 'agency' || !isDeletionMark(deletedAt)) {
     return document;
   }
   return {

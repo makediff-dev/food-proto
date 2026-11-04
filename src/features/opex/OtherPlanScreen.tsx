@@ -18,19 +18,17 @@ import { IconPlus } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
   ColumnLabel,
-  categoryNameClassName,
-  categoryNameRowClassName,
-  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
   MoneyAmount,
   nameHeadingClassName,
   tableClassName,
   tableFrameClassName,
+  totalNameClassName,
+  totalValueClassName,
 } from '@/features/table';
 
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
-const valueCell = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
 
 export function OtherPlanScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);
@@ -53,7 +51,7 @@ export function OtherPlanScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_OTHER_PLAN_TITLE}
       full
-      lede="План прочих статей без НДС. Строки из HR и транспорта только смотрят. Названия правят в ячейке; новые расходы добавляют в категорию, ненужные — мягко удаляют. Агентское соглашение считает формула."
+      lede="План прочих статей без НДС. Строки из HR и транспорта и «Агентское соглашение» только смотрят. Названия правят в ячейке; новые расходы добавляют в категорию, ненужные — мягко удаляют."
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -111,11 +109,11 @@ export function OtherPlanScreen({ month }: { month: string }) {
                 }
               />
             ))}
-            <tr className="font-medium">
-              <th scope="row" className={categoryNameRowClassName(false)}>
-                <span className={categoryNameClassName}>ВСЕГО</span>
+            <tr>
+              <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
+                Всего
               </th>
-              <td className={`${valueCell} ${cellKindClassName.computed}`}>
+              <td className={`${totalValueClassName} ${columnDividerClassName}`}>
                 <MoneyAmount amount={view.totalPlanExVat} />
               </td>
             </tr>

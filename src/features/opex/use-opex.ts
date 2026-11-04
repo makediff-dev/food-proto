@@ -7,7 +7,6 @@ import type {
   HrTaxRatesMonth,
   OpexGroupCode,
   TransportHireKind,
-  TransportVehicleId,
 } from '@/domain/document';
 import {
   addHrPosition,
@@ -42,10 +41,16 @@ import {
 import {
   addTransportCarrier,
   addTransportCarrierRejection,
+  addTransportVehicle,
+  addTransportVehicleRejection,
   deleteTransportCarrier,
+  deleteTransportVehicle,
   renameTransportCarrier,
   renameTransportCarrierRejection,
+  renameTransportVehicle,
+  renameTransportVehicleRejection,
   restoreTransportCarrier,
+  restoreTransportVehicle,
   setTransportHireDay,
   setTransportHireDayRejection,
   setTransportHirePlan,
@@ -218,6 +223,38 @@ export function useOpex() {
       updateDocument((current) => restoreTransportCarrier(current, carrierId));
       return null;
     },
+    addTransportVehicle(name: string): TransportFieldRejection | null {
+      const id = `transport-vehicle:${crypto.randomUUID()}`;
+      const rejection = addTransportVehicleRejection(document, name);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => addTransportVehicle(current, { id, name, deletedAt: null }));
+      return null;
+    },
+    deleteTransportVehicle(vehicleId: string) {
+      updateDocument((current) => deleteTransportVehicle(current, vehicleId, new Date().toISOString()));
+    },
+    renameTransportVehicle(vehicleId: string, name: string): TransportFieldRejection | null {
+      const rejection = renameTransportVehicleRejection(document, vehicleId, name);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => renameTransportVehicle(current, vehicleId, name));
+      return null;
+    },
+    restoreTransportVehicle(vehicleId: string): TransportFieldRejection | null {
+      const vehicle = document.transportVehicles.find((item) => item.id === vehicleId);
+      if (!vehicle || vehicle.deletedAt === null) {
+        return 'missing';
+      }
+      const rejection = addTransportVehicleRejection(document, vehicle.name);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => restoreTransportVehicle(current, vehicleId));
+      return null;
+    },
     setTransportHirePlan(
       month: string,
       carrierId: string,
@@ -248,7 +285,7 @@ export function useOpex() {
     },
     setTransportOwnPlan(
       month: string,
-      vehicleId: TransportVehicleId,
+      vehicleId: string,
       litersPer100KmThousandths: number,
       fuelPriceExVat: number,
       planKmThousandths: number,
@@ -271,7 +308,7 @@ export function useOpex() {
     },
     setTransportOwnDay(
       occurredOn: string,
-      vehicleId: TransportVehicleId,
+      vehicleId: string,
       odometerThousandths: number,
       fuelPriceExVat: number,
     ): TransportFieldRejection | null {

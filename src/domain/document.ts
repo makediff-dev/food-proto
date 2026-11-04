@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 55 as const;
+export const SCHEMA_VERSION = 56 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -334,23 +334,14 @@ export interface TransportHireDayFact {
   lines: TransportHireDayLine[];
 }
 
-/** Три фиксированные машины листа `Transport`. */
-export type TransportVehicleId = 'vehicle-1' | 'vehicle-2' | 'vehicle-3';
-
-export const TRANSPORT_VEHICLE_IDS = [
-  'vehicle-1',
-  'vehicle-2',
-  'vehicle-3',
-] as const satisfies readonly TransportVehicleId[];
-
-export function isTransportVehicleId(value: string): value is TransportVehicleId {
-  return (TRANSPORT_VEHICLE_IDS as readonly string[]).includes(value);
-}
+/** Автомобиль собственного транспорта. Мягкое удаление. */
+export interface TransportVehicle extends DeletableRecord {}
 
 /** План своего транспорта на месяц: норма, цена литра, км. */
 export interface TransportOwnMonthPlanVehicle {
   id: string;
-  vehicleId: TransportVehicleId;
+  /** Ссылка на `transportVehicles`. Живёт и после удаления. */
+  vehicleId: string;
   /** Норма л/100 км, тысячные доли литра. */
   litersPer100KmThousandths: number;
   /** Цена 1 л без НДС, копейки. */
@@ -368,7 +359,8 @@ export interface TransportOwnMonthPlan {
 /** Показание спидометра на утро и цена литра дня. */
 export interface TransportOwnDayVehicle {
   id: string;
-  vehicleId: TransportVehicleId;
+  /** Ссылка на `transportVehicles`. Живёт и после удаления. */
+  vehicleId: string;
   /** Одометр на утро, тысячные доли км. */
   odometerThousandths: number;
   fuelPriceExVat: number;
@@ -827,6 +819,8 @@ export interface PrototypeDocument {
   transportCarriers: TransportCarrier[];
   transportHireMonthPlans: TransportHireMonthPlan[];
   transportHireDayFacts: TransportHireDayFact[];
+  /** Автомобили собственного транспорта. */
+  transportVehicles: TransportVehicle[];
   transportOwnMonthPlans: TransportOwnMonthPlan[];
   transportOwnDayFacts: TransportOwnDayFact[];
   /** Справочник прочих статей `Operation Expense` (без HR и 7.1/7.2). */

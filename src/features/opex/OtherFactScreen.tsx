@@ -14,19 +14,17 @@ import { useRole } from '@/features/roles/RoleProvider';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
   ColumnLabel,
-  categoryNameClassName,
-  categoryNameRowClassName,
-  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
   MoneyAmount,
   nameHeadingClassName,
   tableClassName,
   tableFrameClassName,
+  totalNameClassName,
+  totalValueClassName,
 } from '@/features/table';
 
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
-const valueCell = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
 
 export function OtherFactScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);
@@ -83,11 +81,11 @@ export function OtherFactScreen({ month }: { month: string }) {
                 }}
               />
             ))}
-            <tr className="font-medium">
-              <th scope="row" className={categoryNameRowClassName(false)}>
-                <span className={categoryNameClassName}>ВСЕГО</span>
+            <tr>
+              <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
+                Всего
               </th>
-              <td className={`${valueCell} ${cellKindClassName.computed}`}>
+              <td className={`${totalValueClassName} ${columnDividerClassName}`}>
                 <MoneyAmount amount={view.totalFactExVat} />
               </td>
             </tr>

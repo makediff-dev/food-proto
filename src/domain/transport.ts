@@ -3,16 +3,14 @@ import {
   isMonthKey,
   isOccurredOn,
   isTransportHireKind,
-  isTransportVehicleId,
   type PrototypeDocument,
   TRANSPORT_HIRE_KINDS,
-  TRANSPORT_VEHICLE_IDS,
   type TransportCarrier,
   type TransportHireKind,
   type TransportHireMonthPlan,
   type TransportHireMonthPlanLine,
   type TransportOwnMonthPlan,
-  type TransportVehicleId,
+  type TransportVehicle,
 } from '@/domain/document';
 import { ratioRound } from '@/domain/money';
 import { isQuantityThousandths, QUANTITY_SCALE } from '@/domain/quantity';
@@ -37,12 +35,6 @@ export const TRANSPORT_HIRE_LABELS: Record<TransportHireKind, string> = {
   finishedDelivery: 'Доставка готовой продукции наёмный',
   finishedTransfer: 'Перемещение готовой продукции наёмный',
   materialDelivery: 'Доставка сырья и материалов',
-};
-
-export const TRANSPORT_VEHICLE_LABELS: Record<TransportVehicleId, string> = {
-  'vehicle-1': 'Авто № 1',
-  'vehicle-2': 'Авто № 2',
-  'vehicle-3': 'Авто № 3',
 };
 
 export interface TransportHireCarrierView {
@@ -74,8 +66,9 @@ export interface TransportHireBlockView {
 }
 
 export interface TransportOwnVehicleView {
-  vehicleId: TransportVehicleId;
+  vehicleId: string;
   name: string;
+  deleted: boolean;
   litersPer100KmThousandths: number;
   planFuelPriceExVat: number;
   planKmThousandths: number;
@@ -111,6 +104,10 @@ function isQty(value: number): boolean {
 
 export function activeTransportCarriers(document: PrototypeDocument): TransportCarrier[] {
   return document.transportCarriers.filter((item) => item.deletedAt === null);
+}
+
+export function activeTransportVehicles(document: PrototypeDocument): TransportVehicle[] {
+  return document.transportVehicles.filter((item) => item.deletedAt === null);
 }
 
 export function transportHirePlan(document: PrototypeDocument, month: string): TransportHireMonthPlan | null {
@@ -162,11 +159,7 @@ function previousDay(occurredOn: string): string | null {
  * Пробег дня = одометр утра − одометр утра предыдущего дня.
  * Нет предыдущего или ноль — 0. `Transport!J57 = M63 - J63`.
  */
-export function ownDayKmThousandths(
-  document: PrototypeDocument,
-  occurredOn: string,
-  vehicleId: TransportVehicleId,
-): number {
+export function ownDayKmThousandths(document: PrototypeDocument, occurredOn: string, vehicleId: string): number {
   const day = document.transportOwnDayFacts.find((item) => item.occurredOn === occurredOn);
   const reading = day?.vehicles.find((item) => item.vehicleId === vehicleId)?.odometerThousandths ?? 0;
   if (reading === 0) {
@@ -259,8 +252,14 @@ export function transportMonthView(document: PrototypeDocument, month: string): 
     };
   });
 
-  const own: TransportOwnVehicleView[] = TRANSPORT_VEHICLE_IDS.map((vehicleId) => {
-    const planRow = ownPlan?.vehicles.find((item) => item.vehicleId === vehicleId);
+  const ownVehicles = document.transportVehicles.filter(
+    (item) =>
+      item.deletedAt === null ||
+      ownPlan?.vehicles.some((row) => row.vehicleId === item.id) === true ||
+      ownDays.some((day) => day.vehicles.some((row) => row.vehicleId === item.id)),
+  );
+  const own: TransportOwnVehicleView[] = ownVehicles.map((vehicle) => {
+    const planRow = ownPlan?.vehicles.find((item) => item.vehicleId === vehicle.id);
     const liters = planRow?.litersPer100KmThousandths ?? 0;
     const fuelPrice = planRow?.fuelPriceExVat ?? 0;
     const planKm = planRow?.planKmThousandths ?? 0;
@@ -270,15 +269,16 @@ export function transportMonthView(document: PrototypeDocument, month: string): 
     let factKm = 0;
     let factAmount = 0;
     for (const day of ownDays) {
-      const km = ownDayKmThousandths(document, day.occurredOn, vehicleId);
-      const fuel = day.vehicles.find((item) => item.vehicleId === vehicleId)?.fuelPriceExVat ?? 0;
+      const km = ownDayKmThousandths(document, day.occurredOn, vehicle.id);
+      const fuel = day.vehicles.find((item) => item.vehicleId === vehicle.id)?.fuelPriceExVat ?? 0;
       factKm += km;
       factAmount += ownDayFuelAmountExVat(km, liters, fuel);
     }
 
     return {
-      vehicleId,
-      name: TRANSPORT_VEHICLE_LABELS[vehicleId],
+      vehicleId: vehicle.id,
+      name: vehicle.name,
+      deleted: vehicle.deletedAt !== null,
       litersPer100KmThousandths: liters,
       planFuelPriceExVat: fuelPrice,
       planKmThousandths: planKm,
@@ -399,6 +399,100 @@ export function restoreTransportCarrier(document: PrototypeDocument, carrierId: 
     ...document,
     transportCarriers: document.transportCarriers.map((item) =>
       item.id === carrierId ? { ...item, deletedAt: null } : item,
+    ),
+  };
+}
+
+export function addTransportVehicleRejection(
+  document: PrototypeDocument,
+  name: string,
+): TransportFieldRejection | null {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return 'name';
+  }
+  const taken = activeTransportVehicles(document).some((item) => item.name === trimmed);
+  if (taken) {
+    return 'name';
+  }
+  return null;
+}
+
+export function addTransportVehicle(document: PrototypeDocument, vehicle: TransportVehicle): PrototypeDocument {
+  if (addTransportVehicleRejection(document, vehicle.name)) {
+    return document;
+  }
+  return {
+    ...document,
+    transportVehicles: [...document.transportVehicles, { ...vehicle, name: vehicle.name.trim(), deletedAt: null }],
+  };
+}
+
+export function deleteTransportVehicle(
+  document: PrototypeDocument,
+  vehicleId: string,
+  deletedAt: string,
+): PrototypeDocument {
+  if (!isDeletionMark(deletedAt)) {
+    return document;
+  }
+  return {
+    ...document,
+    transportVehicles: document.transportVehicles.map((item) =>
+      item.id === vehicleId && item.deletedAt === null ? { ...item, deletedAt } : item,
+    ),
+  };
+}
+
+export function renameTransportVehicleRejection(
+  document: PrototypeDocument,
+  vehicleId: string,
+  name: string,
+): TransportFieldRejection | null {
+  const vehicle = document.transportVehicles.find((item) => item.id === vehicleId);
+  if (!vehicle || vehicle.deletedAt !== null) {
+    return 'missing';
+  }
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return 'name';
+  }
+  const taken = activeTransportVehicles(document).some((item) => item.name === trimmed && item.id !== vehicleId);
+  if (taken) {
+    return 'name';
+  }
+  return null;
+}
+
+export function renameTransportVehicle(
+  document: PrototypeDocument,
+  vehicleId: string,
+  name: string,
+): PrototypeDocument {
+  if (renameTransportVehicleRejection(document, vehicleId, name)) {
+    return document;
+  }
+  const trimmed = name.trim();
+  return {
+    ...document,
+    transportVehicles: document.transportVehicles.map((item) =>
+      item.id === vehicleId ? { ...item, name: trimmed } : item,
+    ),
+  };
+}
+
+export function restoreTransportVehicle(document: PrototypeDocument, vehicleId: string): PrototypeDocument {
+  const vehicle = document.transportVehicles.find((item) => item.id === vehicleId);
+  if (!vehicle || vehicle.deletedAt === null) {
+    return document;
+  }
+  if (addTransportVehicleRejection(document, vehicle.name)) {
+    return document;
+  }
+  return {
+    ...document,
+    transportVehicles: document.transportVehicles.map((item) =>
+      item.id === vehicleId ? { ...item, deletedAt: null } : item,
     ),
   };
 }
@@ -534,9 +628,9 @@ export function setTransportHireDay(
 }
 
 export function setTransportOwnPlanRejection(
-  _document: PrototypeDocument,
+  document: PrototypeDocument,
   month: string,
-  vehicleId: TransportVehicleId,
+  vehicleId: string,
   litersPer100KmThousandths: number,
   fuelPriceExVat: number,
   planKmThousandths: number,
@@ -544,8 +638,12 @@ export function setTransportOwnPlanRejection(
   if (!isMonthKey(month)) {
     return 'month';
   }
-  if (!isTransportVehicleId(vehicleId)) {
+  const vehicle = document.transportVehicles.find((item) => item.id === vehicleId);
+  if (!vehicle) {
     return 'missing';
+  }
+  if (vehicle.deletedAt !== null) {
+    return 'archived';
   }
   if (!isQty(litersPer100KmThousandths) || !isQty(planKmThousandths)) {
     return 'quantity';
@@ -559,7 +657,7 @@ export function setTransportOwnPlanRejection(
 export function setTransportOwnPlan(
   document: PrototypeDocument,
   month: string,
-  vehicleId: TransportVehicleId,
+  vehicleId: string,
   litersPer100KmThousandths: number,
   fuelPriceExVat: number,
   planKmThousandths: number,
@@ -603,17 +701,21 @@ export function setTransportOwnPlan(
 }
 
 export function setTransportOwnDayRejection(
-  _document: PrototypeDocument,
+  document: PrototypeDocument,
   occurredOn: string,
-  vehicleId: TransportVehicleId,
+  vehicleId: string,
   odometerThousandths: number,
   fuelPriceExVat: number,
 ): TransportFieldRejection | null {
   if (!isOccurredOn(occurredOn)) {
     return 'day';
   }
-  if (!isTransportVehicleId(vehicleId)) {
+  const vehicle = document.transportVehicles.find((item) => item.id === vehicleId);
+  if (!vehicle) {
     return 'missing';
+  }
+  if (vehicle.deletedAt !== null) {
+    return 'archived';
   }
   if (!isQty(odometerThousandths)) {
     return 'odometer';
@@ -627,7 +729,7 @@ export function setTransportOwnDayRejection(
 export function setTransportOwnDay(
   document: PrototypeDocument,
   occurredOn: string,
-  vehicleId: TransportVehicleId,
+  vehicleId: string,
   odometerThousandths: number,
   fuelPriceExVat: number,
 ): PrototypeDocument {
@@ -685,7 +787,7 @@ export function transportHireDayValue(
 export function transportOwnDayValue(
   document: PrototypeDocument,
   occurredOn: string,
-  vehicleId: TransportVehicleId,
+  vehicleId: string,
 ): { odometerThousandths: number; fuelPriceExVat: number } {
   const day = document.transportOwnDayFacts.find((item) => item.occurredOn === occurredOn);
   const row = day?.vehicles.find((item) => item.vehicleId === vehicleId);

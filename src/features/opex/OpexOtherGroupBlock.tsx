@@ -16,7 +16,6 @@ import {
   GridText,
   MoneyAmount,
   MoneyCell,
-  nameCellKind,
 } from '@/features/table';
 
 const valueCell = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
@@ -91,11 +90,13 @@ export function OtherGroupBlock({
             const amountEditable = editable && (side === 'plan' ? row.planEditable : row.factEditable);
             const amount = side === 'plan' ? row.planExVat : row.factExVat;
             const isDerived = row.kind === 'derived';
-            const canRename = renameEnabled && !row.deleted && !isDerived && onRename;
-            const amountKind = amountEditable ? 'assigned' : isDerived ? 'repeated' : 'computed';
+            const isFixedLine = isDerived || row.kind === 'agency';
+            const canRename = renameEnabled && !row.deleted && !isFixedLine && onRename;
+            const nameKind = canRename ? 'assigned' : isFixedLine ? 'computed' : 'repeated';
+            const amountKind = amountEditable ? 'assigned' : 'computed';
             return (
               <tr key={row.id}>
-                <th scope="row" className={entityNameRowClassName(nameCellKind(Boolean(canRename)))}>
+                <th scope="row" className={entityNameRowClassName(nameKind)}>
                   <div className="flex w-full items-center gap-2">
                     <span className="text-muted">{row.code}</span>
                     <span className="min-w-0 flex-1">
@@ -109,12 +110,11 @@ export function OtherGroupBlock({
                       ) : (
                         <span className="text-sm leading-8 text-ink">
                           {row.name}
-                          {isDerived ? <span className="text-muted"> (вычисляется)</span> : null}
                           {row.deleted ? <span className="text-muted"> (архив)</span> : null}
                         </span>
                       )}
                     </span>
-                    {editable && !row.deleted && !isDerived && onDelete ? (
+                    {editable && !row.deleted && !isFixedLine && onDelete ? (
                       <button
                         type="button"
                         aria-label={`Удалить ${row.name}`}

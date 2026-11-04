@@ -185,58 +185,60 @@ export function TransportFactScreen({ month, day }: { month: string; day: string
                 </tr>
               </thead>
               <tbody>
-                {view.own.map((vehicle) => {
-                  const values = transportOwnDayValue(opex.document, selectedDay, vehicle.vehicleId);
-                  return (
-                    <tr key={vehicle.vehicleId}>
-                      <th scope="row" className={entityNameRowClassName('repeated')}>
-                        {vehicle.name}
-                      </th>
-                      <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-                        {editable ? (
-                          <QuantityCell
-                            label={`Спидометр, ${vehicle.name}`}
-                            value={values.odometerThousandths}
-                            unit="км"
-                            blankIfZero
-                            onChange={(next) => {
-                              const rejection = opex.setTransportOwnDay(
-                                selectedDay,
-                                vehicle.vehicleId,
-                                next,
-                                values.fuelPriceExVat,
-                              );
-                              return rejection ? TRANSPORT_ERROR[rejection] : null;
-                            }}
-                          />
-                        ) : (
-                          values.odometerThousandths
-                        )}
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-                        {editable ? (
-                          <MoneyCell
-                            label={`Цена топлива, ${vehicle.name}`}
-                            value={values.fuelPriceExVat}
-                            parse={parseOpexMoney}
-                            invalidMessage={TRANSPORT_ERROR.price}
-                            onChange={(next) => {
-                              const rejection = opex.setTransportOwnDay(
-                                selectedDay,
-                                vehicle.vehicleId,
-                                values.odometerThousandths,
-                                next,
-                              );
-                              return rejection ? TRANSPORT_ERROR[rejection] : null;
-                            }}
-                          />
-                        ) : (
-                          <MoneyAmount amount={values.fuelPriceExVat} />
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {view.own
+                  .filter((vehicle) => !vehicle.deleted)
+                  .map((vehicle) => {
+                    const values = transportOwnDayValue(opex.document, selectedDay, vehicle.vehicleId);
+                    return (
+                      <tr key={vehicle.vehicleId}>
+                        <th scope="row" className={entityNameRowClassName('repeated')}>
+                          {vehicle.name}
+                        </th>
+                        <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
+                          {editable ? (
+                            <QuantityCell
+                              label={`Спидометр, ${vehicle.name}`}
+                              value={values.odometerThousandths}
+                              unit="км"
+                              blankIfZero
+                              onChange={(next) => {
+                                const rejection = opex.setTransportOwnDay(
+                                  selectedDay,
+                                  vehicle.vehicleId,
+                                  next,
+                                  values.fuelPriceExVat,
+                                );
+                                return rejection ? TRANSPORT_ERROR[rejection] : null;
+                              }}
+                            />
+                          ) : (
+                            values.odometerThousandths
+                          )}
+                        </td>
+                        <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
+                          {editable ? (
+                            <MoneyCell
+                              label={`Цена топлива, ${vehicle.name}`}
+                              value={values.fuelPriceExVat}
+                              parse={parseOpexMoney}
+                              invalidMessage={TRANSPORT_ERROR.price}
+                              onChange={(next) => {
+                                const rejection = opex.setTransportOwnDay(
+                                  selectedDay,
+                                  vehicle.vehicleId,
+                                  values.odometerThousandths,
+                                  next,
+                                );
+                                return rejection ? TRANSPORT_ERROR[rejection] : null;
+                              }}
+                            />
+                          ) : (
+                            <MoneyAmount amount={values.fuelPriceExVat} />
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>

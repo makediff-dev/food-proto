@@ -42,7 +42,7 @@ export const TRANSPORT_ERROR: Record<TransportFieldRejection, string> = {
   price: 'Укажите цену.',
   amount: 'Укажите сумму.',
   odometer: 'Укажите показание спидометра.',
-  archived: 'Сначала верните контрагента из архива.',
+  archived: 'Сначала верните запись из архива.',
 };
 
 export function parseOpexMoney(raw: string): number | null {

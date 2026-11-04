@@ -1,5 +1,17 @@
 import { mockMaterials } from '@/data/mock-materials';
-import { mockHrPositions, mockTransportCarriers } from '@/data/mock-opex';
+import {
+  mockHrDayFacts,
+  mockHrMonthPlans,
+  mockHrPositions,
+  mockHrTaxRates,
+  mockOpexMonthLines,
+  mockTransportCarriers,
+  mockTransportHireDayFacts,
+  mockTransportHireMonthPlans,
+  mockTransportOwnDayFacts,
+  mockTransportOwnMonthPlans,
+  mockTransportVehicles,
+} from '@/data/mock-opex';
 import {
   catalogCategories,
   catalogOpexOtherLines,
@@ -29,7 +41,8 @@ import {
  * у салатов и гуляша счёт рядом с журналом, у гамбургера остаток не ниже нуля.
  * Факт ноября — одна отгрузка 2 ноября: продажи 45, 90, 80 и 100; выпуск 50, 85, 90 и 110.
  * Это около десятой плана (3 дня из 30), чтобы прогноз месяца не раздувался. Инвентаризации ноября нет.
- * Операционные расходы, HR и транспорт — справочники из книги, суммы нулевые. Нормативы движения — сентябрь, октябрь и ноябрь.
+ * Операционные расходы, HR и транспорт — справочники из книги; суммы сентября, октября и ноября в `mock-opex.ts`.
+ * Нормативы движения — сентябрь, октябрь и ноябрь.
  * Плановые цены с НДС: салаты — мок, гуляш `Svod!F31`, гамбургер `Svod!F63`.
  * Факт продаж — круглые и полукруглые: 95, 70, 100 и 85 ₽ с НДС.
  * НДС у всех товаров 20%. В книге у горячих `Svod!N31` 10%, у роллов `Svod!N63` 20%.
@@ -769,16 +782,17 @@ export const mockDocument: PrototypeDocument = {
   sales: salesFromOrders(orders),
   productionEntries: productionFromOrders(productionOrders),
   hrPositions: mockHrPositions,
-  hrMonthPlans: [],
-  hrDayFacts: [],
-  hrTaxRates: [],
+  hrMonthPlans: mockHrMonthPlans,
+  hrDayFacts: mockHrDayFacts,
+  hrTaxRates: mockHrTaxRates,
   transportCarriers: mockTransportCarriers,
-  transportHireMonthPlans: [],
-  transportHireDayFacts: [],
-  transportOwnMonthPlans: [],
-  transportOwnDayFacts: [],
+  transportHireMonthPlans: mockTransportHireMonthPlans,
+  transportHireDayFacts: mockTransportHireDayFacts,
+  transportVehicles: mockTransportVehicles,
+  transportOwnMonthPlans: mockTransportOwnMonthPlans,
+  transportOwnDayFacts: mockTransportOwnDayFacts,
   opexOtherLines: catalogOpexOtherLines(),
-  opexMonthLines: [],
+  opexMonthLines: mockOpexMonthLines,
   finishedGoodsOpenings,
   finishedGoodsNorms,
   materials: mockMaterials.materials,
@@ -836,6 +850,7 @@ export function createMockDocument(): PrototypeDocument {
       ...item,
       lines: item.lines.map((line) => ({ ...line })),
     })),
+    transportVehicles: mockDocument.transportVehicles.map((item) => ({ ...item })),
     transportOwnMonthPlans: mockDocument.transportOwnMonthPlans.map((item) => ({
       ...item,
       vehicles: item.vehicles.map((line) => ({ ...line })),

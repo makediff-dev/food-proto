@@ -12,9 +12,11 @@ import { useOpex } from '@/features/opex/use-opex';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
   ColumnLabel,
+  categoryNameRowClassName,
   cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
+  entityNameRowClassName,
   MoneyAmount,
   nameHeadingClassName,
   tableClassName,
@@ -23,8 +25,6 @@ import {
 
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
 const valueCell = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
-const nameCell =
-  'sticky left-0 z-10 border-b border-b-line border-r-[1.5px] border-r-muted bg-sheet px-3 py-2 text-left align-middle text-sm';
 
 export function TransportSummaryScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);
@@ -82,7 +82,7 @@ export function TransportSummaryScreen({ month }: { month: string }) {
                 <tbody>
                   {block.carriers.map((carrier) => (
                     <tr key={carrier.carrierId}>
-                      <th scope="row" className={nameCell}>
+                      <th scope="row" className={entityNameRowClassName('repeated')}>
                         {carrier.name}
                         {carrier.deleted ? ' (архив)' : ''}
                       </th>
@@ -107,7 +107,7 @@ export function TransportSummaryScreen({ month }: { month: string }) {
                     </tr>
                   ))}
                   <tr className="font-medium">
-                    <th scope="row" className={nameCell}>
+                    <th scope="row" className={categoryNameRowClassName(false)}>
                       Итого
                     </th>
                     <td className={`${valueCell} ${cellKindClassName.computed}`}>
@@ -171,8 +171,9 @@ export function TransportSummaryScreen({ month }: { month: string }) {
               <tbody>
                 {view.own.map((vehicle) => (
                   <tr key={vehicle.vehicleId}>
-                    <th scope="row" className={nameCell}>
+                    <th scope="row" className={entityNameRowClassName('repeated')}>
                       {vehicle.name}
+                      {vehicle.deleted ? ' (архив)' : ''}
                     </th>
                     <td className={`${valueCell} ${cellKindClassName.computed}`}>
                       <QuantityRead value={vehicle.litersPer100KmThousandths} unit="л" />
@@ -198,7 +199,7 @@ export function TransportSummaryScreen({ month }: { month: string }) {
                   </tr>
                 ))}
                 <tr className="font-medium">
-                  <th scope="row" className={nameCell}>
+                  <th scope="row" className={categoryNameRowClassName(false)}>
                     Итого
                   </th>
                   <td className={`${valueCell} ${cellKindClassName.computed}`} colSpan={3} />

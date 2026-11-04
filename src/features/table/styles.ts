@@ -18,8 +18,8 @@ export const cellKindClassName: Record<CellKind, string> = {
   repeated: 'cell-repeated',
 };
 
-/** Колонка названия: assigned — справочник правят на этом экране; repeated — из другой таблицы. */
-export type NameCellKind = 'assigned' | 'repeated';
+/** Колонка названия: assigned — справочник правят на этом экране; computed — формула; repeated — из другой таблицы. */
+export type NameCellKind = 'assigned' | 'computed' | 'repeated';
 
 export function nameCellKind(editable: boolean): NameCellKind {
   return editable ? 'assigned' : 'repeated';
