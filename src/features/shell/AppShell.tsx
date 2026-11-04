@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { type ReactNode, useEffect, useState } from 'react';
 
-import { useDocumentStore } from '@/data/DocumentProvider';
 import {
   DERIVATIVE_MOVEMENT_INVENTORY_HREF,
   DERIVATIVE_MOVEMENT_INVENTORY_TITLE,
@@ -58,13 +57,13 @@ import {
   RECIPES_SECTION_TITLE,
 } from '@/features/recipes/paths';
 import { roleHomeHref } from '@/features/roles/access';
-import { ROLES_HREF, ROLES_TITLE } from '@/features/roles/paths';
 import { RoleGate } from '@/features/roles/RoleGate';
 import { useRole } from '@/features/roles/RoleProvider';
-import { isRoleId, type NavSectionId, ROLES, roleHasSection } from '@/features/roles/roles';
+import { type NavSectionId, roleHasSection } from '@/features/roles/roles';
 import { SUMMARY_SECTION_TITLE } from '@/features/sales/paths';
 import { SALES_FACT_TITLE, SALES_JOURNAL_TITLE, SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
-import { IconChevronDown, IconChevronRight, IconMenu, IconUndo } from '@/features/shell/Icons';
+import { SETTINGS_HREF, SETTINGS_TITLE } from '@/features/settings/paths';
+import { IconChevronDown, IconChevronRight, IconMenu, IconSettings } from '@/features/shell/Icons';
 
 type NavKind = 'report' | 'input';
 
@@ -175,8 +174,8 @@ function navItemIsCurrent(pathname: string, item: NavItem): boolean {
 }
 
 function currentNavLabel(pathname: string): string | undefined {
-  if (sectionIsCurrent(pathname, ROLES_HREF)) {
-    return ROLES_TITLE;
+  if (sectionIsCurrent(pathname, SETTINGS_HREF)) {
+    return SETTINGS_TITLE;
   }
 
   for (const item of SALES_NAV) {
@@ -293,21 +292,21 @@ function NavGroup({
   );
 }
 
-function RolesNavLink({ pathname, onNavigate }: { pathname: string; onNavigate: () => void }) {
-  const current = sectionIsCurrent(pathname, ROLES_HREF);
+function SettingsNavLink({ pathname, onNavigate }: { pathname: string; onNavigate: () => void }) {
+  const current = sectionIsCurrent(pathname, SETTINGS_HREF);
 
   return (
-    <div className="pb-1">
+    <div className="border-t border-sidebar-line">
       <Link
-        href={ROLES_HREF}
+        href={SETTINGS_HREF}
         aria-current={current ? 'page' : undefined}
         onClick={onNavigate}
-        className={`flex w-full items-center gap-1 px-3 py-2 text-left text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+        className={`flex h-12 w-full items-center gap-2 px-4 text-left text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
           current ? 'bg-sidebar-active text-white' : 'text-white hover:bg-white/5'
         }`}
       >
-        <span className="inline-flex size-6 shrink-0" aria-hidden="true" />
-        <span>{ROLES_TITLE}</span>
+        <IconSettings />
+        <span>{SETTINGS_TITLE}</span>
       </Link>
     </div>
   );
@@ -393,13 +392,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               onNavigate={closeMenu}
             />
           ))}
-          {roleHasSection(role, 'roles') ? <RolesNavLink pathname={pathname} onNavigate={closeMenu} /> : null}
         </nav>
 
-        <div className="border-t border-sidebar-line">
-          <MockReset />
-          <RoleSwitcher />
-        </div>
+        {roleHasSection(role, 'roles') ? <SettingsNavLink pathname={pathname} onNavigate={closeMenu} /> : null}
       </aside>
 
       <div className="app-main flex min-h-0 min-w-0 flex-1 flex-col lg:pl-64">
@@ -420,69 +415,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           <RoleGate>{children}</RoleGate>
         </div>
       </div>
-    </div>
-  );
-}
-
-function MockReset() {
-  const { source, hydrated, storageError, resetToMock } = useDocumentStore();
-  const usingLocalData = source === 'local';
-
-  function handleReset() {
-    const confirmed = window.confirm(
-      'Вернуть мок-данные? Все записи в этом браузере будут стёрты. Останется гамбургер и план сентября.',
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    resetToMock();
-  }
-
-  return (
-    <div className="px-4 py-3">
-      <p className="text-xs leading-5 text-sidebar-muted" role={storageError ? 'alert' : undefined}>
-        {storageError ?? (usingLocalData ? 'Сохранено в этом браузере.' : 'Показаны мок-данные.')}
-      </p>
-      <button
-        type="button"
-        onClick={handleReset}
-        disabled={!hydrated || !usingLocalData}
-        className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 border border-white/50 px-3 text-sm text-white outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:border-sidebar-line disabled:text-sidebar-muted"
-      >
-        <IconUndo />
-        Вернуть мок-данные
-      </button>
-    </div>
-  );
-}
-
-function RoleSwitcher() {
-  const { roleId, setRole } = useRole();
-  const fieldId = 'app-menu-role';
-
-  return (
-    <div className="px-4 pt-1 pb-3">
-      <label htmlFor={fieldId} className="text-xs leading-5 text-sidebar-muted">
-        Роль
-      </label>
-      <select
-        id={fieldId}
-        value={roleId}
-        onChange={(event) => {
-          const next = event.target.value;
-          if (isRoleId(next)) {
-            setRole(next);
-          }
-        }}
-        className="mt-2 h-10 w-full border border-white/50 bg-sidebar px-2 text-sm text-white outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-      >
-        {ROLES.map((role) => (
-          <option key={role.id} value={role.id}>
-            {role.label}
-          </option>
-        ))}
-      </select>
     </div>
   );
 }

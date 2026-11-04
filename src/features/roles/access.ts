@@ -11,6 +11,7 @@ import {
 } from '@/features/recipes/paths';
 import { ROLES_HREF } from '@/features/roles/paths';
 import { type NavSectionId, type RoleDefinition, roleHasSection } from '@/features/roles/roles';
+import { SETTINGS_HREF } from '@/features/settings/paths';
 
 const SECTION_HOME: Record<NavSectionId, string> = {
   sales: '/',
@@ -20,7 +21,7 @@ const SECTION_HOME: Record<NavSectionId, string> = {
   derivativeMovement: DERIVATIVE_MOVEMENT_SUMMARY_HREF,
   materials: '/materials',
   opex: '/opex',
-  roles: ROLES_HREF,
+  roles: SETTINGS_HREF,
 };
 
 /** Prefer a working section home over the roles matrix page. */
@@ -41,11 +42,16 @@ export function roleHomeHref(role: RoleDefinition): string {
       return SECTION_HOME[section];
     }
   }
-  return ROLES_HREF;
+  return SETTINGS_HREF;
 }
 
 export function pathnameSection(pathname: string): NavSectionId | null {
-  if (pathname === ROLES_HREF || pathname.startsWith(`${ROLES_HREF}/`)) {
+  if (
+    pathname === SETTINGS_HREF ||
+    pathname.startsWith(`${SETTINGS_HREF}/`) ||
+    pathname === ROLES_HREF ||
+    pathname.startsWith(`${ROLES_HREF}/`)
+  ) {
     return 'roles';
   }
 
