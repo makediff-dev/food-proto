@@ -16,11 +16,6 @@ export interface CashflowMoneySide {
 export interface CashflowLineView {
   id: string;
   name: string;
-  /** Редактируемое поле факта кредита — только для строк получения/погашения/процентов. */
-  creditEdit?: {
-    creditorId: string;
-    field: 'factReceived' | 'factRepaid' | 'factInterest';
-  };
   amounts: CashflowMoneySide;
   children?: CashflowLineView[];
 }
@@ -44,16 +39,9 @@ function sumChildren(children: readonly CashflowLineView[]): CashflowMoneySide {
   );
 }
 
-function line(
-  id: string,
-  name: string,
-  plan: number,
-  fact: number,
-  children?: CashflowLineView[],
-  creditEdit?: CashflowLineView['creditEdit'],
-): CashflowLineView {
+function line(id: string, name: string, plan: number, fact: number, children?: CashflowLineView[]): CashflowLineView {
   const amounts = children && children.length > 0 ? sumChildren(children) : side(plan, fact);
-  return { id, name, amounts, children, creditEdit };
+  return { id, name, amounts, children };
 }
 
 function revenueSide(document: PrototypeDocument, month: string): CashflowMoneySide {
@@ -131,24 +119,13 @@ function taxBlock(document: PrototypeDocument, month: string): CashflowLineView 
 }
 
 function creditIncomeLines(rows: readonly CreditCreditorRowView[]): CashflowLineView[] {
-  return rows.map((row) =>
-    line(`credit-in:${row.creditorId}`, row.name, row.planReceived, row.factReceived, undefined, {
-      creditorId: row.creditorId,
-      field: 'factReceived',
-    }),
-  );
+  return rows.map((row) => line(`credit-in:${row.creditorId}`, row.name, row.planReceived, row.factReceived));
 }
 
 function creditExpenseLines(rows: readonly CreditCreditorRowView[]): CashflowLineView[] {
   return rows.flatMap((row) => [
-    line(`credit-repay:${row.creditorId}`, `Погашение · ${row.name}`, row.planRepaid, row.factRepaid, undefined, {
-      creditorId: row.creditorId,
-      field: 'factRepaid',
-    }),
-    line(`credit-interest:${row.creditorId}`, `Проценты · ${row.name}`, row.planInterest, row.factInterest, undefined, {
-      creditorId: row.creditorId,
-      field: 'factInterest',
-    }),
+    line(`credit-repay:${row.creditorId}`, `Погашение · ${row.name}`, row.planRepaid, row.factRepaid),
+    line(`credit-interest:${row.creditorId}`, `Проценты · ${row.name}`, row.planInterest, row.factInterest),
   ]);
 }
 

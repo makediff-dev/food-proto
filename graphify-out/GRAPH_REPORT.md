@@ -1,17 +1,17 @@
 # Graph Report - food-proto  (2026-11-06)
 
 ## Corpus Check
-- 265 files · ~156,042 words
+- 265 files · ~155,765 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 8 file(s) not represented in the graph (top: .mdc 5, (none) 1, .ico 1)
 
 ## Summary
-- 2466 nodes · 9539 edges · 79 communities (72 shown, 7 thin omitted)
+- 2466 nodes · 9536 edges · 79 communities (72 shown, 7 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 67 edges (avg confidence: 0.91)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c17fc2cc`
+- Built from commit: `47efe34b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -52,7 +52,7 @@
 - TransportFactScreen
 - document.ts
 - sales.ts
-- IconChevronDown
+- DerivativeCostTable.tsx
 - AppShell.tsx
 - flow.md
 - credit-resources/paths.ts
@@ -230,7 +230,7 @@ Nodes (29): nextConfig, next, MaterialsInventoryPage(), metadata, MaterialsNorms
 
 ### Community 21 - "index.ts"
 Cohesion: 0.08
-Nodes (63): MovementPlanGroup, MovementPlanRow, MovementPlanTotals, adjacentDay(), COLUMNS, ArrowButton(), COLUMN_GROUPS, COLUMN_KIND (+55 more)
+Nodes (68): MovementPlanGroup, MovementPlanRow, MovementPlanTotals, adjacentDay(), COLUMNS, ArrowButton(), COLUMN_GROUPS, COLUMN_KIND (+60 more)
 
 ### Community 22 - "production-plan.ts"
 Cohesion: 0.16
@@ -246,7 +246,7 @@ Nodes (17): Деньги, Категория и «Всего», Операцио
 
 ### Community 25 - "keepWithNext"
 Cohesion: 0.06
-Nodes (87): FinishedGoodsGroup, FinishedGoodsRow, FinishedGoodsTotals, CategoryBlock(), FinishedGoodsFactTable(), groupEndClass(), MetricCell(), ProductRow() (+79 more)
+Nodes (94): FinishedGoodsGroup, FinishedGoodsRow, FinishedGoodsTotals, TotalCell(), CategoryBlock(), FinishedGoodsFactTable(), groupEndClass(), MetricCell() (+86 more)
 
 ### Community 26 - "ProductionJournalFactScreen.tsx"
 Cohesion: 0.06
@@ -262,7 +262,7 @@ Nodes (20): costExVat(), addMoney(), addMoneyNullable(), bookClosingQuantity(), 
 
 ### Community 29 - "PageFrame"
 Cohesion: 0.07
-Nodes (98): react, metadata, OpexHrPlanPage(), creditResourcesMonthView, HR_DEPARTMENT_LABELS, CashflowFactScreen(), inputKind(), CashflowSummaryScreen() (+90 more)
+Nodes (87): react, metadata, OpexHrPlanPage(), creditResourcesMonthView, HR_DEPARTMENT_LABELS, CashflowFactScreen(), inputKind(), CashflowSummaryScreen() (+79 more)
 
 ### Community 30 - "production-fact.ts"
 Cohesion: 0.15
@@ -288,9 +288,9 @@ Nodes (27): Creditor, CreditResourceMonthLine, DeletableRecord, FinishedGoodsNor
 Cohesion: 0.34
 Nodes (14): SaleLine, productAllowedInPeriodSale(), addSale(), addSaleRejection(), deleteSale(), lineRejection(), normalizeCustomer(), replaceSales() (+6 more)
 
-### Community 36 - "IconChevronDown"
+### Community 36 - "DerivativeCostTable.tsx"
 Cohesion: 0.09
-Nodes (52): WorkshopBlock(), WorkshopBlock(), GroupBlock(), SectionBlock(), CategoryBlock(), editableFieldNear(), ProductRow(), CategoryBlock() (+44 more)
+Nodes (38): editableFieldNear(), ProductRow(), editableFieldNear(), ProductRow(), ProductRow(), COLUMN_GROUPS, COLUMN_KIND, columnEdgeClass() (+30 more)
 
 ### Community 37 - "AppShell.tsx"
 Cohesion: 0.08
@@ -386,7 +386,7 @@ Nodes (3): submit(), AddProductDialog(), submit()
 
 ### Community 62 - "SummaryTable.tsx"
 Cohesion: 0.16
-Nodes (22): averagedUnitCost(), CategoryBlock(), editableFieldNear(), FACT_REPEATED, factColumnKind(), FINANCE_SIDE_KEYS, PLAN_ASSIGNED, PLAN_REPEATED (+14 more)
+Nodes (20): averagedUnitCost(), CategoryBlock(), editableFieldNear(), FACT_REPEATED, factColumnKind(), FINANCE_SIDE_KEYS, PLAN_ASSIGNED, PLAN_REPEATED (+12 more)
 
 ### Community 63 - "Отчет общий движения производных"
 Cohesion: 0.12
@@ -417,8 +417,8 @@ Cohesion: 0.08
 Nodes (41): isOpexGroupCode(), OpexGroupCode, OpexMonthLine, OpexMonthLines, activeOtherLines(), addOpexOtherLine(), addOpexOtherLineRejection(), AGENCY_FEE_PERCENT (+33 more)
 
 ### Community 75 - "MaterialReceiptFormTable.tsx"
-Cohesion: 0.08
-Nodes (37): buildGroups(), COLUMN_KIND, ColumnKey, COLUMNS, EntryFormGroup, EntryFormTotals, groupTotals(), MaterialReceiptFormTable() (+29 more)
+Cohesion: 0.07
+Nodes (52): toggle(), LineRows(), WorkshopBlock(), WorkshopBlock(), buildGroups(), COLUMN_KIND, ColumnKey, COLUMNS (+44 more)
 
 ### Community 79 - "DerivativeCompositionEditor"
 Cohesion: 0.33
@@ -440,17 +440,17 @@ Nodes (4): Как собрать первый прототип, Подсказк
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `next` connect `next` to `FinishedProductEditScreen.tsx`, `ProductionEntryScreen.tsx`, `products.ts`, `derivative-movement.ts`, `package.json`, `DerivativeCreateScreen.tsx`, `monthKeyFromDate`, `opex/paths.ts`, `MaterialsPlanScreen.tsx`, `RecipeJournalsTable.tsx`, `SaleScreen.tsx`, `ProductionJournalFactScreen.tsx`, `RoleProvider.tsx`, `PageFrame`, `FinishedGoodsMonthScreen.tsx`, `cashflow/paths.ts`, `TransportFactScreen`, `AppShell.tsx`, `credit-resources/paths.ts`, `SummaryScreen.tsx`, `derivatives.ts`, `useRole`, `recipes/paths.ts`, `SalesJournalScreen.tsx`, `settings/page.tsx`, `sales/page.tsx`, `FinishedProductEditScreen`?**
+- **Why does `next` connect `next` to `FinishedProductEditScreen.tsx`, `ProductionEntryScreen.tsx`, `products.ts`, `derivative-movement.ts`, `package.json`, `DerivativeCreateScreen.tsx`, `monthKeyFromDate`, `opex/paths.ts`, `MaterialsPlanScreen.tsx`, `RecipeJournalsTable.tsx`, `SaleScreen.tsx`, `index.ts`, `ProductionJournalFactScreen.tsx`, `RoleProvider.tsx`, `PageFrame`, `FinishedGoodsMonthScreen.tsx`, `cashflow/paths.ts`, `TransportFactScreen`, `AppShell.tsx`, `credit-resources/paths.ts`, `SummaryScreen.tsx`, `derivatives.ts`, `useRole`, `recipes/paths.ts`, `SalesJournalScreen.tsx`, `settings/page.tsx`, `sales/page.tsx`, `FinishedProductEditScreen`?**
   _High betweenness centrality (0.067) - this node is a cross-community bridge._
 - **What connects `@biomejs/biome`, `@tailwindcss/postcss`, `@types/node` to the rest of the system?**
   _8 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `ProductionEntryScreen.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.05421686746987952 - nodes in this community are weakly interconnected._
-- **Why does `monthKeyFromDate()` connect `monthKeyFromDate` to `ProductionEntryScreen.tsx`, `products.ts`, `derivative-movement.ts`, `MaterialsPlanScreen.tsx`, `SaleScreen.tsx`, `next`, `ProductionJournalFactScreen.tsx`, `PageFrame`, `production-fact.ts`, `FinishedGoodsMonthScreen.tsx`, `TransportFactScreen`, `sales.ts`, `SummaryScreen.tsx`, `useRole`, `hr.ts`, `finished-goods.ts`, `sales-plan.ts`, `recipes/paths.ts`, `SalesJournalScreen.tsx`, `sales/page.tsx`?**
-  _High betweenness centrality (0.060) - this node is a cross-community bridge._
+- **Why does `monthKeyFromDate()` connect `monthKeyFromDate` to `ProductionEntryScreen.tsx`, `products.ts`, `derivative-movement.ts`, `MaterialsPlanScreen.tsx`, `SaleScreen.tsx`, `next`, `index.ts`, `ProductionJournalFactScreen.tsx`, `PageFrame`, `production-fact.ts`, `FinishedGoodsMonthScreen.tsx`, `TransportFactScreen`, `sales.ts`, `SummaryScreen.tsx`, `useRole`, `hr.ts`, `finished-goods.ts`, `sales-plan.ts`, `recipes/paths.ts`, `SalesJournalScreen.tsx`, `sales/page.tsx`, `MaterialReceiptFormTable.tsx`?**
+  _High betweenness centrality (0.059) - this node is a cross-community bridge._
 - **Should `products.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.06760316066725197 - nodes in this community are weakly interconnected._
-- **Why does `react` connect `PageFrame` to `FinishedProductEditScreen.tsx`, `ProductionEntryScreen.tsx`, `products.ts`, `derivative-movement.ts`, `package.json`, `DerivativeCreateScreen.tsx`, `monthKeyFromDate`, `MaterialsPlanScreen.tsx`, `RecipeJournalsTable.tsx`, `SaleScreen.tsx`, `next`, `index.ts`, `Icons.tsx`, `keepWithNext`, `ProductionJournalFactScreen.tsx`, `RoleProvider.tsx`, `FinishedGoodsMonthScreen.tsx`, `IconChevronDown`, `AppShell.tsx`, `SummaryScreen.tsx`, `useRole`, `recipes/paths.ts`, `SalesJournalScreen.tsx`, `SummaryTable.tsx`, `DocumentProvider.tsx`, `SaleFormTable.tsx`, `MaterialReceiptFormTable.tsx`?**
+- **Why does `react` connect `PageFrame` to `FinishedProductEditScreen.tsx`, `ProductionEntryScreen.tsx`, `products.ts`, `derivative-movement.ts`, `package.json`, `DerivativeCreateScreen.tsx`, `monthKeyFromDate`, `MaterialsPlanScreen.tsx`, `RecipeJournalsTable.tsx`, `SaleScreen.tsx`, `next`, `index.ts`, `Icons.tsx`, `keepWithNext`, `ProductionJournalFactScreen.tsx`, `RoleProvider.tsx`, `FinishedGoodsMonthScreen.tsx`, `DerivativeCostTable.tsx`, `AppShell.tsx`, `SummaryScreen.tsx`, `useRole`, `recipes/paths.ts`, `SalesJournalScreen.tsx`, `SummaryTable.tsx`, `DocumentProvider.tsx`, `SaleFormTable.tsx`, `MaterialReceiptFormTable.tsx`?**
   _High betweenness centrality (0.035) - this node is a cross-community bridge._
 - **Should `derivative-movement.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.06519114688128773 - nodes in this community are weakly interconnected._

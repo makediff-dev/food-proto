@@ -52,7 +52,7 @@ export function CreditResourcesFactScreen({ month }: { month: string }) {
     <PageFrame
       title={CREDIT_RESOURCES_FACT_TITLE}
       full
-      lede="Фактическое получение, погашение тела и процентные платежи по кредиторам. Те же суммы правят во «Вводе факта» ДДС."
+      lede="Фактическое получение, погашение тела и процентные платежи по кредиторам. Суммы сами попадают в отчёт ДДС и в процентные платежи свода продаж."
       intro={
         <CreditMonthBar
           month={selectedMonth}
