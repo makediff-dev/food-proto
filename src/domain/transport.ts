@@ -44,9 +44,12 @@ export interface TransportHireCarrierView {
   planUnitPriceExVat: number;
   planAmountExVat: number;
   factQuantityThousandths: number;
+  /** Сумма / количество; без факта количества — 0. */
   factUnitPriceExVat: number;
   factAmountExVat: number;
   varianceQuantityThousandths: number;
+  /** Факт − план; без факта количества — null. */
+  varianceUnitPriceExVat: number | null;
   varianceAmountExVat: number;
 }
 
@@ -61,6 +64,8 @@ export interface TransportHireBlockView {
   factQuantityThousandths: number;
   factUnitPriceExVat: number;
   factAmountExVat: number;
+  varianceQuantityThousandths: number;
+  varianceUnitPriceExVat: number | null;
   varianceAmountExVat: number;
 }
 
@@ -218,6 +223,7 @@ export function transportMonthView(document: PrototypeDocument, month: string): 
           }
         }
       }
+      const factPrice = unitPrice(factAmount, factQty);
       return {
         carrierId: carrier.id,
         name: carrier.name,
@@ -226,9 +232,10 @@ export function transportMonthView(document: PrototypeDocument, month: string): 
         planUnitPriceExVat: planPrice,
         planAmountExVat: planAmount,
         factQuantityThousandths: factQty,
-        factUnitPriceExVat: unitPrice(factAmount, factQty),
+        factUnitPriceExVat: factPrice,
         factAmountExVat: factAmount,
         varianceQuantityThousandths: factQty - planQty,
+        varianceUnitPriceExVat: factQty > 0 ? factPrice - planPrice : null,
         varianceAmountExVat: factAmount - planAmount,
       };
     });
@@ -236,17 +243,21 @@ export function transportMonthView(document: PrototypeDocument, month: string): 
     const planAmount = views.reduce((sum, item) => sum + item.planAmountExVat, 0);
     const factQty = views.reduce((sum, item) => sum + item.factQuantityThousandths, 0);
     const factAmount = views.reduce((sum, item) => sum + item.factAmountExVat, 0);
+    const planPrice = unitPrice(planAmount, planQty);
+    const factPrice = unitPrice(factAmount, factQty);
     return {
       kind,
       name: TRANSPORT_HIRE_LABELS[kind],
       quantityUnit: kind === 'materialDelivery' ? 'кг' : 'шт',
       carriers: views,
       planQuantityThousandths: planQty,
-      planUnitPriceExVat: unitPrice(planAmount, planQty),
+      planUnitPriceExVat: planPrice,
       planAmountExVat: planAmount,
       factQuantityThousandths: factQty,
-      factUnitPriceExVat: unitPrice(factAmount, factQty),
+      factUnitPriceExVat: factPrice,
       factAmountExVat: factAmount,
+      varianceQuantityThousandths: factQty - planQty,
+      varianceUnitPriceExVat: factQty > 0 ? factPrice - planPrice : null,
       varianceAmountExVat: factAmount - planAmount,
     };
   });
