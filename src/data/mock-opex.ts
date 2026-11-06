@@ -45,27 +45,39 @@ export const mockHrPositions: HrPosition[] = [
   staff('hr-admin-cleaner', 'admin', 'Мастер чистоты'),
   staff('hr-admin-storekeeper', 'admin', 'Кладовщик'),
 
-  staff('hr-meat-foreman', 'meat', 'Бригадир цеха'),
-  staff('hr-meat-mince', 'meat', 'Оператор фаршесоставления'),
-  staff('hr-meat-former', 'meat', 'Формовщик'),
-  staff('hr-meat-heat', 'meat', 'Оператор термообработки'),
-  outsourcing('meat'),
+  staff('hr-meat-1-foreman', 'meat-1', 'Бригадир цеха'),
+  staff('hr-meat-1-mince', 'meat-1', 'Оператор фаршесоставления'),
+  staff('hr-meat-1-former', 'meat-1', 'Формовщик'),
+  staff('hr-meat-1-heat', 'meat-1', 'Оператор термообработки'),
+  outsourcing('meat-1'),
+  outsourcing('meat-2'),
 
-  staff('hr-bakery-foreman', 'bakery', 'Бригадир цеха'),
-  staff('hr-bakery-dough', 'bakery', 'Оператор тестомеса'),
-  staff('hr-bakery-divider', 'bakery', 'Оператор тестоделителя-округлителя'),
-  staff('hr-bakery-heat', 'bakery', 'Оператор термообработки'),
-  staff('hr-bakery-cool', 'bakery', 'Оператор охлаждения'),
-  outsourcing('bakery'),
+  staff('hr-bakery-1-foreman', 'bakery-1', 'Бригадир цеха'),
+  staff('hr-bakery-1-dough', 'bakery-1', 'Оператор тестомеса'),
+  staff('hr-bakery-1-divider', 'bakery-1', 'Оператор тестоделителя-округлителя'),
+  staff('hr-bakery-1-heat', 'bakery-1', 'Оператор термообработки'),
+  staff('hr-bakery-1-cool', 'bakery-1', 'Оператор охлаждения'),
+  outsourcing('bakery-1'),
+  outsourcing('bakery-2'),
 
-  staff('hr-veg-operator', 'vegetables', 'Оператор овощного цеха'),
-  outsourcing('vegetables'),
+  staff('hr-veg-1-operator', 'vegetables-1', 'Оператор овощного цеха'),
+  outsourcing('vegetables-1'),
+  outsourcing('vegetables-2'),
 
-  staff('hr-assembly-foreman', 'assembly', 'Бригадир цеха'),
-  staff('hr-assembly-line', 'assembly', 'Оператор сборочной линии Крумбайн'),
-  staff('hr-assembly-pack', 'assembly', 'Оператор упаковочных машин'),
-  staff('hr-assembly-loader', 'assembly', 'Грузчик-сборщик'),
-  outsourcing('assembly'),
+  staff('hr-soup-1-operator', 'soup-1', 'Оператор цеха варки'),
+  outsourcing('soup-1'),
+  outsourcing('soup-2'),
+
+  staff('hr-sides-1-operator', 'sides-1', 'Оператор цеха гарниров'),
+  outsourcing('sides-1'),
+  outsourcing('sides-2'),
+
+  staff('hr-assembly-1-foreman', 'assembly-1', 'Бригадир цеха'),
+  staff('hr-assembly-1-line', 'assembly-1', 'Оператор сборочной линии Крумбайн'),
+  staff('hr-assembly-1-pack', 'assembly-1', 'Оператор упаковочных машин'),
+  staff('hr-assembly-1-loader', 'assembly-1', 'Грузчик-сборщик'),
+  outsourcing('assembly-1'),
+  outsourcing('assembly-2'),
 
   staff('hr-dc-chief', 'dc', 'Начальник РЦ'),
   staff('hr-dc-loader', 'dc', 'Грузчик-сборщик'),
@@ -117,7 +129,7 @@ type MockMonth = (typeof MOCK_MONTHS)[number];
 
 const NOVEMBER_FACT_UNTIL = '2026-11-04';
 const OCTOBER_ASSEMBLY_UNTIL = '2026-10-20';
-const ASSEMBLY_POSITION_ID = 'hr-assembly-line';
+const ASSEMBLY_POSITION_ID = 'hr-assembly-1-line';
 
 const SHIPMENT_DAYS: Record<MockMonth, readonly string[]> = {
   '2026-09': ['2026-09-03', '2026-09-10', '2026-09-18'],
@@ -150,22 +162,22 @@ interface OutsourcingSeed {
 }
 
 const OUTSOURCING_PLAN: readonly OutsourcingSeed[] = [
-  { departmentId: 'meat', hourThousandths: people(3), rateRub: 80 },
-  { departmentId: 'assembly', hourThousandths: people(2), rateRub: 80 },
+  { departmentId: 'meat-1', hourThousandths: people(3), rateRub: 80 },
+  { departmentId: 'assembly-1', hourThousandths: people(2), rateRub: 80 },
 ];
 
 const OUTSOURCING_FACT: Record<MockMonth, readonly OutsourcingSeed[]> = {
   '2026-09': [
-    { departmentId: 'meat', hourThousandths: 3_300, rateRub: 80 },
-    { departmentId: 'assembly', hourThousandths: 2_200, rateRub: 90 },
+    { departmentId: 'meat-1', hourThousandths: 3_300, rateRub: 80 },
+    { departmentId: 'assembly-1', hourThousandths: 2_200, rateRub: 90 },
   ],
   '2026-10': [
-    { departmentId: 'meat', hourThousandths: 2_400, rateRub: 80 },
-    { departmentId: 'assembly', hourThousandths: 1_200, rateRub: 80 },
+    { departmentId: 'meat-1', hourThousandths: 2_400, rateRub: 80 },
+    { departmentId: 'assembly-1', hourThousandths: 1_200, rateRub: 80 },
   ],
   '2026-11': [
-    { departmentId: 'meat', hourThousandths: 400, rateRub: 80 },
-    { departmentId: 'assembly', hourThousandths: 200, rateRub: 80 },
+    { departmentId: 'meat-1', hourThousandths: 400, rateRub: 80 },
+    { departmentId: 'assembly-1', hourThousandths: 200, rateRub: 80 },
   ],
 };
 

@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 57 as const;
+export const SCHEMA_VERSION = 58 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -165,26 +165,57 @@ export interface ProductionEntry {
 }
 
 /**
- * Подразделения листа `HR`. Не склады сырья и не цеха рецептов «1/2».
+ * Подразделения листа `HR`. Не склады сырья и не цеха рецептов.
+ * Производственные цеха — по две линии («1» / «2»); администрация и цех готовой продукции без дубля.
  * У администрации нет строки аутсорсинга.
  */
-export type HrDepartmentId = 'admin' | 'meat' | 'bakery' | 'vegetables' | 'assembly' | 'dc';
+export type HrDepartmentId =
+  | 'admin'
+  | 'meat-1'
+  | 'meat-2'
+  | 'bakery-1'
+  | 'bakery-2'
+  | 'vegetables-1'
+  | 'vegetables-2'
+  | 'soup-1'
+  | 'soup-2'
+  | 'sides-1'
+  | 'sides-2'
+  | 'assembly-1'
+  | 'assembly-2'
+  | 'dc';
 
 export const HR_DEPARTMENT_IDS = [
   'admin',
-  'meat',
-  'bakery',
-  'vegetables',
-  'assembly',
+  'meat-1',
+  'meat-2',
+  'bakery-1',
+  'bakery-2',
+  'vegetables-1',
+  'vegetables-2',
+  'soup-1',
+  'soup-2',
+  'sides-1',
+  'sides-2',
+  'assembly-1',
+  'assembly-2',
   'dc',
 ] as const satisfies readonly HrDepartmentId[];
 
-/** Производственные цеха и РЦ — есть аутсорсинг и дневной факт. Порядок как у сырья и производных: мясо, пекарня… */
+/** Производственные цеха и цех готовой продукции — есть аутсорсинг. Порядок: мясо… сборка, затем готовая. */
 export const HR_SHOP_DEPARTMENT_IDS = [
-  'meat',
-  'bakery',
-  'vegetables',
-  'assembly',
+  'meat-1',
+  'meat-2',
+  'bakery-1',
+  'bakery-2',
+  'vegetables-1',
+  'vegetables-2',
+  'soup-1',
+  'soup-2',
+  'sides-1',
+  'sides-2',
+  'assembly-1',
+  'assembly-2',
   'dc',
 ] as const satisfies readonly Exclude<HrDepartmentId, 'admin'>[];
 

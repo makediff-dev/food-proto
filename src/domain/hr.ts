@@ -128,10 +128,18 @@ export interface HrMonthView {
 
 export const HR_DEPARTMENT_LABELS: Record<HrDepartmentId, string> = {
   admin: 'Администрация',
-  meat: 'Мясной цех',
-  bakery: 'Пекарня',
-  vegetables: 'Овощной цех',
-  assembly: 'Цех сборки и упаковки',
+  'meat-1': 'Мясной цех 1',
+  'meat-2': 'Мясной цех 2',
+  'bakery-1': 'Пекарня 1',
+  'bakery-2': 'Пекарня 2',
+  'vegetables-1': 'Овощной цех 1',
+  'vegetables-2': 'Овощной цех 2',
+  'soup-1': 'Цех варки супов и каш 1',
+  'soup-2': 'Цех варки супов и каш 2',
+  'sides-1': 'Цех гарниров 1',
+  'sides-2': 'Цех гарниров 2',
+  'assembly-1': 'Цех сборки и упаковки 1',
+  'assembly-2': 'Цех сборки и упаковки 2',
   dc: 'Цех готовой продукции',
 };
 
@@ -428,13 +436,7 @@ export function hrMonthView(document: PrototypeDocument, month: string): HrMonth
   });
 
   const admin = departments.find((item) => item.departmentId === 'admin');
-  const production = departments.filter(
-    (item) =>
-      item.departmentId === 'bakery' ||
-      item.departmentId === 'meat' ||
-      item.departmentId === 'vegetables' ||
-      item.departmentId === 'assembly',
-  );
+  const production = departments.filter((item) => item.departmentId !== 'admin' && item.departmentId !== 'dc');
   const dc = departments.find((item) => item.departmentId === 'dc');
 
   const planHeadcount =
