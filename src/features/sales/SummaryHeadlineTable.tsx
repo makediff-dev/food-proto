@@ -22,7 +22,7 @@ const labelCellClassName =
 
 const valueCellClassName = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
 
-type HeadlineRowId = 'revenue' | 'contribution' | 'opex' | 'profit' | 'tax' | 'net' | 'rentability';
+type HeadlineRowId = 'revenue' | 'contribution' | 'opex' | 'profit' | 'tax' | 'interest' | 'net' | 'rentability';
 
 function headlineKind(side: 'plan' | 'fact' | 'variance'): CellKind {
   void side;
@@ -35,6 +35,7 @@ const ROWS: { id: HeadlineRowId; label: string }[] = [
   { id: 'opex', label: 'Операционные расходы' },
   { id: 'profit', label: 'Прибыль' },
   { id: 'tax', label: 'Налог на прибыль' },
+  { id: 'interest', label: 'Процентные платежи' },
   { id: 'net', label: 'Чистая прибыль' },
   { id: 'rentability', label: 'Рентабельность' },
 ];
@@ -189,6 +190,9 @@ function HeadlineValue({
   if (row === 'tax') {
     return <MoneyCell value={values.profitTax} />;
   }
+  if (row === 'interest') {
+    return <MoneyCell value={values.interestExpense} />;
+  }
   if (row === 'net') {
     return <MoneyCell value={values.netProfit} />;
   }
@@ -213,6 +217,9 @@ function VarianceValue({ row, headline }: { row: HeadlineRowId; headline: Headli
   }
   if (row === 'tax') {
     return <MoneyCell value={variance.profitTax} signed sense="cost" />;
+  }
+  if (row === 'interest') {
+    return <MoneyAmount amount={variance.interestExpense} signed sense="cost" />;
   }
   if (row === 'net') {
     return <MoneyCell value={variance.netProfit} signed />;

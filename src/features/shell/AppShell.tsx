@@ -5,6 +5,22 @@ import { usePathname } from 'next/navigation';
 import { type ReactNode, useEffect, useState } from 'react';
 
 import {
+  CASHFLOW_FACT_HREF,
+  CASHFLOW_FACT_TITLE,
+  CASHFLOW_SECTION_TITLE,
+  CASHFLOW_SUMMARY_HREF,
+  CASHFLOW_SUMMARY_TITLE,
+} from '@/features/cashflow/paths';
+import {
+  CREDIT_RESOURCES_FACT_HREF,
+  CREDIT_RESOURCES_FACT_TITLE,
+  CREDIT_RESOURCES_PLAN_HREF,
+  CREDIT_RESOURCES_PLAN_TITLE,
+  CREDIT_RESOURCES_SECTION_TITLE,
+  CREDIT_RESOURCES_SUMMARY_HREF,
+  CREDIT_RESOURCES_SUMMARY_TITLE,
+} from '@/features/credit-resources/paths';
+import {
   DERIVATIVE_MOVEMENT_INVENTORY_HREF,
   DERIVATIVE_MOVEMENT_INVENTORY_TITLE,
   DERIVATIVE_MOVEMENT_PLAN_HREF,
@@ -145,6 +161,27 @@ const OPEX_NAV: readonly NavItem[] = [
   { href: '/opex/other/fact', label: `${OPEX_OTHER_TITLE} · ${OPEX_OTHER_FACT_TITLE}`, navKind: 'input' },
 ];
 
+const CREDIT_RESOURCES_NAV: readonly NavItem[] = [
+  {
+    href: CREDIT_RESOURCES_SUMMARY_HREF,
+    label: CREDIT_RESOURCES_SUMMARY_TITLE,
+    exact: true,
+    navKind: 'report',
+  },
+  { href: CREDIT_RESOURCES_PLAN_HREF, label: CREDIT_RESOURCES_PLAN_TITLE, navKind: 'input' },
+  { href: CREDIT_RESOURCES_FACT_HREF, label: CREDIT_RESOURCES_FACT_TITLE, navKind: 'input' },
+];
+
+const CASHFLOW_NAV: readonly NavItem[] = [
+  {
+    href: CASHFLOW_SUMMARY_HREF,
+    label: CASHFLOW_SUMMARY_TITLE,
+    exact: true,
+    navKind: 'report',
+  },
+  { href: CASHFLOW_FACT_HREF, label: CASHFLOW_FACT_TITLE, navKind: 'input' },
+];
+
 function sectionIsCurrent(pathname: string, href: string): boolean {
   if (href === '/') {
     return pathname === '/';
@@ -214,6 +251,18 @@ function currentNavLabel(pathname: string): string | undefined {
   }
 
   for (const item of OPEX_NAV) {
+    if (navItemIsCurrent(pathname, item)) {
+      return item.label;
+    }
+  }
+
+  for (const item of CREDIT_RESOURCES_NAV) {
+    if (navItemIsCurrent(pathname, item)) {
+      return item.label;
+    }
+  }
+
+  for (const item of CASHFLOW_NAV) {
     if (navItemIsCurrent(pathname, item)) {
       return item.label;
     }
@@ -325,6 +374,8 @@ const NAV_GROUPS: readonly { section: NavSectionId; title: string; items: readon
   { section: 'derivativeMovement', title: DERIVATIVE_MOVEMENT_SECTION_TITLE, items: DERIVATIVE_MOVEMENT_NAV },
   { section: 'materials', title: MATERIALS_SECTION_TITLE, items: MATERIALS_NAV },
   { section: 'opex', title: OPEX_SECTION_TITLE, items: OPEX_NAV },
+  { section: 'creditResources', title: CREDIT_RESOURCES_SECTION_TITLE, items: CREDIT_RESOURCES_NAV },
+  { section: 'cashflow', title: CASHFLOW_SECTION_TITLE, items: CASHFLOW_NAV },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {

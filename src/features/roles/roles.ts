@@ -10,6 +10,8 @@ export type NavSectionId =
   | 'derivativeMovement'
   | 'materials'
   | 'opex'
+  | 'creditResources'
+  | 'cashflow'
   | 'roles';
 
 export const ALL_NAV_SECTIONS: readonly NavSectionId[] = [
@@ -20,6 +22,8 @@ export const ALL_NAV_SECTIONS: readonly NavSectionId[] = [
   'derivativeMovement',
   'materials',
   'opex',
+  'creditResources',
+  'cashflow',
   'roles',
 ];
 
@@ -36,6 +40,7 @@ export type RolePermissions = {
   canEditInventory: boolean;
   canEditMaterialsPlan: boolean;
   canEditMaterialReceipts: boolean;
+  canEditCreditAndCashflow: boolean;
   canViewSalesFinance: boolean;
 };
 
@@ -58,6 +63,7 @@ const ALL_EDIT: Omit<RolePermissions, 'sections'> = {
   canEditInventory: true,
   canEditMaterialsPlan: true,
   canEditMaterialReceipts: true,
+  canEditCreditAndCashflow: true,
   canViewSalesFinance: true,
 };
 
@@ -73,6 +79,7 @@ const NO_EDIT: Omit<RolePermissions, 'sections'> = {
   canEditInventory: false,
   canEditMaterialsPlan: false,
   canEditMaterialReceipts: false,
+  canEditCreditAndCashflow: false,
   canViewSalesFinance: false,
 };
 
@@ -118,6 +125,7 @@ export const ROLES: readonly RoleDefinition[] = [
     canEditSalesOpex: true,
     canEditInventory: true,
     canEditMaterialsPlan: true,
+    canEditCreditAndCashflow: true,
     canViewSalesFinance: true,
   },
   {
@@ -142,6 +150,8 @@ export const PERMISSION_MATRIX_ROWS: readonly PermissionMatrixRow[] = [
   { kind: 'section', section: 'derivativeMovement', label: 'Раздел «Движение производных»' },
   { kind: 'section', section: 'materials', label: 'Раздел «Сырьё и материалы»' },
   { kind: 'section', section: 'opex', label: 'Раздел «Операционные расходы»' },
+  { kind: 'section', section: 'creditResources', label: 'Раздел «Движение кредитных ресурсов»' },
+  { kind: 'section', section: 'cashflow', label: 'Раздел «Движение денежных средств»' },
   { kind: 'flag', key: 'canEditSalesPlan', label: 'Правит план продаж' },
   { kind: 'flag', key: 'canEditSalesFact', label: 'Правит факт продаж' },
   { kind: 'flag', key: 'canEditSalesCatalog', label: 'Правит товары и категории' },
@@ -154,6 +164,7 @@ export const PERMISSION_MATRIX_ROWS: readonly PermissionMatrixRow[] = [
   { kind: 'flag', key: 'canEditInventory', label: 'Правит инвентаризацию' },
   { kind: 'flag', key: 'canEditMaterialsPlan', label: 'Правит план сырья' },
   { kind: 'flag', key: 'canEditMaterialReceipts', label: 'Правит приходы сырья' },
+  { kind: 'flag', key: 'canEditCreditAndCashflow', label: 'Правит кредиты и ДДС' },
 ];
 
 export function isRoleId(value: string): value is RoleId {

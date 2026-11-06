@@ -1,3 +1,4 @@
+import { mockCreditors, mockCreditResourceMonths, mockInitialCashBalance } from '@/data/mock-credit';
 import { mockMaterials } from '@/data/mock-materials';
 import {
   mockHrDayFacts,
@@ -43,6 +44,7 @@ import {
  * Факт ноября — одна отгрузка 2 ноября: продажи 45, 90, 80 и 100; выпуск 50, 85, 90 и 110.
  * Это около десятой плана (3 дня из 30), чтобы прогноз месяца не раздувался. Инвентаризации ноября нет.
  * Операционные расходы, HR и транспорт — справочники из книги; суммы сентября, октября и ноября в `mock-opex.ts`.
+ * Кредитные ресурсы — Т-Банк (18 %), тело и проценты сентября–ноября в `mock-credit.ts`; стартовый остаток ДДС там же.
  * Нормативы движения — сентябрь, октябрь и ноябрь.
  * Плановые цены с НДС: салаты — мок, гуляш `Svod!F31`, гамбургер `Svod!F63`.
  * Факт продаж — круглые и полукруглые: 95, 70, 100 и 85 ₽ с НДС.
@@ -805,6 +807,9 @@ export const mockDocument: PrototypeDocument = {
   derivatives: mockDerivatives,
   derivativeOpenings: [],
   derivativeNorms: [],
+  creditors: mockCreditors,
+  creditResourceMonths: mockCreditResourceMonths,
+  initialCashBalance: mockInitialCashBalance,
 };
 
 export function createMockDocument(): PrototypeDocument {
@@ -904,5 +909,11 @@ export function createMockDocument(): PrototypeDocument {
       ...item,
       lines: item.lines.map((line) => ({ ...line })),
     })),
+    creditors: mockDocument.creditors.map((item) => ({ ...item })),
+    creditResourceMonths: mockDocument.creditResourceMonths.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    initialCashBalance: mockDocument.initialCashBalance,
   };
 }

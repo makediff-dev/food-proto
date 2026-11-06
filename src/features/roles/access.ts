@@ -1,3 +1,5 @@
+import { CASHFLOW_SUMMARY_HREF } from '@/features/cashflow/paths';
+import { CREDIT_RESOURCES_SUMMARY_HREF } from '@/features/credit-resources/paths';
 import {
   DERIVATIVE_MOVEMENT_INVENTORY_HREF,
   DERIVATIVE_MOVEMENT_PLAN_HREF,
@@ -21,6 +23,8 @@ const SECTION_HOME: Record<NavSectionId, string> = {
   derivativeMovement: DERIVATIVE_MOVEMENT_SUMMARY_HREF,
   materials: '/materials',
   opex: '/opex',
+  creditResources: CREDIT_RESOURCES_SUMMARY_HREF,
+  cashflow: CASHFLOW_SUMMARY_HREF,
   roles: SETTINGS_HREF,
 };
 
@@ -33,6 +37,8 @@ const HOME_SECTION_ORDER: readonly NavSectionId[] = [
   'derivativeMovement',
   'materials',
   'opex',
+  'creditResources',
+  'cashflow',
   'roles',
 ];
 
@@ -85,6 +91,14 @@ export function pathnameSection(pathname: string): NavSectionId | null {
 
   if (pathname === '/opex' || pathname.startsWith('/opex/')) {
     return 'opex';
+  }
+
+  if (pathname === CREDIT_RESOURCES_SUMMARY_HREF || pathname.startsWith(`${CREDIT_RESOURCES_SUMMARY_HREF}/`)) {
+    return 'creditResources';
+  }
+
+  if (pathname === CASHFLOW_SUMMARY_HREF || pathname.startsWith(`${CASHFLOW_SUMMARY_HREF}/`)) {
+    return 'cashflow';
   }
 
   if (pathname === '/movement' || pathname.startsWith('/movement/')) {

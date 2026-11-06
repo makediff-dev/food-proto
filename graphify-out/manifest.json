@@ -84,9 +84,9 @@
     "semantic_hash": "66c2951a711a3c1f4596fa8fff571b2d"
   },
   "src/data/mock-document.ts": {
-    "mtime": 1793971332.1633594,
-    "seen": 1793971419.4422517,
-    "ast_hash": "c2bf28ccffc5222bf8b9a6d52e9b381f",
+    "mtime": 1793975845.7831118,
+    "seen": 1793975864.8725526,
+    "ast_hash": "a5ffad3e720365b1a9bc753dbb249c8c",
     "semantic_hash": ""
   },
   "src/domain/categories.ts": {
@@ -108,9 +108,9 @@
     "semantic_hash": "724f33ff464c09fb3fcdf0af0a576d9d"
   },
   "src/domain/document.ts": {
-    "mtime": 1793971206.871802,
-    "seen": 1793971419.4422517,
-    "ast_hash": "9f934c35acb72b7e3516bfcc3df23d2d",
+    "mtime": 1793975273.4069357,
+    "seen": 1793975864.8731441,
+    "ast_hash": "059afaa8a28d8b4d6993021d86229fad",
     "semantic_hash": ""
   },
   "src/domain/money.ts": {
@@ -150,9 +150,9 @@
     "semantic_hash": "f1509dbf0b6c9dd96e99ad72151cb276"
   },
   "src/domain/summary.ts": {
-    "mtime": 1793718632.6965332,
-    "seen": 1793718649.3306124,
-    "ast_hash": "5243ddf250a9abb377533e9b3879bc6e",
+    "mtime": 1793975838.845521,
+    "seen": 1793975864.8731441,
+    "ast_hash": "992a48b9190c96fd840566175c5cc662",
     "semantic_hash": ""
   },
   "src/domain/units.ts": {
@@ -256,21 +256,21 @@
     "semantic_hash": ""
   },
   "docs/architecture.md": {
-    "mtime": 1793714563.725098,
-    "seen": 1793714635.6194293,
-    "ast_hash": "2e40f81ef4ac9980393b3c188c05ec0f",
+    "mtime": 1793975814.7050543,
+    "seen": 1793975864.8731441,
+    "ast_hash": "67c3ded69cd714cf1ad0db72b98a6b9f",
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1793971382.3498292,
-    "seen": 1793971419.4422517,
-    "ast_hash": "1678d4e5961a5831bd1970911c88b842",
+    "mtime": 1793975796.5368705,
+    "seen": 1793975864.8731441,
+    "ast_hash": "8194d0fbf19d67f56ba86735dd3c2c57",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
-    "mtime": 1793790498.796501,
-    "seen": 1793790545.8394408,
-    "ast_hash": "b929e70a3e432bf97f62465564a8b1e0",
+    "mtime": 1793975806.5965438,
+    "seen": 1793975864.8731441,
+    "ast_hash": "897b02f9e591533fb3b83efb793ae3d5",
     "semantic_hash": ""
   },
   "inputs/README.md": {
@@ -507,9 +507,9 @@
     "semantic_hash": ""
   },
   "src/features/sales/SummaryHeadlineTable.tsx": {
-    "mtime": 1793718150.5311415,
-    "seen": 1793718455.365931,
-    "ast_hash": "454bf407cf33a4ca6e6f05d21eec0d12",
+    "mtime": 1793975373.7891617,
+    "seen": 1793975864.8731441,
+    "ast_hash": "71e5403b9fb65eea0e73e8fb2b974126",
     "semantic_hash": ""
   },
   "src/features/sales/SummaryScreen.tsx": {
@@ -525,9 +525,9 @@
     "semantic_hash": ""
   },
   "src/features/shell/AppShell.tsx": {
-    "mtime": 1793959066.5523725,
-    "seen": 1793959708.369375,
-    "ast_hash": "639ea03c200d4912c82a4063067c905a",
+    "mtime": 1793975728.0338178,
+    "seen": 1793975864.8731441,
+    "ast_hash": "5fb4f81f205e165b98ab56c285017b31",
     "semantic_hash": ""
   },
   "src/features/shell/Dialog.tsx": {
@@ -765,9 +765,9 @@
     "semantic_hash": ""
   },
   "docs/tables/sales-summary.md": {
-    "mtime": 1793712944.9823508,
-    "seen": 1793713061.3755891,
-    "ast_hash": "311bb16612f2b603b1f57dcc5f922555",
+    "mtime": 1793975798.0253575,
+    "seen": 1793975864.8731441,
+    "ast_hash": "94e1ee0151d073148424b8443e7ddf4b",
     "semantic_hash": ""
   },
   "src/app/materials/inventory/page.tsx": {
@@ -1185,9 +1185,9 @@
     "semantic_hash": ""
   },
   "src/features/roles/RoleProvider.tsx": {
-    "mtime": 1793714088.4168699,
-    "seen": 1793714635.6194293,
-    "ast_hash": "6a4afc9a306dce262625e7e995b289f2",
+    "mtime": 1793975708.867484,
+    "seen": 1793975864.8731441,
+    "ast_hash": "d4e18d132ecfd26300a8af72baf14768",
     "semantic_hash": ""
   },
   "src/features/roles/paths.ts": {
@@ -1197,9 +1197,9 @@
     "semantic_hash": ""
   },
   "src/features/roles/roles.ts": {
-    "mtime": 1793959066.5538862,
-    "seen": 1793959708.3688574,
-    "ast_hash": "e20f07585e32372248a0df0938d17ebd",
+    "mtime": 1793975707.469005,
+    "seen": 1793975864.8731441,
+    "ast_hash": "09d2f2cc476684955dd5a0b747e3ea7b",
     "semantic_hash": ""
   },
   "src/app/recipes/cost/[id]/page.tsx": {
@@ -1287,9 +1287,9 @@
     "semantic_hash": ""
   },
   "src/features/roles/access.ts": {
-    "mtime": 1793959066.5538862,
-    "seen": 1793959708.3688574,
-    "ast_hash": "8d9c69459b66073439b8881fb1a98235",
+    "mtime": 1793975716.9749863,
+    "seen": 1793975864.8731441,
+    "ast_hash": "c8bbbebb599fee08be7aa07abb7e9bb7",
     "semantic_hash": ""
   },
   "src/app/opex/hr/fact/page.tsx": {
@@ -1488,6 +1488,132 @@
     "mtime": 1793795285.4383314,
     "seen": 1793795335.1893942,
     "ast_hash": "fb73f7d31bf7c8fe772dcf7fb32747e0",
+    "semantic_hash": ""
+  },
+  "src/app/credit-resources/page.tsx": {
+    "mtime": 1793975635.9947455,
+    "seen": 1793975864.8725526,
+    "ast_hash": "a9b71b47fb82963b9ca80779acb49866",
+    "semantic_hash": ""
+  },
+  "src/features/credit-resources/CreditResourcesPlaceholderScreen.tsx": {
+    "mtime": 1793975639.3404975,
+    "seen": 1793975864.8731441,
+    "ast_hash": "bac2f40e3fd66957844c17060ec7fb90",
+    "semantic_hash": ""
+  },
+  "src/features/credit-resources/paths.ts": {
+    "mtime": 1793975511.23801,
+    "seen": 1793975864.8731441,
+    "ast_hash": "6b866b2453ac5423d748714536b6d044",
+    "semantic_hash": ""
+  },
+  "src/app/cashflow/fact/page.tsx": {
+    "mtime": 1793975838.8178015,
+    "seen": 1793975864.8725526,
+    "ast_hash": "2c425dab1d838557aea3ac55b79d7fab",
+    "semantic_hash": ""
+  },
+  "src/app/cashflow/page.tsx": {
+    "mtime": 1793975838.8162682,
+    "seen": 1793975864.8725526,
+    "ast_hash": "0b38ae6de340cfae00e401e50e325cf7",
+    "semantic_hash": ""
+  },
+  "src/app/credit-resources/fact/page.tsx": {
+    "mtime": 1793975838.8162682,
+    "seen": 1793975864.8725526,
+    "ast_hash": "ed3deb299ec828c2b80c43084b31bacd",
+    "semantic_hash": ""
+  },
+  "src/app/credit-resources/plan/page.tsx": {
+    "mtime": 1793975838.8178015,
+    "seen": 1793975864.8725526,
+    "ast_hash": "84f0e323a721613bc08248b020f7afdb",
+    "semantic_hash": ""
+  },
+  "src/data/mock-credit.ts": {
+    "mtime": 1793975845.714174,
+    "seen": 1793975864.8725526,
+    "ast_hash": "caef8f99c23c9f547161bacc36aecf8c",
+    "semantic_hash": ""
+  },
+  "src/domain/cashflow.ts": {
+    "mtime": 1793975845.7453907,
+    "seen": 1793975864.8725526,
+    "ast_hash": "0af37931cf3eb45b6bbd0b0d2678a7e6",
+    "semantic_hash": ""
+  },
+  "src/domain/credit-resources.ts": {
+    "mtime": 1793975894.002055,
+    "seen": 1793975914.5072477,
+    "ast_hash": "80ef0305f7b7c66baadfc6fb7f467672",
+    "semantic_hash": ""
+  },
+  "src/features/cashflow/CashflowFactScreen.tsx": {
+    "mtime": 1793975682.6640055,
+    "seen": 1793975864.8731441,
+    "ast_hash": "1b5bd72b0d9a7fd9301cfcf336a80a03",
+    "semantic_hash": ""
+  },
+  "src/features/cashflow/CashflowMonthBar.tsx": {
+    "mtime": 1793975645.01954,
+    "seen": 1793975864.8731441,
+    "ast_hash": "2cc92f9aad76925cd5eff4bc968887d1",
+    "semantic_hash": ""
+  },
+  "src/features/cashflow/CashflowSummaryScreen.tsx": {
+    "mtime": 1793975838.8344789,
+    "seen": 1793975864.8731441,
+    "ast_hash": "05cdb4d7c3cc96eb1b23d2e5d7c123fc",
+    "semantic_hash": ""
+  },
+  "src/features/cashflow/paths.ts": {
+    "mtime": 1793975644.4088368,
+    "seen": 1793975864.8731441,
+    "ast_hash": "2c61cd4887c37c9f578413916238eb22",
+    "semantic_hash": ""
+  },
+  "src/features/cashflow/use-cashflow.ts": {
+    "mtime": 1793975646.2346885,
+    "seen": 1793975864.8731441,
+    "ast_hash": "3285b04a26e1f80c1d5a88854033c0f1",
+    "semantic_hash": ""
+  },
+  "src/features/credit-resources/CreditMonthBar.tsx": {
+    "mtime": 1793975568.120602,
+    "seen": 1793975864.8731441,
+    "ast_hash": "50fed3eed8d8464d8f15cd6ec833a6ec",
+    "semantic_hash": ""
+  },
+  "src/features/credit-resources/CreditResourcesFactScreen.tsx": {
+    "mtime": 1793975629.765034,
+    "seen": 1793975864.8731441,
+    "ast_hash": "c7df0c8fa56c3054c4f9c67da02f633e",
+    "semantic_hash": ""
+  },
+  "src/features/credit-resources/CreditResourcesPlanScreen.tsx": {
+    "mtime": 1793975845.8128169,
+    "seen": 1793975864.8731441,
+    "ast_hash": "aafc125ed748d4c2f668d5357daf5e52",
+    "semantic_hash": ""
+  },
+  "src/features/credit-resources/CreditResourcesSummaryScreen.tsx": {
+    "mtime": 1793975838.8414006,
+    "seen": 1793975864.8731441,
+    "ast_hash": "0f10f7a17d1542d8bb29c9ed7cf4b9bf",
+    "semantic_hash": ""
+  },
+  "src/features/credit-resources/text.ts": {
+    "mtime": 1793975514.2846134,
+    "seen": 1793975864.8731441,
+    "ast_hash": "dfef302cb42c6f2ca6875e6a30c70db4",
+    "semantic_hash": ""
+  },
+  "src/features/credit-resources/use-credit-resources.ts": {
+    "mtime": 1793975520.8765874,
+    "seen": 1793975864.8731441,
+    "ast_hash": "135eb439d3c2668b6215b6177fe076a1",
     "semantic_hash": ""
   }
 }

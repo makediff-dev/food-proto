@@ -54,6 +54,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
       canEditInventory: role.canEditInventory,
       canEditMaterialsPlan: role.canEditMaterialsPlan,
       canEditMaterialReceipts: role.canEditMaterialReceipts,
+      canEditCreditAndCashflow: role.canEditCreditAndCashflow,
       canViewSalesFinance: role.canViewSalesFinance,
     }),
     [role, roleId, setRole],

@@ -1,72 +1,72 @@
 # Graph Report - food-proto  (2026-11-06)
 
 ## Corpus Check
-- 244 files · ~148,238 words
+- 265 files · ~155,873 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 8 file(s) not represented in the graph (top: .mdc 5, (none) 1, .ico 1)
 
 ## Summary
-- 2324 nodes · 8911 edges · 86 communities (79 shown, 7 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 64 edges (avg confidence: 0.91)
+- 2462 nodes · 9525 edges · 89 communities (82 shown, 7 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 67 edges (avg confidence: 0.91)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `16f05a00`
+- Built from commit: `20b71c7c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- RecipePrint.tsx
+- DerivativeCreateScreen.tsx
 - ProductionEntryScreen.tsx
 - products.ts
 - derivative-movement.ts
 - mock-document.ts
-- FinishedGoodsMonthTable.tsx
+- derivative-cost.ts
 - Предметная область
-- use-materials.ts
+- materials.ts
 - package.json
 - biome.json
-- SettingsScreen.tsx
-- DerivativeCreateScreen.tsx
+- credit-resources.ts
+- FinishedGoodsMonthTable.tsx
 - compilerOptions
 - FinishedProductEditScreen.tsx
-- finished-goods.ts
-- OpexSummaryScreen.tsx
-- materials.ts
+- monthKeyFromDate
+- opex/paths.ts
+- MaterialsPlanScreen.tsx
 - RecipeJournalsTable.tsx
 - mock-materials.ts
-- react
-- next
-- FinishedGoodsFactTable.tsx
-- production-plan.ts
+- DerivativeMovementSummaryTable.tsx
+- MaterialJournalScreen.tsx
 - index.ts
+- production-plan.ts
+- MaterialsSummaryTable.tsx
 - Флоу товара
 - keepWithNext
-- ProductionJournalFactScreen.tsx
-- FinishedGoodsMonthScreen.tsx
+- FinishedGoodsFactScreen.tsx
+- RoleProvider.tsx
 - movementRow
-- TransportSummaryScreen.tsx
+- Icons.tsx
 - production-fact.ts
-- planMonthOpen
-- finished-product-cost.ts
-- SummaryScreen.tsx
+- FinishedGoodsMonthScreen.tsx
+- CashflowSummaryScreen
+- next
 - document.ts
-- PageFrame
-- IconChevronRight
+- useDocumentStore
+- IconChevronDown
 - AppShell.tsx
 - flow.md
-- MaterialDocumentScreen.tsx
-- SummaryHeadlineTable.tsx
+- credit-resources/paths.ts
+- SummaryScreen.tsx
 - derivatives.ts
 - Отчет общий сырья
-- FinishedGoodsFactScreen.tsx
+- MaterialReceiptFormTable.tsx
 - postcss.config.mjs
 - hr.ts
-- movement-plan.ts
+- finished-goods.ts
 - Отчет общий движения
 - summary.ts
-- SalesFactScreen.tsx
-- HrSummaryScreen.tsx
+- recipes/paths.ts
+- format.ts
 - Ввод плана движения
 - Ввод факта (производство)
 - Ввод плана (производство)
@@ -74,58 +74,61 @@
 - Ввод плана (продажи)
 - Отчет общий продаж
 - SaleScreen.tsx
-- recipes/paths.ts
+- MovementPlanScreen.tsx
 - inputs/README.md
-- DerivativeMovementSummaryTable.tsx
+- SalesFactScreen.tsx
 - PlanningScreen.tsx
 - SummaryTable.tsx
 - Отчет общий движения производных
-- access.ts
-- RoleProvider.tsx
+- ProductionJournalFactScreen.tsx
+- SummaryHeadlineTable.tsx
 - use-opex.ts
 - Себестоимость готовой продукции
-- TransportFactScreen.tsx
+- IconArrowLeft
 - DocumentProvider.tsx
-- monthKeyFromDate
-- Icons.tsx
-- production-journal-fact.ts
-- recipe-yield.ts
+- PageFrame
+- AGENTS.md
+- sales-fact.ts
+- ratioRound
 - operating-expense.ts
-- MaterialReceiptFormTable.tsx
+- ProductionEntryFormTable.tsx
 - Отчет подневный движения
 - Отчет подневный производства
 - Отчет общий производства
-- RecipeComponentSearch
+- DerivativeCompositionEditor
 - Отчет подневный продаж
 - sales-plan.ts
-- MaterialsNormsScreen
-- HrFactScreen.tsx
+- MaterialsNormsScreen.tsx
+- Операционные расходы
 - mock-opex.ts
-- sales-fact.ts
+- Архитектура прототипа
+- Движение готовой продукции
+- Движение производных
+- Как собрать первый прототип
 
 ## God Nodes (most connected - your core abstractions)
-1. `monthKeyFromDate()` - 100 edges
-2. `next` - 92 edges
-3. `PageFrame()` - 89 edges
-4. `react` - 74 edges
-5. `useOpex()` - 65 edges
-6. `keepWithNext()` - 65 edges
-7. `entityNameRowClassName()` - 62 edges
-8. `planMonthOpen()` - 59 edges
-9. `useRole()` - 59 edges
-10. `IconChevronDown()` - 59 edges
+1. `monthKeyFromDate()` - 110 edges
+2. `next` - 102 edges
+3. `PageFrame()` - 99 edges
+4. `react` - 79 edges
+5. `entityNameRowClassName()` - 72 edges
+6. `ColumnLabel()` - 66 edges
+7. `useOpex()` - 65 edges
+8. `useRole()` - 65 edges
+9. `keepWithNext()` - 65 edges
+10. `IconChevronDown()` - 61 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `Движение денежных средств` --references--> `initialCashBalance()`  [INFERRED]
+  docs/domain.md → src/domain/credit-resources.ts
 - `Себестоимость готовой продукции` --references--> `derivativeConsumptionPrice()`  [INFERRED]
   docs/domain.md → src/domain/derivative-cost.ts
 - `Что пишется` --references--> `plannedProductionVolumePieces()`  [INFERRED]
   docs/tables/production-plan.md → src/domain/finished-goods.ts
 - `Ввод плана (движение)` --references--> `finishedGoodsMonthDays()`  [INFERRED]
   docs/domain.md → src/domain/finished-goods.ts
-- `Свод` --references--> `derivativeConsumptionPrice()`  [INFERRED]
-  docs/tables/derivative-cost.md → src/domain/derivative-cost.ts
-- `Свод` --references--> `derivativeConsumptionPrice()`  [INFERRED]
-  docs/tables/finished-product-cost.md → src/domain/derivative-cost.ts
+- `Верхний блок сводки` --references--> `monthInterestAmounts()`  [INFERRED]
+  docs/domain.md → src/domain/credit-resources.ts
 
 ## Import Cycles
 - 3-file cycle: `src/domain/finished-goods.ts -> src/domain/production-journal-fact.ts -> src/domain/production-fact.ts -> src/domain/finished-goods.ts`
@@ -149,39 +152,39 @@
 - 5-file cycle: `src/domain/derivatives.ts -> src/domain/materials.ts -> src/domain/finished-goods.ts -> src/domain/sales-fact.ts -> src/domain/finished-product-cost.ts -> src/domain/derivatives.ts`
 - 5-file cycle: `src/domain/finished-goods.ts -> src/domain/sales-fact.ts -> src/domain/sales-plan.ts -> src/domain/finished-product-cost.ts -> src/domain/materials.ts -> src/domain/finished-goods.ts`
 
-## Communities (86 total, 7 thin omitted)
+## Communities (89 total, 7 thin omitted)
 
-### Community 0 - "RecipePrint.tsx"
-Cohesion: 0.13
-Nodes (27): DerivativeAddRejection, ProductRecipeRejection, RECIPE_YIELD_TOLERANCE_THOUSANDTHS, formatMaterialWeightPair(), formatQuantity(), MATERIAL_DOCUMENT_ERROR, MATERIAL_NAME_ERROR, MATERIAL_NORM_ERROR (+19 more)
+### Community 0 - "DerivativeCreateScreen.tsx"
+Cohesion: 0.14
+Nodes (27): metadata, NewDerivativePage(), DerivativeAddRejection, DERIVATIVE_WORKSHOPS, MATERIAL_WAREHOUSES, RECIPE_YIELD_TOLERANCE_THOUSANDTHS, formatQuantity(), DerivativeCreateScreen() (+19 more)
 
 ### Community 1 - "ProductionEntryScreen.tsx"
 Cohesion: 0.06
-Nodes (68): metadata, ProductionEntryPage(), metadata, NewProductionEntryPage(), metadata, ProductionJournalPage(), metadata, ProductionPage() (+60 more)
+Nodes (69): metadata, ProductionFactPage(), metadata, ProductionEntryPage(), metadata, NewProductionEntryPage(), metadata, ProductionJournalPage() (+61 more)
 
 ### Community 2 - "products.ts"
-Cohesion: 0.09
-Nodes (48): Home(), metadata, metadata, PlanPage(), addCategory(), categoryNameRejection(), CategoryRejection, deleteCategory() (+40 more)
+Cohesion: 0.13
+Nodes (35): addCategory(), categoryNameRejection(), CategoryRejection, deleteCategory(), renameCategory(), restoreCategory(), nameKey(), NameRejection (+27 more)
 
 ### Community 3 - "derivative-movement.ts"
-Cohesion: 0.14
-Nodes (25): buildRow(), costForQuantity(), DerivativeMovementMonthView, derivativeNormMetrics(), derivativeNormsList(), derivativeOpeningsList(), factConsumptionQuantityForDerivative(), factProductionVolumePiecesForProduct() (+17 more)
+Cohesion: 0.12
+Nodes (32): buildRow(), costForQuantity(), DerivativeMovementMonthView, DerivativeNormField, derivativeNormMetrics(), DerivativeNormRejection, derivativeNormsList(), DerivativeOpeningRejection (+24 more)
 
 ### Community 4 - "mock-document.ts"
 Cohesion: 0.05
-Nodes (33): burger, caesar, CatalogProductId, catalogProductIds, closingInventoryOctober, closingInventorySeptember, factPriceWithVat, finishedGoodsNorms (+25 more)
+Nodes (38): mockCreditors, mockCreditResourceMonths, mockInitialCashBalance, burger, caesar, CatalogProductId, catalogProductIds, closingInventoryOctober (+30 more)
 
-### Community 5 - "FinishedGoodsMonthTable.tsx"
-Cohesion: 0.10
-Nodes (37): FinishedGoodsGroup, FinishedGoodsRow, FinishedGoodsTotals, MovementPlanGroup, MovementPlanRow, MovementPlanTotals, CategoryBlock(), COLUMN_GROUPS (+29 more)
+### Community 5 - "derivative-cost.ts"
+Cohesion: 0.09
+Nodes (39): buildCostRow(), componentUnitPriceInternal(), costForQuantity(), costPerKgFromBatch(), costPerPieceFromBatch(), derivativeBatchCost(), derivativeBatchCostInternal(), derivativeConsumptionPrice() (+31 more)
 
 ### Community 6 - "Предметная область"
-Cohesion: 0.04
-Nodes (42): Cursor Cloud specific instructions, This is NOT the Next.js you know, Прототип учёта, HR (`HR`), Блоки, Ввод плана (движение), Ввод плана (движение производных), Ввод факта (производство) (+34 more)
+Cohesion: 0.08
+Nodes (25): Блоки, Ввод факта (производство), Верхний блок сводки, Готовая продукция (рецептурный журнал), Движение денежных средств, Движение кредитных ресурсов, Отчет общий (производство), Отчет подневный (производство) (+17 more)
 
-### Community 7 - "use-materials.ts"
-Cohesion: 0.14
-Nodes (31): MaterialUnit, MaterialWeightPair, addMaterial(), deletedMaterials(), deleteMaterial(), isMaterialGroupId(), isMaterialUnit(), isMaterialWarehouseId() (+23 more)
+### Community 7 - "materials.ts"
+Cohesion: 0.11
+Nodes (46): MaterialGroupId, MaterialReceiptLine, addMaterial(), deletedMaterials(), deleteMaterial(), deleteMaterialReceipt(), emptyPlanLine(), hasStoredMaterialInventoryLine() (+38 more)
 
 ### Community 8 - "package.json"
 Cohesion: 0.06
@@ -191,165 +194,165 @@ Nodes (33): dependencies, next, react, react-dom, devDependencies, @biomejs/biom
 Cohesion: 0.06
 Nodes (33): source, assist, actions, enabled, noUnusedImports, noUnusedVariables, css, parser (+25 more)
 
-### Community 10 - "SettingsScreen.tsx"
-Cohesion: 0.20
-Nodes (11): metadata, SettingsPage(), permissionAllowed(), ROLES, RolesMatrix(), SETTINGS_HREF, SETTINGS_TITLE, MockSection() (+3 more)
+### Community 10 - "credit-resources.ts"
+Cohesion: 0.11
+Nodes (52): buildCashflowBody(), CashflowLineView, CashflowMoneySide, cashflowMonthView, creditExpenseLines(), creditIncomeLines(), earliestCashflowMonth(), line() (+44 more)
 
-### Community 11 - "DerivativeCreateScreen.tsx"
-Cohesion: 0.16
-Nodes (15): DerivativePage(), metadata, metadata, NewDerivativePage(), DERIVATIVE_WORKSHOPS, DerivativeLine, DerivativeWorkshopId, DerivativeCreateScreen() (+7 more)
+### Community 11 - "FinishedGoodsMonthTable.tsx"
+Cohesion: 0.12
+Nodes (36): FinishedGoodsGroup, FinishedGoodsRow, FinishedGoodsTotals, MovementPlanGroup, MovementPlanRow, MovementPlanTotals, MetricCell(), CategoryBlock() (+28 more)
 
 ### Community 12 - "compilerOptions"
 Cohesion: 0.11
 Nodes (18): compilerOptions, allowJs, esModuleInterop, incremental, isolatedModules, jsx, lib, module (+10 more)
 
 ### Community 13 - "FinishedProductEditScreen.tsx"
-Cohesion: 0.11
-Nodes (43): ProductRecipeLine, productByIdOrNull(), updateProductRecipe(), gramsPerPieceThousandths(), outputKilogramThousandthsFromPiecesAndGrams(), commit(), formatQuantityDraft(), parseQuantityInput() (+35 more)
+Cohesion: 0.13
+Nodes (38): isDerivativeWorkshopId(), activeMaterials(), gramsPerPieceThousandths(), outputKilogramThousandthsFromPiecesAndGrams(), commit(), formatQuantityDraft(), parseQuantityInput(), DerivativeForm() (+30 more)
 
-### Community 14 - "finished-goods.ts"
-Cohesion: 0.11
-Nodes (48): FinishedGoodsOpeningLine, bookClosingPiecesForProduct(), bookClosingReferencedProductIds(), bookOpeningPiecesForProduct(), buildGroups(), closingInventoryDeviationPieces(), closingNormMetrics(), closingStockPieces() (+40 more)
+### Community 14 - "monthKeyFromDate"
+Cohesion: 0.15
+Nodes (24): metadata, MovementInventoryPage(), activeCategories(), missingProductionPlanProducts(), monthKeyFromDate(), planMonthOpen(), shiftMonth(), lastHorizonMonth() (+16 more)
 
-### Community 15 - "OpexSummaryScreen.tsx"
-Cohesion: 0.07
-Nodes (43): metadata, OpexHrPlanPage(), metadata, OpexOtherFactPage(), metadata, OpexOtherPlanPage(), metadata, OpexSummaryPage() (+35 more)
+### Community 15 - "opex/paths.ts"
+Cohesion: 0.06
+Nodes (51): metadata, OpexHrFactPage(), metadata, OpexHrPage(), metadata, OpexHrPlanPage(), metadata, OpexOtherFactPage() (+43 more)
 
-### Community 16 - "materials.ts"
-Cohesion: 0.09
-Nodes (33): MATERIAL_UNITS, MaterialGroupId, MaterialOpeningLine, MaterialReceiptLine, NORMED_MATERIAL_GROUP_ID, addMoney(), addMoneyNullable(), deleteMaterialReceipt() (+25 more)
+### Community 16 - "MaterialsPlanScreen.tsx"
+Cohesion: 0.16
+Nodes (14): MATERIAL_GROUPS, MATERIAL_UNITS, MaterialUnit, MaterialWeightPair, MaterialDocumentRejection, MaterialMovementRow, MaterialMovementTotals, MaterialNormRejection (+6 more)
 
 ### Community 17 - "RecipeJournalsTable.tsx"
-Cohesion: 0.22
-Nodes (14): react-dom, componentLabel(), CompositionLine(), DeleteAction(), ItemRow(), RecipeJournalsTable(), RecipeListComponent, RecipeListItem (+6 more)
+Cohesion: 0.12
+Nodes (24): react-dom, metadata, RecipeFinishedPage(), productCompositionLines(), productRecipeSections(), FinishedProductsScreen(), finishedProductHref(), RECIPES_FINISHED_TITLE (+16 more)
 
 ### Community 18 - "mock-materials.ts"
-Cohesion: 0.10
-Nodes (26): defaultMax(), KG_PER_50_M, LineOverride, materialId(), materialNorms, materialOpening(), materialPlan(), materials (+18 more)
-
-### Community 19 - "react"
-Cohesion: 0.26
-Nodes (20): react, AddPositionDialog(), DepartmentBlock(), HrPlanScreen(), HrTaxRateBlock(), OtherGroupBlock(), AddOtherLineDialog(), opexHrPlanHref() (+12 more)
-
-### Community 20 - "next"
 Cohesion: 0.11
-Nodes (30): nextConfig, next, MaterialsInventoryPage(), metadata, MaterialsPage(), metadata, MaterialsPlanPage(), metadata (+22 more)
+Nodes (24): defaultMax(), KG_PER_50_M, LineOverride, materialId(), materialNorms, materialOpening(), materialPlan(), materials (+16 more)
 
-### Community 21 - "FinishedGoodsFactTable.tsx"
+### Community 19 - "DerivativeMovementSummaryTable.tsx"
+Cohesion: 0.10
+Nodes (27): Подсказки заголовков таблицы, COLUMN_GROUPS, COLUMN_KIND, columnEdgeClass(), ColumnKey, COLUMNS, DERIVATIVE_SUMMARY_SUB_BANNERS, DerivativeRow() (+19 more)
+
+### Community 20 - "MaterialJournalScreen.tsx"
 Cohesion: 0.12
-Nodes (30): adjacentDay(), ArrowButton(), CategoryBlock(), COLUMN_GROUPS, COLUMN_KIND, ColumnKey, COLUMNS, DayLabel() (+22 more)
+Nodes (23): MaterialsInventoryPage(), metadata, MaterialsPlanPage(), metadata, MaterialReceiptsPage(), metadata, materialReceiptsInMonth(), MaterialJournalScreen() (+15 more)
+
+### Community 21 - "index.ts"
+Cohesion: 0.08
+Nodes (61): adjacentDay(), COLUMNS, ArrowButton(), CategoryBlock(), COLUMN_GROUPS, COLUMN_KIND, ColumnKey, COLUMNS (+53 more)
 
 ### Community 22 - "production-plan.ts"
-Cohesion: 0.15
-Nodes (25): ProductionPlan, ProductionPlanLine, activeProductionPlans(), addMissingProductionPlanLines(), addMissingProductionPlanLinesRejection(), addProductionPlan(), createRejection(), defaultProductionPlanLines() (+17 more)
+Cohesion: 0.12
+Nodes (34): Удаление, commitDocumentUpdate(), ProductionPlan, PrototypeDocument, plannedProductionVolumePieces(), targetClosingPiecesFromNorm(), dayGridProducts(), periodGridCategories() (+26 more)
 
-### Community 23 - "index.ts"
-Cohesion: 0.08
-Nodes (67): DerivativeMovementRow, DerivativeMovementSection, MaterialMovementTotals, DerivativeRow(), WorkshopBlock(), COLUMN_KIND, ColumnKey, COLUMNS (+59 more)
+### Community 23 - "MaterialsSummaryTable.tsx"
+Cohesion: 0.10
+Nodes (38): DerivativeMovementRow, DerivativeMovementSection, DerivativeMovementInventoryTable(), DerivativeRow(), WorkshopBlock(), COLUMN_KIND, ColumnKey, COLUMNS (+30 more)
 
 ### Community 24 - "Флоу товара"
 Cohesion: 0.12
 Nodes (17): Деньги, Категория и «Всего», Операционные расходы, Остаток, Отклонение, Прогноз и фактическая, Путь товара, Рекомендуемый объём (+9 more)
 
 ### Community 25 - "keepWithNext"
-Cohesion: 0.10
-Nodes (56): TotalCell(), CategoryBlock(), ColumnHeadings(), ColumnKey, columnsOf(), FACT_COLUMNS, MetricCell(), Pieces() (+48 more)
+Cohesion: 0.12
+Nodes (43): CategoryBlock(), ColumnHeadings(), ColumnKey, columnsOf(), FACT_COLUMNS, MetricCell(), Pieces(), PLAN_COLUMNS (+35 more)
 
-### Community 26 - "ProductionJournalFactScreen.tsx"
+### Community 26 - "FinishedGoodsFactScreen.tsx"
 Cohesion: 0.14
-Nodes (24): metadata, ProductionFactPage(), recommendedDayKey(), recommendedVolumeByDay(), defaultProductionJournalFactDay(), productionJournalFactGridProducts(), productionJournalFactMonth(), monthDates() (+16 more)
+Nodes (20): SalesPlanRejection, DayDateControl(), onKeyDown(), finishedGoodsFactPageTitle(), mondayLeadForMonth(), resolveDay(), viewLinkClass(), WEEKDAY_LABELS (+12 more)
 
-### Community 27 - "FinishedGoodsMonthScreen.tsx"
-Cohesion: 0.16
-Nodes (23): metadata, MovementPage(), clampSummaryMonth(), lastSummaryMonth(), resolveSummaryMonthRange(), FullscreenToggle(), FinishedGoodsMonthScreen(), FullscreenToggle() (+15 more)
+### Community 27 - "RoleProvider.tsx"
+Cohesion: 0.08
+Nodes (36): metadata, onest, RootLayout(), unbounded, metadata, SettingsPage(), readRole(), ROLE_STORAGE_KEY (+28 more)
 
 ### Community 28 - "movementRow"
-Cohesion: 0.21
-Nodes (15): costExVat(), bookClosingQuantity(), closingMaterialQuantity(), consumptionQuantity(), deviationCostMoney(), gridMaterials(), inventoryQuantityFor(), moneyOf() (+7 more)
+Cohesion: 0.14
+Nodes (26): Свод, Свод, costExVat(), addMoney(), addMoneyNullable(), bookClosingQuantity(), closingMaterialQuantity(), consumptionQuantity() (+18 more)
 
-### Community 29 - "TransportSummaryScreen.tsx"
-Cohesion: 0.16
-Nodes (15): metadata, OpexTransportPage(), OPEX_TRANSPORT_TITLE, opexTransportHref(), HIRE_GROUP_END, HIRE_SUB_BANNERS, HireColumnKey, hireColumns() (+7 more)
+### Community 29 - "Icons.tsx"
+Cohesion: 0.12
+Nodes (50): react, HR_DEPARTMENT_LABELS, FactDepartment, AddPositionDialog(), DepartmentBlock(), DepartmentBlock(), HrSummaryScreen(), FACT_FIELD (+42 more)
 
 ### Community 30 - "production-fact.ts"
-Cohesion: 0.13
-Nodes (32): amountExVat(), periodReferencedProductIds(), actualRangeProductionFact(), applyProductionFactLens(), applyRowLens(), factRow(), factSpendByProduct(), mergeFactRows() (+24 more)
+Cohesion: 0.11
+Nodes (45): actualRangeProductionFact(), applyProductionFactLens(), applyRowLens(), factRow(), factSpendByProduct(), factVolumeScale(), mergeFactRows(), mergeMonthProductionFacts() (+37 more)
 
-### Community 31 - "planMonthOpen"
-Cohesion: 0.10
-Nodes (38): metadata, MovementInventoryPage(), metadata, MovementPlanPage(), useDocumentStore(), activeCategories(), setFinishedGoodsOpening(), setFinishedGoodsOpeningRejection() (+30 more)
+### Community 31 - "FinishedGoodsMonthScreen.tsx"
+Cohesion: 0.19
+Nodes (17): metadata, MovementFactPage(), metadata, MovementPage(), clampSummaryMonth(), lastSummaryMonth(), resolveSummaryMonthRange(), FinishedGoodsFactScreen() (+9 more)
 
-### Community 32 - "finished-product-cost.ts"
-Cohesion: 0.18
-Nodes (20): Свод, Свод, buildCostRow(), componentUnitPrice(), costForQuantity(), finishedProductCostDetail, FinishedProductCostLineContribution, FinishedProductCostMode (+12 more)
+### Community 32 - "CashflowSummaryScreen"
+Cohesion: 0.16
+Nodes (16): CashflowFactPage(), metadata, CashflowSummaryPage(), metadata, CashflowSummaryScreen(), toggle(), defaultOpenIds(), CASHFLOW_FACT_HREF (+8 more)
 
-### Community 33 - "SummaryScreen.tsx"
-Cohesion: 0.14
-Nodes (28): SalesPlanRejection, ensureRangeIncludesMonth(), monthsInRange(), normalizeMonthRange(), SummaryLens, productionFactHref(), productionFactPageTitle(), ProductionFactScreen() (+20 more)
+### Community 33 - "next"
+Cohesion: 0.25
+Nodes (10): nextConfig, next, Home(), metadata, metadata, PlanPage(), parseSummaryQuery(), SUMMARY_SECTION_TITLE (+2 more)
 
 ### Community 34 - "document.ts"
-Cohesion: 0.09
-Nodes (23): DeletableRecord, FinishedGoodsNorm, HR_DEPARTMENT_IDS, HR_SHOP_DEPARTMENT_IDS, HrDayFact, HrDayOutsourcingLine, HrDayStaffLine, HrMonthFactStaffLine (+15 more)
+Cohesion: 0.08
+Nodes (27): Creditor, CreditResourceMonthLine, DeletableRecord, DERIVATIVE_UNITS, DerivativeNorm, DerivativeNormLine, DerivativeOpening, DerivativeOpeningLine (+19 more)
 
-### Community 35 - "PageFrame"
+### Community 35 - "useDocumentStore"
+Cohesion: 0.36
+Nodes (8): DerivativeMovementPage(), metadata, useDocumentStore(), DerivativeMovementSummaryScreen(), DerivativeMovementSummaryTable(), DERIVATIVE_MOVEMENT_SUMMARY_TITLE, derivativeMovementSummaryHref(), parseDerivativeMovementMonthQuery()
+
+### Community 36 - "IconChevronDown"
 Cohesion: 0.10
-Nodes (35): DerivativeMovementInventoryPage(), metadata, DerivativeMovementPage(), metadata, DerivativeMovementPlanPage(), metadata, derivativeMovementMonth(), DerivativeNormField (+27 more)
-
-### Community 36 - "IconChevronRight"
-Cohesion: 0.09
-Nodes (43): DepartmentBlock(), CategoryBlock(), COLUMN_KIND, ColumnKey, COLUMNS, ProductionPlanTable(), ProductRow(), COLUMN_GROUPS (+35 more)
+Nodes (43): LineRows(), CategoryBlock(), InventoryTable(), DepartmentBlock(), columnEdgeClass(), GroupBlock(), CategoryBlock(), COLUMN_GROUPS (+35 more)
 
 ### Community 37 - "AppShell.tsx"
-Cohesion: 0.13
-Nodes (21): DERIVATIVE_MOVEMENT_SECTION_TITLE, OPEX_OTHER_TITLE, OPEX_SECTION_TITLE, currentNavLabel(), DERIVATIVE_MOVEMENT_NAV, MATERIALS_NAV, MOVEMENT_NAV, NAV_GROUPS (+13 more)
+Cohesion: 0.07
+Nodes (45): Поток данных, DerivativeMovementInventoryPage(), metadata, DerivativeMovementPlanPage(), metadata, DERIVATIVE_MOVEMENT_INVENTORY_HREF, DERIVATIVE_MOVEMENT_INVENTORY_TITLE, DERIVATIVE_MOVEMENT_PLAN_HREF (+37 more)
 
 ### Community 38 - "flow.md"
 Cohesion: 0.35
 Nodes (3): Инвентаризация, Колонки, Что пишется
 
-### Community 39 - "MaterialDocumentScreen.tsx"
-Cohesion: 0.16
-Nodes (19): MaterialReceiptPage(), metadata, metadata, NewMaterialReceiptPage(), MATERIAL_WAREHOUSES, activeMaterials(), materialReceiptById(), DocumentForm() (+11 more)
+### Community 39 - "credit-resources/paths.ts"
+Cohesion: 0.17
+Nodes (14): CreditResourcesFactPage(), metadata, CreditResourcesSummaryPage(), metadata, CreditResourcesPlanPage(), metadata, CREDIT_RESOURCES_FACT_HREF, CREDIT_RESOURCES_FACT_TITLE (+6 more)
 
-### Community 40 - "SummaryHeadlineTable.tsx"
-Cohesion: 0.35
-Nodes (10): headlineKind(), HeadlineRowId, HeadlineValue(), IndicatorHead(), PlanHeadlineTable(), ROWS, SALES_OPS_HEADLINE_ROWS, SummaryHeadlineTable() (+2 more)
+### Community 40 - "SummaryScreen.tsx"
+Cohesion: 0.20
+Nodes (17): FullscreenToggle(), FullscreenToggle(), FullscreenToggle(), FullscreenToggle(), FullscreenToggle(), FullscreenToggle(), FullscreenToggle(), FullscreenToggle() (+9 more)
 
 ### Community 41 - "derivatives.ts"
-Cohesion: 0.09
-Nodes (50): metadata, RecipeDerivativesPage(), buildCostRow(), componentUnitPriceInternal(), costForQuantity(), costPerKgFromBatch(), costPerPieceFromBatch(), derivativeBatchCost() (+42 more)
+Cohesion: 0.13
+Nodes (31): metadata, RecipeDerivativesPage(), activeDerivatives(), addDerivative(), deleteDerivative(), derivativeByIdOrNull(), derivativeCompositionLines(), DerivativeCompositionLineView (+23 more)
 
 ### Community 42 - "Отчет общий сырья"
 Cohesion: 0.33
 Nodes (5): Остаток на конец, Остаток на начало, Отчет общий сырья, Приход от поставщика, Расход в производстве
 
-### Community 43 - "FinishedGoodsFactScreen.tsx"
-Cohesion: 0.14
-Nodes (20): metadata, MovementFactPage(), finishedGoodsGridProducts(), finishedGoodsRangeProducts(), DayDateControl(), onKeyDown(), finishedGoodsFactPageTitle(), FinishedGoodsFactScreen() (+12 more)
+### Community 43 - "MaterialReceiptFormTable.tsx"
+Cohesion: 0.09
+Nodes (40): MaterialReceiptPage(), metadata, metadata, NewMaterialReceiptPage(), Material, isPrice(), materialReceiptById(), materialReceiptRejection() (+32 more)
 
 ### Community 45 - "hr.ts"
-Cohesion: 0.10
-Nodes (47): HrDepartmentId, isHrShopDepartmentId(), isOccurredOn(), averageSalary(), dayFactsInMonth(), emptySide(), factShopHeadcountThousandths(), factShopSalaryExVat() (+39 more)
+Cohesion: 0.07
+Nodes (60): HR_DEPARTMENT_IDS, HR_SHOP_DEPARTMENT_IDS, HrDayStaffLine, HrDepartmentId, HrMonthPlanOutsourcingLine, HrPosition, isHrShopDepartmentId(), averageSalary() (+52 more)
 
-### Community 46 - "movement-plan.ts"
-Cohesion: 0.21
-Nodes (17): FinishedGoodsNormLine, emptyNormLine(), emptyTotals(), FinishedGoodsNormRejection, finishedGoodsNormsList(), isNormPieces(), movementPlanGridProducts(), movementPlanMetrics() (+9 more)
+### Community 46 - "finished-goods.ts"
+Cohesion: 0.08
+Nodes (65): bookClosingPiecesForProduct(), bookClosingReferencedProductIds(), bookOpeningPiecesForProduct(), buildGroups(), closingInventoryDeviationPieces(), closingNormMetrics(), closingStockPieces(), emptyPlanSide() (+57 more)
 
 ### Community 47 - "Отчет общий движения"
 Cohesion: 0.40
 Nodes (5): Остаток на конец, Остаток на начало, Отчет общий движения, Продажи, Производство
 
 ### Community 48 - "summary.ts"
-Cohesion: 0.12
-Nodes (43): Единицы, PROFIT_TAX_PERCENT, SalesPlan, percentHundredths(), vatPercentHundredths(), monthOperatingExpenseAmounts(), factVolumeScale(), planVolumeScale() (+35 more)
+Cohesion: 0.11
+Nodes (43): Единицы, monthInterestAmounts(), SalesPlan, percentHundredths(), vatPercentHundredths(), monthOperatingExpenseAmounts(), PLAN_HORIZON_MONTHS, planPhase (+35 more)
 
-### Community 49 - "SalesFactScreen.tsx"
+### Community 49 - "recipes/paths.ts"
+Cohesion: 0.15
+Nodes (18): RecipesCostDetailPage(), metadata, RecipesCostPage(), RecipesFinishedCostDetailPage(), metadata, RecipesFinishedCostPage(), FinishedProductCostScreen(), parseDerivativeWorkshopQuery() (+10 more)
+
+### Community 50 - "format.ts"
 Cohesion: 0.17
-Nodes (19): metadata, SalesFactPage(), defaultSalesFactDay(), parseSalesFactQuery(), SALES_FACT_TITLE, salesFactHref(), DayDateControl(), onKeyDown() (+11 more)
-
-### Community 50 - "HrSummaryScreen.tsx"
-Cohesion: 0.30
-Nodes (11): metadata, OpexHrPage(), DepartmentBlock(), HrSummaryScreen(), OPEX_HR_TITLE, opexHrHref(), formatHours(), formatQuantity() (+3 more)
+Nodes (14): formatRubles(), fromRubles(), MAX_PRICE_KOPECKS, parseDecimal(), roundKopecksToRubles(), parseCreditMoney(), parseInterestRate(), parseHours() (+6 more)
 
 ### Community 51 - "Ввод плана движения"
 Cohesion: 0.67
@@ -376,116 +379,128 @@ Cohesion: 0.67
 Nodes (3): Верхний блок, Отчет общий продаж, Сетка
 
 ### Community 57 - "SaleScreen.tsx"
-Cohesion: 0.06
-Nodes (75): metadata, SalePage(), metadata, SalesJournalPage(), metadata, NewSalePage(), commitDocumentUpdate(), SaleLine (+67 more)
+Cohesion: 0.07
+Nodes (66): metadata, SalePage(), metadata, SalesJournalPage(), metadata, NewSalePage(), metadata, SalesFactPage() (+58 more)
 
-### Community 58 - "recipes/paths.ts"
-Cohesion: 0.10
-Nodes (25): RecipesCostDetailPage(), metadata, RecipesCostPage(), RecipesFinishedCostDetailPage(), metadata, RecipesFinishedCostPage(), FinishedProductRecipePage(), metadata (+17 more)
+### Community 58 - "MovementPlanScreen.tsx"
+Cohesion: 0.21
+Nodes (12): metadata, MovementPlanPage(), FullscreenToggle(), MovementPlanScreen(), Workspace(), open(), movementPlanNormRangeInvalid(), MOVEMENT_PLAN_TITLE (+4 more)
 
-### Community 60 - "DerivativeMovementSummaryTable.tsx"
-Cohesion: 0.11
-Nodes (24): COLUMN_GROUPS, COLUMN_KIND, columnEdgeClass(), ColumnKey, COLUMNS, DERIVATIVE_SUMMARY_SUB_BANNERS, DerivativeRow(), GROUP_END_KEYS (+16 more)
+### Community 60 - "SalesFactScreen.tsx"
+Cohesion: 0.24
+Nodes (13): defaultSalesFactDay(), salesFactHref(), DayDateControl(), onKeyDown(), mondayLeadForMonth(), resolveDay(), resolveMonth(), SalesFactScreen() (+5 more)
 
 ### Community 61 - "PlanningScreen.tsx"
-Cohesion: 0.15
-Nodes (22): metadata, PlanningArchivePage(), metadata, PlanningPage(), deletedCategories(), deletedProducts(), missingPlanProducts(), parsePlanningQuery() (+14 more)
+Cohesion: 0.13
+Nodes (26): metadata, PlanningArchivePage(), metadata, PlanningPage(), deletedCategories(), deletedProducts(), missingPlanProducts(), parsePlanningQuery() (+18 more)
 
 ### Community 62 - "SummaryTable.tsx"
-Cohesion: 0.12
-Nodes (25): SummaryGroup, SummaryRow, SummaryVariance, VAT_PARSE_ERROR, averagedUnitCost(), CategoryBlock(), editableFieldNear(), FACT_REPEATED (+17 more)
+Cohesion: 0.10
+Nodes (35): averagedUnitCost(), CategoryBlock(), editableFieldNear(), FACT_REPEATED, factColumnKind(), FINANCE_SIDE_KEYS, PLAN_ASSIGNED, PLAN_REPEATED (+27 more)
 
 ### Community 63 - "Отчет общий движения производных"
 Cohesion: 0.12
 Nodes (13): Себестоимость производных, Состав строки, Инвентаризация производных, Колонки, Что пишется, Ввод плана движения производных, Колонки, Что пишется (+5 more)
 
-### Community 64 - "access.ts"
-Cohesion: 0.15
-Nodes (16): Поток данных, DERIVATIVE_MOVEMENT_INVENTORY_HREF, DERIVATIVE_MOVEMENT_PLAN_HREF, DERIVATIVE_MOVEMENT_SUMMARY_HREF, RECIPES_DERIVATIVES_HREF, RECIPES_FINISHED_HREF, HOME_SECTION_ORDER, pathnameSection() (+8 more)
+### Community 64 - "ProductionJournalFactScreen.tsx"
+Cohesion: 0.25
+Nodes (11): recommendedDayKey(), defaultProductionJournalFactDay(), productionJournalFactHref(), DayDateControl(), onKeyDown(), mondayLeadForMonth(), resolveDay(), viewLinkClass() (+3 more)
 
-### Community 65 - "RoleProvider.tsx"
-Cohesion: 0.11
-Nodes (23): metadata, onest, RootLayout(), unbounded, readRole(), ROLE_STORAGE_KEY, writeRole(), RoleProvider() (+15 more)
+### Community 65 - "SummaryHeadlineTable.tsx"
+Cohesion: 0.35
+Nodes (10): headlineKind(), HeadlineRowId, HeadlineValue(), IndicatorHead(), PlanHeadlineTable(), ROWS, SALES_OPS_HEADLINE_ROWS, SummaryHeadlineTable() (+2 more)
 
 ### Community 66 - "use-opex.ts"
 Cohesion: 0.07
-Nodes (72): HireSeed, HrTaxRatesMonth, isDeletionMark(), isOpexGroupCode(), isTransportHireKind(), TRANSPORT_HIRE_KINDS, TransportCarrier, TransportHireKind (+64 more)
+Nodes (70): HrTaxRatesMonth, isDeletionMark(), isOccurredOn(), isTransportHireKind(), TRANSPORT_HIRE_KINDS, TransportCarrier, TransportHireMonthPlan, TransportHireMonthPlanLine (+62 more)
 
-### Community 68 - "TransportFactScreen.tsx"
-Cohesion: 0.30
-Nodes (10): metadata, OpexTransportFactPage(), transportHireDayValue(), transportOwnDayValue(), OPEX_TRANSPORT_FACT_TITLE, opexTransportFactHref(), TRANSPORT_ERROR, resolveDay() (+2 more)
+### Community 68 - "IconArrowLeft"
+Cohesion: 0.28
+Nodes (7): FinishedProductRecipePage(), metadata, DerivativePage(), metadata, DerivativeEditScreen(), FinishedProductEditScreen(), IconArrowLeft()
 
 ### Community 69 - "DocumentProvider.tsx"
 Cohesion: 0.16
-Nodes (20): clearDocument(), DOCUMENT_STORAGE_KEY, DocumentStorageError, readDocument(), writeDocument(), createInitialState(), DocumentProvider(), DocumentSource (+12 more)
+Nodes (18): clearDocument(), DOCUMENT_STORAGE_KEY, DocumentStorageError, readDocument(), writeDocument(), createInitialState(), DocumentProvider(), DocumentSource (+10 more)
 
-### Community 70 - "monthKeyFromDate"
-Cohesion: 0.34
-Nodes (10): finishedProductCostMonth(), monthKeyFromDate(), MaterialMonthBar(), resolveMaterialMonth(), DerivativeCostScreen(), DerivativeCostTable(), FinishedProductCostScreen(), FinishedProductCostTable() (+2 more)
+### Community 70 - "PageFrame"
+Cohesion: 0.11
+Nodes (33): MaterialsPage(), metadata, creditResourcesMonthView, derivativeMovementMonth(), CashflowFactScreen(), CreditResourcesFactScreen(), CreditResourcesPlanScreen(), COLUMN_GROUPS (+25 more)
 
-### Community 71 - "Icons.tsx"
-Cohesion: 0.42
-Nodes (8): Glyph(), IconChevronLeft(), IconClose(), IconList(), IconMenu(), IconSearch(), IconSettings(), IconUndo()
+### Community 71 - "AGENTS.md"
+Cohesion: 0.40
+Nodes (3): Cursor Cloud specific instructions, This is NOT the Next.js you know, Прототип учёта
 
-### Community 72 - "production-journal-fact.ts"
-Cohesion: 0.14
-Nodes (18): costWithVat(), UnitCost, amountWithVat(), averageAmount(), sideFromRows(), dayTotals(), ProductionJournalFactDayView, ProductionJournalFactGroup (+10 more)
+### Community 72 - "sales-fact.ts"
+Cohesion: 0.10
+Nodes (32): UnitCost, Product, productCostPerPiece(), averageAmount(), productionFactGridProducts(), dayTotals(), ProductionJournalFactDayView, productionJournalFactGridProducts() (+24 more)
 
-### Community 73 - "recipe-yield.ts"
-Cohesion: 0.28
-Nodes (11): isQuantityThousandths(), MAX_QUANTITY_THOUSANDTHS, QUANTITY_SCALE, applyHeatTreatmentYield(), isRecipeOutputKilogramThousandths(), materialQuantityToKilogramThousandths(), recipeComponentsKilogramThousandths(), recipeLineKilogramThousandths() (+3 more)
+### Community 73 - "ratioRound"
+Cohesion: 0.24
+Nodes (14): ProductRecipeLine, ratioRound(), ProductRecipeRejection, updateProductRecipe(), isQuantityThousandths(), applyHeatTreatmentYield(), isRecipeOutputKilogramThousandths(), materialQuantityToKilogramThousandths() (+6 more)
 
 ### Community 74 - "operating-expense.ts"
-Cohesion: 0.10
-Nodes (30): OpexGroupCode, OpexMonthLine, OpexMonthLines, AGENCY_FEE_PERCENT, agencyPlanExVat(), amountsForOtherLine(), catalogCode(), DerivedDef (+22 more)
+Cohesion: 0.09
+Nodes (35): isOpexGroupCode(), OpexGroupCode, OpexMonthLine, OpexMonthLines, activeOtherLines(), addOpexOtherLine(), addOpexOtherLineRejection(), AGENCY_FEE_PERCENT (+27 more)
 
-### Community 75 - "MaterialReceiptFormTable.tsx"
-Cohesion: 0.06
-Nodes (57): MATERIAL_GROUPS, buildGroups(), COLUMN_KIND, ColumnKey, COLUMNS, EntryFormGroup, EntryFormTotals, formatKopecks() (+49 more)
+### Community 75 - "ProductionEntryFormTable.tsx"
+Cohesion: 0.08
+Nodes (39): editableFieldNear(), ProductRow(), buildGroups(), COLUMN_KIND, ColumnKey, COLUMNS, EntryFormTotals, formatKopecks() (+31 more)
 
-### Community 79 - "RecipeComponentSearch"
-Cohesion: 0.33
-Nodes (3): buildCandidateGroups(), RecipeComponentSearch(), selectedGroups()
+### Community 79 - "DerivativeCompositionEditor"
+Cohesion: 0.29
+Nodes (5): buildCandidateGroups(), DerivativeCompositionEditor(), RecipeComponentSearch(), selectedGroups(), IconSearch()
 
 ### Community 81 - "sales-plan.ts"
-Cohesion: 0.43
-Nodes (7): activeSalesPlans(), defaultSalesPlanLines(), isPrice(), isVolume(), lineNumbersRejection(), monthIsTaken(), suggestedPriceWithVat()
+Cohesion: 0.12
+Nodes (34): costWithVat(), priceAverage(), rangePlanProduction(), rangePlanSales(), amountExVat(), amountWithVat(), productionLineAmountExVat(), productionPlanLineMetrics (+26 more)
 
-### Community 82 - "MaterialsNormsScreen"
-Cohesion: 0.40
-Nodes (5): MaterialsNormsPage(), metadata, materialNormQuantity(), MaterialsNormsScreen(), MATERIALS_NORMS_TITLE
+### Community 82 - "MaterialsNormsScreen.tsx"
+Cohesion: 0.31
+Nodes (8): MaterialsNormsPage(), metadata, NORMED_MATERIAL_GROUP_ID, materialNormQuantity(), MaterialsNormsScreen(), NormCell(), MATERIALS_NORMS_TITLE, MATERIAL_NORM_ERROR
 
-### Community 83 - "HrFactScreen.tsx"
-Cohesion: 0.23
-Nodes (13): metadata, OpexHrFactPage(), HR_DEPARTMENT_LABELS, hrDayOutsourcingValue(), hrDayStaffValue(), FactDepartment, HrFactScreen(), open() (+5 more)
+### Community 83 - "Операционные расходы"
+Cohesion: 0.50
+Nodes (4): HR (`HR`), Операционные расходы, Прочие статьи (`Operation Expense`), Транспорт (`Transport`)
 
 ### Community 84 - "mock-opex.ts"
-Cohesion: 0.07
-Nodes (42): distribute(), eachDate(), factFuelExVat(), HIRE_PRICE_KOP, HIRE_SEEDS, hireAmount(), isShopPositionId(), MOCK_MONTHS (+34 more)
+Cohesion: 0.06
+Nodes (46): distribute(), eachDate(), factFuelExVat(), HIRE_PRICE_KOP, HIRE_SEEDS, hireAmount(), HireSeed, isShopPositionId() (+38 more)
 
-### Community 85 - "sales-fact.ts"
-Cohesion: 0.11
-Nodes (27): Архитектура прототипа, Слои, Удаление, Чего не делать, Product, ProductCategory, productCostPerPiece(), dayGridProducts() (+19 more)
+### Community 85 - "Архитектура прототипа"
+Cohesion: 0.31
+Nodes (5): Архитектура прототипа, Слои, Чего не делать, Запуск, Куда смотреть
+
+### Community 86 - "Движение готовой продукции"
+Cohesion: 0.67
+Nodes (3): Ввод плана (движение), Движение готовой продукции, Инвентаризация (движение)
+
+### Community 87 - "Движение производных"
+Cohesion: 0.67
+Nodes (3): Ввод плана (движение производных), Движение производных, Инвентаризация (движение производных)
+
+### Community 88 - "Как собрать первый прототип"
+Cohesion: 0.67
+Nodes (3): Как собрать первый прототип, Порядок, Формула
 
 ## Knowledge Gaps
 - **8 isolated node(s):** `@biomejs/biome`, `@tailwindcss/postcss`, `@types/node`, `@types/react`, `@types/react-dom` (+3 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 512 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 525 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `next` connect `next` to `ProductionEntryScreen.tsx`, `products.ts`, `package.json`, `SettingsScreen.tsx`, `DerivativeCreateScreen.tsx`, `FinishedProductEditScreen.tsx`, `OpexSummaryScreen.tsx`, `RecipeJournalsTable.tsx`, `react`, `ProductionJournalFactScreen.tsx`, `FinishedGoodsMonthScreen.tsx`, `TransportSummaryScreen.tsx`, `planMonthOpen`, `SummaryScreen.tsx`, `PageFrame`, `AppShell.tsx`, `MaterialDocumentScreen.tsx`, `derivatives.ts`, `FinishedGoodsFactScreen.tsx`, `SalesFactScreen.tsx`, `HrSummaryScreen.tsx`, `SaleScreen.tsx`, `recipes/paths.ts`, `PlanningScreen.tsx`, `access.ts`, `RoleProvider.tsx`, `TransportFactScreen.tsx`, `monthKeyFromDate`, `MaterialsNormsScreen`, `HrFactScreen.tsx`?**
-  _High betweenness centrality (0.065) - this node is a cross-community bridge._
+- **Why does `next` connect `next` to `DerivativeCreateScreen.tsx`, `ProductionEntryScreen.tsx`, `package.json`, `FinishedProductEditScreen.tsx`, `monthKeyFromDate`, `opex/paths.ts`, `MaterialsPlanScreen.tsx`, `RecipeJournalsTable.tsx`, `MaterialJournalScreen.tsx`, `FinishedGoodsFactScreen.tsx`, `RoleProvider.tsx`, `Icons.tsx`, `production-fact.ts`, `FinishedGoodsMonthScreen.tsx`, `CashflowSummaryScreen`, `useDocumentStore`, `AppShell.tsx`, `credit-resources/paths.ts`, `SummaryScreen.tsx`, `derivatives.ts`, `MaterialReceiptFormTable.tsx`, `recipes/paths.ts`, `SaleScreen.tsx`, `MovementPlanScreen.tsx`, `SalesFactScreen.tsx`, `PlanningScreen.tsx`, `ProductionJournalFactScreen.tsx`, `IconArrowLeft`, `PageFrame`, `MaterialsNormsScreen.tsx`?**
+  _High betweenness centrality (0.067) - this node is a cross-community bridge._
 - **What connects `@biomejs/biome`, `@tailwindcss/postcss`, `@types/node` to the rest of the system?**
   _8 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `RecipePrint.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.12688172043010754 - nodes in this community are weakly interconnected._
-- **Why does `derivativeConsumptionPrice()` connect `derivatives.ts` to `finished-product-cost.ts`, `derivative-movement.ts`, `Предметная область`?**
+- **Should `DerivativeCreateScreen.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.13911290322580644 - nodes in this community are weakly interconnected._
+- **Why does `react` connect `Icons.tsx` to `DerivativeCreateScreen.tsx`, `ProductionEntryScreen.tsx`, `package.json`, `FinishedGoodsMonthTable.tsx`, `FinishedProductEditScreen.tsx`, `monthKeyFromDate`, `MaterialsPlanScreen.tsx`, `RecipeJournalsTable.tsx`, `DerivativeMovementSummaryTable.tsx`, `MaterialJournalScreen.tsx`, `index.ts`, `MaterialsSummaryTable.tsx`, `keepWithNext`, `FinishedGoodsFactScreen.tsx`, `RoleProvider.tsx`, `production-fact.ts`, `FinishedGoodsMonthScreen.tsx`, `next`, `useDocumentStore`, `IconChevronDown`, `AppShell.tsx`, `SummaryScreen.tsx`, `MaterialReceiptFormTable.tsx`, `recipes/paths.ts`, `SaleScreen.tsx`, `MovementPlanScreen.tsx`, `SalesFactScreen.tsx`, `PlanningScreen.tsx`, `SummaryTable.tsx`, `ProductionJournalFactScreen.tsx`, `DocumentProvider.tsx`, `PageFrame`, `ProductionEntryFormTable.tsx`?**
   _High betweenness centrality (0.044) - this node is a cross-community bridge._
 - **Should `ProductionEntryScreen.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.057911392405063294 - nodes in this community are weakly interconnected._
-- **Why does `plannedProductionVolumePieces()` connect `finished-goods.ts` to `derivative-movement.ts`, `production-journal-fact.ts`, `summary.ts`, `materials.ts`, `Ввод плана (производство)`, `production-plan.ts`, `movementRow`, `production-fact.ts`?**
-  _High betweenness centrality (0.043) - this node is a cross-community bridge._
+  _Cohesion score 0.05570611261668172 - nodes in this community are weakly interconnected._
+- **Why does `monthKeyFromDate()` connect `monthKeyFromDate` to `ProductionEntryScreen.tsx`, `opex/paths.ts`, `MaterialsPlanScreen.tsx`, `MaterialJournalScreen.tsx`, `FinishedGoodsFactScreen.tsx`, `Icons.tsx`, `production-fact.ts`, `FinishedGoodsMonthScreen.tsx`, `CashflowSummaryScreen`, `next`, `useDocumentStore`, `SummaryScreen.tsx`, `MaterialReceiptFormTable.tsx`, `hr.ts`, `finished-goods.ts`, `summary.ts`, `recipes/paths.ts`, `SaleScreen.tsx`, `MovementPlanScreen.tsx`, `SalesFactScreen.tsx`, `PlanningScreen.tsx`, `ProductionJournalFactScreen.tsx`, `use-opex.ts`, `PageFrame`, `sales-fact.ts`, `sales-plan.ts`?**
+  _High betweenness centrality (0.040) - this node is a cross-community bridge._
 - **Should `products.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.08636363636363636 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.1282051282051282 - nodes in this community are weakly interconnected._

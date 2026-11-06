@@ -1,4 +1,5 @@
 import { type UnitCost } from '@/domain/cost';
+import { monthInterestAmounts } from '@/domain/credit-resources';
 import {
   PROFIT_TAX_PERCENT,
   type Product,
@@ -109,7 +110,9 @@ export interface SummaryHeadlineSide {
   profit: number | null;
   /** `Svod!G6` / `I6` = прибыль × `Svod!C6` / 100. */
   profitTax: number | null;
-  /** `Svod!G7` / `I7` = прибыль − налог. */
+  /** Процентные платежи после налога; вводят в движении кредитных ресурсов. */
+  interestExpense: number;
+  /** Чистая прибыль = прибыль − налог − процентные платежи. */
   netProfit: number | null;
   /**
    * `Svod!G8` / `I8`: чистая прибыль / выручка без НДС × 100.
@@ -127,6 +130,7 @@ export interface SummaryHeadline {
     operatingExpenseExVat: number;
     profit: number | null;
     profitTax: number | null;
+    interestExpense: number;
     netProfit: number | null;
     netProfitabilityHundredths: number | null;
   };
@@ -439,13 +443,17 @@ function planTotalsAsSide(totals: SalesPlanTotals): SummarySide {
   };
 }
 
-function headlineSide(totals: SummarySide | null, operatingExpenseExVat: number): SummaryHeadlineSide {
+function headlineSide(
+  totals: SummarySide | null,
+  operatingExpenseExVat: number,
+  interestExpense: number,
+): SummaryHeadlineSide {
   const revenueWithVat = totals?.revenueWithVat ?? null;
   const revenueExVat = totals?.revenueExVat ?? null;
   const contribution = totals?.contribution ?? null;
   const profit = contribution === null ? null : contribution - operatingExpenseExVat;
   const profitTax = profit === null ? null : ratioRound(profit * PROFIT_TAX_PERCENT, 100);
-  const netProfit = profit === null || profitTax === null ? null : profit - profitTax;
+  const netProfit = profit === null || profitTax === null ? null : profit - profitTax - interestExpense;
   const netProfitabilityHundredths = percentHundredths(netProfit, revenueExVat);
 
   return {
@@ -454,25 +462,29 @@ function headlineSide(totals: SummarySide | null, operatingExpenseExVat: number)
     operatingExpenseExVat,
     profit,
     profitTax,
+    interestExpense,
     netProfit,
     netProfitabilityHundredths,
   };
 }
 
 /**
- * Верхний блок свода `Svod!D2:L8`.
+ * Верхний блок свода `Svod!D2:L8` с процентными платежами после налога.
  * Выручка и Т-проток — суммы по товарам, без вычета Factoring.
  * Операционные расходы — итог таблицы статей (`Operation Expense!E62` / `F62`).
- * На фактической сводке план расходов — доля прошедших дней; факт — сумма месяца как есть.
+ * Процентные платежи — сумма из движения кредитных ресурсов.
+ * На фактической сводке план расходов и процентов — доля прошедших дней; факт — сумма месяца.
  */
 export function summaryHeadline(
   planTotals: SummarySide | null,
   factTotals: SummarySide,
   operatingExpensePlanExVat: number,
   operatingExpenseFactExVat: number,
+  interestPlanExVat = 0,
+  interestFactExVat = 0,
 ): SummaryHeadline {
-  const plan = headlineSide(planTotals, operatingExpensePlanExVat);
-  const fact = headlineSide(factTotals, operatingExpenseFactExVat);
+  const plan = headlineSide(planTotals, operatingExpensePlanExVat, interestPlanExVat);
+  const fact = headlineSide(factTotals, operatingExpenseFactExVat, interestFactExVat);
 
   return {
     plan,
@@ -483,6 +495,7 @@ export function summaryHeadline(
       operatingExpenseExVat: fact.operatingExpenseExVat - plan.operatingExpenseExVat,
       profit: minus(fact.profit, plan.profit),
       profitTax: minus(fact.profitTax, plan.profitTax),
+      interestExpense: fact.interestExpense - plan.interestExpense,
       netProfit: minus(fact.netProfit, plan.netProfit),
       netProfitabilityHundredths: minus(fact.netProfitabilityHundredths, plan.netProfitabilityHundredths),
     },
@@ -558,6 +571,7 @@ export function monthSummary(
     planTotalsSide?.revenueWithVat ?? 0,
     planTotalsSide?.revenueExVat ?? 0,
   );
+  const interest = monthInterestAmounts(document, month);
 
   return {
     from: month,
@@ -571,7 +585,7 @@ export function monthSummary(
     planTotalsSide,
     factTotals,
     variance: varianceOf(factTotals, planTotalsSide),
-    headline: summaryHeadline(planTotalsSide, factTotals, opex.planExVat, opex.factExVat),
+    headline: summaryHeadline(planTotalsSide, factTotals, opex.planExVat, opex.factExVat, interest.plan, interest.fact),
   };
 }
 
@@ -713,9 +727,13 @@ function mergeMonthSummaries(views: readonly SummaryView[], planDays: number, fa
   const factTotals = factTotalsFromRows(rows, factDays);
   let planOpex = 0;
   let factOpex = 0;
+  let planInterest = 0;
+  let factInterest = 0;
   for (const view of views) {
     planOpex += view.headline.plan.operatingExpenseExVat;
     factOpex += view.headline.fact.operatingExpenseExVat;
+    planInterest += view.headline.plan.interestExpense;
+    factInterest += view.headline.fact.interestExpense;
   }
 
   return {
@@ -730,7 +748,7 @@ function mergeMonthSummaries(views: readonly SummaryView[], planDays: number, fa
     planTotalsSide,
     factTotals,
     variance: varianceOf(factTotals, planTotalsSide),
-    headline: summaryHeadline(planTotalsSide, factTotals, planOpex, factOpex),
+    headline: summaryHeadline(planTotalsSide, factTotals, planOpex, factOpex, planInterest, factInterest),
   };
 }
 
@@ -1014,6 +1032,8 @@ export function applySummaryLens(view: SummaryView, lens: SummaryLens, today: Da
       factTotals,
       scaleOperatingExpense(view.headline.plan.operatingExpenseExVat, opexPlanScale),
       view.headline.fact.operatingExpenseExVat,
+      scaleOperatingExpense(view.headline.plan.interestExpense, opexPlanScale),
+      view.headline.fact.interestExpense,
     ),
   };
 }
