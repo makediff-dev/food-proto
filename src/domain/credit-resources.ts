@@ -133,11 +133,12 @@ function lineAmounts(line: CreditResourceMonthLine | null): Omit<CreditResourceM
 }
 
 /**
- * Остаток тела на начало месяца: стартовая сумма + цепочка факта до предыдущего месяца.
- * `opening = initial + Σ(factReceived − factRepaid)` по месяцам с записями до `month`.
+ * Остаток тела на начало месяца: только цепочка факта получения − погашения до месяца.
+ * Справочная «сумма кредита» (`initialPrincipal`) в остаток не входит — кредит появляется
+ * с месяца получения (или иного движения).
  */
 export function openingPrincipal(document: PrototypeDocument, creditor: Creditor, month: string): number {
-  let balance = creditor.initialPrincipal;
+  let balance = 0;
   for (const record of creditResourceMonthsList(document)) {
     if (record.month >= month || record.month < CHAIN_START) {
       continue;
@@ -162,17 +163,36 @@ function lineHasActivity(amounts: Omit<CreditResourceMonthLine, 'id' | 'creditor
   );
 }
 
-function gridCreditors(document: PrototypeDocument, month: string): Creditor[] {
+function creditorVisibleInMonth(document: PrototypeDocument, creditor: Creditor, month: string): boolean {
+  const opening = openingPrincipal(document, creditor, month);
+  const amounts = lineAmounts(storedLine(document, month, creditor.id));
+  return opening !== 0 || lineHasActivity(amounts);
+}
+
+export type CreditMonthViewOptions = {
+  /**
+   * Показывать рабочих кредиторов без остатка и движения и всех архивных.
+   * Нужно на вводе плана (первое получение и возврат) и на вводе факта.
+   * В отчётах и ДДС — `false`: строка с месяца взятия / с движением.
+   */
+  includeIdleActive?: boolean;
+};
+
+function gridCreditors(document: PrototypeDocument, month: string, options?: CreditMonthViewOptions): Creditor[] {
+  const includeIdleActive = options?.includeIdleActive === true;
   const all = creditorsList(document);
-  const active = all.filter((item) => item.deletedAt === null);
+  const active = all.filter((item) => {
+    if (item.deletedAt !== null) {
+      return false;
+    }
+    return includeIdleActive || creditorVisibleInMonth(document, item, month);
+  });
   const activeIds = new Set(active.map((item) => item.id));
   const archived = all.filter((item) => {
     if (item.deletedAt === null || activeIds.has(item.id)) {
       return false;
     }
-    const opening = openingPrincipal(document, item, month);
-    const amounts = lineAmounts(storedLine(document, month, item.id));
-    return opening !== 0 || lineHasActivity(amounts);
+    return includeIdleActive || creditorVisibleInMonth(document, item, month);
   });
   return [...active, ...archived].sort((left, right) => left.name.localeCompare(right.name, 'ru'));
 }
@@ -205,8 +225,12 @@ function rowView(document: PrototypeDocument, month: string, creditor: Creditor)
 }
 
 /** Сетка месяца: кредиторы, остатки тела, получение, погашение и проценты. */
-export function creditResourcesMonthView(document: PrototypeDocument, month: string): CreditResourcesMonthView {
-  const rows = gridCreditors(document, month).map((creditor) => rowView(document, month, creditor));
+export function creditResourcesMonthView(
+  document: PrototypeDocument,
+  month: string,
+  options?: CreditMonthViewOptions,
+): CreditResourcesMonthView {
+  const rows = gridCreditors(document, month, options).map((creditor) => rowView(document, month, creditor));
   const sum = (pick: (row: CreditCreditorRowView) => number) => rows.reduce((total, row) => total + pick(row), 0);
   return {
     month,

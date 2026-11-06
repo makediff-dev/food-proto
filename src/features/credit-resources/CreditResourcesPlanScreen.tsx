@@ -52,7 +52,7 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
   const [addError, setAddError] = useState<string | null>(null);
 
   const view = useMemo(
-    () => creditResourcesMonthView(credit.document, selectedMonth),
+    () => creditResourcesMonthView(credit.document, selectedMonth, { includeIdleActive: true }),
     [credit.document, selectedMonth],
   );
 
@@ -60,7 +60,7 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
     <PageFrame
       title={CREDIT_RESOURCES_PLAN_TITLE}
       full
-      lede="Справочник кредиторов и план месяца: стартовая сумма, ставка, получение, погашение тела и процентные платежи."
+      lede="Справочник кредиторов и план месяца: сумма кредита (справочно), ставка, получение, погашение тела и процентные платежи. Тело появляется с месяца получения."
       intro={
         <CreditMonthBar
           month={selectedMonth}
@@ -109,13 +109,12 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
               <th scope="col" className={groupEnd}>
                 <ColumnLabel label="Проценты, план" />
               </th>
-              {editable ? <th scope="col" className={columnHeadingClassName} /> : null}
             </tr>
           </thead>
           <tbody>
             {view.rows.length === 0 ? (
               <tr>
-                <td colSpan={editable ? 7 : 6} className="border-b border-b-line px-3 py-6 text-sm text-muted">
+                <td colSpan={6} className="border-b border-b-line px-3 py-6 text-sm text-muted">
                   Кредиторов пока нет. Нажмите «Добавить кредитора».
                 </td>
               </tr>
@@ -126,22 +125,58 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
                 <tr key={row.creditorId}>
                   <th scope="row" className={entityNameRowClassName(rowEditable ? 'assigned' : 'repeated')}>
                     <div className="flex w-full items-center gap-2">
-                      {rowEditable ? (
-                        <GridText
-                          label={`Название, ${row.name}`}
-                          value={row.name}
-                          invalidMessage={FIELD_ERROR.empty}
-                          onCommit={(name) => {
-                            const rejection = credit.renameCreditor(row.creditorId, name);
-                            return rejection ? CREDIT_ERROR[rejection] : null;
+                      <span className="min-w-0 flex-1">
+                        {rowEditable ? (
+                          <GridText
+                            label={`Название, ${row.name}`}
+                            value={row.name}
+                            invalidMessage={FIELD_ERROR.empty}
+                            onCommit={(name) => {
+                              const rejection = credit.renameCreditor(row.creditorId, name);
+                              return rejection ? CREDIT_ERROR[rejection] : null;
+                            }}
+                          />
+                        ) : (
+                          <span className="text-sm leading-8 text-ink">
+                            {row.name}
+                            {row.deleted ? <span className="text-muted"> (архив)</span> : null}
+                          </span>
+                        )}
+                      </span>
+                      {editable && !row.deleted ? (
+                        <button
+                          type="button"
+                          aria-label={`Удалить ${row.name}`}
+                          title="Удалить"
+                          className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                          onClick={() => {
+                            const confirmed = window.confirm(
+                              `Удалить «${row.name}»? Кредитор пропадёт из рабочего списка.`,
+                            );
+                            if (confirmed) {
+                              credit.deleteCreditor(row.creditorId);
+                            }
                           }}
-                        />
-                      ) : (
-                        <span>
-                          {row.name}
-                          {row.deleted ? ' (архив)' : ''}
-                        </span>
-                      )}
+                        >
+                          <IconTrash />
+                        </button>
+                      ) : null}
+                      {editable && row.deleted ? (
+                        <button
+                          type="button"
+                          aria-label={`Вернуть ${row.name}`}
+                          title="Вернуть"
+                          className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                          onClick={() => {
+                            const rejection = credit.restoreCreditor(row.creditorId);
+                            if (rejection) {
+                              window.alert(CREDIT_ERROR[rejection]);
+                            }
+                          }}
+                        >
+                          <IconUndo />
+                        </button>
+                      ) : null}
                     </div>
                   </th>
                   <td className={`${valueCell} ${cellKindClassName[inputKind(rowEditable)]}`}>
@@ -234,43 +269,6 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
                       }
                     />
                   </td>
-                  {editable ? (
-                    <td className="border-b border-b-line px-1.5 py-2 align-middle">
-                      {row.deleted ? (
-                        <button
-                          type="button"
-                          aria-label={`Вернуть ${row.name}`}
-                          title="Вернуть"
-                          className="inline-flex size-8 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                          onClick={() => {
-                            const rejection = credit.restoreCreditor(row.creditorId);
-                            if (rejection) {
-                              window.alert(CREDIT_ERROR[rejection]);
-                            }
-                          }}
-                        >
-                          <IconUndo />
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          aria-label={`Удалить ${row.name}`}
-                          title="Удалить"
-                          className="inline-flex size-8 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                          onClick={() => {
-                            const confirmed = window.confirm(
-                              `Удалить «${row.name}»? Кредитор пропадёт из рабочего списка.`,
-                            );
-                            if (confirmed) {
-                              credit.deleteCreditor(row.creditorId);
-                            }
-                          }}
-                        >
-                          <IconTrash />
-                        </button>
-                      )}
-                    </td>
-                  ) : null}
                 </tr>
               );
             })}

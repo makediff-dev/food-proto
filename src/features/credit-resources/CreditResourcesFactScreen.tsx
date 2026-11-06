@@ -44,7 +44,7 @@ export function CreditResourcesFactScreen({ month }: { month: string }) {
   const editable = credit.hydrated && canEditCreditAndCashflow;
 
   const view = useMemo(
-    () => creditResourcesMonthView(credit.document, selectedMonth),
+    () => creditResourcesMonthView(credit.document, selectedMonth, { includeIdleActive: true }),
     [credit.document, selectedMonth],
   );
 

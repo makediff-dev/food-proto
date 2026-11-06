@@ -1,6 +1,6 @@
 import type { Creditor, CreditResourceMonth } from '@/domain/document';
 
-/** Т-Банк из книги `CashFlow!D145`, ставка 18 %. Стартовое тело — масштаб мока. */
+/** Т-Банк из книги `CashFlow!D145`, ставка 18 %. Сумма договора — справочно; тело появляется с получения в сентябре. */
 export const mockCreditors: Creditor[] = [
   {
     id: 'creditor:t-bank',
@@ -44,11 +44,13 @@ function creditMonth(
 }
 
 /**
- * Сентябрь–ноябрь 2026: погашение тела и проценты в масштабе мока.
+ * Сентябрь–ноябрь 2026: в сентябре берут тело 5 млн, дальше погашение и проценты.
  * Ноябрь — частичный факт (как у продаж).
  */
 export const mockCreditResourceMonths: CreditResourceMonth[] = [
   creditMonth('2026-09', {
+    planReceived: 5_000_000_00,
+    factReceived: 5_000_000_00,
     planRepaid: 200_000_00,
     factRepaid: 200_000_00,
     planInterest: 75_000_00,
