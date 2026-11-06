@@ -30,6 +30,20 @@ export const OPEX_TRANSPORT_FACT_HREF = '/opex/transport/fact';
 export const OPEX_OTHER_PLAN_HREF = '/opex/other/plan';
 export const OPEX_OTHER_FACT_HREF = '/opex/other/fact';
 
+export const OPEX_GROUP_BASE_HREF = '/opex/group';
+
+export function opexGroupHrefPath(code: string): string {
+  return `${OPEX_GROUP_BASE_HREF}/${code}`;
+}
+
+export function opexGroupPlanHrefPath(code: string): string {
+  return `${opexGroupHrefPath(code)}/plan`;
+}
+
+export function opexGroupFactHrefPath(code: string): string {
+  return `${opexGroupHrefPath(code)}/fact`;
+}
+
 export function parseOpexMonthQuery(params: { month?: string }): { month: string } {
   return { month: params.month ?? '' };
 }
@@ -101,4 +115,16 @@ export function opexOtherPlanHref(options: { month: string; currentMonth: string
 
 export function opexOtherFactHref(options: { month: string; currentMonth: string }): string {
   return monthHref(OPEX_OTHER_FACT_HREF, options.month, options.currentMonth);
+}
+
+export function opexGroupHref(options: { code: string; month: string; currentMonth: string }): string {
+  return monthHref(opexGroupHrefPath(options.code), options.month, options.currentMonth);
+}
+
+export function opexGroupPlanHref(options: { code: string; month: string; currentMonth: string }): string {
+  return monthHref(opexGroupPlanHrefPath(options.code), options.month, options.currentMonth);
+}
+
+export function opexGroupFactHref(options: { code: string; month: string; currentMonth: string }): string {
+  return monthHref(opexGroupFactHrefPath(options.code), options.month, options.currentMonth);
 }

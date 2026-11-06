@@ -2,8 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
+import { useDocumentStore } from '@/data/DocumentProvider';
+import type { OpexGroupCode } from '@/domain/document';
+import { opexGroupName } from '@/domain/operating-expense';
 import {
   CASHFLOW_FACT_HREF,
   CASHFLOW_FACT_TITLE,
@@ -55,6 +58,9 @@ import {
   OPEX_TRANSPORT_FACT_TITLE,
   OPEX_TRANSPORT_PLAN_TITLE,
   OPEX_TRANSPORT_TITLE,
+  opexGroupFactHrefPath,
+  opexGroupHrefPath,
+  opexGroupPlanHrefPath,
 } from '@/features/opex/paths';
 import { PLANNING_SECTION_TITLE } from '@/features/planning/paths';
 import {
@@ -149,17 +155,44 @@ const MATERIALS_NAV: readonly NavItem[] = [
   { href: '/materials/receipts', label: MATERIALS_RECEIPTS_TITLE, navKind: 'input' },
 ];
 
-const OPEX_NAV: readonly NavItem[] = [
-  { href: '/opex', label: OPEX_SUMMARY_TITLE, exact: true, navKind: 'report' },
-  { href: '/opex/hr', label: OPEX_HR_TITLE, exact: true, navKind: 'report' },
-  { href: '/opex/transport', label: OPEX_TRANSPORT_TITLE, exact: true, navKind: 'report' },
-  { href: '/opex/hr/plan', label: `HR · ${OPEX_HR_PLAN_TITLE}`, navKind: 'input' },
-  { href: '/opex/hr/fact', label: `HR · ${OPEX_HR_FACT_TITLE}`, navKind: 'input' },
-  { href: '/opex/transport/plan', label: `Транспорт · ${OPEX_TRANSPORT_PLAN_TITLE}`, navKind: 'input' },
-  { href: '/opex/transport/fact', label: `Транспорт · ${OPEX_TRANSPORT_FACT_TITLE}`, navKind: 'input' },
-  { href: '/opex/other/plan', label: `${OPEX_OTHER_TITLE} · ${OPEX_OTHER_PLAN_TITLE}`, navKind: 'input' },
-  { href: '/opex/other/fact', label: `${OPEX_OTHER_TITLE} · ${OPEX_OTHER_FACT_TITLE}`, navKind: 'input' },
-];
+function buildOpexNav(promotedGroupCodes: readonly OpexGroupCode[]): NavItem[] {
+  const items: NavItem[] = [
+    { href: '/opex', label: OPEX_SUMMARY_TITLE, exact: true, navKind: 'report' },
+    { href: '/opex/hr', label: OPEX_HR_TITLE, exact: true, navKind: 'report' },
+    { href: '/opex/transport', label: OPEX_TRANSPORT_TITLE, exact: true, navKind: 'report' },
+  ];
+
+  for (const code of promotedGroupCodes) {
+    items.push({
+      href: opexGroupHrefPath(code),
+      label: opexGroupName(code),
+      exact: true,
+      navKind: 'report',
+    });
+  }
+
+  items.push(
+    { href: '/opex/hr/plan', label: `HR · ${OPEX_HR_PLAN_TITLE}`, navKind: 'input' },
+    { href: '/opex/hr/fact', label: `HR · ${OPEX_HR_FACT_TITLE}`, navKind: 'input' },
+    { href: '/opex/transport/plan', label: `Транспорт · ${OPEX_TRANSPORT_PLAN_TITLE}`, navKind: 'input' },
+    { href: '/opex/transport/fact', label: `Транспорт · ${OPEX_TRANSPORT_FACT_TITLE}`, navKind: 'input' },
+  );
+
+  for (const code of promotedGroupCodes) {
+    const name = opexGroupName(code);
+    items.push(
+      { href: opexGroupPlanHrefPath(code), label: `${name} · ${OPEX_OTHER_PLAN_TITLE}`, navKind: 'input' },
+      { href: opexGroupFactHrefPath(code), label: `${name} · ${OPEX_OTHER_FACT_TITLE}`, navKind: 'input' },
+    );
+  }
+
+  items.push(
+    { href: '/opex/other/plan', label: `${OPEX_OTHER_TITLE} · ${OPEX_OTHER_PLAN_TITLE}`, navKind: 'input' },
+    { href: '/opex/other/fact', label: `${OPEX_OTHER_TITLE} · ${OPEX_OTHER_FACT_TITLE}`, navKind: 'input' },
+  );
+
+  return items;
+}
 
 const CREDIT_RESOURCES_NAV: readonly NavItem[] = [
   {
@@ -215,56 +248,27 @@ function navItemIsCurrent(pathname: string, item: NavItem): boolean {
   return sectionIsCurrent(pathname, item.href);
 }
 
-function currentNavLabel(pathname: string): string | undefined {
+function currentNavLabel(pathname: string, opexNav: readonly NavItem[]): string | undefined {
   if (sectionIsCurrent(pathname, SETTINGS_HREF)) {
     return SETTINGS_TITLE;
   }
 
-  for (const item of SALES_NAV) {
-    if (navItemIsCurrent(pathname, item)) {
-      return item.label;
-    }
-  }
+  const groups: readonly (readonly NavItem[])[] = [
+    SALES_NAV,
+    PRODUCTION_NAV,
+    MOVEMENT_NAV,
+    RECIPES_NAV,
+    MATERIALS_NAV,
+    opexNav,
+    CREDIT_RESOURCES_NAV,
+    CASHFLOW_NAV,
+  ];
 
-  for (const item of PRODUCTION_NAV) {
-    if (navItemIsCurrent(pathname, item)) {
-      return item.label;
-    }
-  }
-
-  for (const item of MOVEMENT_NAV) {
-    if (navItemIsCurrent(pathname, item)) {
-      return item.label;
-    }
-  }
-
-  for (const item of RECIPES_NAV) {
-    if (navItemIsCurrent(pathname, item)) {
-      return item.label;
-    }
-  }
-
-  for (const item of MATERIALS_NAV) {
-    if (navItemIsCurrent(pathname, item)) {
-      return item.label;
-    }
-  }
-
-  for (const item of OPEX_NAV) {
-    if (navItemIsCurrent(pathname, item)) {
-      return item.label;
-    }
-  }
-
-  for (const item of CREDIT_RESOURCES_NAV) {
-    if (navItemIsCurrent(pathname, item)) {
-      return item.label;
-    }
-  }
-
-  for (const item of CASHFLOW_NAV) {
-    if (navItemIsCurrent(pathname, item)) {
-      return item.label;
+  for (const items of groups) {
+    for (const item of items) {
+      if (navItemIsCurrent(pathname, item)) {
+        return item.label;
+      }
     }
   }
 
@@ -366,23 +370,33 @@ function SettingsNavLink({ pathname, onNavigate }: { pathname: string; onNavigat
   );
 }
 
-const NAV_GROUPS: readonly { section: NavSectionId; title: string; items: readonly NavItem[] }[] = [
-  { section: 'sales', title: SALES_SECTION_TITLE, items: SALES_NAV },
-  { section: 'production', title: PRODUCTION_SECTION_TITLE, items: PRODUCTION_NAV },
-  { section: 'movement', title: MOVEMENT_SECTION_TITLE, items: MOVEMENT_NAV },
-  { section: 'recipes', title: RECIPES_SECTION_TITLE, items: RECIPES_NAV },
-  { section: 'derivativeMovement', title: DERIVATIVE_MOVEMENT_SECTION_TITLE, items: DERIVATIVE_MOVEMENT_NAV },
-  { section: 'materials', title: MATERIALS_SECTION_TITLE, items: MATERIALS_NAV },
-  { section: 'opex', title: OPEX_SECTION_TITLE, items: OPEX_NAV },
-  { section: 'creditResources', title: CREDIT_RESOURCES_SECTION_TITLE, items: CREDIT_RESOURCES_NAV },
-  { section: 'cashflow', title: CASHFLOW_SECTION_TITLE, items: CASHFLOW_NAV },
-];
+function buildNavGroups(
+  opexNav: readonly NavItem[],
+): readonly { section: NavSectionId; title: string; items: readonly NavItem[] }[] {
+  return [
+    { section: 'sales', title: SALES_SECTION_TITLE, items: SALES_NAV },
+    { section: 'production', title: PRODUCTION_SECTION_TITLE, items: PRODUCTION_NAV },
+    { section: 'movement', title: MOVEMENT_SECTION_TITLE, items: MOVEMENT_NAV },
+    { section: 'recipes', title: RECIPES_SECTION_TITLE, items: RECIPES_NAV },
+    { section: 'derivativeMovement', title: DERIVATIVE_MOVEMENT_SECTION_TITLE, items: DERIVATIVE_MOVEMENT_NAV },
+    { section: 'materials', title: MATERIALS_SECTION_TITLE, items: MATERIALS_NAV },
+    { section: 'opex', title: OPEX_SECTION_TITLE, items: opexNav },
+    { section: 'creditResources', title: CREDIT_RESOURCES_SECTION_TITLE, items: CREDIT_RESOURCES_NAV },
+    { section: 'cashflow', title: CASHFLOW_SECTION_TITLE, items: CASHFLOW_NAV },
+  ];
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { role } = useRole();
+  const { document: accountingDocument } = useDocumentStore();
   const [menuOpen, setMenuOpen] = useState(false);
-  const currentLabel = currentNavLabel(pathname);
+  const opexNav = useMemo(
+    () => buildOpexNav(accountingDocument.opexPromotedGroupCodes),
+    [accountingDocument.opexPromotedGroupCodes],
+  );
+  const navGroups = useMemo(() => buildNavGroups(opexNav), [opexNav]);
+  const currentLabel = currentNavLabel(pathname, opexNav);
   const homeHref = roleHomeHref(role);
 
   useEffect(() => {
@@ -439,15 +453,17 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
 
         <nav aria-label="Разделы" className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2">
-          {NAV_GROUPS.filter((group) => roleHasSection(role, group.section)).map((group) => (
-            <NavGroup
-              key={group.section}
-              title={group.title}
-              items={group.items}
-              pathname={pathname}
-              onNavigate={closeMenu}
-            />
-          ))}
+          {navGroups
+            .filter((group) => roleHasSection(role, group.section))
+            .map((group) => (
+              <NavGroup
+                key={group.section}
+                title={group.title}
+                items={group.items}
+                pathname={pathname}
+                onNavigate={closeMenu}
+              />
+            ))}
         </nav>
 
         {roleHasSection(role, 'roles') ? <SettingsNavLink pathname={pathname} onNavigate={closeMenu} /> : null}

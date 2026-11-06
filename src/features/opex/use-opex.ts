@@ -32,7 +32,11 @@ import {
   addOpexOtherLine,
   addOpexOtherLineRejection,
   deleteOpexOtherLine,
+  demoteOpexGroup,
+  demoteOpexGroupRejection,
   type OpexFieldRejection,
+  promoteOpexGroup,
+  promoteOpexGroupRejection,
   renameOpexOtherLine,
   renameOpexOtherLineRejection,
   restoreOpexOtherLine,
@@ -104,6 +108,22 @@ export function useOpex() {
         return rejection;
       }
       updateDocument((current) => restoreOpexOtherLine(current, lineId));
+      return null;
+    },
+    promoteOpexGroup(groupCode: OpexGroupCode): OpexFieldRejection | null {
+      const rejection = promoteOpexGroupRejection(document, groupCode);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => promoteOpexGroup(current, groupCode));
+      return null;
+    },
+    demoteOpexGroup(groupCode: OpexGroupCode): OpexFieldRejection | null {
+      const rejection = demoteOpexGroupRejection(document, groupCode);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => demoteOpexGroup(current, groupCode));
       return null;
     },
     addHrPosition(departmentId: HrDepartmentId, name: string): HrFieldRejection | null {

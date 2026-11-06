@@ -19,7 +19,17 @@ const MAX_NAME = 120;
 /** Доля агентского соглашения от выручки с НДС. `Operation Expense!E41 = Svod!G2*0.07`. */
 export const AGENCY_FEE_PERCENT = 7;
 
-export type OpexFieldRejection = 'missing' | 'month' | 'amount' | 'line' | 'group' | 'archived' | NameRejection;
+export type OpexFieldRejection =
+  | 'missing'
+  | 'month'
+  | 'amount'
+  | 'line'
+  | 'group'
+  | 'archived'
+  | 'promoted'
+  | 'not-promoted'
+  | 'not-promotable'
+  | NameRejection;
 
 export type OpexRowKind = 'derived' | 'editable';
 
@@ -155,6 +165,31 @@ const GROUPS: readonly GroupDef[] = [
 export const OPEX_GROUP_LABELS: Record<OpexGroupCode, string> = Object.fromEntries(
   GROUPS.map((group) => [group.code, group.name]),
 ) as Record<OpexGroupCode, string>;
+
+/** Группы без строк HR/транспорта — их можно вынести из «Прочего» в отдельный раздел. */
+export const PROMOTABLE_OPEX_GROUP_CODES = ['2', '3', '4', '5', '6', '8'] as const satisfies readonly OpexGroupCode[];
+
+export type PromotableOpexGroupCode = (typeof PROMOTABLE_OPEX_GROUP_CODES)[number];
+
+export function isPromotableOpexGroupCode(value: string): value is PromotableOpexGroupCode {
+  return (PROMOTABLE_OPEX_GROUP_CODES as readonly string[]).includes(value);
+}
+
+export function opexGroupName(code: OpexGroupCode): string {
+  return OPEX_GROUP_LABELS[code];
+}
+
+function groupDef(code: OpexGroupCode): GroupDef {
+  const group = GROUPS.find((item) => item.code === code);
+  if (!group) {
+    throw new Error(`Unknown opex group ${code}`);
+  }
+  return group;
+}
+
+function promotedSet(document: PrototypeDocument): Set<OpexGroupCode> {
+  return new Set(document.opexPromotedGroupCodes);
+}
 
 function isMoney(value: number): boolean {
   return Number.isInteger(value) && value >= 0 && value <= MAX_MONEY;
@@ -334,7 +369,66 @@ export function operatingExpenseMonthView(
   };
 }
 
-/** Категории прочих статей — даже пустые, чтобы добавить расход. Строки HR и транспорта — только смотрят. */
+function buildOtherGroupView(
+  document: PrototypeDocument,
+  month: string,
+  revenueWithVat: number,
+  group: GroupDef,
+  hr: ReturnType<typeof hrMonthView>,
+  transport: ReturnType<typeof transportMonthView>,
+): OpexOtherGroupView {
+  const lines: OpexOtherLineView[] = [];
+
+  for (const line of group.derived) {
+    const amounts = derivedLineAmounts(line.source, hr, transport);
+    lines.push({
+      id: line.id,
+      code: line.code,
+      name: line.name,
+      kind: 'derived',
+      deleted: false,
+      planExVat: amounts.planExVat,
+      factExVat: amounts.factExVat,
+      varianceExVat: amounts.factExVat - amounts.planExVat,
+      planEditable: false,
+      factEditable: false,
+    });
+  }
+
+  const catalog = otherLinesForGroupMonth(document, group.code, month, revenueWithVat);
+  catalog.forEach((line, index) => {
+    const amounts = amountsForOtherLine(document, month, line, revenueWithVat);
+    const deleted = line.deletedAt !== null;
+    lines.push({
+      id: line.id,
+      code: catalogCode(group, index),
+      name: line.name,
+      kind: line.kind,
+      deleted,
+      planExVat: amounts.planExVat,
+      factExVat: amounts.factExVat,
+      varianceExVat: amounts.factExVat - amounts.planExVat,
+      planEditable: !deleted && line.kind === 'standard',
+      factEditable: !deleted,
+    });
+  });
+
+  const groupPlan = lines.reduce((sum, item) => sum + item.planExVat, 0);
+  const groupFact = lines.reduce((sum, item) => sum + item.factExVat, 0);
+  return {
+    code: group.code,
+    name: group.name,
+    lines,
+    totalPlanExVat: groupPlan,
+    totalFactExVat: groupFact,
+    totalVarianceExVat: groupFact - groupPlan,
+  };
+}
+
+/**
+ * Категории прочих статей на экранах «Прочее» — без поднятых в отдельный раздел.
+ * Пустые категории оставляют, чтобы добавить расход. Строки HR и транспорта — только смотрят.
+ */
 export function operatingExpenseOtherMonthView(
   document: PrototypeDocument,
   month: string,
@@ -342,59 +436,19 @@ export function operatingExpenseOtherMonthView(
 ): OpexOtherMonthView {
   const hr = hrMonthView(document, month);
   const transport = transportMonthView(document, month);
+  const promoted = promotedSet(document);
   const groups: OpexOtherGroupView[] = [];
   let totalPlan = 0;
   let totalFact = 0;
 
   for (const group of GROUPS) {
-    const lines: OpexOtherLineView[] = [];
-
-    for (const line of group.derived) {
-      const amounts = derivedLineAmounts(line.source, hr, transport);
-      lines.push({
-        id: line.id,
-        code: line.code,
-        name: line.name,
-        kind: 'derived',
-        deleted: false,
-        planExVat: amounts.planExVat,
-        factExVat: amounts.factExVat,
-        varianceExVat: amounts.factExVat - amounts.planExVat,
-        planEditable: false,
-        factEditable: false,
-      });
+    if (promoted.has(group.code)) {
+      continue;
     }
-
-    const catalog = otherLinesForGroupMonth(document, group.code, month, revenueWithVat);
-    catalog.forEach((line, index) => {
-      const amounts = amountsForOtherLine(document, month, line, revenueWithVat);
-      const deleted = line.deletedAt !== null;
-      lines.push({
-        id: line.id,
-        code: catalogCode(group, index),
-        name: line.name,
-        kind: line.kind,
-        deleted,
-        planExVat: amounts.planExVat,
-        factExVat: amounts.factExVat,
-        varianceExVat: amounts.factExVat - amounts.planExVat,
-        planEditable: !deleted && line.kind === 'standard',
-        factEditable: !deleted,
-      });
-    });
-
-    const groupPlan = lines.reduce((sum, item) => sum + item.planExVat, 0);
-    const groupFact = lines.reduce((sum, item) => sum + item.factExVat, 0);
-    groups.push({
-      code: group.code,
-      name: group.name,
-      lines,
-      totalPlanExVat: groupPlan,
-      totalFactExVat: groupFact,
-      totalVarianceExVat: groupFact - groupPlan,
-    });
-    totalPlan += groupPlan;
-    totalFact += groupFact;
+    const view = buildOtherGroupView(document, month, revenueWithVat, group, hr, transport);
+    groups.push(view);
+    totalPlan += view.totalPlanExVat;
+    totalFact += view.totalFactExVat;
   }
 
   return {
@@ -403,6 +457,62 @@ export function operatingExpenseOtherMonthView(
     totalPlanExVat: totalPlan,
     totalFactExVat: totalFact,
     totalVarianceExVat: totalFact - totalPlan,
+  };
+}
+
+/** Одна группа прочих статей для отчёта / плана / факта поднятого раздела. */
+export function operatingExpenseOtherGroupMonthView(
+  document: PrototypeDocument,
+  month: string,
+  groupCode: OpexGroupCode,
+  revenueWithVat: number,
+): OpexOtherGroupView | null {
+  if (!isOpexGroupCode(groupCode)) {
+    return null;
+  }
+  const hr = hrMonthView(document, month);
+  const transport = transportMonthView(document, month);
+  return buildOtherGroupView(document, month, revenueWithVat, groupDef(groupCode), hr, transport);
+}
+
+export function promoteOpexGroupRejection(document: PrototypeDocument, groupCode: string): OpexFieldRejection | null {
+  if (!isOpexGroupCode(groupCode)) {
+    return 'group';
+  }
+  if (!isPromotableOpexGroupCode(groupCode)) {
+    return 'not-promotable';
+  }
+  if (promotedSet(document).has(groupCode)) {
+    return 'promoted';
+  }
+  return null;
+}
+
+export function promoteOpexGroup(document: PrototypeDocument, groupCode: OpexGroupCode): PrototypeDocument {
+  if (promoteOpexGroupRejection(document, groupCode)) {
+    return document;
+  }
+  const next = [...document.opexPromotedGroupCodes, groupCode].sort((a, b) => Number(a) - Number(b));
+  return { ...document, opexPromotedGroupCodes: next };
+}
+
+export function demoteOpexGroupRejection(document: PrototypeDocument, groupCode: string): OpexFieldRejection | null {
+  if (!isOpexGroupCode(groupCode)) {
+    return 'group';
+  }
+  if (!promotedSet(document).has(groupCode)) {
+    return 'not-promoted';
+  }
+  return null;
+}
+
+export function demoteOpexGroup(document: PrototypeDocument, groupCode: OpexGroupCode): PrototypeDocument {
+  if (demoteOpexGroupRejection(document, groupCode)) {
+    return document;
+  }
+  return {
+    ...document,
+    opexPromotedGroupCodes: document.opexPromotedGroupCodes.filter((code) => code !== groupCode),
   };
 }
 

@@ -5,7 +5,7 @@ import { Fragment, useState } from 'react';
 import type { OpexOtherGroupView } from '@/domain/operating-expense';
 import { OPEX_LINE_ERROR, parseOpexMoney } from '@/features/opex/text';
 import { FIELD_ERROR } from '@/features/sales/fields';
-import { IconChevronDown, IconChevronRight, IconPlus, IconTrash, IconUndo } from '@/features/shell/Icons';
+import { IconChevronDown, IconChevronRight, IconPanelOut, IconPlus, IconTrash, IconUndo } from '@/features/shell/Icons';
 import {
   categoryBandClassName,
   categoryNameClassName,
@@ -29,6 +29,7 @@ export function OtherGroupBlock({
   onAdd,
   onDelete,
   onRestore,
+  onPromote,
 }: {
   group: OpexOtherGroupView;
   side: 'plan' | 'fact';
@@ -38,6 +39,8 @@ export function OtherGroupBlock({
   onAdd?: () => void;
   onDelete?: (lineId: string, name: string) => void;
   onRestore?: (lineId: string) => string | null;
+  /** Вынести группу в отдельный раздел меню (только на «Прочее · план»). */
+  onPromote?: () => void;
 }) {
   const [open, setOpen] = useState(true);
   const count = group.lines.length;
@@ -77,6 +80,17 @@ export function OtherGroupBlock({
                 className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
               >
                 <IconPlus />
+              </button>
+            ) : null}
+            {onPromote ? (
+              <button
+                type="button"
+                aria-label={`В отдельный раздел: ${group.name}`}
+                title="В отдельный раздел"
+                onClick={onPromote}
+                className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+              >
+                <IconPanelOut />
               </button>
             ) : null}
           </div>

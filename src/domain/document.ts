@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 60 as const;
+export const SCHEMA_VERSION = 61 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -926,6 +926,11 @@ export interface PrototypeDocument {
   opexOtherLines: OpexOtherLine[];
   /** Ввод прочих статей `Operation Expense` (без HR и 7.1/7.2). */
   opexMonthLines: OpexMonthLines[];
+  /**
+   * Коды групп прочих статей, вынесенных в отдельный раздел меню (отчёт / план / факт).
+   * Группы 1 и 7 не поднимают: строки из HR и транспорта.
+   */
+  opexPromotedGroupCodes: OpexGroupCode[];
   /**
    * Инвентаризация на конец месяца на производстве (факт, шт).
    * Старый документ без поля читается как пустой массив.

@@ -4,11 +4,11 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import type { OpexGroupCode } from '@/domain/document';
-import { operatingExpenseOtherMonthView } from '@/domain/operating-expense';
+import { isPromotableOpexGroupCode, operatingExpenseOtherMonthView } from '@/domain/operating-expense';
 import { monthKeyFromDate, salesPlanForMonth, salesPlanTotals } from '@/domain/sales-plan';
 import { OpexMonthBar, resolveOpexMonth } from '@/features/opex/OpexMonthBar';
 import { OtherGroupBlock } from '@/features/opex/OpexOtherGroupBlock';
-import { OPEX_OTHER_PLAN_TITLE, opexOtherPlanHref } from '@/features/opex/paths';
+import { OPEX_OTHER_PLAN_TITLE, opexGroupHref, opexOtherPlanHref } from '@/features/opex/paths';
 import { OPEX_LINE_ERROR } from '@/features/opex/text';
 import { useOpex } from '@/features/opex/use-opex';
 import { useRole } from '@/features/roles/RoleProvider';
@@ -51,7 +51,7 @@ export function OtherPlanScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_OTHER_PLAN_TITLE}
       full
-      lede="План прочих статей без НДС. Строки из HR и транспорта и «Агентское соглашение» только смотрят. Названия правят в ячейке; новые расходы добавляют в категорию, ненужные — мягко удаляют."
+      lede="План прочих статей без НДС. Строки из HR и транспорта и «Агентское соглашение» только смотрят. Названия правят в ячейке; новые расходы добавляют в категорию, ненужные — мягко удаляют. Категорию без строк HR и транспорта можно вынести в отдельный раздел меню."
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -89,6 +89,18 @@ export function OtherPlanScreen({ month }: { month: string }) {
                   return rejection ? OPEX_LINE_ERROR[rejection] : null;
                 }}
                 onAdd={editable ? () => setAddGroup(group.code) : undefined}
+                onPromote={
+                  editable && isPromotableOpexGroupCode(group.code)
+                    ? () => {
+                        const rejection = opex.promoteOpexGroup(group.code);
+                        if (rejection) {
+                          window.alert(OPEX_LINE_ERROR[rejection]);
+                          return;
+                        }
+                        router.push(opexGroupHref({ code: group.code, month: selectedMonth, currentMonth }));
+                      }
+                    : undefined
+                }
                 onDelete={
                   editable
                     ? (lineId, name) => {

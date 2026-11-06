@@ -67,6 +67,17 @@ export function IconArrowLeft() {
   );
 }
 
+/** Вынести блок в отдельный раздел меню. */
+export function IconPanelOut() {
+  return (
+    <Glyph>
+      <path d="M3 4h8v12H3V4z" />
+      <path d="M13 7h4v9h-4" />
+      <path d="M11 10h8M16 7l3 3-3 3" />
+    </Glyph>
+  );
+}
+
 export function IconChevronLeft() {
   return (
     <Glyph>
