@@ -14,6 +14,7 @@ import { useRole } from '@/features/roles/RoleProvider';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
   ColumnLabel,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
   entityNameRowClassName,
@@ -31,6 +32,10 @@ const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
 const valueCell = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
 const groupEnd = `${columnHeadingClassName} ${tableBorder.rightThick}`;
 const valueEnd = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${tableBorder.rightThick}`;
+
+function inputKind(editable: boolean): 'assigned' | 'computed' {
+  return editable ? 'assigned' : 'computed';
+}
 
 export function CashflowFactScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);
@@ -82,7 +87,7 @@ export function CashflowFactScreen({ month }: { month: string }) {
               <th scope="row" className={entityNameRowClassName(editable ? 'assigned' : 'repeated')}>
                 Начальный остаток денежных средств
               </th>
-              <td className={valueEnd}>
+              <td className={`${valueEnd} ${cellKindClassName[inputKind(editable)]}`}>
                 <MoneyCell
                   label="Начальный остаток денежных средств"
                   value={openingBalance}
@@ -101,7 +106,7 @@ export function CashflowFactScreen({ month }: { month: string }) {
               <th scope="row" className={totalNameClassName}>
                 Остаток на начало месяца (расчёт)
               </th>
-              <td className={`${totalValueClassName} ${tableBorder.rightThick}`}>
+              <td className={`${totalValueClassName} ${tableBorder.rightThick} ${cellKindClassName.computed}`}>
                 <MoneyCell label="Остаток на начало, факт" value={ddsView.opening.fact} />
               </td>
             </tr>
@@ -144,7 +149,7 @@ export function CashflowFactScreen({ month }: { month: string }) {
                     {row.name}
                     {row.deleted ? ' (архив)' : ''}
                   </th>
-                  <td className={valueCell}>
+                  <td className={`${valueCell} ${cellKindClassName[inputKind(rowEditable)]}`}>
                     <MoneyCell
                       label={`Получение, факт, ${row.name}`}
                       value={row.factReceived}
@@ -163,7 +168,7 @@ export function CashflowFactScreen({ month }: { month: string }) {
                       }
                     />
                   </td>
-                  <td className={valueCell}>
+                  <td className={`${valueCell} ${cellKindClassName[inputKind(rowEditable)]}`}>
                     <MoneyCell
                       label={`Погашение, факт, ${row.name}`}
                       value={row.factRepaid}
@@ -182,7 +187,7 @@ export function CashflowFactScreen({ month }: { month: string }) {
                       }
                     />
                   </td>
-                  <td className={valueEnd}>
+                  <td className={`${valueEnd} ${cellKindClassName[inputKind(rowEditable)]}`}>
                     <MoneyCell
                       label={`Проценты, факт, ${row.name}`}
                       value={row.factInterest}

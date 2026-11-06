@@ -16,6 +16,7 @@ import { IconPlus, IconTrash, IconUndo } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
   ColumnLabel,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
   entityNameRowClassName,
@@ -33,6 +34,10 @@ const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
 const valueCell = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
 const groupEnd = `${columnHeadingClassName} ${tableBorder.rightThick}`;
 const valueEnd = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${tableBorder.rightThick}`;
+
+function inputKind(editable: boolean): 'assigned' | 'computed' {
+  return editable ? 'assigned' : 'computed';
+}
 
 export function CreditResourcesPlanScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);
@@ -139,7 +144,7 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
                       )}
                     </div>
                   </th>
-                  <td className={valueCell}>
+                  <td className={`${valueCell} ${cellKindClassName[inputKind(rowEditable)]}`}>
                     <MoneyCell
                       label={`Сумма кредита, ${row.name}`}
                       value={row.initialPrincipal}
@@ -153,7 +158,7 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
                       }
                     />
                   </td>
-                  <td className={valueEnd}>
+                  <td className={`${valueEnd} ${cellKindClassName[inputKind(rowEditable)]}`}>
                     <HundredthsCell
                       label={`Ставка, ${row.name}`}
                       value={row.interestRateHundredths}
@@ -168,7 +173,7 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
                       }
                     />
                   </td>
-                  <td className={valueCell}>
+                  <td className={`${valueCell} ${cellKindClassName[inputKind(rowEditable)]}`}>
                     <MoneyCell
                       label={`Получение, план, ${row.name}`}
                       value={row.planReceived}
@@ -187,7 +192,7 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
                       }
                     />
                   </td>
-                  <td className={valueCell}>
+                  <td className={`${valueCell} ${cellKindClassName[inputKind(rowEditable)]}`}>
                     <MoneyCell
                       label={`Погашение, план, ${row.name}`}
                       value={row.planRepaid}
@@ -206,7 +211,7 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
                       }
                     />
                   </td>
-                  <td className={valueEnd}>
+                  <td className={`${valueEnd} ${cellKindClassName[inputKind(rowEditable)]}`}>
                     <MoneyCell
                       label={`Проценты, план, ${row.name}`}
                       value={row.planInterest}

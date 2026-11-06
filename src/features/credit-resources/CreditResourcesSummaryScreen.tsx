@@ -11,7 +11,9 @@ import { formatInterestRate } from '@/features/credit-resources/text';
 import { useCreditResources } from '@/features/credit-resources/use-credit-resources';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
+  type CellKind,
   ColumnLabel,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
   entityNameRowClassName,
@@ -42,6 +44,25 @@ type ColumnKey =
   | 'planInterest'
   | 'factInterest'
   | 'varianceInterest';
+
+/** Ввод — на плане/факте; остатки и отклонения — формулы. */
+const COLUMN_KIND: Record<ColumnKey, CellKind> = {
+  initial: 'repeated',
+  rate: 'repeated',
+  opening: 'computed',
+  planReceived: 'repeated',
+  factReceived: 'repeated',
+  varianceReceived: 'computed',
+  planRepaid: 'repeated',
+  factRepaid: 'repeated',
+  varianceRepaid: 'computed',
+  planClosing: 'computed',
+  factClosing: 'computed',
+  varianceClosing: 'computed',
+  planInterest: 'repeated',
+  factInterest: 'repeated',
+  varianceInterest: 'computed',
+};
 
 const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string }[] }[] = [
   {
@@ -166,49 +187,69 @@ export function CreditResourcesSummaryScreen({ month }: { month: string }) {
                   {row.name}
                   {row.deleted ? ' (архив)' : ''}
                 </th>
-                <td className={`${valueCell} ${columnEdge('initial')}`}>
+                <td className={`${valueCell} ${cellKindClassName[COLUMN_KIND.initial]} ${columnEdge('initial')}`}>
                   <MoneyAmount amount={row.initialPrincipal} />
                 </td>
-                <td className={`${valueCell} ${columnEdge('rate')}`}>
+                <td className={`${valueCell} ${cellKindClassName[COLUMN_KIND.rate]} ${columnEdge('rate')}`}>
                   <span className="text-sm tabular-nums">{formatInterestRate(row.interestRateHundredths)}</span>
                 </td>
-                <td className={`${valueCell} ${columnEdge('opening')}`}>
+                <td className={`${valueCell} ${cellKindClassName[COLUMN_KIND.opening]} ${columnEdge('opening')}`}>
                   <MoneyAmount amount={row.openingPrincipal} />
                 </td>
-                <td className={`${valueCell} ${columnEdge('planReceived')}`}>
+                <td
+                  className={`${valueCell} ${cellKindClassName[COLUMN_KIND.planReceived]} ${columnEdge('planReceived')}`}
+                >
                   <MoneyAmount amount={row.planReceived} />
                 </td>
-                <td className={`${valueCell} ${columnEdge('factReceived')}`}>
+                <td
+                  className={`${valueCell} ${cellKindClassName[COLUMN_KIND.factReceived]} ${columnEdge('factReceived')}`}
+                >
                   <MoneyAmount amount={row.factReceived} />
                 </td>
-                <td className={`${valueCell} ${columnEdge('varianceReceived')}`}>
+                <td
+                  className={`${valueCell} ${cellKindClassName[COLUMN_KIND.varianceReceived]} ${columnEdge('varianceReceived')}`}
+                >
                   <MoneyCell label="Откл., получение" value={row.varianceReceived} signed sense="income" />
                 </td>
-                <td className={`${valueCell} ${columnEdge('planRepaid')}`}>
+                <td className={`${valueCell} ${cellKindClassName[COLUMN_KIND.planRepaid]} ${columnEdge('planRepaid')}`}>
                   <MoneyAmount amount={row.planRepaid} />
                 </td>
-                <td className={`${valueCell} ${columnEdge('factRepaid')}`}>
+                <td className={`${valueCell} ${cellKindClassName[COLUMN_KIND.factRepaid]} ${columnEdge('factRepaid')}`}>
                   <MoneyAmount amount={row.factRepaid} />
                 </td>
-                <td className={`${valueCell} ${columnEdge('varianceRepaid')}`}>
+                <td
+                  className={`${valueCell} ${cellKindClassName[COLUMN_KIND.varianceRepaid]} ${columnEdge('varianceRepaid')}`}
+                >
                   <MoneyCell label="Откл., погашение" value={row.varianceRepaid} signed sense="cost" />
                 </td>
-                <td className={`${valueCell} ${columnEdge('planClosing')}`}>
+                <td
+                  className={`${valueCell} ${cellKindClassName[COLUMN_KIND.planClosing]} ${columnEdge('planClosing')}`}
+                >
                   <MoneyAmount amount={row.planClosingPrincipal} />
                 </td>
-                <td className={`${valueCell} ${columnEdge('factClosing')}`}>
+                <td
+                  className={`${valueCell} ${cellKindClassName[COLUMN_KIND.factClosing]} ${columnEdge('factClosing')}`}
+                >
                   <MoneyAmount amount={row.factClosingPrincipal} />
                 </td>
-                <td className={`${valueCell} ${columnEdge('varianceClosing')}`}>
+                <td
+                  className={`${valueCell} ${cellKindClassName[COLUMN_KIND.varianceClosing]} ${columnEdge('varianceClosing')}`}
+                >
                   <MoneyCell label="Откл., остаток" value={row.varianceClosingPrincipal} signed sense="income" />
                 </td>
-                <td className={`${valueCell} ${columnEdge('planInterest')}`}>
+                <td
+                  className={`${valueCell} ${cellKindClassName[COLUMN_KIND.planInterest]} ${columnEdge('planInterest')}`}
+                >
                   <MoneyAmount amount={row.planInterest} />
                 </td>
-                <td className={`${valueCell} ${columnEdge('factInterest')}`}>
+                <td
+                  className={`${valueCell} ${cellKindClassName[COLUMN_KIND.factInterest]} ${columnEdge('factInterest')}`}
+                >
                   <MoneyAmount amount={row.factInterest} />
                 </td>
-                <td className={`${valueCell} ${columnEdge('varianceInterest')}`}>
+                <td
+                  className={`${valueCell} ${cellKindClassName[COLUMN_KIND.varianceInterest]} ${columnEdge('varianceInterest')}`}
+                >
                   <MoneyCell label="Откл., проценты" value={row.varianceInterest} signed sense="cost" />
                 </td>
               </tr>

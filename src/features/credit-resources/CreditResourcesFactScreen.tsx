@@ -13,6 +13,7 @@ import { useRole } from '@/features/roles/RoleProvider';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
   ColumnLabel,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
   entityNameRowClassName,
@@ -28,6 +29,10 @@ const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
 const valueCell = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
 const groupEnd = `${columnHeadingClassName} ${tableBorder.rightThick}`;
 const valueEnd = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${tableBorder.rightThick}`;
+
+function inputKind(editable: boolean): 'assigned' | 'computed' {
+  return editable ? 'assigned' : 'computed';
+}
 
 export function CreditResourcesFactScreen({ month }: { month: string }) {
   const today = useMemo(() => new Date(), []);
@@ -91,7 +96,7 @@ export function CreditResourcesFactScreen({ month }: { month: string }) {
                     {row.name}
                     {row.deleted ? ' (архив)' : ''}
                   </th>
-                  <td className={valueCell}>
+                  <td className={`${valueCell} ${cellKindClassName[inputKind(rowEditable)]}`}>
                     <MoneyCell
                       label={`Получение, факт, ${row.name}`}
                       value={row.factReceived}
@@ -110,7 +115,7 @@ export function CreditResourcesFactScreen({ month }: { month: string }) {
                       }
                     />
                   </td>
-                  <td className={valueCell}>
+                  <td className={`${valueCell} ${cellKindClassName[inputKind(rowEditable)]}`}>
                     <MoneyCell
                       label={`Погашение, факт, ${row.name}`}
                       value={row.factRepaid}
@@ -129,7 +134,7 @@ export function CreditResourcesFactScreen({ month }: { month: string }) {
                       }
                     />
                   </td>
-                  <td className={valueEnd}>
+                  <td className={`${valueEnd} ${cellKindClassName[inputKind(rowEditable)]}`}>
                     <MoneyCell
                       label={`Проценты, факт, ${row.name}`}
                       value={row.factInterest}

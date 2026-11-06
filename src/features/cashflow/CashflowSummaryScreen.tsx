@@ -11,10 +11,12 @@ import { useCashflow } from '@/features/cashflow/use-cashflow';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
+  type CellKind,
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
   categoryNameRowClassName,
+  cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
   entityNameRowClassName,
@@ -49,7 +51,10 @@ function LineRows({
   const open = openIds.has(line.id);
   const isGroup = depth === 0 || (hasChildren && depth <= 1);
   const nameRow = isGroup ? categoryNameRowClassName(false) : entityNameRowClassName('repeated');
-  const amountBand = isGroup ? categoryBandClassName : '';
+  /** Группа — итог (computed / полоса категории); лист — повтор из другой таблицы. */
+  const sideKind: CellKind = hasChildren ? 'computed' : 'repeated';
+  const amountFill = isGroup ? categoryBandClassName : cellKindClassName[sideKind];
+  const varianceFill = isGroup ? categoryBandClassName : cellKindClassName.computed;
 
   return (
     <Fragment>
@@ -73,13 +78,13 @@ function LineRows({
             <span className={isGroup ? categoryNameClassName : 'text-sm'}>{line.name}</span>
           </div>
         </th>
-        <td className={`${valueCell} ${amountBand}`}>
+        <td className={`${valueCell} ${amountFill}`}>
           <MoneyAmount amount={line.amounts.plan} />
         </td>
-        <td className={`${valueCell} ${amountBand}`}>
+        <td className={`${valueCell} ${amountFill}`}>
           <MoneyAmount amount={line.amounts.fact} />
         </td>
-        <td className={`${valueCellEnd} ${amountBand}`}>
+        <td className={`${valueCellEnd} ${varianceFill}`}>
           <MoneyCell label={`Откл., ${line.name}`} value={line.amounts.variance} signed sense="income" />
         </td>
       </tr>
