@@ -1,5 +1,8 @@
 import type { CreditFieldRejection } from '@/domain/credit-resources';
-import { fromRubles, parseDecimal } from '@/domain/units';
+import { fromRublesUpTo, parseDecimal } from '@/domain/units';
+
+/** Потолок сумм кредитов и ДДС, как `MAX_MONEY` в domain — не потолок цены товара. */
+const MAX_CREDIT_MONEY_KOPECKS = 100_000_000_000;
 
 export const CREDIT_ERROR: Record<CreditFieldRejection, string> = {
   missing: 'Кредитор не найден.',
@@ -18,7 +21,7 @@ export function parseCreditMoney(raw: string): number | null {
   if (value === null) {
     return null;
   }
-  return fromRubles(value);
+  return fromRublesUpTo(value, MAX_CREDIT_MONEY_KOPECKS);
 }
 
 /** Ставка: проценты → сотые доли. «18» → 1800, «18,5» → 1850. */

@@ -7,7 +7,7 @@ import { creditResourcesMonthView } from '@/domain/credit-resources';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { CreditMonthBar, resolveCreditMonth } from '@/features/credit-resources/CreditMonthBar';
 import { CREDIT_RESOURCES_PLAN_TITLE, creditResourcesPlanHref } from '@/features/credit-resources/paths';
-import { CREDIT_ERROR } from '@/features/credit-resources/text';
+import { CREDIT_ERROR, parseCreditMoney } from '@/features/credit-resources/text';
 import { useCreditResources } from '@/features/credit-resources/use-credit-resources';
 import { useRole } from '@/features/roles/RoleProvider';
 import { FIELD_ERROR, fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
@@ -148,6 +148,7 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
                     <MoneyCell
                       label={`Сумма кредита, ${row.name}`}
                       value={row.initialPrincipal}
+                      parse={parseCreditMoney}
                       onChange={
                         rowEditable
                           ? (amount) => {
@@ -177,6 +178,7 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
                     <MoneyCell
                       label={`Получение, план, ${row.name}`}
                       value={row.planReceived}
+                      parse={parseCreditMoney}
                       onChange={
                         rowEditable
                           ? (amount) => {
@@ -196,6 +198,7 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
                     <MoneyCell
                       label={`Погашение, план, ${row.name}`}
                       value={row.planRepaid}
+                      parse={parseCreditMoney}
                       onChange={
                         rowEditable
                           ? (amount) => {
@@ -215,6 +218,7 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
                     <MoneyCell
                       label={`Проценты, план, ${row.name}`}
                       value={row.planInterest}
+                      parse={parseCreditMoney}
                       onChange={
                         rowEditable
                           ? (amount) => {

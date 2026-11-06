@@ -7,7 +7,7 @@ import { creditResourcesMonthView } from '@/domain/credit-resources';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { CreditMonthBar, resolveCreditMonth } from '@/features/credit-resources/CreditMonthBar';
 import { CREDIT_RESOURCES_FACT_TITLE, creditResourcesFactHref } from '@/features/credit-resources/paths';
-import { CREDIT_ERROR } from '@/features/credit-resources/text';
+import { CREDIT_ERROR, parseCreditMoney } from '@/features/credit-resources/text';
 import { useCreditResources } from '@/features/credit-resources/use-credit-resources';
 import { useRole } from '@/features/roles/RoleProvider';
 import { PageFrame } from '@/features/shell/PageFrame';
@@ -100,6 +100,7 @@ export function CreditResourcesFactScreen({ month }: { month: string }) {
                     <MoneyCell
                       label={`Получение, факт, ${row.name}`}
                       value={row.factReceived}
+                      parse={parseCreditMoney}
                       onChange={
                         rowEditable
                           ? (amount) => {
@@ -119,6 +120,7 @@ export function CreditResourcesFactScreen({ month }: { month: string }) {
                     <MoneyCell
                       label={`Погашение, факт, ${row.name}`}
                       value={row.factRepaid}
+                      parse={parseCreditMoney}
                       onChange={
                         rowEditable
                           ? (amount) => {
@@ -138,6 +140,7 @@ export function CreditResourcesFactScreen({ month }: { month: string }) {
                     <MoneyCell
                       label={`Проценты, факт, ${row.name}`}
                       value={row.factInterest}
+                      parse={parseCreditMoney}
                       onChange={
                         rowEditable
                           ? (amount) => {

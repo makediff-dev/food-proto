@@ -9,7 +9,7 @@ import { monthKeyFromDate } from '@/domain/sales-plan';
 import { CashflowMonthBar, resolveCashflowMonth } from '@/features/cashflow/CashflowMonthBar';
 import { CASHFLOW_FACT_TITLE, cashflowFactHref } from '@/features/cashflow/paths';
 import { useCashflow } from '@/features/cashflow/use-cashflow';
-import { CREDIT_ERROR } from '@/features/credit-resources/text';
+import { CREDIT_ERROR, parseCreditMoney } from '@/features/credit-resources/text';
 import { useRole } from '@/features/roles/RoleProvider';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
@@ -84,6 +84,7 @@ export function CashflowFactScreen({ month }: { month: string }) {
                 <MoneyCell
                   label="Начальный остаток денежных средств"
                   value={openingBalance}
+                  parse={parseCreditMoney}
                   onChange={
                     editable
                       ? (amount) => {
