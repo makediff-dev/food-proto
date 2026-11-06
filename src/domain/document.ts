@@ -166,11 +166,12 @@ export interface ProductionEntry {
 
 /**
  * Подразделения листа `HR`. Не склады сырья и не цеха рецептов.
- * Производственные цеха — по две линии («1» / «2»); администрация и цех готовой продукции без дубля.
- * У администрации нет строки аутсорсинга.
+ * Производственные цеха — по две линии («1» / «2»); администрация, отдел продаж и цех готовой продукции без дубля.
+ * У администрации и отдела продаж нет строки аутсорсинга.
  */
 export type HrDepartmentId =
   | 'admin'
+  | 'sales'
   | 'meat-1'
   | 'meat-2'
   | 'bakery-1'
@@ -187,6 +188,7 @@ export type HrDepartmentId =
 
 export const HR_DEPARTMENT_IDS = [
   'admin',
+  'sales',
   'meat-1',
   'meat-2',
   'bakery-1',
@@ -217,7 +219,7 @@ export const HR_SHOP_DEPARTMENT_IDS = [
   'assembly-1',
   'assembly-2',
   'dc',
-] as const satisfies readonly Exclude<HrDepartmentId, 'admin'>[];
+] as const satisfies readonly Exclude<HrDepartmentId, 'admin' | 'sales'>[];
 
 export type HrShopDepartmentId = (typeof HR_SHOP_DEPARTMENT_IDS)[number];
 

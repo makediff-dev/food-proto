@@ -22,7 +22,7 @@ function staff(id: string, departmentId: HrPosition['departmentId'], name: strin
   return { id, departmentId, name, kind: 'staff', deletedAt: null };
 }
 
-function outsourcing(departmentId: Exclude<HrPosition['departmentId'], 'admin'>): HrPosition {
+function outsourcing(departmentId: HrShopDepartmentId): HrPosition {
   return {
     id: `hr-out:${departmentId}`,
     departmentId,

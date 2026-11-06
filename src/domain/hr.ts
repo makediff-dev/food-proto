@@ -107,7 +107,7 @@ export interface HrMonthView {
   month: string;
   days: number;
   departments: HrDepartmentView[];
-  /** ВСЕГО: администрация + производство + РЦ, без аутсорсинга в численности/зарплате факта как на листе. */
+  /** ВСЕГО: все подразделения, без аутсорсинга в численности/зарплате факта как на листе. */
   total: {
     plan: HrMoneySide;
     fact: HrMoneySide;
@@ -128,6 +128,7 @@ export interface HrMonthView {
 
 export const HR_DEPARTMENT_LABELS: Record<HrDepartmentId, string> = {
   admin: 'Администрация',
+  sales: 'Отдел продаж',
   'meat-1': 'Мясной цех 1',
   'meat-2': 'Мясной цех 2',
   'bakery-1': 'Пекарня 1',
@@ -337,7 +338,7 @@ function staffFactFromDays(
 
 /**
  * Свод HR месяца: подразделения, аутсорсинг, налоги.
- * Формулы — лист `HR`. Факт администрации считается из дней так же, как факт цеха.
+ * Формулы — лист `HR`. Факт администрации и отдела продаж считается из дней так же, как факт цеха.
  */
 export function hrMonthView(document: PrototypeDocument, month: string): HrMonthView {
   const days = daysInMonth(month);
@@ -351,7 +352,8 @@ export function hrMonthView(document: PrototypeDocument, month: string): HrMonth
     );
     const rolled = staffFactFromDays(document, departmentId, positions, plan, dayFacts, days);
 
-    if (departmentId === 'admin') {
+    // Администрация и отдел продаж — без аутсорсинга; факт из дней, как у цеха.
+    if (!isHrShopDepartmentId(departmentId)) {
       const planSide = sumStaffSides(rolled.staff, 'plan');
       const factHeadcount = factShopHeadcountThousandths(rolled.headcountThousandths, days);
       const factSide: HrMoneySide = {
@@ -435,35 +437,15 @@ export function hrMonthView(document: PrototypeDocument, month: string): HrMonth
     };
   });
 
-  const admin = departments.find((item) => item.departmentId === 'admin');
-  const production = departments.filter((item) => item.departmentId !== 'admin' && item.departmentId !== 'dc');
-  const dc = departments.find((item) => item.departmentId === 'dc');
-
-  const planHeadcount =
-    (admin?.plan.headcount ?? 0) +
-    production.reduce((sum, item) => sum + item.plan.headcount, 0) +
-    (dc?.plan.headcount ?? 0);
-  const planPayroll =
-    (admin?.planPayrollExVat ?? 0) +
-    production.reduce((sum, item) => sum + item.planPayrollExVat, 0) +
-    (dc?.planPayrollExVat ?? 0);
-  const planOut =
-    production.reduce((sum, item) => sum + (item.outsourcing?.planAmountExVat ?? 0), 0) +
-    (dc?.outsourcing?.planAmountExVat ?? 0);
+  const planHeadcount = departments.reduce((sum, item) => sum + item.plan.headcount, 0);
+  const planPayroll = departments.reduce((sum, item) => sum + item.planPayrollExVat, 0);
+  const planOut = departments.reduce((sum, item) => sum + (item.outsourcing?.planAmountExVat ?? 0), 0);
   const planFot = planPayroll + planOut;
 
   // Факт «Кол-во» всех подразделений — среднее по дням в тысячных долях человека.
-  const factHeadcountThousandths =
-    (admin?.fact.headcount ?? 0) +
-    production.reduce((sum, item) => sum + item.fact.headcount, 0) +
-    (dc?.fact.headcount ?? 0);
-  const factPayroll =
-    (admin?.factPayrollExVat ?? 0) +
-    production.reduce((sum, item) => sum + item.factPayrollExVat, 0) +
-    (dc?.factPayrollExVat ?? 0);
-  const factOut =
-    production.reduce((sum, item) => sum + (item.outsourcing?.factAmountExVat ?? 0), 0) +
-    (dc?.outsourcing?.factAmountExVat ?? 0);
+  const factHeadcountThousandths = departments.reduce((sum, item) => sum + item.fact.headcount, 0);
+  const factPayroll = departments.reduce((sum, item) => sum + item.factPayrollExVat, 0);
+  const factOut = departments.reduce((sum, item) => sum + (item.outsourcing?.factAmountExVat ?? 0), 0);
   const factFot = factPayroll + factOut;
 
   const planTotal: HrMoneySide = {

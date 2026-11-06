@@ -108,9 +108,9 @@
     "semantic_hash": "724f33ff464c09fb3fcdf0af0a576d9d"
   },
   "src/domain/document.ts": {
-    "mtime": 1793967350.2659154,
-    "seen": 1793967407.8168344,
-    "ast_hash": "6b061b5e160c7c384ff8182e4c5d66d6",
+    "mtime": 1793970122.8616538,
+    "seen": 1793970189.323181,
+    "ast_hash": "7cd50d5de4171db16b6f49d75f858c28",
     "semantic_hash": ""
   },
   "src/domain/money.ts": {
@@ -262,9 +262,9 @@
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1793967371.8736248,
-    "seen": 1793967407.8168344,
-    "ast_hash": "ef222c6eb410d770e2668a889fa0013b",
+    "mtime": 1793970149.0781896,
+    "seen": 1793970189.323181,
+    "ast_hash": "5d8d076b94c1f336d55b4073bcd29ce3",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
@@ -1335,15 +1335,15 @@
     "semantic_hash": ""
   },
   "src/data/mock-opex.ts": {
-    "mtime": 1793967370.0250108,
-    "seen": 1793967407.8168344,
-    "ast_hash": "4ac7da148bf66ae4b172a4ddd56e8578",
+    "mtime": 1793970161.1862452,
+    "seen": 1793970189.323181,
+    "ast_hash": "c11c56bfc707275dfffc3b8a3f12e5e4",
     "semantic_hash": ""
   },
   "src/domain/hr.ts": {
-    "mtime": 1793967387.295492,
-    "seen": 1793967407.8168344,
-    "ast_hash": "a0a854ed7d9ec1b29355d9323f35491f",
+    "mtime": 1793970154.7754898,
+    "seen": 1793970189.323181,
+    "ast_hash": "8c5b3e16b9ff9fbd30617fa5103a50e7",
     "semantic_hash": ""
   },
   "src/domain/operating-expense.ts": {
