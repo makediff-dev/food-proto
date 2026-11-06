@@ -1,6 +1,7 @@
 import { mockMaterials } from '@/data/mock-materials';
 import {
   mockHrDayFacts,
+  mockHrMonthFacts,
   mockHrMonthPlans,
   mockHrPositions,
   mockHrTaxRates,
@@ -783,6 +784,7 @@ export const mockDocument: PrototypeDocument = {
   productionEntries: productionFromOrders(productionOrders),
   hrPositions: mockHrPositions,
   hrMonthPlans: mockHrMonthPlans,
+  hrMonthFacts: mockHrMonthFacts,
   hrDayFacts: mockHrDayFacts,
   hrTaxRates: mockHrTaxRates,
   transportCarriers: mockTransportCarriers,
@@ -834,6 +836,10 @@ export function createMockDocument(): PrototypeDocument {
       ...item,
       staffLines: item.staffLines.map((line) => ({ ...line })),
       outsourcingLines: item.outsourcingLines.map((line) => ({ ...line })),
+    })),
+    hrMonthFacts: mockDocument.hrMonthFacts.map((item) => ({
+      ...item,
+      staffLines: item.staffLines.map((line) => ({ ...line })),
     })),
     hrDayFacts: mockDocument.hrDayFacts.map((item) => ({
       ...item,

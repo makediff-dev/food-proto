@@ -19,6 +19,8 @@ import {
   setHrDayOutsourcingRejection,
   setHrDayStaff,
   setHrDayStaffRejection,
+  setHrMonthStaff,
+  setHrMonthStaffRejection,
   setHrOutsourcingPlan,
   setHrOutsourcingPlanRejection,
   setHrStaffPlan,
@@ -155,6 +157,19 @@ export function useOpex() {
         return rejection;
       }
       updateDocument((current) => setHrOutsourcingPlan(current, month, departmentId, hourThousandths, rateExVat));
+      return null;
+    },
+    setHrMonthStaff(
+      month: string,
+      positionId: string,
+      headcountThousandths: number,
+      amountExVat: number,
+    ): HrFieldRejection | null {
+      const rejection = setHrMonthStaffRejection(document, month, positionId, headcountThousandths, amountExVat);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => setHrMonthStaff(current, month, positionId, headcountThousandths, amountExVat));
       return null;
     },
     setHrDayStaff(

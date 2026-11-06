@@ -41,7 +41,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_HR_TITLE}
       full
-      lede="План и факт по подразделениям и должностям. Факт собран из дневных строк. Зарплатные налоги только показывают."
+      lede="План и факт по подразделениям и должностям. У администрации и отдела продаж — месячный факт, у цехов и РЦ — из дневных строк. Зарплатные налоги только показывают."
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -69,7 +69,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
                   <ColumnLabel label="План, ФОТ" />
                 </th>
                 <th scope="col" className={valueHead}>
-                  <ColumnLabel label="Факт, чел" hint="Сумма людей по дням / дни месяца" />
+                  <ColumnLabel label="Факт, чел" hint="У цехов и РЦ — сумма людей по дням / дни месяца" />
                 </th>
                 <th scope="col" className={valueHead}>
                   <ColumnLabel label="Факт, зарплата" />

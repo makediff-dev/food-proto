@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 58 as const;
+export const SCHEMA_VERSION = 59 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -270,6 +270,24 @@ export interface HrMonthPlan {
   month: string;
   staffLines: HrMonthPlanStaffLine[];
   outsourcingLines: HrMonthPlanOutsourcingLine[];
+}
+
+/** Месячный факт штатной должности (администрация и отдел продаж): численность и сумма отдельно. `HR!G/I`. */
+export interface HrMonthFactStaffLine {
+  id: string;
+  positionId: string;
+  /** Люди за месяц, тысячные доли. 1 чел → 1000. */
+  headcountThousandths: number;
+  /** Выплаченная сумма за месяц, копейки без НДС. */
+  amountExVat: number;
+}
+
+/** Месячный факт администрации и отдела продаж. На один месяц — одна запись. */
+export interface HrMonthFact {
+  id: string;
+  /** `ГГГГ-ММ`. */
+  month: string;
+  staffLines: HrMonthFactStaffLine[];
 }
 
 /** Дневной факт штатной должности: численность и сумма отдельно. `HR!J` штатной строки. */
@@ -843,7 +861,9 @@ export interface PrototypeDocument {
   hrPositions: HrPosition[];
   /** План численности и зарплат по месяцам. */
   hrMonthPlans: HrMonthPlan[];
-  /** Дневной факт подразделений: численность и выплаты штатных, часы и выплаты аутсорсинга цехов и РЦ. */
+  /** Месячный факт администрации и отдела продаж: численность и выплаты штатных. */
+  hrMonthFacts: HrMonthFact[];
+  /** Дневной факт цехов и РЦ: численность и выплаты штатных, часы и выплаты аутсорсинга. */
   hrDayFacts: HrDayFact[];
   /** Ставки НДФЛ, соцстраха и травматизма по месяцам. */
   hrTaxRates: HrTaxRatesMonth[];

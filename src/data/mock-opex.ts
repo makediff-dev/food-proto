@@ -1,9 +1,11 @@
 import {
   type HrDayFact,
+  type HrMonthFact,
   type HrMonthPlan,
   type HrPosition,
   type HrShopDepartmentId,
   type HrTaxRatesMonth,
+  isHrShopDepartmentId,
   type OpexMonthLines,
   type TransportCarrier,
   type TransportHireDayFact,
@@ -431,6 +433,22 @@ function factFuelExVat(occurredOn: string): number {
   return rub(OWN_FACT_FUEL_RUB['2026-11']);
 }
 
+function isShopPositionId(positionId: string): boolean {
+  const position = mockHrPositions.find((item) => item.id === positionId);
+  return position ? isHrShopDepartmentId(position.departmentId) : false;
+}
+
+function monthOfficeFactAmount(month: MockMonth, salaryExVat: number): number {
+  if (month === '2026-09') {
+    return Math.round((salaryExVat * 11) / 10);
+  }
+  if (month === '2026-10') {
+    return salaryExVat;
+  }
+  const dates = staffFactDates(month, '');
+  return Math.round(salaryExVat / daysInMonth(month)) * dates.length;
+}
+
 export const mockHrMonthPlans: HrMonthPlan[] = MOCK_MONTHS.map((month) => ({
   id: `hr-plan:${month}`,
   month,
@@ -445,6 +463,17 @@ export const mockHrMonthPlans: HrMonthPlan[] = MOCK_MONTHS.map((month) => ({
     departmentId: seed.departmentId,
     hourThousandths: seed.hourThousandths,
     rateExVat: rub(seed.rateRub),
+  })),
+}));
+
+export const mockHrMonthFacts: HrMonthFact[] = MOCK_MONTHS.map((month) => ({
+  id: `hr-month-fact:${month}`,
+  month,
+  staffLines: STAFF_SEEDS.filter((seed) => !isShopPositionId(seed.positionId)).map((seed) => ({
+    id: `hr-month-staff:${month}:${seed.positionId}`,
+    positionId: seed.positionId,
+    headcountThousandths: people(1),
+    amountExVat: monthOfficeFactAmount(month, rub(seed.salaryRub)),
   })),
 }));
 
@@ -466,7 +495,7 @@ export const mockHrDayFacts: HrDayFact[] = (() => {
   };
 
   for (const month of MOCK_MONTHS) {
-    for (const seed of STAFF_SEEDS) {
+    for (const seed of STAFF_SEEDS.filter((item) => isShopPositionId(item.positionId))) {
       const dates = staffFactDates(month, seed.positionId);
       const amounts = staffFactAmounts(month, rub(seed.salaryRub), dates);
       dates.forEach((occurredOn, index) => {
