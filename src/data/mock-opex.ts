@@ -84,9 +84,6 @@ export const mockTransportCarriers: TransportCarrier[] = [
   carrier('transport-finished-kazachek', 'finishedDelivery', 'Казачек Ф.В.'),
   carrier('transport-finished-kalinov', 'finishedDelivery', 'Калинов А.А.'),
   carrier('transport-finished-klr', 'finishedDelivery', 'КЛР Групп'),
-  carrier('transport-transfer-berber', 'finishedTransfer', 'ИП Бербер'),
-  carrier('transport-transfer-dial', 'finishedTransfer', 'Диал'),
-  carrier('transport-transfer-kalinov', 'finishedTransfer', 'Калинов А.А.'),
   carrier('transport-material-dial', 'materialDelivery', 'Диал'),
   carrier('transport-material-klr', 'materialDelivery', 'КЛР Групп'),
 ];
@@ -180,10 +177,9 @@ interface HireSeed {
   fact: number;
 }
 
-/** Цена без НДС, копейки: 0,20 ₽/шт, 0,30 ₽/шт, 0,80 ₽/кг. */
+/** Цена без НДС, копейки: 0,20 ₽/шт, 0,80 ₽/кг. */
 const HIRE_PRICE_KOP: Record<TransportHireKind, number> = {
   finishedDelivery: 20,
-  finishedTransfer: 30,
   materialDelivery: 80,
 };
 
@@ -194,9 +190,6 @@ const HIRE_SEEDS: Record<MockMonth, readonly HireSeed[]> = {
     { carrierId: 'transport-finished-kazachek', kind: 'finishedDelivery', plan: 450, fact: 500 },
     { carrierId: 'transport-finished-kalinov', kind: 'finishedDelivery', plan: 350, fact: 380 },
     { carrierId: 'transport-finished-klr', kind: 'finishedDelivery', plan: 300, fact: 340 },
-    { carrierId: 'transport-transfer-berber', kind: 'finishedTransfer', plan: 250, fact: 280 },
-    { carrierId: 'transport-transfer-dial', kind: 'finishedTransfer', plan: 200, fact: 220 },
-    { carrierId: 'transport-transfer-kalinov', kind: 'finishedTransfer', plan: 150, fact: 160 },
     { carrierId: 'transport-material-dial', kind: 'materialDelivery', plan: 500, fact: 540 },
     { carrierId: 'transport-material-klr', kind: 'materialDelivery', plan: 300, fact: 340 },
   ],
@@ -206,9 +199,6 @@ const HIRE_SEEDS: Record<MockMonth, readonly HireSeed[]> = {
     { carrierId: 'transport-finished-kazachek', kind: 'finishedDelivery', plan: 450, fact: 270 },
     { carrierId: 'transport-finished-kalinov', kind: 'finishedDelivery', plan: 350, fact: 200 },
     { carrierId: 'transport-finished-klr', kind: 'finishedDelivery', plan: 300, fact: 170 },
-    { carrierId: 'transport-transfer-berber', kind: 'finishedTransfer', plan: 250, fact: 140 },
-    { carrierId: 'transport-transfer-dial', kind: 'finishedTransfer', plan: 200, fact: 110 },
-    { carrierId: 'transport-transfer-kalinov', kind: 'finishedTransfer', plan: 150, fact: 80 },
     { carrierId: 'transport-material-dial', kind: 'materialDelivery', plan: 500, fact: 280 },
     { carrierId: 'transport-material-klr', kind: 'materialDelivery', plan: 300, fact: 180 },
   ],
@@ -218,9 +208,6 @@ const HIRE_SEEDS: Record<MockMonth, readonly HireSeed[]> = {
     { carrierId: 'transport-finished-kazachek', kind: 'finishedDelivery', plan: 480, fact: 50 },
     { carrierId: 'transport-finished-kalinov', kind: 'finishedDelivery', plan: 370, fact: 35 },
     { carrierId: 'transport-finished-klr', kind: 'finishedDelivery', plan: 300, fact: 30 },
-    { carrierId: 'transport-transfer-berber', kind: 'finishedTransfer', plan: 270, fact: 30 },
-    { carrierId: 'transport-transfer-dial', kind: 'finishedTransfer', plan: 220, fact: 25 },
-    { carrierId: 'transport-transfer-kalinov', kind: 'finishedTransfer', plan: 160, fact: 15 },
     { carrierId: 'transport-material-dial', kind: 'materialDelivery', plan: 560, fact: 50 },
     { carrierId: 'transport-material-klr', kind: 'materialDelivery', plan: 340, fact: 40 },
   ],

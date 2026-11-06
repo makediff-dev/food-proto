@@ -33,7 +33,6 @@ export type TransportFieldRejection =
 
 export const TRANSPORT_HIRE_LABELS: Record<TransportHireKind, string> = {
   finishedDelivery: 'Доставка готовой продукции наёмный',
-  finishedTransfer: 'Перемещение готовой продукции наёмный',
   materialDelivery: 'Доставка сырья и материалов',
 };
 
@@ -85,7 +84,7 @@ export interface TransportMonthView {
   month: string;
   days: number;
   hire: TransportHireBlockView[];
-  /** Сумма трёх блоков наёмного — строка 7.1. */
+  /** Сумма блоков наёмного — строка 7.1. */
   hireTotalPlanExVat: number;
   hireTotalFactExVat: number;
   own: TransportOwnVehicleView[];

@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 56 as const;
+export const SCHEMA_VERSION = 57 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -281,12 +281,11 @@ export interface HrTaxRatesMonth {
   factInjuryHundredths: number;
 }
 
-/** Три вида наёмного транспорта на листе `Transport`. */
-export type TransportHireKind = 'finishedDelivery' | 'finishedTransfer' | 'materialDelivery';
+/** Два вида наёмного транспорта на листе `Transport`. */
+export type TransportHireKind = 'finishedDelivery' | 'materialDelivery';
 
 export const TRANSPORT_HIRE_KINDS = [
   'finishedDelivery',
-  'finishedTransfer',
   'materialDelivery',
 ] as const satisfies readonly TransportHireKind[];
 
@@ -306,7 +305,7 @@ export interface TransportHireMonthPlanLine {
   id: string;
   carrierId: string;
   /**
-   * Количество: шт (доставка/перемещение готовой) или кг (сырьё), тысячные доли.
+   * Количество: шт (доставка готовой) или кг (сырьё), тысячные доли.
    * `Transport!D`.
    */
   quantityThousandths: number;
