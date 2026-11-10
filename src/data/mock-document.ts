@@ -1,4 +1,4 @@
-import { mockCreditors, mockCreditResourceMonths, mockInitialCashBalance } from '@/data/mock-credit';
+import { mockCreditors, mockCreditResourceMonths } from '@/data/mock-credit';
 import { mockMaterials } from '@/data/mock-materials';
 import {
   mockHrDayFacts,
@@ -811,7 +811,6 @@ export const mockDocument: PrototypeDocument = {
   derivativeNorms: [],
   creditors: mockCreditors,
   creditResourceMonths: mockCreditResourceMonths,
-  initialCashBalance: mockInitialCashBalance,
 };
 
 export function createMockDocument(): PrototypeDocument {
@@ -921,6 +920,5 @@ export function createMockDocument(): PrototypeDocument {
       ...item,
       lines: item.lines.map((line) => ({ ...line })),
     })),
-    initialCashBalance: mockDocument.initialCashBalance,
   };
 }

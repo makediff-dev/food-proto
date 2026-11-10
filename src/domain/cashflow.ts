@@ -1,4 +1,4 @@
-import { type CreditCreditorRowView, creditResourcesMonthView, initialCashBalance } from '@/domain/credit-resources';
+import { type CreditCreditorRowView, creditResourcesMonthView } from '@/domain/credit-resources';
 import { MATERIAL_GROUPS, type PrototypeDocument } from '@/domain/document';
 import { materialMovementMonth } from '@/domain/materials';
 import { operatingExpenseMonthView } from '@/domain/operating-expense';
@@ -166,13 +166,14 @@ function earliestCashflowMonth(document: PrototypeDocument, month: string): stri
 }
 
 /**
- * Остаток денег на начало: стартовый баланс + Σ(доходы − расходы) до месяца.
+ * Остаток денег на начало: Σ(доходы − расходы) до месяца.
+ * Старт учёта всегда 0; дальше только кредиты, продажи и расходы.
  * Цепочку начинают с самого раннего месяца с данными в документе.
  */
 export function openingCashBalance(document: PrototypeDocument, month: string): CashflowMoneySide {
   const start = earliestCashflowMonth(document, month);
-  let fact = initialCashBalance(document);
-  let plan = initialCashBalance(document);
+  let fact = 0;
+  let plan = 0;
   let cursor = start;
   while (cursor < month) {
     const net = monthNetCashflow(document, cursor);

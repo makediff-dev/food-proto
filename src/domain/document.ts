@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 62 as const;
+export const SCHEMA_VERSION = 63 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -999,11 +999,6 @@ export interface PrototypeDocument {
    * Старый документ без поля читается как пустой массив.
    */
   creditResourceMonths: CreditResourceMonth[];
-  /**
-   * Начальный остаток денежных средств на старте учёта, копейки.
-   * Переносится в ДДС на начало первого месяца. Старый документ без поля — 0.
-   */
-  initialCashBalance: number;
 }
 
 /** Метка мягкого удаления, которую пишет экран через `Date.toISOString()`. */

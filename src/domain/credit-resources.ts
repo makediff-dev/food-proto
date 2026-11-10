@@ -485,21 +485,3 @@ export function setCreditMonthField(
     ),
   };
 }
-
-export function setInitialCashBalanceRejection(amount: number): CreditFieldRejection | null {
-  if (!isMoney(amount)) {
-    return 'amount';
-  }
-  return null;
-}
-
-export function setInitialCashBalance(document: PrototypeDocument, amount: number): PrototypeDocument {
-  if (setInitialCashBalanceRejection(amount)) {
-    return document;
-  }
-  return { ...document, initialCashBalance: amount };
-}
-
-export function initialCashBalance(document: PrototypeDocument): number {
-  return document.initialCashBalance ?? 0;
-}

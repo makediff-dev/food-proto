@@ -7,13 +7,7 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useDocumentStore } from '@/data/DocumentProvider';
 import type { OpexGroupCode } from '@/domain/document';
 import { opexGroupName } from '@/domain/operating-expense';
-import {
-  CASHFLOW_FACT_HREF,
-  CASHFLOW_FACT_TITLE,
-  CASHFLOW_SECTION_TITLE,
-  CASHFLOW_SUMMARY_HREF,
-  CASHFLOW_SUMMARY_TITLE,
-} from '@/features/cashflow/paths';
+import { CASHFLOW_SECTION_TITLE, CASHFLOW_SUMMARY_HREF, CASHFLOW_SUMMARY_TITLE } from '@/features/cashflow/paths';
 import {
   CREDIT_RESOURCES_FACT_HREF,
   CREDIT_RESOURCES_FACT_TITLE,
@@ -207,7 +201,6 @@ const CASHFLOW_NAV: readonly NavItem[] = [
     exact: true,
     navKind: 'report',
   },
-  { href: CASHFLOW_FACT_HREF, label: CASHFLOW_FACT_TITLE, navKind: 'input' },
   {
     href: CREDIT_RESOURCES_PLAN_HREF,
     label: `${CREDIT_RESOURCES_NAV_PREFIX} · ${CREDIT_RESOURCES_PLAN_TITLE}`,

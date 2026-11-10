@@ -11,9 +11,6 @@ export const mockCreditors: Creditor[] = [
   },
 ];
 
-/** Начальный остаток денег на старте учёта (масштаб мока). */
-export const mockInitialCashBalance = 2_500_000_00;
-
 function creditMonth(
   month: string,
   line: {

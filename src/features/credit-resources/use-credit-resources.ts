@@ -17,8 +17,6 @@ import {
   setCreditorInitialPrincipalRejection,
   setCreditorInterestRate,
   setCreditorInterestRateRejection,
-  setInitialCashBalance,
-  setInitialCashBalanceRejection,
 } from '@/domain/credit-resources';
 
 export function useCreditResources() {
@@ -82,14 +80,6 @@ export function useCreditResources() {
         return rejection;
       }
       updateDocument((current) => setCreditMonthField(current, month, creditorId, field, amount));
-      return null;
-    },
-    setInitialCashBalance(amount: number): CreditFieldRejection | null {
-      const rejection = setInitialCashBalanceRejection(amount);
-      if (rejection) {
-        return rejection;
-      }
-      updateDocument((current) => setInitialCashBalance(current, amount));
       return null;
     },
   };
