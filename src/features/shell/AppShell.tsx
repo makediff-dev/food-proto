@@ -17,9 +17,9 @@ import {
 import {
   CREDIT_RESOURCES_FACT_HREF,
   CREDIT_RESOURCES_FACT_TITLE,
+  CREDIT_RESOURCES_NAV_PREFIX,
   CREDIT_RESOURCES_PLAN_HREF,
   CREDIT_RESOURCES_PLAN_TITLE,
-  CREDIT_RESOURCES_SECTION_TITLE,
   CREDIT_RESOURCES_SUMMARY_HREF,
   CREDIT_RESOURCES_SUMMARY_TITLE,
 } from '@/features/credit-resources/paths';
@@ -194,17 +194,6 @@ function buildOpexNav(promotedGroupCodes: readonly OpexGroupCode[]): NavItem[] {
   return items;
 }
 
-const CREDIT_RESOURCES_NAV: readonly NavItem[] = [
-  {
-    href: CREDIT_RESOURCES_SUMMARY_HREF,
-    label: CREDIT_RESOURCES_SUMMARY_TITLE,
-    exact: true,
-    navKind: 'report',
-  },
-  { href: CREDIT_RESOURCES_PLAN_HREF, label: CREDIT_RESOURCES_PLAN_TITLE, navKind: 'input' },
-  { href: CREDIT_RESOURCES_FACT_HREF, label: CREDIT_RESOURCES_FACT_TITLE, navKind: 'input' },
-];
-
 const CASHFLOW_NAV: readonly NavItem[] = [
   {
     href: CASHFLOW_SUMMARY_HREF,
@@ -212,7 +201,23 @@ const CASHFLOW_NAV: readonly NavItem[] = [
     exact: true,
     navKind: 'report',
   },
+  {
+    href: CREDIT_RESOURCES_SUMMARY_HREF,
+    label: `${CREDIT_RESOURCES_NAV_PREFIX} · ${CREDIT_RESOURCES_SUMMARY_TITLE}`,
+    exact: true,
+    navKind: 'report',
+  },
   { href: CASHFLOW_FACT_HREF, label: CASHFLOW_FACT_TITLE, navKind: 'input' },
+  {
+    href: CREDIT_RESOURCES_PLAN_HREF,
+    label: `${CREDIT_RESOURCES_NAV_PREFIX} · ${CREDIT_RESOURCES_PLAN_TITLE}`,
+    navKind: 'input',
+  },
+  {
+    href: CREDIT_RESOURCES_FACT_HREF,
+    label: `${CREDIT_RESOURCES_NAV_PREFIX} · ${CREDIT_RESOURCES_FACT_TITLE}`,
+    navKind: 'input',
+  },
 ];
 
 function sectionIsCurrent(pathname: string, href: string): boolean {
@@ -260,7 +265,6 @@ function currentNavLabel(pathname: string, opexNav: readonly NavItem[]): string 
     RECIPES_NAV,
     MATERIALS_NAV,
     opexNav,
-    CREDIT_RESOURCES_NAV,
     CASHFLOW_NAV,
   ];
 
@@ -381,7 +385,6 @@ function buildNavGroups(
     { section: 'derivativeMovement', title: DERIVATIVE_MOVEMENT_SECTION_TITLE, items: DERIVATIVE_MOVEMENT_NAV },
     { section: 'materials', title: MATERIALS_SECTION_TITLE, items: MATERIALS_NAV },
     { section: 'opex', title: OPEX_SECTION_TITLE, items: opexNav },
-    { section: 'creditResources', title: CREDIT_RESOURCES_SECTION_TITLE, items: CREDIT_RESOURCES_NAV },
     { section: 'cashflow', title: CASHFLOW_SECTION_TITLE, items: CASHFLOW_NAV },
   ];
 }

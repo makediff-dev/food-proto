@@ -1,4 +1,8 @@
+/** Подпись блока в домене; в меню кредиты живут под «Движение денежных средств». */
 export const CREDIT_RESOURCES_SECTION_TITLE = 'Движение кредитных ресурсов';
+
+/** Префикс пунктов меню в разделе ДДС. */
+export const CREDIT_RESOURCES_NAV_PREFIX = 'Кредиты';
 
 export const CREDIT_RESOURCES_SUMMARY_TITLE = 'Отчет общий';
 

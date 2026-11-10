@@ -10,7 +10,6 @@ export type NavSectionId =
   | 'derivativeMovement'
   | 'materials'
   | 'opex'
-  | 'creditResources'
   | 'cashflow'
   | 'roles';
 
@@ -22,7 +21,6 @@ export const ALL_NAV_SECTIONS: readonly NavSectionId[] = [
   'derivativeMovement',
   'materials',
   'opex',
-  'creditResources',
   'cashflow',
   'roles',
 ];
@@ -150,7 +148,6 @@ export const PERMISSION_MATRIX_ROWS: readonly PermissionMatrixRow[] = [
   { kind: 'section', section: 'derivativeMovement', label: 'Раздел «Движение производных»' },
   { kind: 'section', section: 'materials', label: 'Раздел «Сырьё и материалы»' },
   { kind: 'section', section: 'opex', label: 'Раздел «Операционные расходы»' },
-  { kind: 'section', section: 'creditResources', label: 'Раздел «Движение кредитных ресурсов»' },
   { kind: 'section', section: 'cashflow', label: 'Раздел «Движение денежных средств»' },
   { kind: 'flag', key: 'canEditSalesPlan', label: 'Правит план продаж' },
   { kind: 'flag', key: 'canEditSalesFact', label: 'Правит факт продаж' },
