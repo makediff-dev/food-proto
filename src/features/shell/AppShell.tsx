@@ -11,7 +11,6 @@ import { CASHFLOW_SECTION_TITLE, CASHFLOW_SUMMARY_HREF, CASHFLOW_SUMMARY_TITLE }
 import {
   CREDIT_RESOURCES_FACT_HREF,
   CREDIT_RESOURCES_FACT_TITLE,
-  CREDIT_RESOURCES_NAV_PREFIX,
   CREDIT_RESOURCES_PLAN_HREF,
   CREDIT_RESOURCES_PLAN_TITLE,
   CREDIT_RESOURCES_SUMMARY_HREF,
@@ -83,6 +82,7 @@ import { SUMMARY_SECTION_TITLE } from '@/features/sales/paths';
 import { SALES_FACT_TITLE, SALES_JOURNAL_TITLE, SALES_SECTION_TITLE } from '@/features/sales-fact/paths';
 import { SETTINGS_HREF, SETTINGS_TITLE } from '@/features/settings/paths';
 import { IconChevronDown, IconChevronRight, IconMenu, IconSettings } from '@/features/shell/Icons';
+import { VAT_REPORT_SUMMARY_HREF, VAT_REPORT_SUMMARY_TITLE } from '@/features/vat/paths';
 
 type NavKind = 'report' | 'input';
 
@@ -196,23 +196,28 @@ const CASHFLOW_NAV: readonly NavItem[] = [
     navKind: 'report',
   },
   {
+    href: VAT_REPORT_SUMMARY_HREF,
+    label: VAT_REPORT_SUMMARY_TITLE,
+    exact: true,
+    navKind: 'report',
+  },
+  {
     href: CREDIT_RESOURCES_SUMMARY_HREF,
-    label: `${CREDIT_RESOURCES_NAV_PREFIX} · ${CREDIT_RESOURCES_SUMMARY_TITLE}`,
+    label: CREDIT_RESOURCES_SUMMARY_TITLE,
     exact: true,
     navKind: 'report',
   },
   {
     href: CREDIT_RESOURCES_PLAN_HREF,
-    label: `${CREDIT_RESOURCES_NAV_PREFIX} · ${CREDIT_RESOURCES_PLAN_TITLE}`,
+    label: CREDIT_RESOURCES_PLAN_TITLE,
     navKind: 'input',
   },
   {
     href: CREDIT_RESOURCES_FACT_HREF,
-    label: `${CREDIT_RESOURCES_NAV_PREFIX} · ${CREDIT_RESOURCES_FACT_TITLE}`,
+    label: CREDIT_RESOURCES_FACT_TITLE,
     navKind: 'input',
   },
 ];
-
 function sectionIsCurrent(pathname: string, href: string): boolean {
   if (href === '/') {
     return pathname === '/';

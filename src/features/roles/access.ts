@@ -14,6 +14,7 @@ import {
 import { ROLES_HREF } from '@/features/roles/paths';
 import { type NavSectionId, type RoleDefinition, roleHasSection } from '@/features/roles/roles';
 import { SETTINGS_HREF } from '@/features/settings/paths';
+import { VAT_REPORT_SUMMARY_HREF } from '@/features/vat/paths';
 
 const SECTION_HOME: Record<NavSectionId, string> = {
   sales: '/',
@@ -94,6 +95,8 @@ export function pathnameSection(pathname: string): NavSectionId | null {
   if (
     pathname === CREDIT_RESOURCES_SUMMARY_HREF ||
     pathname.startsWith(`${CREDIT_RESOURCES_SUMMARY_HREF}/`) ||
+    pathname === VAT_REPORT_SUMMARY_HREF ||
+    pathname.startsWith(`${VAT_REPORT_SUMMARY_HREF}/`) ||
     pathname === CASHFLOW_SUMMARY_HREF ||
     pathname.startsWith(`${CASHFLOW_SUMMARY_HREF}/`)
   ) {

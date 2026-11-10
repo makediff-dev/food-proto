@@ -262,15 +262,15 @@
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1794323009.8155856,
-    "seen": 1794323038.8122582,
-    "ast_hash": "d08629bedce162158cc208256226077e",
+    "mtime": 1794324784.5198238,
+    "seen": 1794324837.3065603,
+    "ast_hash": "66b18dc49c1098cc2b8d85d9d75cd114",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
-    "mtime": 1794323010.7820096,
-    "seen": 1794323038.8122582,
-    "ast_hash": "ac5cdd4e8b17378cb9119c963951059d",
+    "mtime": 1794324784.5254667,
+    "seen": 1794324837.3065603,
+    "ast_hash": "ee2c5f9c51637e073757ecf816dc8c89",
     "semantic_hash": ""
   },
   "inputs/README.md": {
@@ -525,9 +525,9 @@
     "semantic_hash": ""
   },
   "src/features/shell/AppShell.tsx": {
-    "mtime": 1794323027.2459912,
-    "seen": 1794323038.8122582,
-    "ast_hash": "fefe7276ad5c74622764c669bde15ffe",
+    "mtime": 1794324769.6434915,
+    "seen": 1794324837.3065603,
+    "ast_hash": "daec4370c92f1e2d47de817ae1596bef",
     "semantic_hash": ""
   },
   "src/features/shell/Dialog.tsx": {
@@ -1287,9 +1287,9 @@
     "semantic_hash": ""
   },
   "src/features/roles/access.ts": {
-    "mtime": 1794322572.0444443,
-    "seen": 1794322611.666678,
-    "ast_hash": "55ff682a00c5445a9d24d2c93ffcf017",
+    "mtime": 1794323939.1142392,
+    "seen": 1794323960.4225488,
+    "ast_hash": "e6d4aa51e9880a6f3ca5d85186666987",
     "semantic_hash": ""
   },
   "src/app/opex/hr/fact/page.tsx": {
@@ -1503,9 +1503,9 @@
     "semantic_hash": ""
   },
   "src/features/credit-resources/paths.ts": {
-    "mtime": 1794322567.440641,
-    "seen": 1794322611.6656728,
-    "ast_hash": "3185edfd3f64b51d495d1ef7fcb41650",
+    "mtime": 1794324767.8524716,
+    "seen": 1794324837.3065603,
+    "ast_hash": "cdcb25c02cb166d9aed0b80c373a8932",
     "semantic_hash": ""
   },
   "src/app/cashflow/page.tsx": {
@@ -1638,6 +1638,36 @@
     "mtime": 1794318442.199112,
     "seen": 1794318481.7596943,
     "ast_hash": "c02d46c6e8d5add84c24ed37cb0cc8b8",
+    "semantic_hash": ""
+  },
+  "src/app/vat/page.tsx": {
+    "mtime": 1794323939.1111631,
+    "seen": 1794323960.42196,
+    "ast_hash": "3960f49cf997856fb09b9972eb09a8ff",
+    "semantic_hash": ""
+  },
+  "src/domain/vat-report.ts": {
+    "mtime": 1794324397.9399512,
+    "seen": 1794324454.1765027,
+    "ast_hash": "430b3b18ca4b87d341851df2ab225f14",
+    "semantic_hash": ""
+  },
+  "src/features/vat/VatReportScreen.tsx": {
+    "mtime": 1794324007.811725,
+    "seen": 1794324027.8392918,
+    "ast_hash": "7efecd2fea8b079293d6eb8109e2e856",
+    "semantic_hash": ""
+  },
+  "src/features/vat/paths.ts": {
+    "mtime": 1794324767.320414,
+    "seen": 1794324837.3065603,
+    "ast_hash": "dff3550abfa901c1ddfb0ac4bf33439b",
+    "semantic_hash": ""
+  },
+  "src/features/vat/use-vat-report.ts": {
+    "mtime": 1794323890.6509829,
+    "seen": 1794323960.4225488,
+    "ast_hash": "6257d00d24caf573d3600d889c48cd63",
     "semantic_hash": ""
   }
 }
