@@ -2,7 +2,10 @@ import { type NameRejection, rejectName } from '@/domain/directory';
 import {
   isDeletionMark,
   isMonthKey,
+  isOccurredOn,
   isOpexGroupCode,
+  type OpexDayFact,
+  type OpexDayLine,
   type OpexGroupCode,
   type OpexMonthLine,
   type OpexMonthLines,
@@ -22,6 +25,8 @@ export const AGENCY_FEE_PERCENT = 7;
 export type OpexFieldRejection =
   | 'missing'
   | 'month'
+  | 'day'
+  | 'daily'
   | 'amount'
   | 'line'
   | 'group'
@@ -84,12 +89,20 @@ export interface OpexOtherLineView {
 
 export interface OpexOtherGroupView {
   code: OpexGroupCode;
+  /**
+   * Номер на экране: порядковый среди категорий «Прочего» (после поднятий),
+   * пустая строка на странице поднятой категории.
+   */
+  displayCode: string;
   name: string;
   lines: OpexOtherLineView[];
   totalPlanExVat: number;
   totalFactExVat: number;
   totalVarianceExVat: number;
 }
+
+/** Как нумеровать группу и статьи на экране «Прочее» / поднятой категории. */
+type OtherNumbering = { mode: 'display'; ordinal: number } | { mode: 'standalone' };
 
 export interface OpexOtherMonthView {
   month: string;
@@ -222,12 +235,48 @@ function otherLinesForGroup(document: PrototypeDocument, groupCode: OpexGroupCod
   return activeOtherLines(document).filter((item) => item.groupCode === groupCode);
 }
 
-function catalogCode(group: GroupDef, catalogIndex: number): string {
+function displayGroupCode(numbering: OtherNumbering): string {
+  switch (numbering.mode) {
+    case 'display':
+      return String(numbering.ordinal);
+    case 'standalone':
+      return '';
+  }
+}
+
+function derivedLineCode(displayGroup: string, line: DerivedDef): string {
+  if (!displayGroup) {
+    return line.code.includes('.') ? (line.code.split('.')[1] ?? line.code) : line.code;
+  }
+  const suffix = line.code.includes('.') ? (line.code.split('.')[1] ?? line.code) : line.code;
+  return `${displayGroup}.${suffix}`;
+}
+
+function catalogCode(displayGroup: string, group: GroupDef, catalogIndex: number): string {
+  if (!displayGroup) {
+    return String(catalogIndex + 1);
+  }
   const maxDerived = group.derived.reduce((max, line) => {
     const suffix = Number(line.code.split('.')[1] ?? 0);
     return Number.isFinite(suffix) ? Math.max(max, suffix) : max;
   }, 0);
-  return `${group.code}.${maxDerived + 1 + catalogIndex}`;
+  return `${displayGroup}.${maxDerived + 1 + catalogIndex}`;
+}
+
+function dayFactsInMonth(document: PrototypeDocument, month: string): OpexDayFact[] {
+  return (document.opexDayFacts ?? []).filter((item) => item.occurredOn.startsWith(`${month}-`));
+}
+
+function dayFactAmount(document: PrototypeDocument, month: string, lineId: string): number {
+  let sum = 0;
+  for (const day of dayFactsInMonth(document, month)) {
+    for (const line of day.lines) {
+      if (line.lineId === lineId) {
+        sum += line.amountExVat;
+      }
+    }
+  }
+  return sum;
 }
 
 function findOtherLine(document: PrototypeDocument, lineId: string): OpexOtherLine | null {
@@ -241,16 +290,11 @@ function amountsForOtherLine(
   revenueWithVat: number,
 ): { planExVat: number; factExVat: number } {
   const stored = storedLine(opexLines(document, month), line.id);
-  if (line.kind === 'agency') {
-    return {
-      planExVat: agencyPlanExVat(revenueWithVat),
-      factExVat: stored?.factExVat ?? 0,
-    };
-  }
-  return {
-    planExVat: stored?.planExVat ?? 0,
-    factExVat: stored?.factExVat ?? 0,
-  };
+  const planExVat = line.kind === 'agency' ? agencyPlanExVat(revenueWithVat) : (stored?.planExVat ?? 0);
+  const factExVat = promotedSet(document).has(line.groupCode)
+    ? dayFactAmount(document, month, line.id)
+    : (stored?.factExVat ?? 0);
+  return { planExVat, factExVat };
 }
 
 /** Рабочие статьи + удалённые с ненулевым планом или фактом месяца. */
@@ -332,7 +376,7 @@ export function operatingExpenseMonthView(
       lineRows.push({
         id: line.id,
         kind: 'editable',
-        code: catalogCode(group, index),
+        code: catalogCode(group.code, group, index),
         name: line.name,
         deleted: line.deletedAt !== null,
         planExVat: amounts.planExVat,
@@ -376,14 +420,16 @@ function buildOtherGroupView(
   group: GroupDef,
   hr: ReturnType<typeof hrMonthView>,
   transport: ReturnType<typeof transportMonthView>,
+  numbering: OtherNumbering,
 ): OpexOtherGroupView {
   const lines: OpexOtherLineView[] = [];
+  const displayCode = displayGroupCode(numbering);
 
   for (const line of group.derived) {
     const amounts = derivedLineAmounts(line.source, hr, transport);
     lines.push({
       id: line.id,
-      code: line.code,
+      code: derivedLineCode(displayCode, line),
       name: line.name,
       kind: 'derived',
       deleted: false,
@@ -401,7 +447,7 @@ function buildOtherGroupView(
     const deleted = line.deletedAt !== null;
     lines.push({
       id: line.id,
-      code: catalogCode(group, index),
+      code: catalogCode(displayCode, group, index),
       name: line.name,
       kind: line.kind,
       deleted,
@@ -417,6 +463,7 @@ function buildOtherGroupView(
   const groupFact = lines.reduce((sum, item) => sum + item.factExVat, 0);
   return {
     code: group.code,
+    displayCode,
     name: group.name,
     lines,
     totalPlanExVat: groupPlan,
@@ -441,11 +488,16 @@ export function operatingExpenseOtherMonthView(
   let totalPlan = 0;
   let totalFact = 0;
 
+  let ordinal = 0;
   for (const group of GROUPS) {
     if (promoted.has(group.code)) {
       continue;
     }
-    const view = buildOtherGroupView(document, month, revenueWithVat, group, hr, transport);
+    ordinal += 1;
+    const view = buildOtherGroupView(document, month, revenueWithVat, group, hr, transport, {
+      mode: 'display',
+      ordinal,
+    });
     groups.push(view);
     totalPlan += view.totalPlanExVat;
     totalFact += view.totalFactExVat;
@@ -472,7 +524,42 @@ export function operatingExpenseOtherGroupMonthView(
   }
   const hr = hrMonthView(document, month);
   const transport = transportMonthView(document, month);
-  return buildOtherGroupView(document, month, revenueWithVat, groupDef(groupCode), hr, transport);
+  return buildOtherGroupView(document, month, revenueWithVat, groupDef(groupCode), hr, transport, {
+    mode: 'standalone',
+  });
+}
+
+/** Та же группа на дату: факт — сумма (значение) дня, план — месячный. */
+export function operatingExpenseOtherGroupDayView(
+  document: PrototypeDocument,
+  occurredOn: string,
+  groupCode: OpexGroupCode,
+  revenueWithVat: number,
+): OpexOtherGroupView | null {
+  if (!isOccurredOn(occurredOn)) {
+    return null;
+  }
+  const month = occurredOn.slice(0, 7);
+  const base = operatingExpenseOtherGroupMonthView(document, month, groupCode, revenueWithVat);
+  if (!base) {
+    return null;
+  }
+  const day = (document.opexDayFacts ?? []).find((item) => item.occurredOn === occurredOn);
+  const lines = base.lines.map((line) => {
+    const factExVat = day?.lines.find((item) => item.lineId === line.id)?.amountExVat ?? 0;
+    return {
+      ...line,
+      factExVat,
+      varianceExVat: factExVat - line.planExVat,
+    };
+  });
+  const totalFactExVat = lines.reduce((sum, item) => sum + item.factExVat, 0);
+  return {
+    ...base,
+    lines,
+    totalFactExVat,
+    totalVarianceExVat: totalFactExVat - base.totalPlanExVat,
+  };
 }
 
 export function promoteOpexGroupRejection(document: PrototypeDocument, groupCode: string): OpexFieldRejection | null {
@@ -488,12 +575,148 @@ export function promoteOpexGroupRejection(document: PrototypeDocument, groupCode
   return null;
 }
 
+function writeMonthLineAmounts(
+  document: PrototypeDocument,
+  month: string,
+  lineId: string,
+  planExVat: number,
+  factExVat: number,
+): PrototypeDocument {
+  const existing = opexLines(document, month);
+  const nextLine: OpexMonthLine = {
+    id: `opex-line:${month}:${lineId}`,
+    lineId,
+    planExVat,
+    factExVat,
+  };
+
+  if (!existing) {
+    if (planExVat === 0 && factExVat === 0) {
+      return document;
+    }
+    return {
+      ...document,
+      opexMonthLines: [...document.opexMonthLines, { id: `opex:${month}`, month, lines: [nextLine] }],
+    };
+  }
+
+  const without = existing.lines.filter((item) => item.lineId !== lineId);
+  const lines = planExVat === 0 && factExVat === 0 ? without : [...without, nextLine];
+  if (lines.length === 0) {
+    return {
+      ...document,
+      opexMonthLines: document.opexMonthLines.filter((item) => item.month !== month),
+    };
+  }
+  return {
+    ...document,
+    opexMonthLines: document.opexMonthLines.map((item) => (item.month === month ? { ...item, lines } : item)),
+  };
+}
+
+function writeDayLineAmount(
+  document: PrototypeDocument,
+  occurredOn: string,
+  lineId: string,
+  amountExVat: number,
+): PrototypeDocument {
+  const dayFacts = document.opexDayFacts ?? [];
+  const existing = dayFacts.find((item) => item.occurredOn === occurredOn);
+  const nextLine: OpexDayLine = {
+    id: `opex-day-line:${occurredOn}:${lineId}`,
+    lineId,
+    amountExVat,
+  };
+
+  if (!existing) {
+    if (amountExVat === 0) {
+      return document;
+    }
+    return {
+      ...document,
+      opexDayFacts: [...dayFacts, { id: `opex-day:${occurredOn}`, occurredOn, lines: [nextLine] }],
+    };
+  }
+
+  const without = existing.lines.filter((item) => item.lineId !== lineId);
+  const lines = amountExVat === 0 ? without : [...without, nextLine];
+  if (lines.length === 0) {
+    return {
+      ...document,
+      opexDayFacts: dayFacts.filter((item) => item.occurredOn !== occurredOn),
+    };
+  }
+  return {
+    ...document,
+    opexDayFacts: dayFacts.map((item) => (item.occurredOn === occurredOn ? { ...item, lines } : item)),
+  };
+}
+
+function lineIdsForGroup(document: PrototypeDocument, groupCode: OpexGroupCode): Set<string> {
+  return new Set(document.opexOtherLines.filter((item) => item.groupCode === groupCode).map((item) => item.id));
+}
+
+/** Месячный факт → 1-е число; план остаётся в месяце. */
+function migrateMonthFactToDayOne(document: PrototypeDocument, groupCode: OpexGroupCode): PrototypeDocument {
+  const lineIds = lineIdsForGroup(document, groupCode);
+  let next = document;
+  for (const monthBlock of document.opexMonthLines) {
+    for (const line of monthBlock.lines) {
+      if (!lineIds.has(line.lineId) || line.factExVat === 0) {
+        continue;
+      }
+      next = writeDayLineAmount(next, `${monthBlock.month}-01`, line.lineId, line.factExVat);
+      next = writeMonthLineAmounts(next, monthBlock.month, line.lineId, line.planExVat, 0);
+    }
+  }
+  return next;
+}
+
+/** Сумма дней → месячный факт; дневные строки группы стираются. */
+function foldDayFactsIntoMonth(document: PrototypeDocument, groupCode: OpexGroupCode): PrototypeDocument {
+  const lineIds = lineIdsForGroup(document, groupCode);
+  const dayFacts = document.opexDayFacts ?? [];
+  const sums = new Map<string, Map<string, number>>();
+
+  for (const day of dayFacts) {
+    const month = day.occurredOn.slice(0, 7);
+    for (const line of day.lines) {
+      if (!lineIds.has(line.lineId)) {
+        continue;
+      }
+      const byLine = sums.get(month) ?? new Map<string, number>();
+      byLine.set(line.lineId, (byLine.get(line.lineId) ?? 0) + line.amountExVat);
+      sums.set(month, byLine);
+    }
+  }
+
+  let next = document;
+  for (const [month, byLine] of sums) {
+    for (const [lineId, factExVat] of byLine) {
+      const stored = storedLine(opexLines(next, month), lineId);
+      next = writeMonthLineAmounts(next, month, lineId, stored?.planExVat ?? 0, factExVat);
+    }
+  }
+
+  next = {
+    ...next,
+    opexDayFacts: (next.opexDayFacts ?? [])
+      .map((day) => ({
+        ...day,
+        lines: day.lines.filter((line) => !lineIds.has(line.lineId)),
+      }))
+      .filter((day) => day.lines.length > 0),
+  };
+  return next;
+}
+
 export function promoteOpexGroup(document: PrototypeDocument, groupCode: OpexGroupCode): PrototypeDocument {
   if (promoteOpexGroupRejection(document, groupCode)) {
     return document;
   }
-  const next = [...document.opexPromotedGroupCodes, groupCode].sort((a, b) => Number(a) - Number(b));
-  return { ...document, opexPromotedGroupCodes: next };
+  const migrated = migrateMonthFactToDayOne(document, groupCode);
+  const next = [...migrated.opexPromotedGroupCodes, groupCode].sort((a, b) => Number(a) - Number(b));
+  return { ...migrated, opexPromotedGroupCodes: next };
 }
 
 export function demoteOpexGroupRejection(document: PrototypeDocument, groupCode: string): OpexFieldRejection | null {
@@ -510,9 +733,10 @@ export function demoteOpexGroup(document: PrototypeDocument, groupCode: OpexGrou
   if (demoteOpexGroupRejection(document, groupCode)) {
     return document;
   }
+  const folded = foldDayFactsIntoMonth(document, groupCode);
   return {
-    ...document,
-    opexPromotedGroupCodes: document.opexPromotedGroupCodes.filter((code) => code !== groupCode),
+    ...folded,
+    opexPromotedGroupCodes: folded.opexPromotedGroupCodes.filter((code) => code !== groupCode),
   };
 }
 
@@ -547,6 +771,9 @@ export function setOpexLineRejection(
   if (line.kind === 'agency' && side === 'plan') {
     return 'line';
   }
+  if (side === 'fact' && promotedSet(document).has(line.groupCode)) {
+    return 'daily';
+  }
   if (!isMoney(amountExVat)) {
     return 'amount';
   }
@@ -567,35 +794,49 @@ export function setOpexLine(
   const current = storedLine(existing, lineId);
   const nextPlan = side === 'plan' ? amountExVat : (current?.planExVat ?? 0);
   const nextFact = side === 'fact' ? amountExVat : (current?.factExVat ?? 0);
-  const nextLine: OpexMonthLine = {
-    id: `opex-line:${month}:${lineId}`,
-    lineId,
-    planExVat: nextPlan,
-    factExVat: nextFact,
-  };
+  return writeMonthLineAmounts(document, month, lineId, nextPlan, nextFact);
+}
 
-  if (!existing) {
-    if (nextPlan === 0 && nextFact === 0) {
-      return document;
-    }
-    return {
-      ...document,
-      opexMonthLines: [...document.opexMonthLines, { id: `opex:${month}`, month, lines: [nextLine] }],
-    };
+export function setOpexDayLineRejection(
+  document: PrototypeDocument,
+  occurredOn: string,
+  lineId: string,
+  amountExVat: number,
+): OpexFieldRejection | null {
+  if (!isOccurredOn(occurredOn)) {
+    return 'day';
   }
+  const line = findOtherLine(document, lineId);
+  if (!line) {
+    return 'missing';
+  }
+  if (line.deletedAt !== null) {
+    return 'archived';
+  }
+  if (!promotedSet(document).has(line.groupCode)) {
+    return 'not-promoted';
+  }
+  if (!isMoney(amountExVat)) {
+    return 'amount';
+  }
+  return null;
+}
 
-  const without = existing.lines.filter((item) => item.lineId !== lineId);
-  const lines = nextPlan === 0 && nextFact === 0 ? without : [...without, nextLine];
-  if (lines.length === 0) {
-    return {
-      ...document,
-      opexMonthLines: document.opexMonthLines.filter((item) => item.month !== month),
-    };
+export function setOpexDayLine(
+  document: PrototypeDocument,
+  occurredOn: string,
+  lineId: string,
+  amountExVat: number,
+): PrototypeDocument {
+  if (setOpexDayLineRejection(document, occurredOn, lineId, amountExVat)) {
+    return document;
   }
-  return {
-    ...document,
-    opexMonthLines: document.opexMonthLines.map((item) => (item.month === month ? { ...item, lines } : item)),
-  };
+  return writeDayLineAmount(document, occurredOn, lineId, amountExVat);
+}
+
+export function opexDayLineValue(document: PrototypeDocument, occurredOn: string, lineId: string): number {
+  const day = (document.opexDayFacts ?? []).find((item) => item.occurredOn === occurredOn);
+  return day?.lines.find((item) => item.lineId === lineId)?.amountExVat ?? 0;
 }
 
 export function addOpexOtherLineRejection(

@@ -63,7 +63,7 @@ export function OtherGroupBlock({
               {open ? <IconChevronDown /> : <IconChevronRight />}
             </button>
             <span className={`${categoryNameClassName} gap-1`}>
-              <span className="text-muted">{group.code}</span>
+              {group.displayCode ? <span className="text-muted">{group.displayCode}</span> : null}
               <span>
                 {group.name} ({count})
               </span>
@@ -112,7 +112,7 @@ export function OtherGroupBlock({
               <tr key={row.id}>
                 <th scope="row" className={entityNameRowClassName(nameKind)}>
                   <div className="flex w-full items-center gap-2">
-                    <span className="text-muted">{row.code}</span>
+                    {row.code ? <span className="text-muted">{row.code}</span> : null}
                     <span className="min-w-0 flex-1">
                       {canRename ? (
                         <GridText

@@ -3,15 +3,18 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 
-import { isOpexGroupCode } from '@/domain/document';
-import { operatingExpenseOtherGroupMonthView, opexGroupName } from '@/domain/operating-expense';
-import { monthKeyFromDate, salesPlanForMonth, salesPlanTotals } from '@/domain/sales-plan';
-import { OpexMonthBar, resolveOpexMonth } from '@/features/opex/OpexMonthBar';
+import { isOccurredOn, isOpexGroupCode } from '@/domain/document';
+import { operatingExpenseOtherGroupDayView, opexGroupName } from '@/domain/operating-expense';
+import { maxProductionEntryOccurredOn } from '@/domain/production-journal';
+import { defaultSalesFactDay, monthDates } from '@/domain/sales-fact';
+import { monthKeyFromDate, planMonthOpen, salesPlanForMonth, salesPlanTotals } from '@/domain/sales-plan';
+import { resolveOpexMonth } from '@/features/opex/OpexMonthBar';
 import { OtherGroupBlock } from '@/features/opex/OpexOtherGroupBlock';
 import { OPEX_OTHER_FACT_TITLE, OPEX_OTHER_PLAN_HREF, opexGroupFactHref } from '@/features/opex/paths';
 import { OPEX_LINE_ERROR } from '@/features/opex/text';
 import { useOpex } from '@/features/opex/use-opex';
 import { useRole } from '@/features/roles/RoleProvider';
+import { monthFieldClassName } from '@/features/sales/fields';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
   ColumnLabel,
@@ -27,10 +30,31 @@ import {
 
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
 
-export function OpexGroupFactScreen({ code, month }: { code: string; month: string }) {
+function resolveDay(month: string, day: string, fallback: string): string {
+  if (isOccurredOn(day) && day.startsWith(`${month}-`) && monthDates(month).includes(day)) {
+    return day;
+  }
+
+  const dom = Number(day.slice(8, 10));
+  if (Number.isInteger(dom) && dom > 0) {
+    const last = monthDates(month).length;
+    const clamped = Math.min(dom, last);
+    const candidate = `${month}-${String(clamped).padStart(2, '0')}`;
+    if (monthDates(month).includes(candidate)) {
+      return candidate;
+    }
+  }
+
+  return fallback;
+}
+
+export function OpexGroupFactScreen({ code, month, day }: { code: string; month: string; day: string }) {
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = resolveOpexMonth(month, today, currentMonth);
+  const fallbackDay = defaultSalesFactDay(selectedMonth, today);
+  const selectedDay = resolveDay(selectedMonth, day, fallbackDay);
+  const maxDay = maxProductionEntryOccurredOn(today);
   const opex = useOpex();
   const { canEditSalesOpex } = useRole();
   const router = useRouter();
@@ -53,8 +77,28 @@ export function OpexGroupFactScreen({ code, month }: { code: string; month: stri
     if (!groupCode || !promoted) {
       return null;
     }
-    return operatingExpenseOtherGroupMonthView(opex.document, selectedMonth, groupCode, totals?.revenueWithVat ?? 0);
-  }, [groupCode, promoted, opex.document, selectedMonth, totals?.revenueWithVat]);
+    return operatingExpenseOtherGroupDayView(opex.document, selectedDay, groupCode, totals?.revenueWithVat ?? 0);
+  }, [groupCode, promoted, opex.document, selectedDay, totals?.revenueWithVat]);
+
+  function open(nextDay: string) {
+    if (!groupCode || !isOccurredOn(nextDay)) {
+      return;
+    }
+    const targetMonth = nextDay.slice(0, 7);
+    if (!planMonthOpen(targetMonth, today)) {
+      return;
+    }
+    router.push(
+      opexGroupFactHref({
+        code: groupCode,
+        month: targetMonth,
+        day: nextDay,
+        currentMonth,
+        todayDay: defaultSalesFactDay(currentMonth, today),
+      }),
+      { scroll: false },
+    );
+  }
 
   if (!groupCode || !promoted || !view) {
     return null;
@@ -66,20 +110,24 @@ export function OpexGroupFactScreen({ code, month }: { code: string; month: stri
     <PageFrame
       title={`${title} · ${OPEX_OTHER_FACT_TITLE}`}
       full
-      lede="Факт статей без НДС за месяц. Статьи и названия правят во вводе плана этой категории."
+      lede="Дневной факт статей без НДС. Статьи и названия правят во вводе плана этой категории."
       intro={
-        <OpexMonthBar
-          month={selectedMonth}
-          today={today}
-          onOpen={(next) =>
-            router.push(opexGroupFactHref({ code: groupCode, month: next, currentMonth }), { scroll: false })
-          }
-        />
+        <div className="flex items-center border border-line bg-sheet p-4">
+          <input
+            type="date"
+            aria-label="День"
+            min="2000-01-01"
+            max={maxDay}
+            value={selectedDay}
+            onChange={(event) => open(event.target.value)}
+            className={monthFieldClassName}
+          />
+        </div>
       }
     >
       <div className={tableFrameClassName}>
         <table className={tableClassName}>
-          <caption className="sr-only">{`${title}, факт за ${selectedMonth}`}</caption>
+          <caption className="sr-only">{`${title}, факт за ${selectedDay}`}</caption>
           <thead>
             <tr>
               <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
@@ -96,7 +144,7 @@ export function OpexGroupFactScreen({ code, month }: { code: string; month: stri
               side="fact"
               editable={editable}
               onAmount={(lineId, amount) => {
-                const rejection = opex.setOpexLine(selectedMonth, lineId, 'fact', amount);
+                const rejection = opex.setOpexDayLine(selectedDay, lineId, amount);
                 return rejection ? OPEX_LINE_ERROR[rejection] : null;
               }}
             />

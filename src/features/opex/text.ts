@@ -7,6 +7,8 @@ import { fromRubles, parseDecimal } from '@/domain/units';
 export const OPEX_LINE_ERROR: Record<OpexFieldRejection, string> = {
   missing: 'Строка не найдена.',
   month: 'Укажите месяц.',
+  day: 'Укажите день.',
+  daily: 'Факт этой категории вводят по дням.',
   amount: 'Укажите сумму без НДС.',
   line: 'Эту строку здесь не правят.',
   group: 'Укажите категорию.',

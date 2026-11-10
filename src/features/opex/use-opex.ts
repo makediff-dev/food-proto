@@ -41,6 +41,8 @@ import {
   renameOpexOtherLineRejection,
   restoreOpexOtherLine,
   restoreOpexOtherLineRejection,
+  setOpexDayLine,
+  setOpexDayLineRejection,
   setOpexLine,
   setOpexLineRejection,
 } from '@/domain/operating-expense';
@@ -80,6 +82,14 @@ export function useOpex() {
         return rejection;
       }
       updateDocument((current) => setOpexLine(current, month, lineId, side, amountExVat));
+      return null;
+    },
+    setOpexDayLine(occurredOn: string, lineId: string, amountExVat: number): OpexFieldRejection | null {
+      const rejection = setOpexDayLineRejection(document, occurredOn, lineId, amountExVat);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => setOpexDayLine(current, occurredOn, lineId, amountExVat));
       return null;
     },
     addOpexOtherLine(groupCode: OpexGroupCode, name: string): OpexFieldRejection | null {

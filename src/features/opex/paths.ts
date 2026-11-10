@@ -125,6 +125,18 @@ export function opexGroupPlanHref(options: { code: string; month: string; curren
   return monthHref(opexGroupPlanHrefPath(options.code), options.month, options.currentMonth);
 }
 
-export function opexGroupFactHref(options: { code: string; month: string; currentMonth: string }): string {
-  return monthHref(opexGroupFactHrefPath(options.code), options.month, options.currentMonth);
+export function opexGroupFactHref(options: {
+  code: string;
+  month: string;
+  day: string;
+  currentMonth: string;
+  todayDay: string;
+}): string {
+  return dayHref(
+    opexGroupFactHrefPath(options.code),
+    options.month,
+    options.day,
+    options.currentMonth,
+    options.todayDay,
+  );
 }

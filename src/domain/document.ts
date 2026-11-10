@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 61 as const;
+export const SCHEMA_VERSION = 62 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -538,6 +538,20 @@ export interface OpexMonthLines {
   lines: OpexMonthLine[];
 }
 
+/** Дневной факт статьи поднятой категории прочих расходов. */
+export interface OpexDayLine {
+  id: string;
+  /** Id статьи из `opexOtherLines`. */
+  lineId: string;
+  amountExVat: number;
+}
+
+export interface OpexDayFact {
+  id: string;
+  occurredOn: string;
+  lines: OpexDayLine[];
+}
+
 /** Строка инвентаризации на конец месяца на производстве. */
 export interface FinishedGoodsOpeningLine {
   id: string;
@@ -927,8 +941,15 @@ export interface PrototypeDocument {
   /** Ввод прочих статей `Operation Expense` (без HR и 7.1/7.2). */
   opexMonthLines: OpexMonthLines[];
   /**
+   * Дневной факт статей поднятых категорий (`opexPromotedGroupCodes`).
+   * Пока категория в «Прочем», факт лежит в `opexMonthLines`; при поднятии месячный факт
+   * переносится на 1-е число, при возврате дни суммируются обратно в месяц.
+   */
+  opexDayFacts: OpexDayFact[];
+  /**
    * Коды групп прочих статей, вынесенных в отдельный раздел меню (отчёт / план / факт).
    * Группы 1 и 7 не поднимают: строки из HR и транспорта.
+   * У поднятой категории факт вводят по дням (`opexDayFacts`).
    */
   opexPromotedGroupCodes: OpexGroupCode[];
   /**

@@ -64,7 +64,7 @@ export function OpexGroupSummaryScreen({ code, month }: { code: string; month: s
     <PageFrame
       title={title}
       full
-      lede="План и факт статей без НДС. Ввод — на страницах плана и факта этой категории."
+      lede="План и факт статей без НДС. План — за месяц, факт — сумма дней. Ввод — на страницах плана и факта этой категории."
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -99,7 +99,7 @@ export function OpexGroupSummaryScreen({ code, month }: { code: string; month: s
               <tr key={row.id}>
                 <th scope="row" className={entityNameRowClassName('repeated')}>
                   <span className="inline-flex items-center gap-1">
-                    <span className="text-muted">{row.code}</span>
+                    {row.code ? <span className="text-muted">{row.code}</span> : null}
                     <span>
                       {row.name}
                       {row.deleted ? <span className="text-muted"> (архив)</span> : null}

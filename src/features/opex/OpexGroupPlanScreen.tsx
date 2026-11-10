@@ -75,7 +75,7 @@ export function OpexGroupPlanScreen({ code, month }: { code: string; month: stri
     <PageFrame
       title={`${title} · ${OPEX_OTHER_PLAN_TITLE}`}
       full
-      lede="План статей без НДС. Можно вернуть категорию в «Прочее»."
+      lede="План статей без НДС за месяц. Факт вводят по дням. Можно вернуть категорию в «Прочее» — дневные суммы сложатся в месяц."
       intro={
         <div className="flex flex-wrap items-end gap-3">
           <OpexMonthBar

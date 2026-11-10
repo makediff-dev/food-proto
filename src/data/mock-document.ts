@@ -797,6 +797,7 @@ export const mockDocument: PrototypeDocument = {
   transportOwnDayFacts: mockTransportOwnDayFacts,
   opexOtherLines: catalogOpexOtherLines(),
   opexMonthLines: mockOpexMonthLines,
+  opexDayFacts: [],
   opexPromotedGroupCodes: [],
   finishedGoodsOpenings,
   finishedGoodsNorms,
@@ -873,6 +874,10 @@ export function createMockDocument(): PrototypeDocument {
     })),
     opexOtherLines: mockDocument.opexOtherLines.map((item) => ({ ...item })),
     opexMonthLines: mockDocument.opexMonthLines.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    opexDayFacts: mockDocument.opexDayFacts.map((item) => ({
       ...item,
       lines: item.lines.map((line) => ({ ...line })),
     })),
