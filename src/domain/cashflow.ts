@@ -192,8 +192,13 @@ function buildCashflowBody(
     line('credit-in', 'Кредиты и займы', 0, 0, creditIncomeLines(credit.rows)),
   ];
   const expenseChildren = [
-    materialsBlock(document, month, ['meat', 'bakery', 'sauces'], 'materials', 'Сырьё'),
-    materialsBlock(document, month, ['packaging'], 'packaging', 'Упаковочные материалы'),
+    materialsBlock(
+      document,
+      month,
+      MATERIAL_GROUPS.map((group) => group.id),
+      'materials',
+      'Сырьё и упаковочные материалы',
+    ),
     opexBlock(document, month),
     taxBlock(document, month),
     line('credit-out', 'Кредиты и займы', 0, 0, creditExpenseLines(credit.rows)),
