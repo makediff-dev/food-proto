@@ -258,7 +258,7 @@ export function CreditResourcesSummaryScreen({ month }: { month: string }) {
           {view.rows.length > 0 ? (
             <tfoot>
               <tr>
-                <th scope="row" className={totalNameClassName}>
+                <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
                   Всего
                 </th>
                 <td className={`${totalValueClassName} ${columnEdge('initial')}`}>
