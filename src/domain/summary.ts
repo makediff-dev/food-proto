@@ -108,7 +108,7 @@ export interface SummaryHeadlineSide {
   operatingExpenseExVat: number;
   /** `Svod!G5` / `I5` = Т-проток − операционные расходы. */
   profit: number | null;
-  /** `Svod!G6` / `I6` = прибыль × `Svod!C6` / 100. */
+  /** `Svod!G6` / `I6` = прибыль × `Svod!C6` / 100, не ниже 0. */
   profitTax: number | null;
   /** Процентные платежи после налога; вводят в движении кредитных ресурсов. */
   interestExpense: number;
@@ -452,7 +452,8 @@ function headlineSide(
   const revenueExVat = totals?.revenueExVat ?? null;
   const contribution = totals?.contribution ?? null;
   const profit = contribution === null ? null : contribution - operatingExpenseExVat;
-  const profitTax = profit === null ? null : ratioRound(profit * PROFIT_TAX_PERCENT, 100);
+  const taxed = profit === null ? null : ratioRound(profit * PROFIT_TAX_PERCENT, 100);
+  const profitTax = taxed === null ? null : Math.max(0, taxed);
   const netProfit = profit === null || profitTax === null ? null : profit - profitTax - interestExpense;
   const netProfitabilityHundredths = percentHundredths(netProfit, revenueExVat);
 
@@ -472,6 +473,7 @@ function headlineSide(
  * Верхний блок свода `Svod!D2:L8` с процентными платежами после налога.
  * Выручка и Т-проток — суммы по товарам, без вычета Factoring.
  * Операционные расходы — итог таблицы статей (`Operation Expense!E62` / `F62`).
+ * Налог на прибыль — 20 % от прибыли (`Svod!C6`), не ниже 0. Чистая прибыль берёт уже этот налог.
  * Процентные платежи — сумма из движения кредитных ресурсов.
  * На фактической сводке план расходов и процентов — доля прошедших дней; факт — сумма месяца.
  */
