@@ -36,6 +36,11 @@ const valueEnd = `${columnHeadingClassName} ${tableBorder.rightThick}`;
 const valueCell = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
 const valueCellEnd = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${tableBorder.rightThick}`;
 
+/** Начисление с продаж увеличивает платёж, вычет с сырья его уменьшает. */
+function varianceSense(id: string): 'income' | 'cost' {
+  return id === 'materials' || id.startsWith('materials:') ? 'income' : 'cost';
+}
+
 function LineRows({
   line,
   depth,
@@ -84,7 +89,12 @@ function LineRows({
           <MoneyAmount amount={line.amounts.fact} />
         </td>
         <td className={`${valueCellEnd} ${varianceFill}`}>
-          <MoneyCell label={`Откл., ${line.name}`} value={line.amounts.variance} signed sense="income" />
+          <MoneyCell
+            label={`Откл., ${line.name}`}
+            value={line.amounts.variance}
+            signed
+            sense={varianceSense(line.id)}
+          />
         </td>
       </tr>
       {hasChildren && open
@@ -163,7 +173,7 @@ export function VatReportScreen({ month }: { month: string }) {
                 <MoneyAmount amount={view.payable.fact} />
               </td>
               <td className={`${totalValueClassName} ${tableBorder.rightThick}`}>
-                <MoneyCell label="Откл., НДС к уплате" value={view.payable.variance} signed sense="income" />
+                <MoneyCell label="Откл., НДС к уплате" value={view.payable.variance} signed sense="cost" />
               </td>
             </tr>
           </tbody>
