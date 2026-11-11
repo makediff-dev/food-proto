@@ -4,12 +4,16 @@ import { QUANTITY_SCALE } from '@/domain/quantity';
 import type { TransportFieldRejection } from '@/domain/transport';
 import { fromRubles, parseDecimal } from '@/domain/units';
 
+/** Подсказка к «Агентское соглашение»: план от выручки, факт вводят. */
+export const AGENCY_LINE_HINT = 'План — 7 % от выручки с НДС свода';
+
 export const OPEX_LINE_ERROR: Record<OpexFieldRejection, string> = {
   missing: 'Строка не найдена.',
   month: 'Укажите месяц.',
   day: 'Укажите день.',
   daily: 'Факт этой категории вводят по дням.',
   amount: 'Укажите сумму без НДС.',
+  vat: 'Укажите ставку НДС от 0 до 100 %.',
   line: 'Эту строку здесь не правят.',
   group: 'Укажите категорию.',
   archived: 'Сначала верните расход из архива.',
@@ -47,6 +51,7 @@ export const TRANSPORT_ERROR: Record<TransportFieldRejection, string> = {
   price: 'Укажите цену.',
   amount: 'Укажите сумму.',
   odometer: 'Укажите показание спидометра.',
+  vat: 'Укажите ставку НДС от 0 до 100 %.',
   archived: 'Сначала верните запись из архива.',
 };
 

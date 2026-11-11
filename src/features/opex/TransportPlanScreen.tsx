@@ -27,6 +27,7 @@ import {
   MoneyCell,
   nameCellKind,
   nameHeadingClassName,
+  PercentCell,
   tableClassName,
   tableFrameClassName,
 } from '@/features/table';
@@ -53,7 +54,7 @@ export function TransportPlanScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_TRANSPORT_PLAN_TITLE}
       full
-      lede="План наёмного транспорта по контрагентам и план топлива собственных автомобилей."
+      lede="План наёмного транспорта по контрагентам и план топлива собственных автомобилей. Ставку НДС контрагента и НДС топлива правят в колонке «НДС» — сумма попадает в «Отчет по налогам»."
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -81,6 +82,9 @@ export function TransportPlanScreen({ month }: { month: string }) {
                   <tr>
                     <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                       <ColumnLabel label="Контрагент" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="НДС" hint="Ставка НДС расхода, %. Сумма — в «Отчете по налогам»" />
                     </th>
                     <th scope="col" className={valueHead}>
                       <ColumnLabel label={`Кол-во, ${block.quantityUnit}`} />
@@ -138,6 +142,23 @@ export function TransportPlanScreen({ month }: { month: string }) {
                             ) : null}
                           </div>
                         </th>
+                        <td
+                          className={`${valueCell} ${cellKindClassName[editable && !carrier.deleted ? 'assigned' : 'computed']}`}
+                        >
+                          <PercentCell
+                            label={`НДС, ${carrier.name}`}
+                            value={carrier.vatPercent}
+                            invalidMessage={TRANSPORT_ERROR.vat}
+                            onChange={
+                              editable && !carrier.deleted
+                                ? (next) => {
+                                    const rejection = opex.setTransportCarrierVat(carrier.carrierId, next);
+                                    return rejection ? TRANSPORT_ERROR[rejection] : null;
+                                  }
+                                : undefined
+                            }
+                          />
+                        </td>
                         <td
                           className={`${valueCell} ${cellKindClassName[editable && !carrier.deleted ? 'assigned' : 'computed']}`}
                         >
@@ -219,6 +240,9 @@ export function TransportPlanScreen({ month }: { month: string }) {
                   </th>
                   <th scope="col" className={valueHead}>
                     <ColumnLabel label="Цена топлива" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="НДС" hint="Ставка НДС топлива, %. Сумма — в «Отчете по налогам»" />
                   </th>
                   <th scope="col" className={valueHead}>
                     <ColumnLabel label="План, км" />
@@ -320,6 +344,23 @@ export function TransportPlanScreen({ month }: { month: string }) {
                         ) : (
                           <MoneyAmount amount={vehicle.planFuelPriceExVat} />
                         )}
+                      </td>
+                      <td
+                        className={`${valueCell} ${cellKindClassName[editable && !vehicle.deleted ? 'assigned' : 'computed']}`}
+                      >
+                        <PercentCell
+                          label={`НДС топлива, ${vehicle.name}`}
+                          value={vehicle.fuelVatPercent}
+                          invalidMessage={TRANSPORT_ERROR.vat}
+                          onChange={
+                            editable && !vehicle.deleted
+                              ? (next) => {
+                                  const rejection = opex.setTransportVehicleFuelVat(vehicle.vehicleId, next);
+                                  return rejection ? TRANSPORT_ERROR[rejection] : null;
+                                }
+                              : undefined
+                          }
+                        />
                       </td>
                       <td
                         className={`${valueCell} ${cellKindClassName[editable && !vehicle.deleted ? 'assigned' : 'computed']}`}

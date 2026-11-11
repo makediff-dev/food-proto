@@ -37,6 +37,7 @@ const DOCUMENT_COLLECTION_KEYS = {
   derivativeNorms: 'object',
   creditors: 'object',
   creditResourceMonths: 'object',
+  propertyTaxMonths: 'object',
 } as const satisfies Record<DocumentCollectionKey, 'object' | 'string'>;
 
 export type ParseDocumentResult = { ok: true; document: PrototypeDocument } | { ok: false; error: string };

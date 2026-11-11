@@ -1,7 +1,7 @@
 /** Подпись блока в домене; в меню живёт под «Движение денежных средств». */
-export const VAT_REPORT_SECTION_TITLE = 'НДС';
+export const VAT_REPORT_SECTION_TITLE = 'Налоги';
 
-export const VAT_REPORT_SUMMARY_TITLE = 'Отчет по НДС';
+export const VAT_REPORT_SUMMARY_TITLE = 'Отчет по налогам';
 
 export const VAT_REPORT_SUMMARY_HREF = '/vat';
 

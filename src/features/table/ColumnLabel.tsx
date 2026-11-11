@@ -43,8 +43,12 @@ export function keepWithNext(text: string): string {
   return line;
 }
 
-const columnHeadingHintClassName =
-  'pointer-events-none absolute left-1/2 top-full z-50 mt-1.5 hidden w-max max-w-[14rem] -translate-x-1/2 rounded border border-line bg-paper px-2 py-1 text-left text-xs font-normal normal-case leading-snug text-ink shadow-sm group-hover:block';
+const hintBubbleClassName =
+  'pointer-events-none absolute z-50 hidden w-max max-w-[14rem] rounded border border-line bg-paper px-2 py-1 text-left text-xs font-normal normal-case leading-snug text-ink shadow-sm group-hover:block';
+
+/** В шапке — вниз: thead выше строк. В теле таблицы — вверх: иначе следующая строка перекрывает. */
+const columnHeadingHintClassName = `${hintBubbleClassName} left-1/2 top-full mt-1.5 -translate-x-1/2`;
+const inlineHintClassName = `${hintBubbleClassName} bottom-full left-0 mb-1.5`;
 
 export function ColumnLabel({ label, hint }: { label: string; hint?: string }) {
   const chunks = keepWithNext(label).split(' ');
@@ -66,6 +70,18 @@ export function ColumnLabel({ label, hint }: { label: string; hint?: string }) {
     <span className="group relative mx-auto block w-min cursor-help">
       {labelContent}
       <span role="tooltip" className={columnHeadingHintClassName}>
+        {keepWithNext(hint)}
+      </span>
+    </span>
+  );
+}
+
+/** Подпись в строке таблицы с пунктиром и всплывающей подсказкой при наведении. */
+export function HintedText({ text, hint, className = '' }: { text: string; hint: string; className?: string }) {
+  return (
+    <span className={`group relative z-20 inline-block max-w-full cursor-help hover:z-50 ${className}`}>
+      <span className="border-b border-dotted border-muted">{text}</span>
+      <span role="tooltip" className={inlineHintClassName}>
         {keepWithNext(hint)}
       </span>
     </span>

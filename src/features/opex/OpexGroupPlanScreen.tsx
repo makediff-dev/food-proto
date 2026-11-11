@@ -75,7 +75,7 @@ export function OpexGroupPlanScreen({ code, month }: { code: string; month: stri
     <PageFrame
       title={`${title} · ${OPEX_OTHER_PLAN_TITLE}`}
       full
-      lede="План статей без НДС за месяц. Факт вводят по дням. Можно вернуть категорию в «Прочее» — дневные суммы сложатся в месяц."
+      lede="План статей без НДС за месяц. Ставку НДС расхода правят в колонке «НДС» — сумма попадает в «Отчет по налогам». Факт вводят по дням. Можно вернуть категорию в «Прочее» — дневные суммы сложатся в месяц."
       intro={
         <div className="flex flex-wrap items-end gap-3">
           <OpexMonthBar
@@ -114,6 +114,9 @@ export function OpexGroupPlanScreen({ code, month }: { code: string; month: stri
                 <ColumnLabel label="Наименование" />
               </th>
               <th scope="col" className={valueHead}>
+                <ColumnLabel label="НДС" hint="Ставка НДС расхода, %. Сумма — в «Отчете по налогам»" />
+              </th>
+              <th scope="col" className={valueHead}>
                 <ColumnLabel label="План" />
               </th>
             </tr>
@@ -125,6 +128,10 @@ export function OpexGroupPlanScreen({ code, month }: { code: string; month: stri
               editable={editable}
               onRename={(lineId, name) => {
                 const rejection = opex.renameOpexOtherLine(lineId, name);
+                return rejection ? OPEX_LINE_ERROR[rejection] : null;
+              }}
+              onVat={(lineId, vatPercent) => {
+                const rejection = opex.setOpexOtherLineVat(lineId, vatPercent);
                 return rejection ? OPEX_LINE_ERROR[rejection] : null;
               }}
               onAmount={(lineId, amount) => {
@@ -155,6 +162,7 @@ export function OpexGroupPlanScreen({ code, month }: { code: string; month: stri
               <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
                 Всего
               </th>
+              <td className={`${totalValueClassName} ${columnDividerClassName}`} />
               <td className={`${totalValueClassName} ${columnDividerClassName}`}>
                 <MoneyAmount amount={view.totalPlanExVat} />
               </td>

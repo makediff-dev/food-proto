@@ -2,10 +2,17 @@ import {
   type FinishedGoodsOpening,
   isMonthKey,
   type MaterialUnit,
+  type OpexOtherLine,
   type PrototypeDocument,
   SCHEMA_VERSION,
+  type TransportCarrier,
+  type TransportVehicle,
 } from '@/domain/document';
 import { shiftMonth } from '@/domain/sales-plan';
+
+const DEFAULT_OPEX_OTHER_VAT_PERCENT = 20;
+const DEFAULT_TRANSPORT_HIRE_VAT_PERCENT = 20;
+const DEFAULT_TRANSPORT_FUEL_VAT_PERCENT = 20;
 
 /** Раньше в прототипе была единица `пм`; в интерфейсе — `м`. */
 function normalizeMaterialUnits(document: PrototypeDocument): PrototypeDocument {
@@ -20,6 +27,48 @@ function normalizeMaterialUnits(document: PrototypeDocument): PrototypeDocument 
   return changed ? { ...document, materials } : document;
 }
 
+/** Ставка НДС прочих статей — поле справочника; у старых записей подставляем 20 %. */
+function normalizeOpexOtherVat(document: PrototypeDocument): PrototypeDocument {
+  let changed = false;
+  const opexOtherLines = (document.opexOtherLines ?? []).map((line) => {
+    const raw = line as OpexOtherLine & { vatPercent?: number };
+    if (Number.isInteger(raw.vatPercent) && raw.vatPercent >= 0 && raw.vatPercent <= 100) {
+      return line;
+    }
+    changed = true;
+    return { ...line, vatPercent: DEFAULT_OPEX_OTHER_VAT_PERCENT };
+  });
+  return changed ? { ...document, opexOtherLines } : document;
+}
+
+/** Ставка НДС контрагента наёмного транспорта; у старых записей подставляем 20 %. */
+function normalizeTransportCarrierVat(document: PrototypeDocument): PrototypeDocument {
+  let changed = false;
+  const transportCarriers = (document.transportCarriers ?? []).map((carrier) => {
+    const raw = carrier as TransportCarrier & { vatPercent?: number };
+    if (Number.isInteger(raw.vatPercent) && raw.vatPercent >= 0 && raw.vatPercent <= 100) {
+      return carrier;
+    }
+    changed = true;
+    return { ...carrier, vatPercent: DEFAULT_TRANSPORT_HIRE_VAT_PERCENT };
+  });
+  return changed ? { ...document, transportCarriers } : document;
+}
+
+/** Ставка НДС топлива автомобиля; у старых записей подставляем 20 %. */
+function normalizeTransportFuelVat(document: PrototypeDocument): PrototypeDocument {
+  let changed = false;
+  const transportVehicles = (document.transportVehicles ?? []).map((vehicle) => {
+    const raw = vehicle as TransportVehicle & { fuelVatPercent?: number };
+    if (Number.isInteger(raw.fuelVatPercent) && raw.fuelVatPercent >= 0 && raw.fuelVatPercent <= 100) {
+      return vehicle;
+    }
+    changed = true;
+    return { ...vehicle, fuelVatPercent: DEFAULT_TRANSPORT_FUEL_VAT_PERCENT };
+  });
+  return changed ? { ...document, transportVehicles } : document;
+}
+
 const LEGACY_OPENING_SCHEMA = 41 as const;
 
 /**
@@ -27,7 +76,9 @@ const LEGACY_OPENING_SCHEMA = 41 as const;
  * Старые записи месяца M хранили остаток на начало M → переносим в конец M−1.
  */
 export function migrateDocument(document: PrototypeDocument): PrototypeDocument {
-  const normalizedUnits = normalizeMaterialUnits(document);
+  const normalizedUnits = normalizeTransportFuelVat(
+    normalizeTransportCarrierVat(normalizeOpexOtherVat(normalizeMaterialUnits(document))),
+  );
 
   if (normalizedUnits.schemaVersion === SCHEMA_VERSION) {
     return normalizedUnits;
@@ -68,9 +119,15 @@ export function migrateDocument(document: PrototypeDocument): PrototypeDocument 
     });
   }
 
-  return normalizeMaterialUnits({
-    ...normalizedUnits,
-    schemaVersion: SCHEMA_VERSION,
-    finishedGoodsOpenings,
-  });
+  return normalizeTransportFuelVat(
+    normalizeTransportCarrierVat(
+      normalizeOpexOtherVat(
+        normalizeMaterialUnits({
+          ...normalizedUnits,
+          schemaVersion: SCHEMA_VERSION,
+          finishedGoodsOpenings,
+        }),
+      ),
+    ),
+  );
 }

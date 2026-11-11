@@ -28,6 +28,7 @@ export type OpexFieldRejection =
   | 'day'
   | 'daily'
   | 'amount'
+  | 'vat'
   | 'line'
   | 'group'
   | 'archived'
@@ -35,6 +36,12 @@ export type OpexFieldRejection =
   | 'not-promoted'
   | 'not-promotable'
   | NameRejection;
+
+const DEFAULT_OPEX_OTHER_VAT_PERCENT = 20;
+
+function isOpexVatPercent(value: number): boolean {
+  return Number.isInteger(value) && value >= 0 && value <= 100;
+}
 
 export type OpexRowKind = 'derived' | 'editable';
 
@@ -80,11 +87,14 @@ export interface OpexOtherLineView {
   name: string;
   kind: OpexOtherRowKind;
   deleted: boolean;
+  /** Ставка НДС статьи; у строк HR/транспорта — `null`. */
+  vatPercent: number | null;
   planExVat: number;
   factExVat: number;
   varianceExVat: number;
   planEditable: boolean;
   factEditable: boolean;
+  vatEditable: boolean;
 }
 
 export interface OpexOtherGroupView {
@@ -433,11 +443,13 @@ function buildOtherGroupView(
       name: line.name,
       kind: 'derived',
       deleted: false,
+      vatPercent: null,
       planExVat: amounts.planExVat,
       factExVat: amounts.factExVat,
       varianceExVat: amounts.factExVat - amounts.planExVat,
       planEditable: false,
       factEditable: false,
+      vatEditable: false,
     });
   }
 
@@ -451,11 +463,13 @@ function buildOtherGroupView(
       name: line.name,
       kind: line.kind,
       deleted,
+      vatPercent: line.vatPercent,
       planExVat: amounts.planExVat,
       factExVat: amounts.factExVat,
       varianceExVat: amounts.factExVat - amounts.planExVat,
       planEditable: !deleted && line.kind === 'standard',
       factEditable: !deleted,
+      vatEditable: !deleted,
     });
   });
 
@@ -856,9 +870,16 @@ export function addOpexOtherLineRejection(
 
 export function addOpexOtherLine(
   document: PrototypeDocument,
-  line: Omit<OpexOtherLine, 'kind' | 'deletedAt' | 'name'> & { name: string },
+  line: Omit<OpexOtherLine, 'kind' | 'deletedAt' | 'name' | 'vatPercent'> & {
+    name: string;
+    vatPercent?: number;
+  },
 ): PrototypeDocument {
   if (addOpexOtherLineRejection(document, line.groupCode, line.name)) {
+    return document;
+  }
+  const vatPercent = line.vatPercent ?? DEFAULT_OPEX_OTHER_VAT_PERCENT;
+  if (!isOpexVatPercent(vatPercent)) {
     return document;
   }
   const next: OpexOtherLine = {
@@ -866,11 +887,45 @@ export function addOpexOtherLine(
     groupCode: line.groupCode,
     name: line.name.trim(),
     kind: 'standard',
+    vatPercent,
     deletedAt: null,
   };
   return {
     ...document,
     opexOtherLines: [...document.opexOtherLines, next],
+  };
+}
+
+export function setOpexOtherLineVatRejection(
+  document: PrototypeDocument,
+  lineId: string,
+  vatPercent: number,
+): OpexFieldRejection | null {
+  const line = findOtherLine(document, lineId);
+  if (!line || line.deletedAt !== null) {
+    return 'missing';
+  }
+  if (!isOpexVatPercent(vatPercent)) {
+    return 'vat';
+  }
+  return null;
+}
+
+export function setOpexOtherLineVat(
+  document: PrototypeDocument,
+  lineId: string,
+  vatPercent: number,
+): PrototypeDocument {
+  if (setOpexOtherLineVatRejection(document, lineId, vatPercent)) {
+    return document;
+  }
+  const line = findOtherLine(document, lineId);
+  if (!line || line.vatPercent === vatPercent) {
+    return document;
+  }
+  return {
+    ...document,
+    opexOtherLines: document.opexOtherLines.map((item) => (item.id === lineId ? { ...item, vatPercent } : item)),
   };
 }
 

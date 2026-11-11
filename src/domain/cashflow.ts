@@ -1,9 +1,13 @@
 import { type CreditCreditorRowView, creditResourcesMonthView } from '@/domain/credit-resources';
 import { MATERIAL_GROUPS, type PrototypeDocument } from '@/domain/document';
+import { HR_TAX_RATE_SCALE, hrTaxRatesOrDefault } from '@/domain/hr';
 import { materialMovementMonth } from '@/domain/materials';
+import { amountWithVat } from '@/domain/money';
 import { operatingExpenseMonthView } from '@/domain/operating-expense';
+import { propertyTaxForMonth } from '@/domain/property-tax';
 import { shiftMonth } from '@/domain/sales-plan';
 import { monthSummary } from '@/domain/summary';
+import { vatReportMonthView } from '@/domain/vat-report';
 
 const CHAIN_START = '2000-01';
 
@@ -87,24 +91,41 @@ function opexViewForMonth(document: PrototypeDocument, month: string) {
   );
 }
 
+/** В ДДС суммы с НДС: аутсорс поднимают ставкой «НДС аутсорса», остальные opex без НДС. */
+function cashflowOpexAmount(lineId: string, amountExVat: number, vatHundredths: number): number {
+  if (lineId !== 'outsourcing') {
+    return amountExVat;
+  }
+  return amountWithVat(amountExVat, vatHundredths / HR_TAX_RATE_SCALE) ?? amountExVat;
+}
+
+function outsourcingVatHundredths(document: PrototypeDocument, month: string, sideName: 'plan' | 'fact'): number {
+  const rates = hrTaxRatesOrDefault(document, month);
+  return sideName === 'plan' ? rates.planOutsourcingVatHundredths : rates.factOutsourcingVatHundredths;
+}
+
 function opexBlock(document: PrototypeDocument, month: string): CashflowLineView {
   const opex = opexViewForMonth(document, month);
   const previousMonth = shiftMonth(month, -1);
   const previousOpex = previousMonth >= CHAIN_START ? opexViewForMonth(document, previousMonth) : null;
+  const planVatMonth = previousMonth >= CHAIN_START ? previousMonth : month;
+  const currentFactVat = outsourcingVatHundredths(document, month, 'fact');
+  const currentPlanVat = outsourcingVatHundredths(document, month, 'plan');
+  const previousPlanVat = outsourcingVatHundredths(document, planVatMonth, 'plan');
 
   const children = opex.groups.map((group) => {
     const previousGroup =
       group.code === '1' ? previousOpex?.groups.find((item) => item.code === group.code) : undefined;
     const lineChildren = group.lines.map((item) => {
       const previousLine = previousGroup?.lines.find((lineItem) => lineItem.id === item.id);
-      const plan = group.code === '1' ? (previousLine?.planExVat ?? 0) : item.planExVat;
-      return line(`opex:${group.code}:${item.id}`, `${item.code} ${item.name}`, plan, item.factExVat);
+      const planExVat = group.code === '1' ? (previousLine?.planExVat ?? 0) : item.planExVat;
+      const planVat = group.code === '1' ? previousPlanVat : currentPlanVat;
+      const plan = cashflowOpexAmount(item.id, planExVat, planVat);
+      const fact = cashflowOpexAmount(item.id, item.factExVat, currentFactVat);
+      return line(`opex:${group.code}:${item.id}`, `${item.code} ${item.name}`, plan, fact);
     });
-    const amounts =
-      group.code === '1'
-        ? side(previousGroup?.planExVat ?? 0, group.factExVat)
-        : side(group.planExVat, group.factExVat);
-    return line(`opex-group:${group.code}`, group.name, amounts.plan, amounts.fact, lineChildren);
+    // Итог группы — сумма строк (с НДС у аутсорса), а не сырой ExVat из opex.
+    return line(`opex-group:${group.code}`, group.name, 0, 0, lineChildren);
   });
   return line('opex', 'Операционные расходы', 0, 0, children);
 }
@@ -113,8 +134,14 @@ function taxBlock(document: PrototypeDocument, month: string): CashflowLineView 
   const summary = monthSummary(document, month);
   const planTax = Math.max(0, summary.headline.plan.profitTax ?? 0);
   const factTax = Math.max(0, summary.headline.fact.profitTax ?? 0);
+  const propertyTax = propertyTaxForMonth(document, month);
+  // Оплата или возврат: CashFlow!C141 «НДС», план E141 = TAX!D24, факт — TAX!E24.
+  // Отрицательное — к возмещению и уменьшает расходы, остаток денег растёт.
+  const vat = vatReportMonthView(document, month).payable;
   return line('tax', 'Налоговые платежи (кроме зарплатных налогов)', 0, 0, [
+    line('tax:vat', 'НДС', vat.plan, vat.fact),
     line('tax:profit', 'Налог на прибыль', planTax, factTax),
+    line('tax:property', 'Налог на имущество', propertyTax.plan, propertyTax.fact),
   ]);
 }
 
@@ -156,6 +183,9 @@ function earliestCashflowMonth(document: PrototypeDocument, month: string): stri
   for (const item of document.creditResourceMonths ?? []) {
     consider(item.month);
   }
+  for (const item of document.propertyTaxMonths ?? []) {
+    consider(item.month);
+  }
   for (const item of document.materialMonthPlans ?? []) {
     consider(item.month);
   }
@@ -167,7 +197,7 @@ function earliestCashflowMonth(document: PrototypeDocument, month: string): stri
 
 /**
  * Остаток денег на начало: Σ(доходы − расходы) до месяца.
- * Старт учёта всегда 0; дальше только кредиты, продажи и расходы.
+ * Старт учёта всегда 0; дальше кредиты, продажи и расходы, включая НДС к уплате или возврат.
  * Цепочку начинают с самого раннего месяца с данными в документе.
  */
 export function openingCashBalance(document: PrototypeDocument, month: string): CashflowMoneySide {

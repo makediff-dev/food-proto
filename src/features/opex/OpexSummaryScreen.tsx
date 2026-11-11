@@ -7,6 +7,7 @@ import { type OpexGroupView, operatingExpenseMonthView } from '@/domain/operatin
 import { monthKeyFromDate, salesPlanForMonth, salesPlanTotals } from '@/domain/sales-plan';
 import { OpexMonthBar, resolveOpexMonth } from '@/features/opex/OpexMonthBar';
 import { OPEX_SUMMARY_TITLE, opexSummaryHref } from '@/features/opex/paths';
+import { AGENCY_LINE_HINT } from '@/features/opex/text';
 import { useOpex } from '@/features/opex/use-opex';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
@@ -21,6 +22,7 @@ import {
   columnDividerClassName,
   columnHeadingClassName,
   entityNameRowClassName,
+  HintedText,
   keepWithNext,
   MoneyAmount,
   nameHeadingClassName,
@@ -196,11 +198,14 @@ function GroupBlock({ group }: { group: OpexGroupView }) {
       {open
         ? group.lines.map((row) => (
             <tr key={row.id}>
-              <th scope="row" className={entityNameRowClassName('repeated')}>
+              <th
+                scope="row"
+                className={`${entityNameRowClassName('repeated')}${row.id === 'agency' ? ' hover:z-40' : ''}`}
+              >
                 <span className="inline-flex items-center gap-1">
                   <span className="text-muted">{row.code}</span>
                   <span>
-                    {row.name}
+                    {row.id === 'agency' ? <HintedText text={row.name} hint={AGENCY_LINE_HINT} /> : row.name}
                     {row.deleted ? <span className="text-muted"> (архив)</span> : null}
                   </span>
                 </span>

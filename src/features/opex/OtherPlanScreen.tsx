@@ -51,7 +51,7 @@ export function OtherPlanScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_OTHER_PLAN_TITLE}
       full
-      lede="План прочих статей без НДС. Строки из HR и транспорта и «Агентское соглашение» только смотрят. Названия правят в ячейке; новые расходы добавляют в категорию, ненужные — мягко удаляют. Категорию без строк HR и транспорта можно вынести в отдельный раздел: она пропадёт отсюда, нумерация остальных сдвинется, факт там станет подневным."
+      lede="План прочих статей без НДС. Ставку НДС расхода правят в колонке «НДС» — сумма попадает в «Отчет по налогам». Строки из HR и транспорта только смотрят. Названия правят в ячейке; новые расходы добавляют в категорию, ненужные — мягко удаляют. Категорию без строк HR и транспорта можно вынести в отдельный раздел: она пропадёт отсюда, нумерация остальных сдвинется, факт там станет подневным."
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -69,6 +69,9 @@ export function OtherPlanScreen({ month }: { month: string }) {
                 <ColumnLabel label="Наименование" />
               </th>
               <th scope="col" className={valueHead}>
+                <ColumnLabel label="НДС" hint="Ставка НДС расхода, %. Сумма — в «Отчете по налогам»" />
+              </th>
+              <th scope="col" className={valueHead}>
                 <ColumnLabel label="План" />
               </th>
             </tr>
@@ -82,6 +85,10 @@ export function OtherPlanScreen({ month }: { month: string }) {
                 editable={editable}
                 onRename={(lineId, name) => {
                   const rejection = opex.renameOpexOtherLine(lineId, name);
+                  return rejection ? OPEX_LINE_ERROR[rejection] : null;
+                }}
+                onVat={(lineId, vatPercent) => {
+                  const rejection = opex.setOpexOtherLineVat(lineId, vatPercent);
                   return rejection ? OPEX_LINE_ERROR[rejection] : null;
                 }}
                 onAmount={(lineId, amount) => {
@@ -125,6 +132,7 @@ export function OtherPlanScreen({ month }: { month: string }) {
               <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
                 Всего
               </th>
+              <td className={`${totalValueClassName} ${columnDividerClassName}`} />
               <td className={`${totalValueClassName} ${columnDividerClassName}`}>
                 <MoneyAmount amount={view.totalPlanExVat} />
               </td>

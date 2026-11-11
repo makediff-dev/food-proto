@@ -41,7 +41,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_HR_TITLE}
       full
-      lede="План и факт по подразделениям и должностям. У администрации и отдела продаж — месячный факт, у цехов и РЦ — из дневных строк. Зарплатные налоги только показывают."
+      lede="План и факт по подразделениям и должностям. У администрации и отдела продаж — месячный факт, у цехов и РЦ — из дневных строк. Зарплатные налоги и НДС аутсорса только показывают."
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -85,7 +85,17 @@ export function HrSummaryScreen({ month }: { month: string }) {
               ))}
               <tr className="font-medium">
                 <th scope="row" className={categoryNameRowClassName(false)}>
-                  <span className={categoryNameClassName}>ВСЕГО</span>
+                  <span className={categoryNameClassName}>
+                    <span className="group relative cursor-help">
+                      <span className="border-b border-dotted border-muted">ВСЕГО</span>
+                      <span
+                        role="tooltip"
+                        className="pointer-events-none absolute bottom-full left-0 z-50 mb-1.5 hidden w-max rounded border border-line bg-paper px-2 py-1 text-left text-xs font-normal normal-case leading-snug whitespace-normal text-ink shadow-sm group-hover:block"
+                      >
+                        включая аутсорс
+                      </span>
+                    </span>
+                  </span>
                 </th>
                 <td className={`${valueCell} ${cellKindClassName.computed}`}>{view.total.plan.headcount}</td>
                 <td className={`${valueCell} ${cellKindClassName.computed}`}>
@@ -110,7 +120,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
 
         <div className={tableFrameClassName}>
           <table className={tableClassName}>
-            <caption className="sr-only">Зарплатные налоги</caption>
+            <caption className="sr-only">Зарплатные налоги и НДС аутсорса</caption>
             <thead>
               <tr>
                 <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
@@ -137,31 +147,33 @@ export function HrSummaryScreen({ month }: { month: string }) {
               </tr>
             </thead>
             <tbody>
-              {view.taxes.map((tax) => (
-                <tr key={tax.id}>
-                  <th scope="row" className={entityNameRowClassName('repeated')}>
-                    {tax.name}
-                  </th>
-                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                    <MoneyAmount amount={tax.planBaseExVat} />
-                  </td>
-                  <td className={`${valueCell} ${cellKindClassName.repeated}`}>
-                    {formatTaxRate(tax.planRateHundredths)}
-                  </td>
-                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                    <MoneyAmount amount={tax.planAmountExVat} />
-                  </td>
-                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                    <MoneyAmount amount={tax.factBaseExVat} />
-                  </td>
-                  <td className={`${valueCell} ${cellKindClassName.repeated}`}>
-                    {formatTaxRate(tax.factRateHundredths)}
-                  </td>
-                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                    <MoneyAmount amount={tax.factAmountExVat} />
-                  </td>
-                </tr>
-              ))}
+              {view.taxes
+                .filter((tax) => tax.id !== 'outsourcing-vat')
+                .map((tax) => (
+                  <tr key={tax.id}>
+                    <th scope="row" className={entityNameRowClassName('repeated')}>
+                      {tax.name}
+                    </th>
+                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                      <MoneyAmount amount={tax.planBaseExVat} />
+                    </td>
+                    <td className={`${valueCell} ${cellKindClassName.repeated}`}>
+                      {formatTaxRate(tax.planRateHundredths)}
+                    </td>
+                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                      <MoneyAmount amount={tax.planAmountExVat} />
+                    </td>
+                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                      <MoneyAmount amount={tax.factBaseExVat} />
+                    </td>
+                    <td className={`${valueCell} ${cellKindClassName.repeated}`}>
+                      {formatTaxRate(tax.factRateHundredths)}
+                    </td>
+                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                      <MoneyAmount amount={tax.factAmountExVat} />
+                    </td>
+                  </tr>
+                ))}
               <tr className="font-medium">
                 <th scope="row" className={categoryNameRowClassName(false)}>
                   <span className={categoryNameClassName}>ВСЕГО</span>
@@ -181,6 +193,33 @@ export function HrSummaryScreen({ month }: { month: string }) {
                   <MoneyAmount amount={view.taxTotal.factAmountExVat} />
                 </td>
               </tr>
+              {view.taxes
+                .filter((tax) => tax.id === 'outsourcing-vat')
+                .map((tax) => (
+                  <tr key={tax.id}>
+                    <th scope="row" className={entityNameRowClassName('repeated')}>
+                      {tax.name}
+                    </th>
+                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                      <MoneyAmount amount={tax.planBaseExVat} />
+                    </td>
+                    <td className={`${valueCell} ${cellKindClassName.repeated}`}>
+                      {formatTaxRate(tax.planRateHundredths)}
+                    </td>
+                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                      <MoneyAmount amount={tax.planAmountExVat} />
+                    </td>
+                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                      <MoneyAmount amount={tax.factBaseExVat} />
+                    </td>
+                    <td className={`${valueCell} ${cellKindClassName.repeated}`}>
+                      {formatTaxRate(tax.factRateHundredths)}
+                    </td>
+                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                      <MoneyAmount amount={tax.factAmountExVat} />
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>

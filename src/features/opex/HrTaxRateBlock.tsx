@@ -22,15 +22,17 @@ const PLAN_FIELD: Record<HrTaxLineView['id'], HrTaxRateField> = {
   ndfl: 'planNdflHundredths',
   social: 'planSocialHundredths',
   injury: 'planInjuryHundredths',
+  'outsourcing-vat': 'planOutsourcingVatHundredths',
 };
 
 const FACT_FIELD: Record<HrTaxLineView['id'], HrTaxRateField> = {
   ndfl: 'factNdflHundredths',
   social: 'factSocialHundredths',
   injury: 'factInjuryHundredths',
+  'outsourcing-vat': 'factOutsourcingVatHundredths',
 };
 
-/** Ставки НДФЛ, соцстраха и травматизма месяца. База и сумма считаются. */
+/** Ставки НДФЛ, соцстраха, травматизма и НДС аутсорса месяца. База и сумма считаются. */
 export function HrTaxRateBlock({
   side,
   taxes,
@@ -48,7 +50,7 @@ export function HrTaxRateBlock({
   return (
     <div className={tableFrameClassName}>
       <table className={tableClassName}>
-        <caption className="sr-only">Зарплатные налоги</caption>
+        <caption className="sr-only">Зарплатные налоги и НДС аутсорса</caption>
         <thead>
           <tr>
             <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>

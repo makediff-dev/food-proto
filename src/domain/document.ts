@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 63 as const;
+export const SCHEMA_VERSION = 65 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -318,8 +318,8 @@ export interface HrDayFact {
 }
 
 /**
- * Ставки зарплатных налогов месяца, сотые доли процента: 13 % → 1300, 0,2 % → 20.
- * План и факт раздельно, как `HR!E86:H88`.
+ * Ставки зарплатных налогов и НДС аутсорса месяца, сотые доли процента: 13 % → 1300, 0,2 % → 20.
+ * План и факт раздельно, как `HR!E86:H88`. НДС аутсорса кормит ДДС (сумма с НДС).
  */
 export interface HrTaxRatesMonth {
   id: string;
@@ -327,9 +327,12 @@ export interface HrTaxRatesMonth {
   planNdflHundredths: number;
   planSocialHundredths: number;
   planInjuryHundredths: number;
+  /** НДС аутсорса персонала, сотые доли %: 20 % → 2000. */
+  planOutsourcingVatHundredths: number;
   factNdflHundredths: number;
   factSocialHundredths: number;
   factInjuryHundredths: number;
+  factOutsourcingVatHundredths: number;
 }
 
 /** Два вида наёмного транспорта на листе `Transport`. */
@@ -344,11 +347,16 @@ export function isTransportHireKind(value: string): value is TransportHireKind {
   return (TRANSPORT_HIRE_KINDS as readonly string[]).includes(value);
 }
 
-/** Контрагент наёмного транспорта. Мягкое удаление. */
+/**
+ * Контрагент наёмного транспорта. Мягкое удаление.
+ * `vatPercent` — ставка НДС расхода, целое 0–100. Сумму считают в «Отчете по налогам»:
+ * база без НДС × ставка / 100. В суммы транспорта и opex не входит.
+ */
 export interface TransportCarrier {
   id: string;
   kind: TransportHireKind;
   name: string;
+  vatPercent: number;
   deletedAt: string | null;
 }
 
@@ -384,8 +392,15 @@ export interface TransportHireDayFact {
   lines: TransportHireDayLine[];
 }
 
-/** Автомобиль собственного транспорта. Мягкое удаление. */
-export interface TransportVehicle extends DeletableRecord {}
+/**
+ * Автомобиль собственного транспорта. Мягкое удаление.
+ * `fuelVatPercent` — ставка НДС топлива, целое 0–100. Одна на все месяцы.
+ * Сумму считают в «Отчете по налогам»: стоимость топлива без НДС × ставка / 100.
+ * В суммы транспорта и opex не входит.
+ */
+export interface TransportVehicle extends DeletableRecord {
+  fuelVatPercent: number;
+}
 
 /** План своего транспорта на месяц: норма, цена литра, км. */
 export interface TransportOwnMonthPlanVehicle {
@@ -434,16 +449,20 @@ export function isOpexGroupCode(value: string): value is OpexGroupCode {
 /**
  * Прочая статья `Operation Expense` (без HR и без 7.1/7.2 из Transport).
  * `agency` — план считает формула от выручки, факт вводят; `standard` — план и факт вводят.
+ * `vatPercent` — ставка НДС расхода. Сумму считают в «Отчете по налогам»: база без НДС × ставка / 100.
  */
 export type OpexOtherLineKind = 'standard' | 'agency';
 
 export interface OpexOtherLine extends DeletableRecord {
   groupCode: OpexGroupCode;
   kind: OpexOtherLineKind;
+  vatPercent: number;
 }
 
+const DEFAULT_OPEX_OTHER_VAT_PERCENT = 20;
+
 /** Мок прочих статей — имена и группы как в книге. */
-export const OPEX_OTHER_LINES: OpexOtherLine[] = [
+const OPEX_OTHER_LINE_SEED: Omit<OpexOtherLine, 'vatPercent'>[] = [
   { id: 'electricity', groupCode: '2', name: 'Электроэнергия', kind: 'standard', deletedAt: null },
   { id: 'water', groupCode: '2', name: 'Водоснабжение', kind: 'standard', deletedAt: null },
   { id: 'sewage', groupCode: '2', name: 'Вывоз стоков', kind: 'standard', deletedAt: null },
@@ -518,6 +537,11 @@ export const OPEX_OTHER_LINES: OpexOtherLine[] = [
     deletedAt: null,
   },
 ];
+
+export const OPEX_OTHER_LINES: OpexOtherLine[] = OPEX_OTHER_LINE_SEED.map((item) => ({
+  ...item,
+  vatPercent: item.id === 'agency' ? 0 : DEFAULT_OPEX_OTHER_VAT_PERCENT,
+}));
 
 export function catalogOpexOtherLines(): OpexOtherLine[] {
   return OPEX_OTHER_LINES.map((item) => ({ ...item }));
@@ -907,6 +931,21 @@ export interface CreditResourceMonth {
 }
 
 /**
+ * Налог на имущество за месяц.
+ * План и факт вводят итогом в рублях (копейки), без ставки и базы.
+ * На один месяц — одна запись. Мягкого удаления нет.
+ */
+export interface PropertyTaxMonth {
+  id: string;
+  /** `ГГГГ-ММ`. */
+  month: string;
+  /** План платежа, копейки. */
+  plan: number;
+  /** Факт платежа, копейки. */
+  fact: number;
+}
+
+/**
  * Единственный сохраняемый документ прототипа.
  * Предметные разделы добавляются полями сюда. Производные суммы сюда не писать.
  */
@@ -999,6 +1038,11 @@ export interface PrototypeDocument {
    * Старый документ без поля читается как пустой массив.
    */
   creditResourceMonths: CreditResourceMonth[];
+  /**
+   * Налог на имущество по месяцам: план и факт итогом в рублях, без расчётов.
+   * Старый документ без поля читается как пустой массив.
+   */
+  propertyTaxMonths: PropertyTaxMonth[];
 }
 
 /** Метка мягкого удаления, которую пишет экран через `Date.toISOString()`. */

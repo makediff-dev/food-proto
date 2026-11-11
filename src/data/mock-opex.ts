@@ -15,7 +15,12 @@ import {
   type TransportOwnMonthPlan,
   type TransportVehicle,
 } from '@/domain/document';
-import { DEFAULT_INJURY_HUNDREDTHS, DEFAULT_NDFL_HUNDREDTHS, DEFAULT_SOCIAL_HUNDREDTHS } from '@/domain/hr';
+import {
+  DEFAULT_INJURY_HUNDREDTHS,
+  DEFAULT_NDFL_HUNDREDTHS,
+  DEFAULT_OUTSOURCING_VAT_HUNDREDTHS,
+  DEFAULT_SOCIAL_HUNDREDTHS,
+} from '@/domain/hr';
 import { ratioRound } from '@/domain/money';
 import { QUANTITY_SCALE } from '@/domain/quantity';
 import { daysInMonth } from '@/domain/sales-plan';
@@ -88,7 +93,7 @@ export const mockHrPositions: HrPosition[] = [
 ];
 
 function carrier(id: string, kind: TransportCarrier['kind'], name: string): TransportCarrier {
-  return { id, kind, name, deletedAt: null };
+  return { id, kind, name, vatPercent: 20, deletedAt: null };
 }
 
 /** Именованные контрагенты листа `Transport`. */
@@ -103,7 +108,7 @@ export const mockTransportCarriers: TransportCarrier[] = [
 ];
 
 function vehicle(id: string, name: string): TransportVehicle {
-  return { id, name, deletedAt: null };
+  return { id, name, fuelVatPercent: 20, deletedAt: null };
 }
 
 /** Три машины листа `Transport` в моке; на экране можно добавлять и удалять. */
@@ -122,7 +127,7 @@ const MOCK_VEHICLE_IDS = mockTransportVehicles.map((item) => item.id);
  * Факт людей и пробега — каждый день закрытого месяца и 1–4 ноября. Сборка в октябре работает до 20-го:
  * гамбургер отстаёт, численность цеха за месяц ниже плана. Сентябрьский ФОТ на десятую выше плана.
  * Наёмный транспорт — в дни отгрузок журнала продаж. Ноябрь ещё идёт.
- * Ставки налогов 13 %, 20 % и 0,2 %. План агентского считает отчёт, здесь только факт.
+ * Ставки налогов 13 %, 20 % и 0,2 %. НДС контрагентов наёмного и топлива своего парка — 20 %. План агентского считает отчёт, здесь только факт.
  */
 
 const MOCK_MONTHS = ['2026-09', '2026-10', '2026-11'] as const;
@@ -533,9 +538,11 @@ export const mockHrTaxRates: HrTaxRatesMonth[] = MOCK_MONTHS.map((month) => ({
   planNdflHundredths: DEFAULT_NDFL_HUNDREDTHS,
   planSocialHundredths: DEFAULT_SOCIAL_HUNDREDTHS,
   planInjuryHundredths: DEFAULT_INJURY_HUNDREDTHS,
+  planOutsourcingVatHundredths: DEFAULT_OUTSOURCING_VAT_HUNDREDTHS,
   factNdflHundredths: DEFAULT_NDFL_HUNDREDTHS,
   factSocialHundredths: DEFAULT_SOCIAL_HUNDREDTHS,
   factInjuryHundredths: DEFAULT_INJURY_HUNDREDTHS,
+  factOutsourcingVatHundredths: DEFAULT_OUTSOURCING_VAT_HUNDREDTHS,
 }));
 
 export const mockTransportHireMonthPlans: TransportHireMonthPlan[] = MOCK_MONTHS.map((month) => ({

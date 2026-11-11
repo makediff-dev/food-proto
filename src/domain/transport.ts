@@ -29,7 +29,18 @@ export type TransportFieldRejection =
   | 'price'
   | 'amount'
   | 'odometer'
+  | 'vat'
   | 'archived';
+
+/** Ставка НДС нового контрагента и записей без ставки. Как у прочих статей. */
+export const DEFAULT_TRANSPORT_HIRE_VAT_PERCENT = 20;
+
+/** Ставка НДС топлива нового автомобиля и записей без ставки. */
+export const DEFAULT_TRANSPORT_FUEL_VAT_PERCENT = 20;
+
+export function isTransportVatPercent(value: number): boolean {
+  return Number.isInteger(value) && value >= 0 && value <= 100;
+}
 
 export const TRANSPORT_HIRE_LABELS: Record<TransportHireKind, string> = {
   finishedDelivery: 'Доставка готовой продукции наёмный',
@@ -40,6 +51,8 @@ export interface TransportHireCarrierView {
   carrierId: string;
   name: string;
   deleted: boolean;
+  /** Ставка НДС контрагента, целое 0–100. */
+  vatPercent: number;
   planQuantityThousandths: number;
   planUnitPriceExVat: number;
   planAmountExVat: number;
@@ -75,6 +88,8 @@ export interface TransportOwnVehicleView {
   deleted: boolean;
   litersPer100KmThousandths: number;
   planFuelPriceExVat: number;
+  /** Ставка НДС топлива, целое 0–100. Одна на все месяцы. */
+  fuelVatPercent: number;
   planKmThousandths: number;
   /** Цена за 1 км = норма/100 × цена литра. `Transport!E57`. */
   planCostPerKmExVat: number;
@@ -228,6 +243,7 @@ export function transportMonthView(document: PrototypeDocument, month: string): 
         carrierId: carrier.id,
         name: carrier.name,
         deleted: carrier.deletedAt !== null,
+        vatPercent: isTransportVatPercent(carrier.vatPercent) ? carrier.vatPercent : DEFAULT_TRANSPORT_HIRE_VAT_PERCENT,
         planQuantityThousandths: planQty,
         planUnitPriceExVat: planPrice,
         planAmountExVat: planAmount,
@@ -291,6 +307,9 @@ export function transportMonthView(document: PrototypeDocument, month: string): 
       deleted: vehicle.deletedAt !== null,
       litersPer100KmThousandths: liters,
       planFuelPriceExVat: fuelPrice,
+      fuelVatPercent: isTransportVatPercent(vehicle.fuelVatPercent)
+        ? vehicle.fuelVatPercent
+        : DEFAULT_TRANSPORT_FUEL_VAT_PERCENT,
       planKmThousandths: planKm,
       planCostPerKmExVat: planPerKm,
       planAmountExVat: planAmount,
@@ -336,9 +355,54 @@ export function addTransportCarrier(document: PrototypeDocument, carrier: Transp
   if (addTransportCarrierRejection(document, carrier.kind, carrier.name)) {
     return document;
   }
+  const vatPercent = isTransportVatPercent(carrier.vatPercent)
+    ? carrier.vatPercent
+    : DEFAULT_TRANSPORT_HIRE_VAT_PERCENT;
   return {
     ...document,
-    transportCarriers: [...document.transportCarriers, { ...carrier, name: carrier.name.trim(), deletedAt: null }],
+    transportCarriers: [
+      ...document.transportCarriers,
+      { ...carrier, name: carrier.name.trim(), vatPercent, deletedAt: null },
+    ],
+  };
+}
+
+export function setTransportCarrierVatRejection(
+  document: PrototypeDocument,
+  carrierId: string,
+  vatPercent: number,
+): TransportFieldRejection | null {
+  const carrier = document.transportCarriers.find((item) => item.id === carrierId);
+  if (!carrier) {
+    return 'missing';
+  }
+  if (carrier.deletedAt !== null) {
+    return 'archived';
+  }
+  if (!isTransportVatPercent(vatPercent)) {
+    return 'vat';
+  }
+  return null;
+}
+
+/** Ставка НДС контрагента наёмного. Одна на все месяцы, как у статьи прочих расходов. */
+export function setTransportCarrierVat(
+  document: PrototypeDocument,
+  carrierId: string,
+  vatPercent: number,
+): PrototypeDocument {
+  if (setTransportCarrierVatRejection(document, carrierId, vatPercent)) {
+    return document;
+  }
+  const carrier = document.transportCarriers.find((item) => item.id === carrierId);
+  if (!carrier || carrier.vatPercent === vatPercent) {
+    return document;
+  }
+  return {
+    ...document,
+    transportCarriers: document.transportCarriers.map((item) =>
+      item.id === carrierId ? { ...item, vatPercent } : item,
+    ),
   };
 }
 
@@ -432,9 +496,54 @@ export function addTransportVehicle(document: PrototypeDocument, vehicle: Transp
   if (addTransportVehicleRejection(document, vehicle.name)) {
     return document;
   }
+  const fuelVatPercent = isTransportVatPercent(vehicle.fuelVatPercent)
+    ? vehicle.fuelVatPercent
+    : DEFAULT_TRANSPORT_FUEL_VAT_PERCENT;
   return {
     ...document,
-    transportVehicles: [...document.transportVehicles, { ...vehicle, name: vehicle.name.trim(), deletedAt: null }],
+    transportVehicles: [
+      ...document.transportVehicles,
+      { ...vehicle, name: vehicle.name.trim(), fuelVatPercent, deletedAt: null },
+    ],
+  };
+}
+
+export function setTransportVehicleFuelVatRejection(
+  document: PrototypeDocument,
+  vehicleId: string,
+  fuelVatPercent: number,
+): TransportFieldRejection | null {
+  const vehicle = document.transportVehicles.find((item) => item.id === vehicleId);
+  if (!vehicle) {
+    return 'missing';
+  }
+  if (vehicle.deletedAt !== null) {
+    return 'archived';
+  }
+  if (!isTransportVatPercent(fuelVatPercent)) {
+    return 'vat';
+  }
+  return null;
+}
+
+/** Ставка НДС топлива автомобиля. Одна на все месяцы, как у контрагента наёмного. */
+export function setTransportVehicleFuelVat(
+  document: PrototypeDocument,
+  vehicleId: string,
+  fuelVatPercent: number,
+): PrototypeDocument {
+  if (setTransportVehicleFuelVatRejection(document, vehicleId, fuelVatPercent)) {
+    return document;
+  }
+  const vehicle = document.transportVehicles.find((item) => item.id === vehicleId);
+  if (!vehicle || vehicle.fuelVatPercent === fuelVatPercent) {
+    return document;
+  }
+  return {
+    ...document,
+    transportVehicles: document.transportVehicles.map((item) =>
+      item.id === vehicleId ? { ...item, fuelVatPercent } : item,
+    ),
   };
 }
 

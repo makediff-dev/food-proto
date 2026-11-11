@@ -8,6 +8,7 @@ import { operatingExpenseOtherGroupMonthView, opexGroupName } from '@/domain/ope
 import { monthKeyFromDate, salesPlanForMonth, salesPlanTotals } from '@/domain/sales-plan';
 import { OpexMonthBar, resolveOpexMonth } from '@/features/opex/OpexMonthBar';
 import { OPEX_OTHER_PLAN_HREF, opexGroupHref } from '@/features/opex/paths';
+import { AGENCY_LINE_HINT } from '@/features/opex/text';
 import { useOpex } from '@/features/opex/use-opex';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
@@ -16,6 +17,7 @@ import {
   columnDividerClassName,
   columnHeadingClassName,
   entityNameRowClassName,
+  HintedText,
   MoneyAmount,
   nameHeadingClassName,
   tableClassName,
@@ -97,11 +99,14 @@ export function OpexGroupSummaryScreen({ code, month }: { code: string; month: s
           <tbody>
             {view.lines.map((row) => (
               <tr key={row.id}>
-                <th scope="row" className={entityNameRowClassName('repeated')}>
+                <th
+                  scope="row"
+                  className={`${entityNameRowClassName('repeated')}${row.kind === 'agency' ? ' hover:z-40' : ''}`}
+                >
                   <span className="inline-flex items-center gap-1">
                     {row.code ? <span className="text-muted">{row.code}</span> : null}
                     <span>
-                      {row.name}
+                      {row.kind === 'agency' ? <HintedText text={row.name} hint={AGENCY_LINE_HINT} /> : row.name}
                       {row.deleted ? <span className="text-muted"> (архив)</span> : null}
                     </span>
                   </span>

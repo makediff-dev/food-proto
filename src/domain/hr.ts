@@ -29,6 +29,8 @@ export const HR_TAX_RATE_SCALE = 100;
 export const DEFAULT_NDFL_HUNDREDTHS = 13 * HR_TAX_RATE_SCALE;
 export const DEFAULT_SOCIAL_HUNDREDTHS = 20 * HR_TAX_RATE_SCALE;
 export const DEFAULT_INJURY_HUNDREDTHS = 20; // 0,2 %
+/** НДС аутсорса по умолчанию — как у товаров мока, 20 %. */
+export const DEFAULT_OUTSOURCING_VAT_HUNDREDTHS = 20 * HR_TAX_RATE_SCALE;
 
 const MAX_HEADCOUNT = 10_000;
 const MAX_HOUR_THOUSANDTHS = 1_000_000_000;
@@ -95,7 +97,7 @@ export interface HrDepartmentView {
 }
 
 export interface HrTaxLineView {
-  id: 'ndfl' | 'social' | 'injury';
+  id: 'ndfl' | 'social' | 'injury' | 'outsourcing-vat';
   name: string;
   planBaseExVat: number;
   planRateHundredths: number;
@@ -178,9 +180,27 @@ export function outsourcingFactRateExVat(amountExVat: number, hourThousandths: n
   return ratioRound(amountExVat * QUANTITY_SCALE, hourThousandths) ?? 0;
 }
 
-/** Налог = база × ставка_сотых / 10_000. */
+/** Налог = база × ставка_сотых / 10_000. Соцстрах и травматизм. */
 export function taxAmountExVat(baseExVat: number, rateHundredths: number): number {
   return ratioRound(baseExVat * rateHundredths, 100 * HR_TAX_RATE_SCALE) ?? 0;
+}
+
+/**
+ * НДФЛ внутри начисления: на руки и налог вместе — 100 % базы.
+ * База = на руки / (1 − ставка), сумма = база − на руки.
+ * При 13 % на руки — 87 % базы. Ставка от 100 % не разворачивается.
+ */
+export function ndflIncludedExVat(
+  netExVat: number,
+  rateHundredths: number,
+): { baseExVat: number; amountExVat: number } {
+  const scale = 100 * HR_TAX_RATE_SCALE;
+  const keptHundredths = scale - rateHundredths;
+  if (keptHundredths <= 0) {
+    return { baseExVat: netExVat, amountExVat: 0 };
+  }
+  const baseExVat = ratioRound(netExVat * scale, keptHundredths) ?? netExVat;
+  return { baseExVat, amountExVat: baseExVat - netExVat };
 }
 
 export function activeHrPositions(document: PrototypeDocument): HrPosition[] {
@@ -208,7 +228,11 @@ export function hrMonthFact(document: PrototypeDocument, month: string): HrMonth
 export function hrTaxRatesOrDefault(document: PrototypeDocument, month: string): HrTaxRatesMonth {
   const row = document.hrTaxRates.find((item) => item.month === month);
   if (row) {
-    return row;
+    return {
+      ...row,
+      planOutsourcingVatHundredths: row.planOutsourcingVatHundredths ?? DEFAULT_OUTSOURCING_VAT_HUNDREDTHS,
+      factOutsourcingVatHundredths: row.factOutsourcingVatHundredths ?? DEFAULT_OUTSOURCING_VAT_HUNDREDTHS,
+    };
   }
   return {
     id: `hr-tax:${month}`,
@@ -216,9 +240,11 @@ export function hrTaxRatesOrDefault(document: PrototypeDocument, month: string):
     planNdflHundredths: DEFAULT_NDFL_HUNDREDTHS,
     planSocialHundredths: DEFAULT_SOCIAL_HUNDREDTHS,
     planInjuryHundredths: DEFAULT_INJURY_HUNDREDTHS,
+    planOutsourcingVatHundredths: DEFAULT_OUTSOURCING_VAT_HUNDREDTHS,
     factNdflHundredths: DEFAULT_NDFL_HUNDREDTHS,
     factSocialHundredths: DEFAULT_SOCIAL_HUNDREDTHS,
     factInjuryHundredths: DEFAULT_INJURY_HUNDREDTHS,
+    factOutsourcingVatHundredths: DEFAULT_OUTSOURCING_VAT_HUNDREDTHS,
   };
 }
 
@@ -519,29 +545,30 @@ export function hrMonthView(document: PrototypeDocument, month: string): HrMonth
     fotExVat: factFot,
   };
 
-  // Налоги: база — зарплата на руки без аутсорсинга. `HR!86:88`.
-  const planNdflBase = planPayroll;
-  const planNdfl = taxAmountExVat(planNdflBase, taxRates.planNdflHundredths);
-  const planSocialBase = planNdflBase + planNdfl;
+  // НДФЛ внутри начисления, без аутсорсинга: в строке база — на руки.
+  // Соцстрах и травматизм — от «на руки + НДФЛ». `HR!86:88`.
+  const planNdfl = ndflIncludedExVat(planPayroll, taxRates.planNdflHundredths);
+  const factNdfl = ndflIncludedExVat(factPayroll, taxRates.factNdflHundredths);
+  const planSocialBase = planNdfl.baseExVat;
+  const factSocialBase = factNdfl.baseExVat;
   const planSocial = taxAmountExVat(planSocialBase, taxRates.planSocialHundredths);
   const planInjury = taxAmountExVat(planSocialBase, taxRates.planInjuryHundredths);
-
-  const factNdflBase = factPayroll;
-  const factNdfl = taxAmountExVat(factNdflBase, taxRates.factNdflHundredths);
-  const factSocialBase = factNdflBase + factNdfl;
   const factSocial = taxAmountExVat(factSocialBase, taxRates.factSocialHundredths);
   const factInjury = taxAmountExVat(factSocialBase, taxRates.factInjuryHundredths);
+
+  const planOutsourcingVat = taxAmountExVat(planOut, taxRates.planOutsourcingVatHundredths);
+  const factOutsourcingVat = taxAmountExVat(factOut, taxRates.factOutsourcingVatHundredths);
 
   const taxes: HrTaxLineView[] = [
     {
       id: 'ndfl',
       name: 'НДФЛ',
-      planBaseExVat: planNdflBase,
+      planBaseExVat: planPayroll,
       planRateHundredths: taxRates.planNdflHundredths,
-      planAmountExVat: planNdfl,
-      factBaseExVat: factNdflBase,
+      planAmountExVat: planNdfl.amountExVat,
+      factBaseExVat: factPayroll,
       factRateHundredths: taxRates.factNdflHundredths,
-      factAmountExVat: factNdfl,
+      factAmountExVat: factNdfl.amountExVat,
     },
     {
       id: 'social',
@@ -563,10 +590,21 @@ export function hrMonthView(document: PrototypeDocument, month: string): HrMonth
       factRateHundredths: taxRates.factInjuryHundredths,
       factAmountExVat: factInjury,
     },
+    {
+      id: 'outsourcing-vat',
+      name: 'НДС аутсорса',
+      planBaseExVat: planOut,
+      planRateHundredths: taxRates.planOutsourcingVatHundredths,
+      planAmountExVat: planOutsourcingVat,
+      factBaseExVat: factOut,
+      factRateHundredths: taxRates.factOutsourcingVatHundredths,
+      factAmountExVat: factOutsourcingVat,
+    },
   ];
 
-  const planTaxTotal = planNdfl + planSocial + planInjury;
-  const factTaxTotal = factNdfl + factSocial + factInjury;
+  // ВСЕГО зарплатных налогов — без НДС аутсорса: он только для ДДС.
+  const planTaxTotal = planNdfl.amountExVat + planSocial + planInjury;
+  const factTaxTotal = factNdfl.amountExVat + factSocial + factInjury;
 
   return {
     month,
@@ -1018,9 +1056,11 @@ export type HrTaxRateField =
   | 'planNdflHundredths'
   | 'planSocialHundredths'
   | 'planInjuryHundredths'
+  | 'planOutsourcingVatHundredths'
   | 'factNdflHundredths'
   | 'factSocialHundredths'
-  | 'factInjuryHundredths';
+  | 'factInjuryHundredths'
+  | 'factOutsourcingVatHundredths';
 
 export function setHrTaxRateRejection(
   _document: PrototypeDocument,

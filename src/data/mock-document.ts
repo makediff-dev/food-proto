@@ -14,6 +14,7 @@ import {
   mockTransportOwnMonthPlans,
   mockTransportVehicles,
 } from '@/data/mock-opex';
+import { mockPropertyTaxMonths } from '@/data/mock-property-tax';
 import {
   catalogCategories,
   catalogOpexOtherLines,
@@ -811,6 +812,7 @@ export const mockDocument: PrototypeDocument = {
   derivativeNorms: [],
   creditors: mockCreditors,
   creditResourceMonths: mockCreditResourceMonths,
+  propertyTaxMonths: mockPropertyTaxMonths,
 };
 
 export function createMockDocument(): PrototypeDocument {
@@ -920,5 +922,6 @@ export function createMockDocument(): PrototypeDocument {
       ...item,
       lines: item.lines.map((line) => ({ ...line })),
     })),
+    propertyTaxMonths: mockDocument.propertyTaxMonths.map((item) => ({ ...item })),
   };
 }

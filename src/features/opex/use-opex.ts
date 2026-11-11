@@ -45,12 +45,16 @@ import {
   setOpexDayLineRejection,
   setOpexLine,
   setOpexLineRejection,
+  setOpexOtherLineVat,
+  setOpexOtherLineVatRejection,
 } from '@/domain/operating-expense';
 import {
   addTransportCarrier,
   addTransportCarrierRejection,
   addTransportVehicle,
   addTransportVehicleRejection,
+  DEFAULT_TRANSPORT_FUEL_VAT_PERCENT,
+  DEFAULT_TRANSPORT_HIRE_VAT_PERCENT,
   deleteTransportCarrier,
   deleteTransportVehicle,
   renameTransportCarrier,
@@ -59,6 +63,8 @@ import {
   renameTransportVehicleRejection,
   restoreTransportCarrier,
   restoreTransportVehicle,
+  setTransportCarrierVat,
+  setTransportCarrierVatRejection,
   setTransportHireDay,
   setTransportHireDayRejection,
   setTransportHirePlan,
@@ -67,6 +73,8 @@ import {
   setTransportOwnDayRejection,
   setTransportOwnPlan,
   setTransportOwnPlanRejection,
+  setTransportVehicleFuelVat,
+  setTransportVehicleFuelVatRejection,
   type TransportFieldRejection,
 } from '@/domain/transport';
 
@@ -107,6 +115,14 @@ export function useOpex() {
         return rejection;
       }
       updateDocument((current) => renameOpexOtherLine(current, lineId, name));
+      return null;
+    },
+    setOpexOtherLineVat(lineId: string, vatPercent: number): OpexFieldRejection | null {
+      const rejection = setOpexOtherLineVatRejection(document, lineId, vatPercent);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => setOpexOtherLineVat(current, lineId, vatPercent));
       return null;
     },
     deleteOpexOtherLine(lineId: string) {
@@ -242,11 +258,27 @@ export function useOpex() {
       if (rejection) {
         return rejection;
       }
-      updateDocument((current) => addTransportCarrier(current, { id, kind, name, deletedAt: null }));
+      updateDocument((current) =>
+        addTransportCarrier(current, {
+          id,
+          kind,
+          name,
+          vatPercent: DEFAULT_TRANSPORT_HIRE_VAT_PERCENT,
+          deletedAt: null,
+        }),
+      );
       return null;
     },
     deleteTransportCarrier(carrierId: string) {
       updateDocument((current) => deleteTransportCarrier(current, carrierId, new Date().toISOString()));
+    },
+    setTransportCarrierVat(carrierId: string, vatPercent: number): TransportFieldRejection | null {
+      const rejection = setTransportCarrierVatRejection(document, carrierId, vatPercent);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => setTransportCarrierVat(current, carrierId, vatPercent));
+      return null;
     },
     renameTransportCarrier(carrierId: string, name: string): TransportFieldRejection | null {
       const rejection = renameTransportCarrierRejection(document, carrierId, name);
@@ -274,11 +306,26 @@ export function useOpex() {
       if (rejection) {
         return rejection;
       }
-      updateDocument((current) => addTransportVehicle(current, { id, name, deletedAt: null }));
+      updateDocument((current) =>
+        addTransportVehicle(current, {
+          id,
+          name,
+          fuelVatPercent: DEFAULT_TRANSPORT_FUEL_VAT_PERCENT,
+          deletedAt: null,
+        }),
+      );
       return null;
     },
     deleteTransportVehicle(vehicleId: string) {
       updateDocument((current) => deleteTransportVehicle(current, vehicleId, new Date().toISOString()));
+    },
+    setTransportVehicleFuelVat(vehicleId: string, fuelVatPercent: number): TransportFieldRejection | null {
+      const rejection = setTransportVehicleFuelVatRejection(document, vehicleId, fuelVatPercent);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => setTransportVehicleFuelVat(current, vehicleId, fuelVatPercent));
+      return null;
     },
     renameTransportVehicle(vehicleId: string, name: string): TransportFieldRejection | null {
       const rejection = renameTransportVehicleRejection(document, vehicleId, name);

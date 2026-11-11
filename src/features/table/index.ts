@@ -10,7 +10,7 @@ export {
   TableNumber,
   VatMoneyCell,
 } from '@/features/table/Cells';
-export { ColumnLabel, keepWithNext } from '@/features/table/ColumnLabel';
+export { ColumnLabel, HintedText, keepWithNext } from '@/features/table/ColumnLabel';
 export { GridText } from '@/features/table/GridText';
 export { ProductIndex } from '@/features/table/ProductIndex';
 export { CaptionedCell, MergedTwoStory, StackedPair } from '@/features/table/StackedPair';
