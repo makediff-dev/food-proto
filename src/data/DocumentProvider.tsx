@@ -27,6 +27,7 @@ interface DocumentState {
 
 interface DocumentStoreValue extends DocumentState {
   updateDocument: (recipe: (current: PrototypeDocument) => PrototypeDocument) => void;
+  replaceDocument: (next: PrototypeDocument) => void;
   resetToMock: () => void;
 }
 
@@ -95,6 +96,24 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const replaceDocument = useCallback((next: PrototypeDocument) => {
+    documentRef.current = next;
+
+    let storageError: string | null = null;
+    try {
+      writeDocument(next);
+    } catch {
+      storageError = STORAGE_ERROR_MESSAGE;
+    }
+
+    setState((current) => ({
+      ...current,
+      document: next,
+      source: 'local',
+      storageError,
+    }));
+  }, []);
+
   const resetToMock = useCallback(() => {
     try {
       clearDocument();
@@ -120,9 +139,10 @@ export function DocumentProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       updateDocument,
+      replaceDocument,
       resetToMock,
     }),
-    [state, updateDocument, resetToMock],
+    [state, updateDocument, replaceDocument, resetToMock],
   );
 
   return <DocumentStoreContext.Provider value={value}>{children}</DocumentStoreContext.Provider>;

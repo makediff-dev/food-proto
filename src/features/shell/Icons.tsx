@@ -264,3 +264,19 @@ export function IconFullscreenExit() {
     </Glyph>
   );
 }
+
+export function IconDownload() {
+  return (
+    <Glyph>
+      <path d="M10 3v9M6.5 8.5 10 12l3.5-3.5M4 14v2h12v-2" />
+    </Glyph>
+  );
+}
+
+export function IconUpload() {
+  return (
+    <Glyph>
+      <path d="M10 12V3M6.5 6.5 10 3l3.5 3.5M4 14v2h12v-2" />
+    </Glyph>
+  );
+}
