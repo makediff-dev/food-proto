@@ -36,16 +36,21 @@ const valueEnd = `${columnHeadingClassName} ${tableBorder.rightThick}`;
 const valueCell = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
 const valueCellEnd = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${tableBorder.rightThick}`;
 
+type VarianceSense = 'income' | 'cost';
+
 function LineRows({
   line,
   depth,
   openIds,
   toggle,
+  sense,
 }: {
   line: CashflowLineView;
   depth: number;
   openIds: Set<string>;
   toggle: (id: string) => void;
+  /** Доходы: факт выше плана — хорошо; расходы: факт ниже плана — хорошо. */
+  sense: VarianceSense;
 }) {
   const hasChildren = Boolean(line.children && line.children.length > 0);
   const open = openIds.has(line.id);
@@ -85,12 +90,12 @@ function LineRows({
           <MoneyAmount amount={line.amounts.fact} />
         </td>
         <td className={`${valueCellEnd} ${varianceFill}`}>
-          <MoneyCell label={`Откл., ${line.name}`} value={line.amounts.variance} signed sense="income" />
+          <MoneyCell label={`Откл., ${line.name}`} value={line.amounts.variance} signed sense={sense} />
         </td>
       </tr>
       {hasChildren && open
         ? line.children?.map((child) => (
-            <LineRows key={child.id} line={child} depth={depth + 1} openIds={openIds} toggle={toggle} />
+            <LineRows key={child.id} line={child} depth={depth + 1} openIds={openIds} toggle={toggle} sense={sense} />
           ))
         : null}
     </Fragment>
@@ -169,8 +174,8 @@ export function CashflowSummaryScreen({ month }: { month: string }) {
                 <MoneyCell label="Откл., остаток на начало" value={view.opening.variance} signed sense="income" />
               </td>
             </tr>
-            <LineRows line={view.income} depth={0} openIds={openIds} toggle={toggle} />
-            <LineRows line={view.expense} depth={0} openIds={openIds} toggle={toggle} />
+            <LineRows line={view.income} depth={0} openIds={openIds} toggle={toggle} sense="income" />
+            <LineRows line={view.expense} depth={0} openIds={openIds} toggle={toggle} sense="cost" />
             <tr>
               <th scope="row" className={totalNameClassName}>
                 Остаток денежных средств на конец периода
