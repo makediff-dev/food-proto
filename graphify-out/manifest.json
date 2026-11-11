@@ -262,9 +262,9 @@
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1794400159.1690104,
-    "seen": 1794400222.678014,
-    "ast_hash": "8d32d3acdd7c522bee2dc74ea2fa4d03",
+    "mtime": 1794401318.1974595,
+    "seen": 1794401338.9586463,
+    "ast_hash": "b13a7def0af8a93f23a4136ba2822b03",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
@@ -1395,9 +1395,9 @@
     "semantic_hash": ""
   },
   "src/features/opex/TransportPlanScreen.tsx": {
-    "mtime": 1794399775.9057617,
-    "seen": 1794399862.820482,
-    "ast_hash": "7cf285b9e397d83bec59404e98aa58a9",
+    "mtime": 1794401274.5964668,
+    "seen": 1794401338.9586463,
+    "ast_hash": "7be1849f646c780d08e932d38ce91d46",
     "semantic_hash": ""
   },
   "src/features/opex/TransportSummaryScreen.tsx": {
@@ -1551,9 +1551,9 @@
     "semantic_hash": ""
   },
   "src/features/cashflow/CashflowSummaryScreen.tsx": {
-    "mtime": 1793978003.8996978,
-    "seen": 1793978076.600808,
-    "ast_hash": "c93ceee7d4a6356549c69264c137edb1",
+    "mtime": 1794400906.6146657,
+    "seen": 1794400921.727565,
+    "ast_hash": "37cd8eb3cd4153f6c3ee2cb36a014d9d",
     "semantic_hash": ""
   },
   "src/features/cashflow/paths.ts": {
@@ -1653,9 +1653,9 @@
     "semantic_hash": ""
   },
   "src/features/vat/VatReportScreen.tsx": {
-    "mtime": 1794397698.1099212,
-    "seen": 1794397736.9250133,
-    "ast_hash": "e7e6d2656e3a1789ee64311904f64360",
+    "mtime": 1794400677.3728168,
+    "seen": 1794400699.24192,
+    "ast_hash": "0ce81110a1c85127c198040fb24c01aa",
     "semantic_hash": ""
   },
   "src/features/vat/paths.ts": {

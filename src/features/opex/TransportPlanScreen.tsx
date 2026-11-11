@@ -84,13 +84,13 @@ export function TransportPlanScreen({ month }: { month: string }) {
                       <ColumnLabel label="Контрагент" />
                     </th>
                     <th scope="col" className={valueHead}>
-                      <ColumnLabel label="НДС" hint="Ставка НДС расхода, %. Сумма — в «Отчете по налогам»" />
-                    </th>
-                    <th scope="col" className={valueHead}>
                       <ColumnLabel label={`Кол-во, ${block.quantityUnit}`} />
                     </th>
                     <th scope="col" className={valueHead}>
                       <ColumnLabel label="Цена" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="НДС" hint="Ставка НДС расхода, %. Сумма — в «Отчете по налогам»" />
                     </th>
                     <th scope="col" className={valueHead}>
                       <ColumnLabel label="Сумма" />
@@ -145,23 +145,6 @@ export function TransportPlanScreen({ month }: { month: string }) {
                         <td
                           className={`${valueCell} ${cellKindClassName[editable && !carrier.deleted ? 'assigned' : 'computed']}`}
                         >
-                          <PercentCell
-                            label={`НДС, ${carrier.name}`}
-                            value={carrier.vatPercent}
-                            invalidMessage={TRANSPORT_ERROR.vat}
-                            onChange={
-                              editable && !carrier.deleted
-                                ? (next) => {
-                                    const rejection = opex.setTransportCarrierVat(carrier.carrierId, next);
-                                    return rejection ? TRANSPORT_ERROR[rejection] : null;
-                                  }
-                                : undefined
-                            }
-                          />
-                        </td>
-                        <td
-                          className={`${valueCell} ${cellKindClassName[editable && !carrier.deleted ? 'assigned' : 'computed']}`}
-                        >
                           {editable && !carrier.deleted ? (
                             <QuantityCell
                               label={`План, ${block.quantityUnit}, ${carrier.name}`}
@@ -205,6 +188,23 @@ export function TransportPlanScreen({ month }: { month: string }) {
                             <MoneyAmount amount={carrier.planUnitPriceExVat} />
                           )}
                         </td>
+                        <td
+                          className={`${valueCell} ${cellKindClassName[editable && !carrier.deleted ? 'assigned' : 'computed']}`}
+                        >
+                          <PercentCell
+                            label={`НДС, ${carrier.name}`}
+                            value={carrier.vatPercent}
+                            invalidMessage={TRANSPORT_ERROR.vat}
+                            onChange={
+                              editable && !carrier.deleted
+                                ? (next) => {
+                                    const rejection = opex.setTransportCarrierVat(carrier.carrierId, next);
+                                    return rejection ? TRANSPORT_ERROR[rejection] : null;
+                                  }
+                                : undefined
+                            }
+                          />
+                        </td>
                         <td className={`${valueCell} ${cellKindClassName.computed}`}>
                           <MoneyAmount amount={carrier.planAmountExVat} />
                         </td>
@@ -242,10 +242,10 @@ export function TransportPlanScreen({ month }: { month: string }) {
                     <ColumnLabel label="Цена топлива" />
                   </th>
                   <th scope="col" className={valueHead}>
-                    <ColumnLabel label="НДС" hint="Ставка НДС топлива, %. Сумма — в «Отчете по налогам»" />
+                    <ColumnLabel label="План, км" />
                   </th>
                   <th scope="col" className={valueHead}>
-                    <ColumnLabel label="План, км" />
+                    <ColumnLabel label="НДС" hint="Ставка НДС топлива, %. Сумма — в «Отчете по налогам»" />
                   </th>
                   <th scope="col" className={valueHead}>
                     <ColumnLabel label="Сумма" />
@@ -348,23 +348,6 @@ export function TransportPlanScreen({ month }: { month: string }) {
                       <td
                         className={`${valueCell} ${cellKindClassName[editable && !vehicle.deleted ? 'assigned' : 'computed']}`}
                       >
-                        <PercentCell
-                          label={`НДС топлива, ${vehicle.name}`}
-                          value={vehicle.fuelVatPercent}
-                          invalidMessage={TRANSPORT_ERROR.vat}
-                          onChange={
-                            editable && !vehicle.deleted
-                              ? (next) => {
-                                  const rejection = opex.setTransportVehicleFuelVat(vehicle.vehicleId, next);
-                                  return rejection ? TRANSPORT_ERROR[rejection] : null;
-                                }
-                              : undefined
-                          }
-                        />
-                      </td>
-                      <td
-                        className={`${valueCell} ${cellKindClassName[editable && !vehicle.deleted ? 'assigned' : 'computed']}`}
-                      >
                         {editable && !vehicle.deleted ? (
                           <QuantityCell
                             label={`План км, ${vehicle.name}`}
@@ -385,6 +368,23 @@ export function TransportPlanScreen({ month }: { month: string }) {
                         ) : (
                           vehicle.planKmThousandths
                         )}
+                      </td>
+                      <td
+                        className={`${valueCell} ${cellKindClassName[editable && !vehicle.deleted ? 'assigned' : 'computed']}`}
+                      >
+                        <PercentCell
+                          label={`НДС топлива, ${vehicle.name}`}
+                          value={vehicle.fuelVatPercent}
+                          invalidMessage={TRANSPORT_ERROR.vat}
+                          onChange={
+                            editable && !vehicle.deleted
+                              ? (next) => {
+                                  const rejection = opex.setTransportVehicleFuelVat(vehicle.vehicleId, next);
+                                  return rejection ? TRANSPORT_ERROR[rejection] : null;
+                                }
+                              : undefined
+                          }
+                        />
                       </td>
                       <td className={`${valueCell} ${cellKindClassName.computed}`}>
                         <MoneyAmount amount={vehicle.planAmountExVat} />
