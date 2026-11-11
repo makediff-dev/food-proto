@@ -35,6 +35,7 @@ const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
 const valueEnd = `${columnHeadingClassName} ${tableBorder.rightThick}`;
 const valueCell = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
 const valueCellEnd = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${tableBorder.rightThick}`;
+const VAT_CALC_ID = 'vat-calc';
 
 /** Зачет уменьшает платёж, остальные налоги его увеличивают. */
 function varianceSense(id: string): 'income' | 'cost' {
@@ -153,7 +154,10 @@ export function VatReportScreen({ month }: { month: string }) {
   const store = useVatReport();
   const router = useRouter();
   const view = useMemo(() => vatReportMonthView(store.document, selectedMonth), [store.document, selectedMonth]);
-  const [openIds, setOpenIds] = useState<Set<string>>(() => new Set([view.deductible.id, view.payroll.id]));
+  const [openIds, setOpenIds] = useState<Set<string>>(
+    () => new Set([VAT_CALC_ID, view.deductible.id, view.payroll.id]),
+  );
+  const vatCalcOpen = openIds.has(VAT_CALC_ID);
 
   function toggle(id: string) {
     setOpenIds((current) => {
@@ -203,17 +207,46 @@ export function VatReportScreen({ month }: { month: string }) {
             <tr>
               <th scope="row" className={categoryNameRowClassName(false)}>
                 <div className="flex items-center gap-2">
-                  <span className="inline-block size-8 shrink-0" aria-hidden />
+                  <button
+                    type="button"
+                    aria-expanded={vatCalcOpen}
+                    aria-label={vatCalcOpen ? 'Свернуть Расчет НДС' : 'Развернуть Расчет НДС'}
+                    title={vatCalcOpen ? 'Свернуть' : 'Развернуть'}
+                    onClick={() => toggle(VAT_CALC_ID)}
+                    className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                  >
+                    {vatCalcOpen ? <IconChevronDown /> : <IconChevronRight />}
+                  </button>
                   <span className={categoryNameClassName}>Расчет НДС</span>
                 </div>
               </th>
-              <td className={`${valueCell} ${categoryBandClassName}`} />
-              <td className={`${valueCell} ${categoryBandClassName}`} />
-              <td className={`${valueCellEnd} ${categoryBandClassName}`} />
+              {vatCalcOpen ? (
+                <>
+                  <td className={`${valueCell} ${categoryBandClassName}`} />
+                  <td className={`${valueCell} ${categoryBandClassName}`} />
+                  <td className={`${valueCellEnd} ${categoryBandClassName}`} />
+                </>
+              ) : (
+                <>
+                  <td className={`${valueCell} ${categoryBandClassName}`}>
+                    <MoneyAmount amount={view.payable.plan} />
+                  </td>
+                  <td className={`${valueCell} ${categoryBandClassName}`}>
+                    <MoneyAmount amount={view.payable.fact} />
+                  </td>
+                  <td className={`${valueCellEnd} ${categoryBandClassName}`}>
+                    <MoneyCell label="Откл., НДС к уплате" value={view.payable.variance} signed sense="cost" />
+                  </td>
+                </>
+              )}
             </tr>
-            <LineRows line={view.sales} depth={1} openIds={openIds} toggle={toggle} />
-            <LineRows line={view.deductible} depth={1} openIds={openIds} toggle={toggle} />
-            <ResultRow label="НДС к уплате" amounts={view.payable} />
+            {vatCalcOpen ? (
+              <>
+                <LineRows line={view.sales} depth={1} openIds={openIds} toggle={toggle} />
+                <LineRows line={view.deductible} depth={1} openIds={openIds} toggle={toggle} />
+                <ResultRow label="НДС к уплате" amounts={view.payable} />
+              </>
+            ) : null}
             <LineRows line={view.payroll} depth={0} openIds={openIds} toggle={toggle} />
             <LineRows line={view.profit} depth={0} openIds={openIds} toggle={toggle} />
             <LineRows line={view.property} depth={0} openIds={openIds} toggle={toggle} />
