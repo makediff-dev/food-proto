@@ -41,7 +41,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_HR_TITLE}
       full
-      lede="План и факт по подразделениям и должностям. У администрации и отдела продаж — месячный факт, у цехов и РЦ — из дневных строк. Зарплатные налоги и НДС аутсорса только показывают."
+      lede="План и факт по подразделениям и должностям. У администрации и отдела продаж — месячный факт, у цехов и РЦ — из дневных строк. У аутсорса ставка и сумма — без НДС; процент НДС задают во вводе плана, сумма НДС — в ДДС. Зарплатные налоги только показывают."
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -51,178 +51,157 @@ export function HrSummaryScreen({ month }: { month: string }) {
       }
     >
       <div className="flex flex-col gap-6">
-        <div className={tableFrameClassName}>
-          <table className={tableClassName}>
-            <caption className="sr-only">{`HR за ${selectedMonth}`}</caption>
-            <thead>
-              <tr>
-                <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                  <ColumnLabel label="Наименование" />
-                </th>
-                <th scope="col" className={valueHead}>
-                  <ColumnLabel label="План, чел" />
-                </th>
-                <th scope="col" className={valueHead}>
-                  <ColumnLabel label="План, зарплата" />
-                </th>
-                <th scope="col" className={valueHead}>
-                  <ColumnLabel label="План, ФОТ" />
-                </th>
-                <th scope="col" className={valueHead}>
-                  <ColumnLabel label="Факт, чел" hint="У цехов и РЦ — сумма людей по дням / дни месяца" />
-                </th>
-                <th scope="col" className={valueHead}>
-                  <ColumnLabel label="Факт, зарплата" />
-                </th>
-                <th scope="col" className={valueHead}>
-                  <ColumnLabel label="Факт, ФОТ" />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {view.departments.map((department) => (
-                <DepartmentBlock key={department.departmentId} department={department} />
-              ))}
-              <tr className="font-medium">
-                <th scope="row" className={categoryNameRowClassName(false)}>
-                  <span className={categoryNameClassName}>
-                    <span className="group relative cursor-help">
-                      <span className="border-b border-dotted border-muted">ВСЕГО</span>
-                      <span
-                        role="tooltip"
-                        className="pointer-events-none absolute bottom-full left-0 z-50 mb-1.5 hidden w-max rounded border border-line bg-paper px-2 py-1 text-left text-xs font-normal normal-case leading-snug whitespace-normal text-ink shadow-sm group-hover:block"
-                      >
-                        включая аутсорс
+        <section className="flex flex-col gap-2">
+          <h2 className="px-1 text-sm font-medium">Должности</h2>
+          <div className={tableFrameClassName}>
+            <table className={tableClassName}>
+              <caption className="sr-only">{`HR за ${selectedMonth}`}</caption>
+              <thead>
+                <tr>
+                  <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                    <ColumnLabel label="Наименование" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="План, чел" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="План, зарплата" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="План, ФОТ" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="Факт, чел" hint="У цехов и РЦ — сумма людей по дням / дни месяца" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="Факт, зарплата" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="Факт, ФОТ" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {view.departments.map((department) => (
+                  <DepartmentBlock key={department.departmentId} department={department} />
+                ))}
+                <tr className="font-medium">
+                  <th scope="row" className={categoryNameRowClassName(false)}>
+                    <span className={categoryNameClassName}>
+                      <span className="group relative cursor-help">
+                        <span className="border-b border-dotted border-muted">ВСЕГО</span>
+                        <span
+                          role="tooltip"
+                          className="pointer-events-none absolute bottom-full left-0 z-50 mb-1.5 hidden w-max rounded border border-line bg-paper px-2 py-1 text-left text-xs font-normal normal-case leading-snug whitespace-normal text-ink shadow-sm group-hover:block"
+                        >
+                          включая аутсорс
+                        </span>
                       </span>
                     </span>
-                  </span>
-                </th>
-                <td className={`${valueCell} ${cellKindClassName.computed}`}>{view.total.plan.headcount}</td>
-                <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                  <MoneyAmount amount={view.total.plan.salaryExVat} />
-                </td>
-                <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                  <MoneyAmount amount={view.total.plan.fotExVat} />
-                </td>
-                <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                  {formatQuantity(view.total.fact.headcount)}
-                </td>
-                <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                  <MoneyAmount amount={view.total.fact.salaryExVat} />
-                </td>
-                <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                  <MoneyAmount amount={view.total.fact.fotExVat} />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                  </th>
+                  <td className={`${valueCell} ${cellKindClassName.computed}`}>{view.total.plan.headcount}</td>
+                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                    <MoneyAmount amount={view.total.plan.salaryExVat} />
+                  </td>
+                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                    <MoneyAmount amount={view.total.plan.fotExVat} />
+                  </td>
+                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                    {formatQuantity(view.total.fact.headcount)}
+                  </td>
+                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                    <MoneyAmount amount={view.total.fact.salaryExVat} />
+                  </td>
+                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                    <MoneyAmount amount={view.total.fact.fotExVat} />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-        <div className={tableFrameClassName}>
-          <table className={tableClassName}>
-            <caption className="sr-only">Зарплатные налоги и НДС аутсорса</caption>
-            <thead>
-              <tr>
-                <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                  <ColumnLabel label="Налог" />
-                </th>
-                <th scope="col" className={valueHead}>
-                  <ColumnLabel label="План, база" />
-                </th>
-                <th scope="col" className={valueHead}>
-                  <ColumnLabel label="План, %" />
-                </th>
-                <th scope="col" className={valueHead}>
-                  <ColumnLabel label="План, сумма" />
-                </th>
-                <th scope="col" className={valueHead}>
-                  <ColumnLabel label="Факт, база" />
-                </th>
-                <th scope="col" className={valueHead}>
-                  <ColumnLabel label="Факт, %" />
-                </th>
-                <th scope="col" className={valueHead}>
-                  <ColumnLabel label="Факт, сумма" />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {view.taxes
-                .filter((tax) => tax.id !== 'outsourcing-vat')
-                .map((tax) => (
-                  <tr key={tax.id}>
-                    <th scope="row" className={entityNameRowClassName('repeated')}>
-                      {tax.name}
-                    </th>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={tax.planBaseExVat} />
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.repeated}`}>
-                      {formatTaxRate(tax.planRateHundredths)}
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={tax.planAmountExVat} />
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={tax.factBaseExVat} />
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.repeated}`}>
-                      {formatTaxRate(tax.factRateHundredths)}
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={tax.factAmountExVat} />
-                    </td>
-                  </tr>
-                ))}
-              <tr className="font-medium">
-                <th scope="row" className={categoryNameRowClassName(false)}>
-                  <span className={categoryNameClassName}>ВСЕГО</span>
-                </th>
-                <td className={`${valueCell} ${cellKindClassName.computed}`} />
-                <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                  {formatTaxRate(view.taxTotal.planEffectiveHundredths)}
-                </td>
-                <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                  <MoneyAmount amount={view.taxTotal.planAmountExVat} />
-                </td>
-                <td className={`${valueCell} ${cellKindClassName.computed}`} />
-                <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                  {formatTaxRate(view.taxTotal.factEffectiveHundredths)}
-                </td>
-                <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                  <MoneyAmount amount={view.taxTotal.factAmountExVat} />
-                </td>
-              </tr>
-              {view.taxes
-                .filter((tax) => tax.id === 'outsourcing-vat')
-                .map((tax) => (
-                  <tr key={tax.id}>
-                    <th scope="row" className={entityNameRowClassName('repeated')}>
-                      {tax.name}
-                    </th>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={tax.planBaseExVat} />
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.repeated}`}>
-                      {formatTaxRate(tax.planRateHundredths)}
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={tax.planAmountExVat} />
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={tax.factBaseExVat} />
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.repeated}`}>
-                      {formatTaxRate(tax.factRateHundredths)}
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                      <MoneyAmount amount={tax.factAmountExVat} />
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
-        </div>
+        <section className="flex flex-col gap-2">
+          <h2 className="px-1 text-sm font-medium">Зарплатные налоги</h2>
+          <div className={tableFrameClassName}>
+            <table className={tableClassName}>
+              <caption className="sr-only">Зарплатные налоги</caption>
+              <thead>
+                <tr>
+                  <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                    <ColumnLabel label="Налог" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="План, база" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="План, %" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="План, сумма" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="Факт, база" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="Факт, %" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="Факт, сумма" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {view.taxes
+                  .filter((tax) => tax.id !== 'outsourcing-vat')
+                  .map((tax) => (
+                    <tr key={tax.id}>
+                      <th scope="row" className={entityNameRowClassName('repeated')}>
+                        {tax.name}
+                      </th>
+                      <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                        <MoneyAmount amount={tax.planBaseExVat} />
+                      </td>
+                      <td className={`${valueCell} ${cellKindClassName.repeated}`}>
+                        {formatTaxRate(tax.planRateHundredths)}
+                      </td>
+                      <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                        <MoneyAmount amount={tax.planAmountExVat} />
+                      </td>
+                      <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                        <MoneyAmount amount={tax.factBaseExVat} />
+                      </td>
+                      <td className={`${valueCell} ${cellKindClassName.repeated}`}>
+                        {formatTaxRate(tax.factRateHundredths)}
+                      </td>
+                      <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                        <MoneyAmount amount={tax.factAmountExVat} />
+                      </td>
+                    </tr>
+                  ))}
+                <tr className="font-medium">
+                  <th scope="row" className={categoryNameRowClassName(false)}>
+                    <span className={categoryNameClassName}>ВСЕГО</span>
+                  </th>
+                  <td className={`${valueCell} ${cellKindClassName.computed}`} />
+                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                    {formatTaxRate(view.taxTotal.planEffectiveHundredths)}
+                  </td>
+                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                    <MoneyAmount amount={view.taxTotal.planAmountExVat} />
+                  </td>
+                  <td className={`${valueCell} ${cellKindClassName.computed}`} />
+                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                    {formatTaxRate(view.taxTotal.factEffectiveHundredths)}
+                  </td>
+                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                    <MoneyAmount amount={view.taxTotal.factAmountExVat} />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </PageFrame>
   );

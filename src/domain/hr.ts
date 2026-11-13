@@ -19,7 +19,7 @@ import {
   isOccurredOn,
   type PrototypeDocument,
 } from '@/domain/document';
-import { ratioRound } from '@/domain/money';
+import { amountWithVat, ratioRound } from '@/domain/money';
 import { isQuantityThousandths, QUANTITY_SCALE } from '@/domain/quantity';
 import { daysInMonth, monthKeyFromDate } from '@/domain/sales-plan';
 
@@ -30,7 +30,9 @@ export const DEFAULT_NDFL_HUNDREDTHS = 13 * HR_TAX_RATE_SCALE;
 export const DEFAULT_SOCIAL_HUNDREDTHS = 20 * HR_TAX_RATE_SCALE;
 export const DEFAULT_INJURY_HUNDREDTHS = 20; // 0,2 %
 /** НДС аутсорса по умолчанию — как у товаров мока, 20 %. */
-export const DEFAULT_OUTSOURCING_VAT_HUNDREDTHS = 20 * HR_TAX_RATE_SCALE;
+export const DEFAULT_OUTSOURCING_VAT_PERCENT = 20;
+/** @deprecated Сотые доли; новые строки хранят целое `vatPercent`. */
+export const DEFAULT_OUTSOURCING_VAT_HUNDREDTHS = DEFAULT_OUTSOURCING_VAT_PERCENT * HR_TAX_RATE_SCALE;
 
 const MAX_HEADCOUNT = 10_000;
 const MAX_HOUR_THOUSANDTHS = 1_000_000_000;
@@ -47,6 +49,7 @@ export type HrFieldRejection =
   | 'hours'
   | 'amount'
   | 'rate'
+  | 'vat'
   | 'taxRate'
   | 'archived'
   | 'kind';
@@ -71,13 +74,21 @@ export interface HrStaffRowView {
 export interface HrOutsourcingRowView {
   kind: 'outsourcing';
   departmentId: HrShopDepartmentId;
+  /** Подпись строки в своде — «Аутсорсинговый персонал»; в отдельной таблице — имя цеха. */
   name: string;
+  departmentName: string;
+  /** Ставка НДС цеха из плана месяца, целое 0–100. */
+  vatPercent: number;
   planHoursThousandths: number;
   planRateExVat: number;
+  planRateWithVat: number;
   planAmountExVat: number;
+  planAmountWithVat: number;
   factHoursThousandths: number;
   factRateExVat: number;
+  factRateWithVat: number;
   factAmountExVat: number;
+  factAmountWithVat: number;
   varianceHoursThousandths: number;
   varianceAmountExVat: number;
 }
@@ -172,12 +183,44 @@ export function outsourcingAmountExVat(hourThousandths: number, rateExVat: numbe
   return ratioRound(hourThousandths * rateExVat, QUANTITY_SCALE) ?? 0;
 }
 
-/** Ставка факта на экране HR: сумма дневных выплат / часы. */
+/** Ставка факта на экране HR: сумма (часы × ставка) / часы. */
 export function outsourcingFactRateExVat(amountExVat: number, hourThousandths: number): number {
   if (hourThousandths === 0) {
     return 0;
   }
   return ratioRound(amountExVat * QUANTITY_SCALE, hourThousandths) ?? 0;
+}
+
+function outsourcingMoneyWithVat(amountExVatValue: number, vatPercent: number): number {
+  return amountWithVat(amountExVatValue, vatPercent) ?? amountExVatValue;
+}
+
+function isOutsourcingVatPercent(value: number): boolean {
+  return Number.isInteger(value) && value >= 0 && value <= 100;
+}
+
+export function outsourcingPlanVatPercent(plan: HrMonthPlan | null, departmentId: HrShopDepartmentId): number {
+  const line = outsourcingPlanLine(plan, departmentId);
+  return line && isOutsourcingVatPercent(line.vatPercent) ? line.vatPercent : DEFAULT_OUTSOURCING_VAT_PERCENT;
+}
+
+/** Суммы аутсорса с НДС по цехам — для ДДС. */
+export function outsourcingMonthAmountsWithVat(
+  document: PrototypeDocument,
+  month: string,
+): { planWithVat: number; factWithVat: number } {
+  const view = hrMonthView(document, month);
+  let planWithVat = 0;
+  let factWithVat = 0;
+  for (const department of view.departments) {
+    const row = department.outsourcing;
+    if (!row) {
+      continue;
+    }
+    planWithVat += row.planAmountWithVat;
+    factWithVat += row.factAmountWithVat;
+  }
+  return { planWithVat, factWithVat };
 }
 
 /** Налог = база × ставка_сотых / 10_000. Соцстрах и травматизм. */
@@ -471,24 +514,33 @@ export function hrMonthView(document: PrototypeDocument, month: string): HrMonth
       for (const line of day.outsourcingLines) {
         if (line.departmentId === shopId) {
           outHours += line.hourThousandths;
-          factOutAmount += line.amountExVat ?? 0;
+          factOutAmount += outsourcingAmountExVat(line.hourThousandths, line.rateExVat);
         }
       }
     }
+    const vatPercent = outsourcingPlanVatPercent(plan, shopId);
     const planOutHours = outPlan?.hourThousandths ?? 0;
     const planOutRate = outPlan?.rateExVat ?? 0;
     const planOutAmount = outsourcingAmountExVat(planOutHours, planOutRate);
     const factOutRate = outsourcingFactRateExVat(factOutAmount, outHours);
+    const planOutAmountWithVat = outsourcingMoneyWithVat(planOutAmount, vatPercent);
+    const factOutAmountWithVat = outsourcingMoneyWithVat(factOutAmount, vatPercent);
     const outsourcing: HrOutsourcingRowView = {
       kind: 'outsourcing',
       departmentId: shopId,
       name: 'Аутсорсинговый персонал',
+      departmentName: HR_DEPARTMENT_LABELS[shopId],
+      vatPercent,
       planHoursThousandths: planOutHours,
       planRateExVat: planOutRate,
+      planRateWithVat: outsourcingMoneyWithVat(planOutRate, vatPercent),
       planAmountExVat: planOutAmount,
+      planAmountWithVat: planOutAmountWithVat,
       factHoursThousandths: outHours,
       factRateExVat: factOutRate,
+      factRateWithVat: outsourcingMoneyWithVat(factOutRate, vatPercent),
       factAmountExVat: factOutAmount,
+      factAmountWithVat: factOutAmountWithVat,
       varianceHoursThousandths: outHours - planOutHours,
       varianceAmountExVat: factOutAmount - planOutAmount,
     };
@@ -556,8 +608,19 @@ export function hrMonthView(document: PrototypeDocument, month: string): HrMonth
   const factSocial = taxAmountExVat(factSocialBase, taxRates.factSocialHundredths);
   const factInjury = taxAmountExVat(factSocialBase, taxRates.factInjuryHundredths);
 
-  const planOutsourcingVat = taxAmountExVat(planOut, taxRates.planOutsourcingVatHundredths);
-  const factOutsourcingVat = taxAmountExVat(factOut, taxRates.factOutsourcingVatHundredths);
+  // НДС аутсорса — сумма по цехам: база без НДС × ставка цеха / 100.
+  const planOutsourcingVat = departments.reduce(
+    (sum, item) => sum + (item.outsourcing ? item.outsourcing.planAmountWithVat - item.outsourcing.planAmountExVat : 0),
+    0,
+  );
+  const factOutsourcingVat = departments.reduce(
+    (sum, item) => sum + (item.outsourcing ? item.outsourcing.factAmountWithVat - item.outsourcing.factAmountExVat : 0),
+    0,
+  );
+  const planOutsourcingVatRate =
+    planOut === 0 ? 0 : (ratioRound(planOutsourcingVat * 100 * HR_TAX_RATE_SCALE, planOut) ?? 0);
+  const factOutsourcingVatRate =
+    factOut === 0 ? 0 : (ratioRound(factOutsourcingVat * 100 * HR_TAX_RATE_SCALE, factOut) ?? 0);
 
   const taxes: HrTaxLineView[] = [
     {
@@ -594,10 +657,10 @@ export function hrMonthView(document: PrototypeDocument, month: string): HrMonth
       id: 'outsourcing-vat',
       name: 'НДС аутсорса',
       planBaseExVat: planOut,
-      planRateHundredths: taxRates.planOutsourcingVatHundredths,
+      planRateHundredths: planOutsourcingVatRate,
       planAmountExVat: planOutsourcingVat,
       factBaseExVat: factOut,
-      factRateHundredths: taxRates.factOutsourcingVatHundredths,
+      factRateHundredths: factOutsourcingVatRate,
       factAmountExVat: factOutsourcingVat,
     },
   ];
@@ -794,6 +857,7 @@ export function setHrOutsourcingPlanRejection(
   departmentId: HrShopDepartmentId,
   hourThousandths: number,
   rateExVat: number,
+  vatPercent: number,
 ): HrFieldRejection | null {
   if (!isMonthKey(month)) {
     return 'month';
@@ -807,6 +871,9 @@ export function setHrOutsourcingPlanRejection(
   if (!isMoney(rateExVat)) {
     return 'rate';
   }
+  if (!isOutsourcingVatPercent(vatPercent)) {
+    return 'vat';
+  }
   return null;
 }
 
@@ -816,8 +883,9 @@ export function setHrOutsourcingPlan(
   departmentId: HrShopDepartmentId,
   hourThousandths: number,
   rateExVat: number,
+  vatPercent: number,
 ): PrototypeDocument {
-  if (setHrOutsourcingPlanRejection(document, month, departmentId, hourThousandths, rateExVat)) {
+  if (setHrOutsourcingPlanRejection(document, month, departmentId, hourThousandths, rateExVat, vatPercent)) {
     return document;
   }
   const existing = hrMonthPlan(document, month);
@@ -826,8 +894,13 @@ export function setHrOutsourcingPlan(
     departmentId,
     hourThousandths,
     rateExVat,
+    vatPercent,
   };
+  const isDefault = hourThousandths === 0 && rateExVat === 0 && vatPercent === DEFAULT_OUTSOURCING_VAT_PERCENT;
   if (!existing) {
+    if (isDefault) {
+      return document;
+    }
     return {
       ...document,
       hrMonthPlans: [
@@ -837,7 +910,7 @@ export function setHrOutsourcingPlan(
     };
   }
   const without = existing.outsourcingLines.filter((line) => line.departmentId !== departmentId);
-  const outsourcingLines = hourThousandths === 0 && rateExVat === 0 ? without : [...without, nextLine];
+  const outsourcingLines = isDefault ? without : [...without, nextLine];
   return {
     ...document,
     hrMonthPlans: document.hrMonthPlans.map((item) => (item.month === month ? { ...item, outsourcingLines } : item)),
@@ -990,7 +1063,7 @@ export function setHrDayOutsourcingRejection(
   occurredOn: string,
   departmentId: HrShopDepartmentId,
   hourThousandths: number,
-  amountExVat: number,
+  rateExVat: number,
 ): HrFieldRejection | null {
   if (!isOccurredOn(occurredOn)) {
     return 'day';
@@ -1001,8 +1074,8 @@ export function setHrDayOutsourcingRejection(
   if (!isHours(hourThousandths)) {
     return 'hours';
   }
-  if (!isMoney(amountExVat)) {
-    return 'amount';
+  if (!isMoney(rateExVat)) {
+    return 'rate';
   }
   return null;
 }
@@ -1012,9 +1085,9 @@ export function setHrDayOutsourcing(
   occurredOn: string,
   departmentId: HrShopDepartmentId,
   hourThousandths: number,
-  amountExVat: number,
+  rateExVat: number,
 ): PrototypeDocument {
-  if (setHrDayOutsourcingRejection(document, occurredOn, departmentId, hourThousandths, amountExVat)) {
+  if (setHrDayOutsourcingRejection(document, occurredOn, departmentId, hourThousandths, rateExVat)) {
     return document;
   }
   const existing = document.hrDayFacts.find((item) => item.occurredOn === occurredOn);
@@ -1022,10 +1095,10 @@ export function setHrDayOutsourcing(
     id: `hr-day-out:${occurredOn}:${departmentId}`,
     departmentId,
     hourThousandths,
-    amountExVat,
+    rateExVat,
   };
   if (!existing) {
-    if (hourThousandths === 0 && amountExVat === 0) {
+    if (hourThousandths === 0 && rateExVat === 0) {
       return document;
     }
     return {
@@ -1037,7 +1110,7 @@ export function setHrDayOutsourcing(
     };
   }
   const without = existing.outsourcingLines.filter((line) => line.departmentId !== departmentId);
-  const outsourcingLines = hourThousandths === 0 && amountExVat === 0 ? without : [...without, nextLine];
+  const outsourcingLines = hourThousandths === 0 && rateExVat === 0 ? without : [...without, nextLine];
   if (existing.staffLines.length === 0 && outsourcingLines.length === 0) {
     return {
       ...document,
@@ -1122,12 +1195,12 @@ export function hrDayOutsourcingValue(
   document: PrototypeDocument,
   occurredOn: string,
   departmentId: HrShopDepartmentId,
-): { hourThousandths: number; amountExVat: number } {
+): { hourThousandths: number; rateExVat: number } {
   const day = document.hrDayFacts.find((item) => item.occurredOn === occurredOn);
   const line = day?.outsourcingLines.find((item) => item.departmentId === departmentId);
   return {
     hourThousandths: line?.hourThousandths ?? 0,
-    amountExVat: line?.amountExVat ?? 0,
+    rateExVat: line?.rateExVat ?? 0,
   };
 }
 

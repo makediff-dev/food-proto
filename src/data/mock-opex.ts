@@ -468,6 +468,7 @@ export const mockHrMonthPlans: HrMonthPlan[] = MOCK_MONTHS.map((month) => ({
     departmentId: seed.departmentId,
     hourThousandths: seed.hourThousandths,
     rateExVat: rub(seed.rateRub),
+    vatPercent: 20,
   })),
 }));
 
@@ -516,14 +517,13 @@ export const mockHrDayFacts: HrDayFact[] = (() => {
     for (const seed of OUTSOURCING_FACT[month]) {
       const dates = SHIPMENT_DAYS[month];
       const hours = distribute(seed.hourThousandths, dates.length);
-      const amount = hireAmount(seed.hourThousandths, rub(seed.rateRub));
-      const amounts = distribute(amount, dates.length);
+      const rateExVat = rub(seed.rateRub);
       dates.forEach((occurredOn, index) => {
         ensure(occurredOn).outsourcingLines.push({
           id: `hr-day:${occurredOn}:out:${seed.departmentId}`,
           departmentId: seed.departmentId,
           hourThousandths: hours[index] ?? 0,
-          amountExVat: amounts[index] ?? 0,
+          rateExVat,
         });
       });
     }

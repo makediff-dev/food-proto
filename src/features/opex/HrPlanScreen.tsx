@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Fragment, useMemo, useState } from 'react';
 
 import type { HrDepartmentId, HrShopDepartmentId } from '@/domain/document';
-import { HR_DEPARTMENT_LABELS, type HrDepartmentView, hrMonthView } from '@/domain/hr';
+import { HR_DEPARTMENT_LABELS, type HrDepartmentView, type HrOutsourcingRowView, hrMonthView } from '@/domain/hr';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { QuantityCell } from '@/features/materials/QuantityCell';
 import { HrTaxRateBlock } from '@/features/opex/HrTaxRateBlock';
@@ -30,6 +30,7 @@ import {
   MoneyAmount,
   MoneyCell,
   nameHeadingClassName,
+  PercentCell,
   tableClassName,
   tableFrameClassName,
 } from '@/features/table';
@@ -50,12 +51,16 @@ export function HrPlanScreen({ month }: { month: string }) {
   const editable = opex.hydrated && canEditSalesOpex;
   const view = useMemo(() => hrMonthView(opex.document, selectedMonth), [opex.document, selectedMonth]);
   const [addDepartment, setAddDepartment] = useState<HrDepartmentId | null>(null);
+  const outsourcingRows = useMemo(
+    () => view.departments.flatMap((department) => (department.outsourcing ? [department.outsourcing] : [])),
+    [view.departments],
+  );
 
   return (
     <PageFrame
       title={OPEX_HR_PLAN_TITLE}
       full
-      lede="Плановая численность и зарплата по должностям. У цехов и РЦ — часы и ставка аутсорсинга на месяц. Ниже — ставки зарплатных налогов и НДС аутсорса."
+      lede="Плановая численность и зарплата по должностям. Аутсорсинг — отдельной таблицей: часы, ставка без НДС, сумма и процент НДС по цехам (суммы с НДС — в ДДС). Ниже — ставки зарплатных налогов."
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -65,65 +70,107 @@ export function HrPlanScreen({ month }: { month: string }) {
       }
     >
       <div className="flex flex-col gap-6">
-        <div className={tableFrameClassName}>
-          <table className={tableClassName}>
-            <caption className="sr-only">{`План HR за ${selectedMonth}`}</caption>
-            <thead>
-              <tr>
-                <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                  <ColumnLabel label="Наименование" />
-                </th>
-                <th scope="col" className={valueHead}>
-                  <ColumnLabel label="План, чел" />
-                </th>
-                <th scope="col" className={valueHead}>
-                  <ColumnLabel label="План, зарплата" />
-                </th>
-                <th scope="col" className={valueHead}>
-                  <ColumnLabel label="План, ФОТ" />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {view.departments.map((department) => (
-                <DepartmentBlock
-                  key={department.departmentId}
-                  department={department}
-                  editable={editable}
-                  onAdd={
-                    editable
-                      ? () => {
-                          setAddDepartment(department.departmentId);
-                        }
-                      : undefined
-                  }
-                  onStaffPlan={(positionId, headcount, salaryExVat) => {
-                    const rejection = opex.setHrStaffPlan(selectedMonth, positionId, headcount, salaryExVat);
-                    return rejection ? HR_ERROR[rejection] : null;
-                  }}
-                  onOutsourcingPlan={(departmentId, hoursThousandths, rateExVat) => {
-                    const rejection = opex.setHrOutsourcingPlan(
-                      selectedMonth,
-                      departmentId,
-                      hoursThousandths,
-                      rateExVat,
-                    );
-                    return rejection ? HR_ERROR[rejection] : null;
-                  }}
-                  onDelete={(positionId, name) => {
-                    const confirmed = window.confirm(`Удалить «${name}»? Должность пропадёт из рабочего списка.`);
-                    if (confirmed) {
-                      opex.deleteHrPosition(positionId);
+        <section className="flex flex-col gap-2">
+          <h2 className="px-1 text-sm font-medium">Должности</h2>
+          <div className={tableFrameClassName}>
+            <table className={tableClassName}>
+              <caption className="sr-only">{`План HR за ${selectedMonth}`}</caption>
+              <thead>
+                <tr>
+                  <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                    <ColumnLabel label="Наименование" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="План, чел" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="План, зарплата" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="План, ФОТ" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {view.departments.map((department) => (
+                  <DepartmentBlock
+                    key={department.departmentId}
+                    department={department}
+                    editable={editable}
+                    onAdd={
+                      editable
+                        ? () => {
+                            setAddDepartment(department.departmentId);
+                          }
+                        : undefined
                     }
-                  }}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    onStaffPlan={(positionId, headcount, salaryExVat) => {
+                      const rejection = opex.setHrStaffPlan(selectedMonth, positionId, headcount, salaryExVat);
+                      return rejection ? HR_ERROR[rejection] : null;
+                    }}
+                    onDelete={(positionId, name) => {
+                      const confirmed = window.confirm(`Удалить «${name}»? Должность пропадёт из рабочего списка.`);
+                      if (confirmed) {
+                        opex.deleteHrPosition(positionId);
+                      }
+                    }}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <h2 className="px-1 text-sm font-medium">Аутсорсинг</h2>
+          <div className={tableFrameClassName}>
+            <table className={tableClassName}>
+              <caption className="sr-only">{`План аутсорсинга за ${selectedMonth}`}</caption>
+              <thead>
+                <tr>
+                  <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                    <ColumnLabel label="Цех" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="План, часы" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="План, ставка" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="План, сумма" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="НДС" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {outsourcingRows.map((row) => (
+                  <OutsourcingPlanRow
+                    key={row.departmentId}
+                    row={row}
+                    editable={editable}
+                    onChange={(departmentId, hoursThousandths, rateExVat, vatPercent) => {
+                      const rejection = opex.setHrOutsourcingPlan(
+                        selectedMonth,
+                        departmentId,
+                        hoursThousandths,
+                        rateExVat,
+                        vatPercent,
+                      );
+                      return rejection ? HR_ERROR[rejection] : null;
+                    }}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <HrTaxRateBlock
           side="plan"
-          taxes={view.taxes}
+          taxes={view.taxes.filter((tax) => tax.id !== 'outsourcing-vat')}
           editable={editable}
           onRate={(field, rateHundredths) => {
             const rejection = opex.setHrTaxRate(selectedMonth, field, rateHundredths);
@@ -154,19 +201,16 @@ function DepartmentBlock({
   editable,
   onAdd,
   onStaffPlan,
-  onOutsourcingPlan,
   onDelete,
 }: {
   department: HrDepartmentView;
   editable: boolean;
   onAdd?: () => void;
   onStaffPlan: (positionId: string, headcount: number, salaryExVat: number) => string | null;
-  onOutsourcingPlan: (departmentId: HrShopDepartmentId, hoursThousandths: number, rateExVat: number) => string | null;
   onDelete: (positionId: string, name: string) => void;
 }) {
   const [open, setOpen] = useState(true);
-  const outsourcing = department.outsourcing;
-  const count = department.staff.length + (outsourcing ? 1 : 0);
+  const count = department.staff.length;
 
   return (
     <Fragment>
@@ -207,7 +251,7 @@ function DepartmentBlock({
           <MoneyAmount amount={department.plan.salaryExVat} />
         </td>
         <td className={`${valueCell} ${categoryBandClassName}`}>
-          <MoneyAmount amount={department.plan.fotExVat} />
+          <MoneyAmount amount={department.planPayrollExVat} />
         </td>
       </tr>
       {open
@@ -262,46 +306,74 @@ function DepartmentBlock({
             </tr>
           ))
         : null}
-      {open && outsourcing ? (
-        <tr>
-          <th scope="row" className={entityNameRowClassName('repeated')}>
-            {outsourcing.name}
-          </th>
-          <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-            {editable ? (
-              <QuantityCell
-                label={`План, часы, ${department.name}`}
-                value={outsourcing.planHoursThousandths}
-                unit="ч"
-                blankIfZero
-                onChange={(next) => onOutsourcingPlan(outsourcing.departmentId, next, outsourcing.planRateExVat)}
-              />
-            ) : (
-              `${formatHours(outsourcing.planHoursThousandths)} ч`
-            )}
-          </td>
-          <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-            {editable ? (
-              <MoneyCell
-                label={`Ставка аутсорсинга, ${department.name}`}
-                value={outsourcing.planRateExVat}
-                parse={parseOpexMoney}
-                invalidMessage={HR_ERROR.rate}
-                onChange={(next) => onOutsourcingPlan(outsourcing.departmentId, outsourcing.planHoursThousandths, next)}
-              />
-            ) : (
-              <>
-                <MoneyAmount amount={outsourcing.planRateExVat} />
-                <span className="text-muted"> /ч</span>
-              </>
-            )}
-          </td>
-          <td className={`${valueCell} ${cellKindClassName.computed}`}>
-            <MoneyAmount amount={outsourcing.planAmountExVat} />
-          </td>
-        </tr>
-      ) : null}
     </Fragment>
+  );
+}
+
+function OutsourcingPlanRow({
+  row,
+  editable,
+  onChange,
+}: {
+  row: HrOutsourcingRowView;
+  editable: boolean;
+  onChange: (
+    departmentId: HrShopDepartmentId,
+    hoursThousandths: number,
+    rateExVat: number,
+    vatPercent: number,
+  ) => string | null;
+}) {
+  return (
+    <tr>
+      <th scope="row" className={entityNameRowClassName('repeated')}>
+        {row.departmentName}
+      </th>
+      <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
+        {editable ? (
+          <QuantityCell
+            label={`План, часы, ${row.departmentName}`}
+            value={row.planHoursThousandths}
+            unit="ч"
+            blankIfZero
+            onChange={(next) => onChange(row.departmentId, next, row.planRateExVat, row.vatPercent)}
+          />
+        ) : (
+          `${formatHours(row.planHoursThousandths)} ч`
+        )}
+      </td>
+      <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
+        {editable ? (
+          <MoneyCell
+            label={`Ставка аутсорсинга, ${row.departmentName}`}
+            value={row.planRateExVat}
+            parse={parseOpexMoney}
+            invalidMessage={HR_ERROR.rate}
+            onChange={(next) => onChange(row.departmentId, row.planHoursThousandths, next, row.vatPercent)}
+          />
+        ) : (
+          <>
+            <MoneyAmount amount={row.planRateExVat} />
+            <span className="text-muted"> /ч</span>
+          </>
+        )}
+      </td>
+      <td className={`${valueCell} ${cellKindClassName.computed}`}>
+        <MoneyAmount amount={row.planAmountExVat} />
+      </td>
+      <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
+        {editable ? (
+          <PercentCell
+            label={`НДС, ${row.departmentName}`}
+            value={row.vatPercent}
+            invalidMessage={HR_ERROR.vat}
+            onChange={(next) => onChange(row.departmentId, row.planHoursThousandths, row.planRateExVat, next)}
+          />
+        ) : (
+          `${row.vatPercent} %`
+        )}
+      </td>
+    </tr>
   );
 }
 

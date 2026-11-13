@@ -1,8 +1,7 @@
 import { type CreditCreditorRowView, creditResourcesMonthView } from '@/domain/credit-resources';
 import { MATERIAL_GROUPS, type PrototypeDocument } from '@/domain/document';
-import { HR_TAX_RATE_SCALE, hrTaxRatesOrDefault } from '@/domain/hr';
+import { outsourcingMonthAmountsWithVat } from '@/domain/hr';
 import { materialMovementMonth } from '@/domain/materials';
-import { amountWithVat } from '@/domain/money';
 import { operatingExpenseMonthView } from '@/domain/operating-expense';
 import { propertyTaxForMonth } from '@/domain/property-tax';
 import { shiftMonth } from '@/domain/sales-plan';
@@ -91,38 +90,26 @@ function opexViewForMonth(document: PrototypeDocument, month: string) {
   );
 }
 
-/** В ДДС суммы с НДС: аутсорс поднимают ставкой «НДС аутсорса», остальные opex без НДС. */
-function cashflowOpexAmount(lineId: string, amountExVat: number, vatHundredths: number): number {
-  if (lineId !== 'outsourcing') {
-    return amountExVat;
-  }
-  return amountWithVat(amountExVat, vatHundredths / HR_TAX_RATE_SCALE) ?? amountExVat;
-}
-
-function outsourcingVatHundredths(document: PrototypeDocument, month: string, sideName: 'plan' | 'fact'): number {
-  const rates = hrTaxRatesOrDefault(document, month);
-  return sideName === 'plan' ? rates.planOutsourcingVatHundredths : rates.factOutsourcingVatHundredths;
-}
-
+/** В ДДС суммы с НДС: аутсорс — сумма по цехам со ставкой каждого; остальные opex без НДС. */
 function opexBlock(document: PrototypeDocument, month: string): CashflowLineView {
   const opex = opexViewForMonth(document, month);
   const previousMonth = shiftMonth(month, -1);
   const previousOpex = previousMonth >= CHAIN_START ? opexViewForMonth(document, previousMonth) : null;
-  const planVatMonth = previousMonth >= CHAIN_START ? previousMonth : month;
-  const currentFactVat = outsourcingVatHundredths(document, month, 'fact');
-  const currentPlanVat = outsourcingVatHundredths(document, month, 'plan');
-  const previousPlanVat = outsourcingVatHundredths(document, planVatMonth, 'plan');
+  const planOutsourcingMonth = previousMonth >= CHAIN_START ? previousMonth : month;
+  const currentOutsourcing = outsourcingMonthAmountsWithVat(document, month);
+  const planOutsourcing = outsourcingMonthAmountsWithVat(document, planOutsourcingMonth);
 
   const children = opex.groups.map((group) => {
     const previousGroup =
       group.code === '1' ? previousOpex?.groups.find((item) => item.code === group.code) : undefined;
     const lineChildren = group.lines.map((item) => {
+      if (item.id === 'outsourcing') {
+        const plan = group.code === '1' ? planOutsourcing.planWithVat : currentOutsourcing.planWithVat;
+        return line(`opex:${group.code}:${item.id}`, `${item.code} ${item.name}`, plan, currentOutsourcing.factWithVat);
+      }
       const previousLine = previousGroup?.lines.find((lineItem) => lineItem.id === item.id);
-      const planExVat = group.code === '1' ? (previousLine?.planExVat ?? 0) : item.planExVat;
-      const planVat = group.code === '1' ? previousPlanVat : currentPlanVat;
-      const plan = cashflowOpexAmount(item.id, planExVat, planVat);
-      const fact = cashflowOpexAmount(item.id, item.factExVat, currentFactVat);
-      return line(`opex:${group.code}:${item.id}`, `${item.code} ${item.name}`, plan, fact);
+      const plan = group.code === '1' ? (previousLine?.planExVat ?? 0) : item.planExVat;
+      return line(`opex:${group.code}:${item.id}`, `${item.code} ${item.name}`, plan, item.factExVat);
     });
     // Итог группы — сумма строк (с НДС у аутсорса), а не сырой ExVat из opex.
     return line(`opex-group:${group.code}`, group.name, 0, 0, lineChildren);

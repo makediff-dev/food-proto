@@ -1,5 +1,7 @@
 import {
   type FinishedGoodsOpening,
+  type HrDayOutsourcingLine,
+  type HrMonthPlanOutsourcingLine,
   isMonthKey,
   type MaterialUnit,
   type OpexOtherLine,
@@ -8,6 +10,7 @@ import {
   type TransportCarrier,
   type TransportVehicle,
 } from '@/domain/document';
+import { DEFAULT_OUTSOURCING_VAT_PERCENT, outsourcingFactRateExVat } from '@/domain/hr';
 import { shiftMonth } from '@/domain/sales-plan';
 
 const DEFAULT_OPEX_OTHER_VAT_PERCENT = 20;
@@ -69,6 +72,58 @@ function normalizeTransportFuelVat(document: PrototypeDocument): PrototypeDocume
   return changed ? { ...document, transportVehicles } : document;
 }
 
+/** НДС аутсорса — на строке цеха; у старых планов подставляем 20 %. */
+function normalizeHrOutsourcingPlanVat(document: PrototypeDocument): PrototypeDocument {
+  let changed = false;
+  const hrMonthPlans = (document.hrMonthPlans ?? []).map((plan) => {
+    const outsourcingLines = plan.outsourcingLines.map((line) => {
+      const raw = line as HrMonthPlanOutsourcingLine & { vatPercent?: number };
+      if (Number.isInteger(raw.vatPercent) && raw.vatPercent >= 0 && raw.vatPercent <= 100) {
+        return line;
+      }
+      changed = true;
+      return { ...line, vatPercent: DEFAULT_OUTSOURCING_VAT_PERCENT };
+    });
+    return { ...plan, outsourcingLines };
+  });
+  return changed ? { ...document, hrMonthPlans } : document;
+}
+
+/**
+ * Дневной факт аутсорса хранит ставку часа без НДС.
+ * Старые строки с `amountExVat` переводим в ставку = сумма / часы.
+ */
+function normalizeHrOutsourcingDayRate(document: PrototypeDocument): PrototypeDocument {
+  let changed = false;
+  const hrDayFacts = (document.hrDayFacts ?? []).map((day) => {
+    const outsourcingLines = day.outsourcingLines.map((line) => {
+      const raw = line as HrDayOutsourcingLine & { amountExVat?: number; rateExVat?: number };
+      if (Number.isInteger(raw.rateExVat) && raw.rateExVat >= 0) {
+        if (raw.amountExVat === undefined) {
+          return line;
+        }
+        changed = true;
+        return {
+          id: line.id,
+          departmentId: line.departmentId,
+          hourThousandths: line.hourThousandths,
+          rateExVat: raw.rateExVat,
+        };
+      }
+      changed = true;
+      const amountExVat = Number.isInteger(raw.amountExVat) ? (raw.amountExVat ?? 0) : 0;
+      return {
+        id: line.id,
+        departmentId: line.departmentId,
+        hourThousandths: line.hourThousandths,
+        rateExVat: outsourcingFactRateExVat(amountExVat, line.hourThousandths),
+      };
+    });
+    return { ...day, outsourcingLines };
+  });
+  return changed ? { ...document, hrDayFacts } : document;
+}
+
 const LEGACY_OPENING_SCHEMA = 41 as const;
 
 /**
@@ -76,8 +131,10 @@ const LEGACY_OPENING_SCHEMA = 41 as const;
  * Старые записи месяца M хранили остаток на начало M → переносим в конец M−1.
  */
 export function migrateDocument(document: PrototypeDocument): PrototypeDocument {
-  const normalizedUnits = normalizeTransportFuelVat(
-    normalizeTransportCarrierVat(normalizeOpexOtherVat(normalizeMaterialUnits(document))),
+  const normalizedUnits = normalizeHrOutsourcingDayRate(
+    normalizeHrOutsourcingPlanVat(
+      normalizeTransportFuelVat(normalizeTransportCarrierVat(normalizeOpexOtherVat(normalizeMaterialUnits(document)))),
+    ),
   );
 
   if (normalizedUnits.schemaVersion === SCHEMA_VERSION) {

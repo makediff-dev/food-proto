@@ -197,12 +197,22 @@ export function useOpex() {
       departmentId: HrShopDepartmentId,
       hourThousandths: number,
       rateExVat: number,
+      vatPercent: number,
     ): HrFieldRejection | null {
-      const rejection = setHrOutsourcingPlanRejection(document, month, departmentId, hourThousandths, rateExVat);
+      const rejection = setHrOutsourcingPlanRejection(
+        document,
+        month,
+        departmentId,
+        hourThousandths,
+        rateExVat,
+        vatPercent,
+      );
       if (rejection) {
         return rejection;
       }
-      updateDocument((current) => setHrOutsourcingPlan(current, month, departmentId, hourThousandths, rateExVat));
+      updateDocument((current) =>
+        setHrOutsourcingPlan(current, month, departmentId, hourThousandths, rateExVat, vatPercent),
+      );
       return null;
     },
     setHrMonthStaff(
@@ -235,13 +245,13 @@ export function useOpex() {
       occurredOn: string,
       departmentId: HrShopDepartmentId,
       hourThousandths: number,
-      amountExVat: number,
+      rateExVat: number,
     ): HrFieldRejection | null {
-      const rejection = setHrDayOutsourcingRejection(document, occurredOn, departmentId, hourThousandths, amountExVat);
+      const rejection = setHrDayOutsourcingRejection(document, occurredOn, departmentId, hourThousandths, rateExVat);
       if (rejection) {
         return rejection;
       }
-      updateDocument((current) => setHrDayOutsourcing(current, occurredOn, departmentId, hourThousandths, amountExVat));
+      updateDocument((current) => setHrDayOutsourcing(current, occurredOn, departmentId, hourThousandths, rateExVat));
       return null;
     },
     setHrTaxRate(month: string, field: HrTaxRateField, rateHundredths: number): HrFieldRejection | null {

@@ -262,6 +262,8 @@ export interface HrMonthPlanOutsourcingLine {
   hourThousandths: number;
   /** Ставка, копейки за 1 час без НДС. */
   rateExVat: number;
+  /** Ставка НДС аутсорса цеха, целое 0–100. Сумму налога считают по строке. */
+  vatPercent: number;
 }
 
 /** План HR на календарный месяц. На один месяц — одна запись. */
@@ -300,13 +302,13 @@ export interface HrDayStaffLine {
   amountExVat: number;
 }
 
-/** Дневной факт аутсорсинга цеха/РЦ: часы и выплаченная сумма отдельно. */
+/** Дневной факт аутсорсинга цеха/РЦ: часы и ставка часа без НДС; сумма = часы × ставка. */
 export interface HrDayOutsourcingLine {
   id: string;
   departmentId: HrShopDepartmentId;
   hourThousandths: number;
-  /** Выплаченная сумма, копейки без НДС. */
-  amountExVat: number;
+  /** Ставка, копейки за 1 час без НДС. */
+  rateExVat: number;
 }
 
 export interface HrDayFact {
@@ -318,8 +320,10 @@ export interface HrDayFact {
 }
 
 /**
- * Ставки зарплатных налогов и НДС аутсорса месяца, сотые доли процента: 13 % → 1300, 0,2 % → 20.
- * План и факт раздельно, как `HR!E86:H88`. НДС аутсорса кормит ДДС (сумма с НДС).
+ * Ставки зарплатных налогов месяца, сотые доли процента: 13 % → 1300, 0,2 % → 20.
+ * План и факт раздельно, как `HR!E86:H88`.
+ * Ставка НДС аутсорса — у строки цеха в плане (`HrMonthPlanOutsourcingLine.vatPercent`);
+ * поля `*OutsourcingVatHundredths` оставлены для старых документов и больше не правятся.
  */
 export interface HrTaxRatesMonth {
   id: string;
@@ -327,11 +331,12 @@ export interface HrTaxRatesMonth {
   planNdflHundredths: number;
   planSocialHundredths: number;
   planInjuryHundredths: number;
-  /** НДС аутсорса персонала, сотые доли %: 20 % → 2000. */
+  /** @deprecated Ставка НДС — у цеха в плане аутсорса. */
   planOutsourcingVatHundredths: number;
   factNdflHundredths: number;
   factSocialHundredths: number;
   factInjuryHundredths: number;
+  /** @deprecated Ставка НДС — у цеха в плане аутсорса. */
   factOutsourcingVatHundredths: number;
 }
 
