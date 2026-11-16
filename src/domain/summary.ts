@@ -137,8 +137,14 @@ export interface SummaryHeadline {
   taxPercent: number;
 }
 
-/** Фактическая сводка урезает план; прогноз растягивает факт. */
+/** Фактическая сводка урезает план; прогноз растягивает факт. Производство. */
 export type SummaryLens = 'current' | 'forecast';
+
+/**
+ * Сравнение плана и факта продаж.
+ * `none` — без приведения; `current` — приведение плана; `forecast` — приведение факта.
+ */
+export type SalesComparison = 'none' | 'current' | 'forecast';
 
 type VolumeScale = { kind: 'identity' } | { kind: 'zero' } | { kind: 'ratio'; numerator: number; denominator: number };
 
@@ -626,14 +632,15 @@ export function actualRangeSummary(document: PrototypeDocument, from: string, to
 }
 
 /**
- * Прогноз: один месяц с линзой, интервал — сумма полных месяцев.
- * Фактическая — `actualRangeSummary`.
+ * Сводка продаж по режиму сравнения.
+ * Без приведения — полные месяцы. Приведение плана — `actualRangeSummary`.
+ * Приведение факта: один месяц с линзой, интервал — сумма полных месяцев.
  */
 export function summaryForLens(
   document: PrototypeDocument,
   from: string,
   to: string,
-  lens: SummaryLens,
+  lens: SalesComparison,
   today: Date,
 ): SummaryView {
   if (lens === 'current') {
@@ -641,11 +648,11 @@ export function summaryForLens(
   }
 
   const range = normalizeMonthRange(from, to);
-  if (range.from === range.to) {
-    return applySummaryLens(monthSummary(document, range.from), 'forecast', today);
+  if (lens === 'none' || range.from !== range.to) {
+    return rangeSummary(document, range.from, range.to);
   }
 
-  return rangeSummary(document, range.from, range.to);
+  return applySummaryLens(monthSummary(document, range.from), 'forecast', today);
 }
 
 function calendarDays(views: readonly SummaryView[]): number {

@@ -1,6 +1,6 @@
 'use client';
 
-import type { SummaryHeadline as Headline, SummaryLens } from '@/domain/summary';
+import type { SummaryHeadline as Headline, SalesComparison } from '@/domain/summary';
 import {
   type CellKind,
   ColumnLabel,
@@ -68,7 +68,7 @@ export function SummaryHeadlineTable({
 }: {
   headline: Headline;
   periodLabel: string;
-  view: SummaryLens;
+  view: SalesComparison;
   periodClosed?: boolean;
   /** Прогноз — сумма месяца. Фактическая — доля прошедших дней только у плана. */
   expenseBasis?: 'month' | 'elapsed';

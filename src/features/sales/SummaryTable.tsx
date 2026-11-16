@@ -5,7 +5,7 @@ import { useState } from 'react';
 import type { UnitCost } from '@/domain/cost';
 import { amountExVat } from '@/domain/money';
 import { priceWithVatFromExVat, type SalesPlanRejection } from '@/domain/sales-plan';
-import type { SummaryGroup, SummaryLens, SummaryRow, SummarySide, SummaryVariance } from '@/domain/summary';
+import type { SalesComparison, SummaryGroup, SummaryRow, SummarySide, SummaryVariance } from '@/domain/summary';
 import { FIELD_ERROR, VAT_PARSE_ERROR } from '@/features/sales/fields';
 import { formatPerDay, formatPieces, formatPriceExVat, SALES_PLAN_ERROR } from '@/features/sales/text';
 import { IconChevronDown, IconChevronRight, IconPlus, IconTrash } from '@/features/shell/Icons';
@@ -155,7 +155,7 @@ export function SummaryTable({
   planTotals: SummarySide | null;
   factTotals: SummarySide;
   variance: SummaryVariance;
-  view: SummaryLens;
+  view: SalesComparison;
   periodClosed?: boolean;
   part?: 'full' | 'plan';
   expanded?: boolean;

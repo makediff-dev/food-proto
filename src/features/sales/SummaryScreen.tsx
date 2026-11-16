@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useId, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useId, useMemo, useState } from 'react';
 
 import { activeCategories } from '@/domain/categories';
 import { monthKeyFromDate, planMonthOpen } from '@/domain/sales-plan';
@@ -12,21 +12,24 @@ import {
   lastHorizonMonth,
   monthsInRange,
   normalizeMonthRange,
-  type SummaryLens,
+  type SalesComparison,
   summaryForLens,
 } from '@/domain/summary';
 import { planningHref } from '@/features/planning/paths';
 import { useRole } from '@/features/roles/RoleProvider';
-import { monthFieldClassName, primaryButtonClassName } from '@/features/sales/fields';
+import { monthFieldClassName } from '@/features/sales/fields';
 import { summaryHref } from '@/features/sales/paths';
 import { SummaryHeadlineTable } from '@/features/sales/SummaryHeadlineTable';
 import { SummaryTable } from '@/features/sales/SummaryTable';
 import { daysPhrase, formatMonth, formatMonthNameGenitive } from '@/features/sales/text';
 import { useSales } from '@/features/sales/use-sales';
-import { IconFact, IconFullscreen, IconFullscreenExit, IconPlan } from '@/features/shell/Icons';
+import { IconEye, IconFact, IconFullscreen, IconFullscreenExit, IconPlan } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
 
-export function SummaryScreen({ from, to, view }: { from: string; to: string; view: SummaryLens }) {
+const comparisonButtonClassName =
+  'inline-flex h-11 shrink-0 items-center justify-center gap-2 border border-line px-3 text-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink';
+
+export function SummaryScreen({ from, to, view }: { from: string; to: string; view: SalesComparison }) {
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
   const range = resolveRange(from, to, today);
@@ -45,7 +48,7 @@ function Workspace({
   to: string;
   currentMonth: string;
   today: Date;
-  view: SummaryLens;
+  view: SalesComparison;
 }) {
   const sales = useSales();
   const { canViewSalesFinance } = useRole();
@@ -53,8 +56,8 @@ function Workspace({
   const fromFieldId = useId();
   const toFieldId = useId();
   const [fullscreen, setFullscreen] = useState(false);
-  const isActual = view === 'current';
-  const period = isActual ? ensureRangeIncludesMonth(from, to, currentMonth) : { from, to };
+  const isPlanScaled = view === 'current';
+  const period = isPlanScaled ? ensureRangeIncludesMonth(from, to, currentMonth) : { from, to };
   const periodFrom = period.from;
   const periodTo = period.to;
   const singleMonth = periodFrom === periodTo;
@@ -68,7 +71,7 @@ function Workspace({
   const tableExpanded = fullscreen && hasTable;
   const periodLabel = singleMonth ? periodFrom : `${periodFrom} — ${periodTo}`;
   const periodClosed = periodTo < currentMonth;
-  const actualAvailable = periodFrom <= currentMonth && currentMonth <= periodTo;
+  const planScaleAvailable = periodFrom <= currentMonth && currentMonth <= periodTo;
   const title = summaryPageTitle({
     view,
     from: periodFrom,
@@ -77,7 +80,7 @@ function Workspace({
   });
 
   useEffect(() => {
-    if (!isActual) {
+    if (!isPlanScaled) {
       return;
     }
     if (from === periodFrom && to === periodTo) {
@@ -92,7 +95,7 @@ function Workspace({
       }),
       { scroll: false },
     );
-  }, [isActual, from, to, periodFrom, periodTo, currentMonth, router]);
+  }, [isPlanScaled, from, to, periodFrom, periodTo, currentMonth, router]);
 
   useEffect(() => {
     if (!tableExpanded) {
@@ -114,7 +117,7 @@ function Workspace({
     };
   }, [tableExpanded]);
 
-  function open(nextFrom: string, nextTo: string, nextView: SummaryLens = view) {
+  function open(nextFrom: string, nextTo: string, nextView: SalesComparison = view) {
     const range = normalizeMonthRange(nextFrom, nextTo);
     const hrefRange = nextView === 'current' ? ensureRangeIncludesMonth(range.from, range.to, currentMonth) : range;
     router.push(
@@ -135,27 +138,6 @@ function Workspace({
       <PageFrame
         title={title}
         full
-        aside={
-          isActual ? (
-            <button
-              type="button"
-              className={primaryButtonClassName}
-              onClick={() => open(periodFrom, periodTo, 'forecast')}
-            >
-              <IconPlan />
-              Прогноз
-            </button>
-          ) : actualAvailable ? (
-            <button
-              type="button"
-              className={primaryButtonClassName}
-              onClick={() => open(periodFrom, periodTo, 'current')}
-            >
-              <IconFact />
-              Фактическая
-            </button>
-          ) : null
-        }
         intro={
           <div className="flex flex-col gap-4">
             <div className="w-full border border-line bg-sheet p-4">
@@ -168,18 +150,18 @@ function Workspace({
                     id={fromFieldId}
                     type="month"
                     min="2000-01"
-                    max={isActual ? currentMonth : horizonEnd}
+                    max={isPlanScaled ? currentMonth : horizonEnd}
                     value={periodFrom}
                     onChange={(event) => {
                       const next = event.target.value;
                       if (!planMonthOpen(next, today)) {
                         return;
                       }
-                      if (isActual && next > currentMonth) {
+                      if (isPlanScaled && next > currentMonth) {
                         return;
                       }
                       const nextTo = next > periodTo ? next : periodTo;
-                      open(next, isActual && nextTo < currentMonth ? currentMonth : nextTo, view);
+                      open(next, isPlanScaled && nextTo < currentMonth ? currentMonth : nextTo, view);
                     }}
                     className={monthFieldClassName}
                   />
@@ -191,7 +173,7 @@ function Workspace({
                   <input
                     id={toFieldId}
                     type="month"
-                    min={isActual ? currentMonth : '2000-01'}
+                    min={isPlanScaled ? currentMonth : '2000-01'}
                     max={horizonEnd}
                     value={periodTo}
                     onChange={(event) => {
@@ -199,13 +181,39 @@ function Workspace({
                       if (!planMonthOpen(next, today)) {
                         return;
                       }
-                      if (isActual && next < currentMonth) {
+                      if (isPlanScaled && next < currentMonth) {
                         return;
                       }
                       const nextFrom = next < periodFrom ? next : periodFrom;
-                      open(isActual && nextFrom > currentMonth ? currentMonth : nextFrom, next, view);
+                      open(isPlanScaled && nextFrom > currentMonth ? currentMonth : nextFrom, next, view);
                     }}
                     className={monthFieldClassName}
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2 border-l border-line pl-3">
+                  <span className="text-sm text-muted">Приведение</span>
+                  <ComparisonButton
+                    label="Без приведения"
+                    title="план месяца и факт на сегодня"
+                    selected={view === 'none'}
+                    icon={<IconEye />}
+                    onClick={() => open(periodFrom, periodTo, 'none')}
+                  />
+                  {planScaleAvailable ? (
+                    <ComparisonButton
+                      label="Приведение плана"
+                      title="план на прошедшие дни"
+                      selected={view === 'current'}
+                      icon={<IconPlan />}
+                      onClick={() => open(periodFrom, periodTo, 'current')}
+                    />
+                  ) : null}
+                  <ComparisonButton
+                    label="Приведение факта"
+                    title="факт тем же темпом до конца месяца"
+                    selected={view === 'forecast'}
+                    icon={<IconFact />}
+                    onClick={() => open(periodFrom, periodTo, 'forecast')}
                   />
                 </div>
               </div>
@@ -215,7 +223,7 @@ function Workspace({
               periodLabel={periodLabel}
               view={view}
               periodClosed={periodClosed}
-              expenseBasis={isActual ? 'elapsed' : 'month'}
+              expenseBasis={isPlanScaled ? 'elapsed' : 'month'}
               showFinance={canViewSalesFinance}
             />
           </div>
@@ -276,13 +284,42 @@ function Workspace({
   );
 }
 
+function ComparisonButton({
+  label,
+  title,
+  selected,
+  icon,
+  onClick,
+}: {
+  label: string;
+  title: string;
+  selected: boolean;
+  icon: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      title={title}
+      onClick={onClick}
+      className={`${comparisonButtonClassName} ${
+        selected ? 'border-ink bg-ink text-white' : 'bg-sheet text-ink hover:border-ink'
+      }`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
 function summaryPageTitle({
   view,
   from,
   to,
   today,
 }: {
-  view: SummaryLens;
+  view: SalesComparison;
   from: string;
   to: string;
   today: Date;
@@ -297,6 +334,15 @@ function summaryPageTitle({
   }
 
   const endIsPast = to < currentMonth;
+  if (view === 'none') {
+    if (from === to) {
+      return endIsPast ? `Сводка за ${formatMonth(from)}` : `Сводка на ${formatMonth(from)}`;
+    }
+    return endIsPast
+      ? `Сводка за период с ${formatMonth(from)} до ${formatMonth(to)}`
+      : `Сводка на период с ${formatMonth(from)} до ${formatMonth(to)}`;
+  }
+
   if (from === to) {
     return endIsPast ? `Сводка за ${formatMonth(from)}` : `Прогноз на ${formatMonth(from)}`;
   }

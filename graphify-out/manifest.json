@@ -150,9 +150,9 @@
     "semantic_hash": "f1509dbf0b6c9dd96e99ad72151cb276"
   },
   "src/domain/summary.ts": {
-    "mtime": 1794316167.8060346,
-    "seen": 1794316212.9718757,
-    "ast_hash": "b7a7e4b2f423a7613939645cf2016d50",
+    "mtime": 1794850771.7104056,
+    "seen": 1794850978.8880868,
+    "ast_hash": "499e076a44795954c03dc36f9f542873",
     "semantic_hash": ""
   },
   "src/domain/units.ts": {
@@ -192,10 +192,10 @@
     "semantic_hash": ""
   },
   "src/features/sales/paths.ts": {
-    "mtime": 1791547412.3490922,
-    "seen": 1792057892.1467483,
-    "ast_hash": "09556b92cfeb5a9be84107af34f188d0",
-    "semantic_hash": "09556b92cfeb5a9be84107af34f188d0"
+    "mtime": 1794850799.1042244,
+    "seen": 1794850978.8896482,
+    "ast_hash": "31b6aa5cedd30a8f59c9aef6fbf1612f",
+    "semantic_hash": ""
   },
   "src/features/sales/text.ts": {
     "mtime": 1793783494.4188955,
@@ -262,9 +262,9 @@
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1794845958.2400708,
-    "seen": 1794846293.4961605,
-    "ast_hash": "d368fc513b31abd4e93318202a61f92d",
+    "mtime": 1794850889.0998921,
+    "seen": 1794850978.8896482,
+    "ast_hash": "f3b39f3cf41e26b0cc525c27d816d690",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
@@ -453,9 +453,9 @@
     "semantic_hash": ""
   },
   "src/features/production/ProductionPlaceholderScreen.tsx": {
-    "mtime": 1794849280.8884172,
-    "seen": 1794849300.018917,
-    "ast_hash": "6d5521bb2efabf0fe0dd56a8d3fd5b6b",
+    "mtime": 1794849303.0242548,
+    "seen": 1794850978.8896482,
+    "ast_hash": "f700fab5ce6b43d08ac451f07b8c87c2",
     "semantic_hash": ""
   },
   "src/features/production/ProductionPlanScreen.tsx": {
@@ -507,21 +507,21 @@
     "semantic_hash": ""
   },
   "src/features/sales/SummaryHeadlineTable.tsx": {
-    "mtime": 1793975373.7891617,
-    "seen": 1793975864.8731441,
-    "ast_hash": "71e5403b9fb65eea0e73e8fb2b974126",
+    "mtime": 1794850950.7290838,
+    "seen": 1794850978.8896482,
+    "ast_hash": "2652cbffc9306733ea646f22b40c67f0",
     "semantic_hash": ""
   },
   "src/features/sales/SummaryScreen.tsx": {
-    "mtime": 1793718168.8449776,
-    "seen": 1793718455.365931,
-    "ast_hash": "223c1e6bd0942d3042f77aae07f16185",
+    "mtime": 1794850965.2687984,
+    "seen": 1794850978.8896482,
+    "ast_hash": "d0ef2659d6807ea0edb38955f378706e",
     "semantic_hash": ""
   },
   "src/features/sales/SummaryTable.tsx": {
-    "mtime": 1793714243.9338944,
-    "seen": 1793714635.6194293,
-    "ast_hash": "1d22c63592e6038c9db415233c3fbffc",
+    "mtime": 1794850832.2301447,
+    "seen": 1794850978.8896482,
+    "ast_hash": "ae5f0c5847efeee79e2103c8548cf5cd",
     "semantic_hash": ""
   },
   "src/features/shell/AppShell.tsx": {
@@ -549,9 +549,9 @@
     "semantic_hash": "d15d269ddfeec61a0c1a2f7dff47b68d"
   },
   "src/features/shell/PageFrame.tsx": {
-    "mtime": 1794849280.874081,
-    "seen": 1794849300.018917,
-    "ast_hash": "4655164ee72359dc61f8249bc12cbd4c",
+    "mtime": 1794849303.0179958,
+    "seen": 1794850978.8896482,
+    "ast_hash": "434faeedeeee12f7c03259baf071b6cf",
     "semantic_hash": ""
   },
   "src/features/table/Cells.tsx": {
@@ -693,9 +693,9 @@
     "semantic_hash": ""
   },
   "docs/flow.md": {
-    "mtime": 1793783478.2984357,
-    "seen": 1793783507.033258,
-    "ast_hash": "5e7f2261cbaef0156f700fad4144805b",
+    "mtime": 1794850897.4758034,
+    "seen": 1794850978.8896482,
+    "ast_hash": "012f29ed4ea2294bc2be0db9a8c5e112",
     "semantic_hash": ""
   },
   "docs/tables/inventory.md": {
@@ -765,9 +765,9 @@
     "semantic_hash": ""
   },
   "docs/tables/sales-summary.md": {
-    "mtime": 1793975798.0253575,
-    "seen": 1793975864.8731441,
-    "ast_hash": "94e1ee0151d073148424b8443e7ddf4b",
+    "mtime": 1794850903.843183,
+    "seen": 1794850978.8896482,
+    "ast_hash": "3bb34d2af78dcf7fc65b56d1fa138041",
     "semantic_hash": ""
   },
   "src/app/materials/inventory/page.tsx": {
@@ -879,9 +879,9 @@
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsNormsScreen.tsx": {
-    "mtime": 1794849283.2540407,
-    "seen": 1794849300.018917,
-    "ast_hash": "2ca36dfa013c97264877d7fa1108af18",
+    "mtime": 1794849303.0172997,
+    "seen": 1794850978.8896482,
+    "ast_hash": "0825475e2f52bac81b94029b43e8b3d7",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsPlanScreen.tsx": {
