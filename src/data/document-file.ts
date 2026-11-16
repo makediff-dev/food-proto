@@ -40,6 +40,7 @@ const DOCUMENT_COLLECTION_KEYS = {
   creditResourceDays: 'object',
   propertyTaxMonths: 'object',
   taxPaymentDays: 'object',
+  profitTaxRateChanges: 'object',
 } as const satisfies Record<DocumentCollectionKey, 'object' | 'string'>;
 
 export type ParseDocumentResult = { ok: true; document: PrototypeDocument } | { ok: false; error: string };

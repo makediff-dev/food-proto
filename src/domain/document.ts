@@ -1,6 +1,6 @@
-export const SCHEMA_VERSION = 70 as const;
+export const SCHEMA_VERSION = 71 as const;
 
-/** Ставка налога на прибыль, %. `Svod!C6`. */
+/** Ставка налога на прибыль по умолчанию, %. `Svod!C6`. С месяца может смениться — `profitTaxRateChanges`. */
 export const PROFIT_TAX_PERCENT = 20;
 
 const DELETION_MARK = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -965,6 +965,18 @@ export interface PropertyTaxMonth {
   plan: number;
 }
 
+/**
+ * Точка смены ставки налога на прибыль.
+ * Действует с этого месяца, пока нет более поздней точки. Месяц без своей точки ставку не хранит.
+ */
+export interface ProfitTaxRateChange {
+  id: string;
+  /** `ГГГГ-ММ`, с которого действует ставка. */
+  month: string;
+  /** Сотые доли процента. 20 % → 2000. */
+  rateHundredths: number;
+}
+
 /** Вид дневной налоговой оплаты на «Вводе факта» ДДС. */
 export type TaxPaymentKind = 'vat' | 'ndfl' | 'social' | 'injury' | 'profit' | 'property';
 
@@ -1095,6 +1107,13 @@ export interface PrototypeDocument {
    * Старый документ без поля читается как пустой массив.
    */
   taxPaymentDays: TaxPaymentDay[];
+  /**
+   * Точки смены ставки налога на прибыль.
+   * Месяц без записи берёт ближайшую более раннюю точку, иначе 20 % (`Svod!C6`).
+   * Правка месяца пишет ставку с него и стирает более поздние точки.
+   * Старый документ без поля читается как пустой массив.
+   */
+  profitTaxRateChanges: ProfitTaxRateChange[];
 }
 
 /** Метка мягкого удаления, которую пишет экран через `Date.toISOString()`. */

@@ -1,3 +1,4 @@
+import type { ProfitTaxRejection } from '@/domain/profit-tax';
 import type { PropertyTaxRejection } from '@/domain/property-tax';
 import type { TaxPaymentRejection } from '@/domain/tax-payment';
 import { fromRublesUpTo, parseDecimal } from '@/domain/units';
@@ -8,6 +9,11 @@ const MAX_PROPERTY_TAX_KOPECKS = 100_000_000_000;
 export const PROPERTY_TAX_ERROR: Record<PropertyTaxRejection, string> = {
   month: 'Укажите месяц.',
   amount: 'Укажите сумму.',
+};
+
+export const PROFIT_TAX_ERROR: Record<ProfitTaxRejection, string> = {
+  month: 'Укажите месяц.',
+  rate: 'Укажите ставку от 0 до 100.',
 };
 
 export const TAX_PAYMENT_ERROR: Record<TaxPaymentRejection, string> = {

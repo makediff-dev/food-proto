@@ -49,11 +49,28 @@ function visibleHeadlineRows(showFinance: boolean): { id: HeadlineRowId; label: 
   return ROWS.filter((row) => SALES_OPS_HEADLINE_ROWS.includes(row.id));
 }
 
-function IndicatorHead({ id, label, taxPercent }: { id: HeadlineRowId; label: string; taxPercent: number }) {
+function formatTaxRateLabel(hundredths: number): string {
+  const text = new Intl.NumberFormat('ru-RU', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(hundredths / 100);
+  return `${text}\u00A0%`;
+}
+
+function IndicatorHead({
+  id,
+  label,
+  taxRateHundredths,
+}: {
+  id: HeadlineRowId;
+  label: string;
+  taxRateHundredths: number | null;
+}) {
+  const rate = id === 'tax' && taxRateHundredths !== null ? formatTaxRateLabel(taxRateHundredths) : null;
   return (
     <th scope="col" className={valueHeadClassName}>
       <ColumnLabel label={label} />
-      {id === 'tax' ? <span className="mt-0.5 block text-sm text-muted">{taxPercent}&nbsp;%</span> : null}
+      {rate ? <span className="mt-0.5 block text-sm text-muted">{rate}</span> : null}
     </th>
   );
 }
@@ -96,7 +113,12 @@ export function SummaryHeadlineTable({
               <span className="sr-only">Показатель</span>
             </th>
             {rows.map((row) => (
-              <IndicatorHead key={row.id} id={row.id} label={row.label} taxPercent={headline.taxPercent} />
+              <IndicatorHead
+                key={row.id}
+                id={row.id}
+                label={row.label}
+                taxRateHundredths={headline.taxRateHundredths}
+              />
             ))}
           </tr>
         </thead>
@@ -250,7 +272,12 @@ export function PlanHeadlineTable({
               <span className="sr-only">Показатель</span>
             </th>
             {rows.map((row) => (
-              <IndicatorHead key={row.id} id={row.id} label={row.label} taxPercent={headline.taxPercent} />
+              <IndicatorHead
+                key={row.id}
+                id={row.id}
+                label={row.label}
+                taxRateHundredths={headline.taxRateHundredths}
+              />
             ))}
           </tr>
         </thead>

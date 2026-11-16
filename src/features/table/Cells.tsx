@@ -173,6 +173,7 @@ export function HundredthsCell({
   value,
   signed = false,
   sense = 'income',
+  unit,
   invalidMessage = 'Укажите число с двумя знаками после запятой.',
   onChange,
 }: {
@@ -180,6 +181,7 @@ export function HundredthsCell({
   value: number | null;
   signed?: boolean;
   sense?: VarianceSense;
+  unit?: string;
   invalidMessage?: string;
   onChange?: CellCommit;
 }) {
@@ -191,9 +193,10 @@ export function HundredthsCell({
     if (value === null) {
       return <Empty />;
     }
+    const text = unit ? `${formatMoneyDraft(value)}\u00A0${unit}` : formatMoneyDraft(value);
     return (
       <TableNumber value={value} signed={signed} sense={sense}>
-        {formatMoneyDraft(value)}
+        {text}
       </TableNumber>
     );
   }
@@ -203,6 +206,7 @@ export function HundredthsCell({
       label={label}
       value={value === null ? '' : formatMoneyDraft(value)}
       inputMode="decimal"
+      unit={unit}
       invalidMessage={invalidMessage}
       parse={parseSignedHundredths}
       onChange={onChange}

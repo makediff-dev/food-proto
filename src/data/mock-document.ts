@@ -816,6 +816,7 @@ export const mockDocument: PrototypeDocument = {
   creditResourceDays: mockCreditResourceDays,
   propertyTaxMonths: mockPropertyTaxMonths,
   taxPaymentDays: mockPropertyTaxPayments,
+  profitTaxRateChanges: [],
 };
 
 export function createMockDocument(): PrototypeDocument {
@@ -931,5 +932,6 @@ export function createMockDocument(): PrototypeDocument {
     })),
     propertyTaxMonths: mockDocument.propertyTaxMonths.map((item) => ({ ...item })),
     taxPaymentDays: mockDocument.taxPaymentDays.map((item) => ({ ...item })),
+    profitTaxRateChanges: mockDocument.profitTaxRateChanges.map((item) => ({ ...item })),
   };
 }

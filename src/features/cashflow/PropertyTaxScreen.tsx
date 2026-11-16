@@ -3,11 +3,13 @@
 import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 
+import { profitTaxRateHundredths } from '@/domain/profit-tax';
 import { propertyTaxForMonth } from '@/domain/property-tax';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { CashflowMonthBar, resolveCashflowMonth } from '@/features/cashflow/CashflowMonthBar';
 import { CASHFLOW_PLAN_TITLE, cashflowPlanHref } from '@/features/cashflow/paths';
-import { PROPERTY_TAX_ERROR, parsePropertyTaxMoney } from '@/features/cashflow/text';
+import { PROFIT_TAX_ERROR, PROPERTY_TAX_ERROR, parsePropertyTaxMoney } from '@/features/cashflow/text';
+import { useProfitTax } from '@/features/cashflow/use-profit-tax';
 import { usePropertyTax } from '@/features/cashflow/use-property-tax';
 import { useRole } from '@/features/roles/RoleProvider';
 import { PageFrame } from '@/features/shell/PageFrame';
@@ -16,6 +18,7 @@ import {
   cellKindClassName,
   columnHeadingClassName,
   entityNameRowClassName,
+  HundredthsCell,
   MoneyCell,
   nameHeadingClassName,
   stickyHeadClassName,
@@ -36,12 +39,17 @@ export function PropertyTaxScreen({ month }: { month: string }) {
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = resolveCashflowMonth(month, today, currentMonth);
   const propertyTax = usePropertyTax();
+  const profitTax = useProfitTax();
   const { canEditCreditAndCashflow } = useRole();
   const router = useRouter();
-  const editable = propertyTax.hydrated && canEditCreditAndCashflow;
+  const editable = propertyTax.hydrated && profitTax.hydrated && canEditCreditAndCashflow;
   const view = useMemo(
     () => propertyTaxForMonth(propertyTax.document, selectedMonth),
     [propertyTax.document, selectedMonth],
+  );
+  const profitTaxRate = useMemo(
+    () => profitTaxRateHundredths(profitTax.document, selectedMonth),
+    [profitTax.document, selectedMonth],
   );
 
   return (
@@ -56,42 +64,82 @@ export function PropertyTaxScreen({ month }: { month: string }) {
         />
       }
     >
-      <div className={tableFrameClassName}>
-        <table className={tableClassName}>
-          <caption className="sr-only">{`План налога на имущество за ${selectedMonth}`}</caption>
-          <thead className={stickyHeadClassName}>
-            <tr>
-              <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                <ColumnLabel label="Статья" />
-              </th>
-              <th scope="col" className={valueEnd}>
-                <ColumnLabel label="План" />
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <th scope="row" className={entityNameRowClassName('repeated')}>
-                Налог на имущество
-              </th>
-              <td className={`${valueCellEnd} ${cellKindClassName[inputKind(editable)]}`}>
-                <MoneyCell
-                  label="Налог на имущество, план"
-                  value={view.plan}
-                  parse={parsePropertyTaxMoney}
-                  onChange={
-                    editable
-                      ? (amount) => {
-                          const rejection = propertyTax.setPlan(selectedMonth, amount);
-                          return rejection ? PROPERTY_TAX_ERROR[rejection] : null;
-                        }
-                      : undefined
-                  }
-                />
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div className="flex flex-col gap-8">
+        <div className={tableFrameClassName}>
+          <table className={tableClassName}>
+            <caption className="sr-only">{`Ставка налога на прибыль за ${selectedMonth}`}</caption>
+            <thead className={stickyHeadClassName}>
+              <tr>
+                <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                  <ColumnLabel label="Статья" />
+                </th>
+                <th scope="col" className={valueEnd}>
+                  <ColumnLabel label="Ставка" hint="Этот месяц и все следующие" />
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row" className={entityNameRowClassName('repeated')}>
+                  Налог на прибыль
+                </th>
+                <td className={`${valueCellEnd} ${cellKindClassName[inputKind(editable)]}`}>
+                  <HundredthsCell
+                    label="Ставка налога на прибыль"
+                    value={profitTaxRate}
+                    unit="%"
+                    invalidMessage={PROFIT_TAX_ERROR.rate}
+                    onChange={
+                      editable
+                        ? (rateHundredths) => {
+                            const rejection = profitTax.setRate(selectedMonth, rateHundredths);
+                            return rejection ? PROFIT_TAX_ERROR[rejection] : null;
+                          }
+                        : undefined
+                    }
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div className={tableFrameClassName}>
+          <table className={tableClassName}>
+            <caption className="sr-only">{`План налога на имущество за ${selectedMonth}`}</caption>
+            <thead className={stickyHeadClassName}>
+              <tr>
+                <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                  <ColumnLabel label="Статья" />
+                </th>
+                <th scope="col" className={valueEnd}>
+                  <ColumnLabel label="План" />
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row" className={entityNameRowClassName('repeated')}>
+                  Налог на имущество
+                </th>
+                <td className={`${valueCellEnd} ${cellKindClassName[inputKind(editable)]}`}>
+                  <MoneyCell
+                    label="Налог на имущество, план"
+                    value={view.plan}
+                    parse={parsePropertyTaxMoney}
+                    onChange={
+                      editable
+                        ? (amount) => {
+                            const rejection = propertyTax.setPlan(selectedMonth, amount);
+                            return rejection ? PROPERTY_TAX_ERROR[rejection] : null;
+                          }
+                        : undefined
+                    }
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </PageFrame>
   );

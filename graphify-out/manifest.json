@@ -84,9 +84,9 @@
     "semantic_hash": "66c2951a711a3c1f4596fa8fff571b2d"
   },
   "src/data/mock-document.ts": {
-    "mtime": 1794842037.6253412,
-    "seen": 1794842277.1912389,
-    "ast_hash": "08a7d2ac8b1b1881394fbbbfa3f85372",
+    "mtime": 1794852762.782019,
+    "seen": 1794852994.14769,
+    "ast_hash": "2d6f7760f8f3c2d065ea22acf58633d3",
     "semantic_hash": ""
   },
   "src/domain/categories.ts": {
@@ -108,9 +108,9 @@
     "semantic_hash": "724f33ff464c09fb3fcdf0af0a576d9d"
   },
   "src/domain/document.ts": {
-    "mtime": 1794845912.465817,
-    "seen": 1794846293.4961605,
-    "ast_hash": "d0cf84addf7ccff8778a2028e6698c81",
+    "mtime": 1794852762.7925465,
+    "seen": 1794852994.14769,
+    "ast_hash": "c09c96924688f38e0fbf5bc46af16163",
     "semantic_hash": ""
   },
   "src/domain/money.ts": {
@@ -150,9 +150,9 @@
     "semantic_hash": "f1509dbf0b6c9dd96e99ad72151cb276"
   },
   "src/domain/summary.ts": {
-    "mtime": 1794850771.7104056,
-    "seen": 1794850978.8880868,
-    "ast_hash": "499e076a44795954c03dc36f9f542873",
+    "mtime": 1794852921.059749,
+    "seen": 1794852994.14769,
+    "ast_hash": "2cb2b0825ddbe06c4898ccef2deb2f32",
     "semantic_hash": ""
   },
   "src/domain/units.ts": {
@@ -256,15 +256,15 @@
     "semantic_hash": ""
   },
   "docs/architecture.md": {
-    "mtime": 1794845934.682805,
-    "seen": 1794846293.4961605,
-    "ast_hash": "413a05cb18a0c93588f387545b2c4974",
+    "mtime": 1794852881.6500812,
+    "seen": 1794852994.14769,
+    "ast_hash": "4fa81d44e8dfeb015d4e7fd849dc4827",
     "semantic_hash": ""
   },
   "docs/domain.md": {
-    "mtime": 1794850889.0998921,
-    "seen": 1794850978.8896482,
-    "ast_hash": "f3b39f3cf41e26b0cc525c27d816d690",
+    "mtime": 1794852881.1385064,
+    "seen": 1794852994.14769,
+    "ast_hash": "d943faeea36b4a9ca12b6daf4cf1114a",
     "semantic_hash": ""
   },
   "docs/extending-the-prototype.md": {
@@ -507,9 +507,9 @@
     "semantic_hash": ""
   },
   "src/features/sales/SummaryHeadlineTable.tsx": {
-    "mtime": 1794850950.7290838,
-    "seen": 1794850978.8896482,
-    "ast_hash": "2652cbffc9306733ea646f22b40c67f0",
+    "mtime": 1794852921.1221776,
+    "seen": 1794852994.14769,
+    "ast_hash": "51b66ea17a7935b8f76c88ddce0ae6d9",
     "semantic_hash": ""
   },
   "src/features/sales/SummaryScreen.tsx": {
@@ -555,9 +555,9 @@
     "semantic_hash": ""
   },
   "src/features/table/Cells.tsx": {
-    "mtime": 1793790441.7684057,
-    "seen": 1793790545.8394408,
-    "ast_hash": "9ee6139b35c0f0d1574e082fe7664faf",
+    "mtime": 1794852824.0478823,
+    "seen": 1794852994.14769,
+    "ast_hash": "da7ad6f653a750ad6076c9516c9964e6",
     "semantic_hash": ""
   },
   "src/features/table/ColumnLabel.tsx": {
@@ -1671,9 +1671,9 @@
     "semantic_hash": ""
   },
   "src/data/document-file.ts": {
-    "mtime": 1794841893.1545646,
-    "seen": 1794842277.1912389,
-    "ast_hash": "3f010ad7efc2f49b03f6cc83ac6fc8b7",
+    "mtime": 1794852762.0550897,
+    "seen": 1794852994.14769,
+    "ast_hash": "882fe02e86ee455a5710330ae762d6cb",
     "semantic_hash": ""
   },
   "src/data/mock-property-tax.ts": {
@@ -1689,15 +1689,15 @@
     "semantic_hash": ""
   },
   "src/features/cashflow/PropertyTaxScreen.tsx": {
-    "mtime": 1794849282.7974076,
-    "seen": 1794849300.018917,
-    "ast_hash": "e23f41ad054dac38af8220118c131ea8",
+    "mtime": 1794852921.0076694,
+    "seen": 1794852994.14769,
+    "ast_hash": "218c35b624f861ae4b0e6d748752c891",
     "semantic_hash": ""
   },
   "src/features/cashflow/text.ts": {
-    "mtime": 1794834697.3121612,
-    "seen": 1794834773.9001408,
-    "ast_hash": "223768b56aac54e969490407e429ba57",
+    "mtime": 1794852826.668805,
+    "seen": 1794852994.14769,
+    "ast_hash": "cf5931b9e0ee3636219c07eb9fb78d58",
     "semantic_hash": ""
   },
   "src/features/cashflow/use-property-tax.ts": {
@@ -1758,6 +1758,18 @@
     "mtime": 1794836848.5843518,
     "seen": 1794836920.455987,
     "ast_hash": "817ef5dd9ac7d01ca7d8a4f08c17ab79",
+    "semantic_hash": ""
+  },
+  "src/domain/profit-tax.ts": {
+    "mtime": 1794852938.9626343,
+    "seen": 1794852994.14769,
+    "ast_hash": "539de7656bbab8ec8bbf340432e1a734",
+    "semantic_hash": ""
+  },
+  "src/features/cashflow/use-profit-tax.ts": {
+    "mtime": 1794852827.919638,
+    "seen": 1794852994.14769,
+    "ast_hash": "704a29db047d25c3817d332c6522ea13",
     "semantic_hash": ""
   }
 }
