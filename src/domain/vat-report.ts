@@ -5,6 +5,7 @@ import { ratioRound } from '@/domain/money';
 import { operatingExpenseMonthView } from '@/domain/operating-expense';
 import { propertyTaxForMonth } from '@/domain/property-tax';
 import { monthSummary } from '@/domain/summary';
+import { taxPaymentMonthTotal } from '@/domain/tax-payment';
 import { transportMonthView } from '@/domain/transport';
 
 export interface VatMoneySide {
@@ -28,11 +29,21 @@ export interface VatReportMonthView {
    * НДС к зачету. `TAX!D8` / `E8` = сумма строк сырья, аутсорса и категорий расходов.
    */
   deductible: VatReportLine;
-  /** С продаж − к зачету; отрицательное — к возмещению. `TAX!D24` / `E24`. */
+  /**
+   * План: с продаж − к зачету (`TAX!D24`).
+   * Факт: сумма дневных оплат НДС (`taxPaymentDays`, kind `vat`), не расчёт к зачету.
+   * Отрицательное — к возмещению / возврат.
+   */
   payable: VatMoneySide;
-  /** НДФЛ, соцстрах, травматизм. `TAX!D26` / `E26`, без пустой строки `HR!89`. */
+  /**
+   * НДФЛ, соцстрах, травматизм. План — из HR; факт — дневные оплаты.
+   * `TAX!D26` / `E26`, без пустой строки `HR!89`.
+   */
   payroll: VatReportLine;
-  /** Как на своде: не ниже 0. `TAX!D31` / `E31` → `Svod!G6` / `I6`. */
+  /**
+   * План — как на своде, не ниже 0. Факт — дневные оплаты.
+   * `TAX!D31` / `E31` → `Svod!G6` / `I6`.
+   */
   profit: VatReportLine;
   /** Ввод бухгалтерии. `TAX` строка 33, в книге без формулы. */
   property: VatReportLine;
@@ -92,10 +103,12 @@ export function vatReportMonthView(document: PrototypeDocument, month: string): 
   ];
   const deductible = line('deductible', 'НДС к зачету', 0, 0, deductibleChildren);
 
-  const payable = side(sales.amounts.plan - deductible.amounts.plan, sales.amounts.fact - deductible.amounts.fact);
+  const payablePlan = sales.amounts.plan - deductible.amounts.plan;
+  const payableFact = taxPaymentMonthTotal(document, 'vat', month);
+  const payable = side(payablePlan, payableFact);
   const payroll = payrollLine(document, month);
   const profitTaxPlan = Math.max(0, summary.headline.plan.profitTax ?? 0);
-  const profitTaxFact = Math.max(0, summary.headline.fact.profitTax ?? 0);
+  const profitTaxFact = taxPaymentMonthTotal(document, 'profit', month);
   const profit = line('profit', 'Налог на прибыль', profitTaxPlan, profitTaxFact);
   const propertyTax = propertyTaxForMonth(document, month);
   const property = line('property', 'Налог на имущество', propertyTax.plan, propertyTax.fact);
@@ -194,7 +207,9 @@ function transportExpenseVat(document: PrototypeDocument, month: string): VatMon
 
 function payrollLine(document: PrototypeDocument, month: string): VatReportLine {
   const children = hrMonthView(document, month)
-    .taxes.filter((item) => item.id !== 'outsourcing-vat')
-    .map((item) => line(`payroll:${item.id}`, item.name, item.planAmountExVat, item.factAmountExVat));
+    .taxes.filter((item) => item.id === 'ndfl' || item.id === 'social' || item.id === 'injury')
+    .map((item) =>
+      line(`payroll:${item.id}`, item.name, item.planAmountExVat, taxPaymentMonthTotal(document, item.id, month)),
+    );
   return line('payroll', 'Зарплатные налоги', 0, 0, children);
 }

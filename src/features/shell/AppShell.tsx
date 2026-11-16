@@ -8,8 +8,10 @@ import { useDocumentStore } from '@/data/DocumentProvider';
 import type { OpexGroupCode } from '@/domain/document';
 import { opexGroupName } from '@/domain/operating-expense';
 import {
-  CASHFLOW_PROPERTY_TAX_HREF,
-  CASHFLOW_PROPERTY_TAX_TITLE,
+  CASHFLOW_FACT_HREF,
+  CASHFLOW_FACT_TITLE,
+  CASHFLOW_PLAN_HREF,
+  CASHFLOW_PLAN_TITLE,
   CASHFLOW_SECTION_TITLE,
   CASHFLOW_SUMMARY_HREF,
   CASHFLOW_SUMMARY_TITLE,
@@ -224,8 +226,13 @@ const CASHFLOW_NAV: readonly NavItem[] = [
     navKind: 'input',
   },
   {
-    href: CASHFLOW_PROPERTY_TAX_HREF,
-    label: CASHFLOW_PROPERTY_TAX_TITLE,
+    href: CASHFLOW_PLAN_HREF,
+    label: CASHFLOW_PLAN_TITLE,
+    navKind: 'input',
+  },
+  {
+    href: CASHFLOW_FACT_HREF,
+    label: CASHFLOW_FACT_TITLE,
     navKind: 'input',
   },
 ];

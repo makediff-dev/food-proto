@@ -1,14 +1,14 @@
 import { isMonthKey, type PropertyTaxMonth, type PrototypeDocument } from '@/domain/document';
+import { taxPaymentMonthTotal } from '@/domain/tax-payment';
 
 const MAX_MONEY = 100_000_000_000;
-
-export type PropertyTaxField = 'plan' | 'fact';
 
 export type PropertyTaxRejection = 'month' | 'amount';
 
 export interface PropertyTaxMonthView {
   month: string;
   plan: number;
+  /** Сумма дневных оплат (kind `property`). */
   fact: number;
   variance: number;
 }
@@ -26,9 +26,8 @@ function monthRecord(document: PrototypeDocument, month: string): PropertyTaxMon
 }
 
 export function propertyTaxForMonth(document: PrototypeDocument, month: string): PropertyTaxMonthView {
-  const stored = monthRecord(document, month);
-  const plan = stored?.plan ?? 0;
-  const fact = stored?.fact ?? 0;
+  const plan = monthRecord(document, month)?.plan ?? 0;
+  const fact = taxPaymentMonthTotal(document, 'property', month);
   return {
     month,
     plan,
@@ -37,14 +36,12 @@ export function propertyTaxForMonth(document: PrototypeDocument, month: string):
   };
 }
 
-export function setPropertyTaxFieldRejection(
+export function setPropertyTaxPlanRejection(
   document: PrototypeDocument,
   month: string,
-  field: PropertyTaxField,
   amount: number,
 ): PropertyTaxRejection | null {
   void document;
-  void field;
   if (!isMonthKey(month)) {
     return 'month';
   }
@@ -54,30 +51,23 @@ export function setPropertyTaxFieldRejection(
   return null;
 }
 
-export function setPropertyTaxField(
-  document: PrototypeDocument,
-  month: string,
-  field: PropertyTaxField,
-  amount: number,
-): PrototypeDocument {
-  if (setPropertyTaxFieldRejection(document, month, field, amount)) {
+export function setPropertyTaxPlan(document: PrototypeDocument, month: string, amount: number): PrototypeDocument {
+  if (setPropertyTaxPlanRejection(document, month, amount)) {
     return document;
   }
 
   const existing = monthRecord(document, month);
-  const current: PropertyTaxMonth = existing ?? {
-    id: `property-tax:${month}`,
-    month,
-    plan: 0,
-    fact: 0,
-  };
-  const next: PropertyTaxMonth = { ...current, [field]: amount };
-  const keep = next.plan !== 0 || next.fact !== 0;
+  const keep = amount !== 0;
 
   if (!existing) {
     if (!keep) {
       return document;
     }
+    const next: PropertyTaxMonth = {
+      id: `property-tax:${month}`,
+      month,
+      plan: amount,
+    };
     return {
       ...document,
       propertyTaxMonths: [...propertyTaxMonthsList(document), next],
@@ -93,6 +83,8 @@ export function setPropertyTaxField(
 
   return {
     ...document,
-    propertyTaxMonths: propertyTaxMonthsList(document).map((item) => (item.month === month ? next : item)),
+    propertyTaxMonths: propertyTaxMonthsList(document).map((item) =>
+      item.month === month ? { ...item, plan: amount } : item,
+    ),
   };
 }

@@ -6,6 +6,7 @@ import { operatingExpenseMonthView } from '@/domain/operating-expense';
 import { propertyTaxForMonth } from '@/domain/property-tax';
 import { shiftMonth } from '@/domain/sales-plan';
 import { monthSummary } from '@/domain/summary';
+import { taxPaymentMonthTotal } from '@/domain/tax-payment';
 import { vatReportMonthView } from '@/domain/vat-report';
 
 const CHAIN_START = '2000-01';
@@ -120,10 +121,11 @@ function opexBlock(document: PrototypeDocument, month: string): CashflowLineView
 function taxBlock(document: PrototypeDocument, month: string): CashflowLineView {
   const summary = monthSummary(document, month);
   const planTax = Math.max(0, summary.headline.plan.profitTax ?? 0);
-  const factTax = Math.max(0, summary.headline.fact.profitTax ?? 0);
+  const factTax = taxPaymentMonthTotal(document, 'profit', month);
   const propertyTax = propertyTaxForMonth(document, month);
-  // Оплата или возврат: CashFlow!C141 «НДС», план E141 = TAX!D24, факт — TAX!E24.
+  // Оплата или возврат: CashFlow!C141 «НДС», план E141 = TAX!D24, факт — taxPaymentDays kind vat.
   // Отрицательное — к возмещению и уменьшает расходы, остаток денег растёт.
+  // Прибыль и имущество: план — свод / propertyTaxMonths; факт — дневные оплаты.
   const vat = vatReportMonthView(document, month).payable;
   return line('tax', 'Налоговые платежи (кроме зарплатных налогов)', 0, 0, [
     line('tax:vat', 'НДС', vat.plan, vat.fact),
@@ -172,6 +174,9 @@ function earliestCashflowMonth(document: PrototypeDocument, month: string): stri
   }
   for (const item of document.propertyTaxMonths ?? []) {
     consider(item.month);
+  }
+  for (const item of document.taxPaymentDays ?? []) {
+    consider(item.occurredOn.slice(0, 7));
   }
   for (const item of document.materialMonthPlans ?? []) {
     consider(item.month);

@@ -42,6 +42,11 @@ function varianceSense(id: string): 'income' | 'cost' {
   return id === 'deductible' || id.startsWith('deductible:') ? 'income' : 'cost';
 }
 
+/** Факт НДС к уплате вводят отдельно; разбивку по категориям в факте не показывают. */
+function hideVatCalcFact(id: string): boolean {
+  return id === 'sales' || id === 'deductible' || id.startsWith('deductible:');
+}
+
 function LineRows({
   line,
   depth,
@@ -83,7 +88,12 @@ function LineRows({
             <span className={isGroup ? categoryNameClassName : 'text-sm'}>{line.name}</span>
           </div>
         </th>
-        <AmountCells line={line} amountFill={amountFill} varianceFill={varianceFill} />
+        <AmountCells
+          line={line}
+          amountFill={amountFill}
+          varianceFill={varianceFill}
+          hideFact={hideVatCalcFact(line.id)}
+        />
       </tr>
       {hasChildren && open
         ? line.children?.map((child) => (
@@ -98,21 +108,28 @@ function AmountCells({
   line,
   amountFill,
   varianceFill,
+  hideFact = false,
 }: {
   line: VatReportLine;
   amountFill: string;
   varianceFill: string;
+  hideFact?: boolean;
 }) {
   return (
     <>
       <td className={`${valueCell} ${amountFill}`}>
         <MoneyAmount amount={line.amounts.plan} />
       </td>
-      <td className={`${valueCell} ${amountFill}`}>
-        <MoneyAmount amount={line.amounts.fact} />
-      </td>
+      <td className={`${valueCell} ${amountFill}`}>{hideFact ? null : <MoneyAmount amount={line.amounts.fact} />}</td>
       <td className={`${valueCellEnd} ${varianceFill}`}>
-        <MoneyCell label={`Откл., ${line.name}`} value={line.amounts.variance} signed sense={varianceSense(line.id)} />
+        {hideFact ? null : (
+          <MoneyCell
+            label={`Откл., ${line.name}`}
+            value={line.amounts.variance}
+            signed
+            sense={varianceSense(line.id)}
+          />
+        )}
       </td>
     </>
   );
@@ -175,7 +192,7 @@ export function VatReportScreen({ month }: { month: string }) {
     <PageFrame
       title={VAT_REPORT_SUMMARY_TITLE}
       full
-      lede="НДС к зачету со сырья и расходов, зарплатные налоги, налог на прибыль и налог на имущество. Отрицательный НДС — к возмещению."
+      lede="План НДС — расчёт с продаж и к зачету. Факт НДС, зарплатных налогов, прибыли и имущества — из «Ввода факта». План имущества — на «Вводе плана»."
       intro={
         <CashflowMonthBar
           month={selectedMonth}

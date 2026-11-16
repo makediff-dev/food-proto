@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 65 as const;
+export const SCHEMA_VERSION = 68 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -936,8 +936,8 @@ export interface CreditResourceMonth {
 }
 
 /**
- * Налог на имущество за месяц.
- * План и факт вводят итогом в рублях (копейки), без ставки и базы.
+ * План налога на имущество за месяц.
+ * Итогом в рублях (копейки), без ставки и базы. Факт — дневные оплаты `taxPaymentDays` (kind `property`).
  * На один месяц — одна запись. Мягкого удаления нет.
  */
 export interface PropertyTaxMonth {
@@ -946,8 +946,23 @@ export interface PropertyTaxMonth {
   month: string;
   /** План платежа, копейки. */
   plan: number;
-  /** Факт платежа, копейки. */
-  fact: number;
+}
+
+/** Вид дневной налоговой оплаты на «Вводе факта» ДДС. */
+export type TaxPaymentKind = 'vat' | 'ndfl' | 'social' | 'injury' | 'profit' | 'property';
+
+/**
+ * Дневная оплата налога (факт в отчёте по налогам; НДС, прибыль и имущество — ещё в ДДС).
+ * Плюс — оплата, минус — возврат. Ноль и пустой день в документ не пишут.
+ * Мягкого удаления нет: стирают запись из массива.
+ */
+export interface TaxPaymentDay {
+  id: string;
+  kind: TaxPaymentKind;
+  /** `ГГГГ-ММ-ДД`. */
+  occurredOn: string;
+  /** Сумма оплаты, копейки. */
+  amount: number;
 }
 
 /**
@@ -1044,10 +1059,17 @@ export interface PrototypeDocument {
    */
   creditResourceMonths: CreditResourceMonth[];
   /**
-   * Налог на имущество по месяцам: план и факт итогом в рублях, без расчётов.
+   * План налога на имущество по месяцам итогом в рублях, без расчётов.
+   * Факт — в `taxPaymentDays` (kind `property`).
    * Старый документ без поля читается как пустой массив.
    */
   propertyTaxMonths: PropertyTaxMonth[];
+  /**
+   * Дневные оплаты налогов (НДС, НДФЛ, соцстрах, травматизм, прибыль, имущество).
+   * Факт в отчёте по налогам; НДС, прибыль и имущество — ещё в ДДС.
+   * Старый документ без поля читается как пустой массив.
+   */
+  taxPaymentDays: TaxPaymentDay[];
 }
 
 /** Метка мягкого удаления, которую пишет экран через `Date.toISOString()`. */

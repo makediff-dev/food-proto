@@ -6,7 +6,7 @@ import { useMemo } from 'react';
 import { propertyTaxForMonth } from '@/domain/property-tax';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { CashflowMonthBar, resolveCashflowMonth } from '@/features/cashflow/CashflowMonthBar';
-import { CASHFLOW_PROPERTY_TAX_TITLE, cashflowPropertyTaxHref } from '@/features/cashflow/paths';
+import { CASHFLOW_PLAN_TITLE, cashflowPlanHref } from '@/features/cashflow/paths';
 import { PROPERTY_TAX_ERROR, parsePropertyTaxMoney } from '@/features/cashflow/text';
 import { usePropertyTax } from '@/features/cashflow/use-property-tax';
 import { useRole } from '@/features/roles/RoleProvider';
@@ -14,7 +14,6 @@ import { PageFrame } from '@/features/shell/PageFrame';
 import {
   ColumnLabel,
   cellKindClassName,
-  columnDividerClassName,
   columnHeadingClassName,
   entityNameRowClassName,
   MoneyCell,
@@ -25,10 +24,8 @@ import {
   tableFrameClassName,
 } from '@/features/table';
 
-const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
-const valueCell = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
-const groupEnd = `${columnHeadingClassName} ${tableBorder.rightThick}`;
-const valueEnd = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${tableBorder.rightThick}`;
+const valueEnd = `${columnHeadingClassName} ${tableBorder.rightThick}`;
+const valueCellEnd = `w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${tableBorder.rightThick}`;
 
 function inputKind(editable: boolean): 'assigned' | 'computed' {
   return editable ? 'assigned' : 'computed';
@@ -49,33 +46,27 @@ export function PropertyTaxScreen({ month }: { month: string }) {
 
   return (
     <PageFrame
-      title={CASHFLOW_PROPERTY_TAX_TITLE}
+      title={CASHFLOW_PLAN_TITLE}
       full
-      lede="План и факт налога на имущество за месяц — итоговые суммы в рублях, без расчёта базы. Суммы попадают в отчёт ДДС."
+      lede="План налога на имущество за месяц — итоговая сумма в рублях, без расчёта базы. Факт вводят подневно на «Вводе факта»."
       intro={
         <CashflowMonthBar
           month={selectedMonth}
           today={today}
-          onOpen={(next) => router.push(cashflowPropertyTaxHref({ month: next, currentMonth }), { scroll: false })}
+          onOpen={(next) => router.push(cashflowPlanHref({ month: next, currentMonth }), { scroll: false })}
         />
       }
     >
       <div className={tableFrameClassName}>
         <table className={tableClassName}>
-          <caption className="sr-only">{`Налог на имущество за ${selectedMonth}`}</caption>
+          <caption className="sr-only">{`План налога на имущество за ${selectedMonth}`}</caption>
           <thead className={stickyHeadClassName}>
             <tr>
               <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                 <ColumnLabel label="Статья" />
               </th>
-              <th scope="col" className={valueHead}>
+              <th scope="col" className={valueEnd}>
                 <ColumnLabel label="План" />
-              </th>
-              <th scope="col" className={valueHead}>
-                <ColumnLabel label="Факт" />
-              </th>
-              <th scope="col" className={groupEnd}>
-                <ColumnLabel label="Откл." />
               </th>
             </tr>
           </thead>
@@ -84,7 +75,7 @@ export function PropertyTaxScreen({ month }: { month: string }) {
               <th scope="row" className={entityNameRowClassName('repeated')}>
                 Налог на имущество
               </th>
-              <td className={`${valueCell} ${cellKindClassName[inputKind(editable)]}`}>
+              <td className={`${valueCellEnd} ${cellKindClassName[inputKind(editable)]}`}>
                 <MoneyCell
                   label="Налог на имущество, план"
                   value={view.plan}
@@ -92,30 +83,12 @@ export function PropertyTaxScreen({ month }: { month: string }) {
                   onChange={
                     editable
                       ? (amount) => {
-                          const rejection = propertyTax.setField(selectedMonth, 'plan', amount);
+                          const rejection = propertyTax.setPlan(selectedMonth, amount);
                           return rejection ? PROPERTY_TAX_ERROR[rejection] : null;
                         }
                       : undefined
                   }
                 />
-              </td>
-              <td className={`${valueCell} ${cellKindClassName[inputKind(editable)]}`}>
-                <MoneyCell
-                  label="Налог на имущество, факт"
-                  value={view.fact}
-                  parse={parsePropertyTaxMoney}
-                  onChange={
-                    editable
-                      ? (amount) => {
-                          const rejection = propertyTax.setField(selectedMonth, 'fact', amount);
-                          return rejection ? PROPERTY_TAX_ERROR[rejection] : null;
-                        }
-                      : undefined
-                  }
-                />
-              </td>
-              <td className={`${valueEnd} ${cellKindClassName.computed}`}>
-                <MoneyCell label="Налог на имущество, откл." value={view.variance} signed sense="income" />
               </td>
             </tr>
           </tbody>
