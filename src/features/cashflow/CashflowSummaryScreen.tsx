@@ -131,7 +131,6 @@ export function CashflowSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={CASHFLOW_SUMMARY_TITLE}
       full
-      lede="Движение денежных средств за месяц: остаток на начало, доходы и расходы с НДС, остаток на конец. План ФОТ — за прошлый месяц."
       intro={
         <CashflowMonthBar
           month={selectedMonth}

@@ -48,14 +48,18 @@ import {
   MOVEMENT_SUMMARY_TITLE,
 } from '@/features/movement/paths';
 import {
+  OPEX_HR_FACT_HREF,
   OPEX_HR_FACT_TITLE,
   OPEX_HR_PLAN_TITLE,
   OPEX_HR_TITLE,
+  OPEX_OTHER_FACT_HREF,
+  OPEX_OTHER_FACT_NAV_LABEL,
   OPEX_OTHER_FACT_TITLE,
   OPEX_OTHER_PLAN_TITLE,
   OPEX_OTHER_TITLE,
   OPEX_SECTION_TITLE,
   OPEX_SUMMARY_TITLE,
+  OPEX_TRANSPORT_FACT_HREF,
   OPEX_TRANSPORT_FACT_TITLE,
   OPEX_TRANSPORT_PLAN_TITLE,
   OPEX_TRANSPORT_TITLE,
@@ -175,67 +179,78 @@ function buildOpexNav(promotedGroupCodes: readonly OpexGroupCode[]): NavItem[] {
 
   items.push(
     { href: '/opex/hr/plan', label: `HR · ${OPEX_HR_PLAN_TITLE}`, navKind: 'input' },
-    { href: '/opex/hr/fact', label: `HR · ${OPEX_HR_FACT_TITLE}`, navKind: 'input' },
     { href: '/opex/transport/plan', label: `Транспорт · ${OPEX_TRANSPORT_PLAN_TITLE}`, navKind: 'input' },
-    { href: '/opex/transport/fact', label: `Транспорт · ${OPEX_TRANSPORT_FACT_TITLE}`, navKind: 'input' },
   );
 
   for (const code of promotedGroupCodes) {
-    const name = opexGroupName(code);
-    items.push(
-      { href: opexGroupPlanHrefPath(code), label: `${name} · ${OPEX_OTHER_PLAN_TITLE}`, navKind: 'input' },
-      { href: opexGroupFactHrefPath(code), label: `${name} · ${OPEX_OTHER_FACT_TITLE}`, navKind: 'input' },
-    );
+    items.push({
+      href: opexGroupPlanHrefPath(code),
+      label: `${opexGroupName(code)} · ${OPEX_OTHER_PLAN_TITLE}`,
+      navKind: 'input',
+    });
   }
 
-  items.push(
-    { href: '/opex/other/plan', label: `${OPEX_OTHER_TITLE} · ${OPEX_OTHER_PLAN_TITLE}`, navKind: 'input' },
-    { href: '/opex/other/fact', label: `${OPEX_OTHER_TITLE} · ${OPEX_OTHER_FACT_TITLE}`, navKind: 'input' },
-  );
+  items.push({ href: '/opex/other/plan', label: `${OPEX_OTHER_TITLE} · ${OPEX_OTHER_PLAN_TITLE}`, navKind: 'input' });
 
   return items;
 }
 
-const CASHFLOW_NAV: readonly NavItem[] = [
-  {
-    href: CASHFLOW_SUMMARY_HREF,
-    label: CASHFLOW_SUMMARY_TITLE,
-    exact: true,
-    navKind: 'report',
-  },
-  {
-    href: VAT_REPORT_SUMMARY_HREF,
-    label: VAT_REPORT_SUMMARY_TITLE,
-    exact: true,
-    navKind: 'report',
-  },
-  {
-    href: CREDIT_RESOURCES_SUMMARY_HREF,
-    label: CREDIT_RESOURCES_SUMMARY_TITLE,
-    exact: true,
-    navKind: 'report',
-  },
-  {
-    href: CREDIT_RESOURCES_PLAN_HREF,
-    label: CREDIT_RESOURCES_PLAN_TITLE,
-    navKind: 'input',
-  },
-  {
-    href: CREDIT_RESOURCES_FACT_HREF,
-    label: CREDIT_RESOURCES_FACT_TITLE,
-    navKind: 'input',
-  },
-  {
-    href: CASHFLOW_PLAN_HREF,
-    label: CASHFLOW_PLAN_TITLE,
-    navKind: 'input',
-  },
-  {
-    href: CASHFLOW_FACT_HREF,
-    label: CASHFLOW_FACT_TITLE,
-    navKind: 'input',
-  },
-];
+function buildCashflowNav(promotedGroupCodes: readonly OpexGroupCode[]): NavItem[] {
+  const items: NavItem[] = [
+    {
+      href: CASHFLOW_SUMMARY_HREF,
+      label: CASHFLOW_SUMMARY_TITLE,
+      exact: true,
+      navKind: 'report',
+    },
+    {
+      href: VAT_REPORT_SUMMARY_HREF,
+      label: VAT_REPORT_SUMMARY_TITLE,
+      exact: true,
+      navKind: 'report',
+    },
+    {
+      href: CREDIT_RESOURCES_SUMMARY_HREF,
+      label: CREDIT_RESOURCES_SUMMARY_TITLE,
+      exact: true,
+      navKind: 'report',
+    },
+    {
+      href: CREDIT_RESOURCES_PLAN_HREF,
+      label: CREDIT_RESOURCES_PLAN_TITLE,
+      navKind: 'input',
+    },
+    {
+      href: CASHFLOW_PLAN_HREF,
+      label: CASHFLOW_PLAN_TITLE,
+      navKind: 'input',
+    },
+    {
+      href: CREDIT_RESOURCES_FACT_HREF,
+      label: CREDIT_RESOURCES_FACT_TITLE,
+      navKind: 'input',
+    },
+    {
+      href: CASHFLOW_FACT_HREF,
+      label: CASHFLOW_FACT_TITLE,
+      navKind: 'input',
+    },
+    { href: OPEX_HR_FACT_HREF, label: `HR · ${OPEX_HR_FACT_TITLE}`, navKind: 'input' },
+    { href: OPEX_TRANSPORT_FACT_HREF, label: `Транспорт · ${OPEX_TRANSPORT_FACT_TITLE}`, navKind: 'input' },
+  ];
+
+  for (const code of promotedGroupCodes) {
+    items.push({
+      href: opexGroupFactHrefPath(code),
+      label: `${opexGroupName(code)} · ${OPEX_OTHER_FACT_TITLE}`,
+      navKind: 'input',
+    });
+  }
+
+  items.push({ href: OPEX_OTHER_FACT_HREF, label: OPEX_OTHER_FACT_NAV_LABEL, navKind: 'input' });
+
+  return items;
+}
 function sectionIsCurrent(pathname: string, href: string): boolean {
   if (href === '/') {
     return pathname === '/';
@@ -269,7 +284,11 @@ function navItemIsCurrent(pathname: string, item: NavItem): boolean {
   return sectionIsCurrent(pathname, item.href);
 }
 
-function currentNavLabel(pathname: string, opexNav: readonly NavItem[]): string | undefined {
+function currentNavLabel(
+  pathname: string,
+  opexNav: readonly NavItem[],
+  cashflowNav: readonly NavItem[],
+): string | undefined {
   if (sectionIsCurrent(pathname, SETTINGS_HREF)) {
     return SETTINGS_TITLE;
   }
@@ -281,7 +300,7 @@ function currentNavLabel(pathname: string, opexNav: readonly NavItem[]): string 
     RECIPES_NAV,
     MATERIALS_NAV,
     opexNav,
-    CASHFLOW_NAV,
+    cashflowNav,
   ];
 
   for (const items of groups) {
@@ -392,6 +411,7 @@ function SettingsNavLink({ pathname, onNavigate }: { pathname: string; onNavigat
 
 function buildNavGroups(
   opexNav: readonly NavItem[],
+  cashflowNav: readonly NavItem[],
 ): readonly { section: NavSectionId; title: string; items: readonly NavItem[] }[] {
   return [
     { section: 'sales', title: SALES_SECTION_TITLE, items: SALES_NAV },
@@ -401,7 +421,7 @@ function buildNavGroups(
     { section: 'derivativeMovement', title: DERIVATIVE_MOVEMENT_SECTION_TITLE, items: DERIVATIVE_MOVEMENT_NAV },
     { section: 'materials', title: MATERIALS_SECTION_TITLE, items: MATERIALS_NAV },
     { section: 'opex', title: OPEX_SECTION_TITLE, items: opexNav },
-    { section: 'cashflow', title: CASHFLOW_SECTION_TITLE, items: CASHFLOW_NAV },
+    { section: 'cashflow', title: CASHFLOW_SECTION_TITLE, items: cashflowNav },
   ];
 }
 
@@ -410,12 +430,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { role } = useRole();
   const { document: accountingDocument } = useDocumentStore();
   const [menuOpen, setMenuOpen] = useState(false);
-  const opexNav = useMemo(
-    () => buildOpexNav(accountingDocument.opexPromotedGroupCodes),
-    [accountingDocument.opexPromotedGroupCodes],
-  );
-  const navGroups = useMemo(() => buildNavGroups(opexNav), [opexNav]);
-  const currentLabel = currentNavLabel(pathname, opexNav);
+  const promotedGroupCodes = accountingDocument.opexPromotedGroupCodes;
+  const opexNav = useMemo(() => buildOpexNav(promotedGroupCodes), [promotedGroupCodes]);
+  const cashflowNav = useMemo(() => buildCashflowNav(promotedGroupCodes), [promotedGroupCodes]);
+  const navGroups = useMemo(() => buildNavGroups(opexNav, cashflowNav), [opexNav, cashflowNav]);
+  const currentLabel = currentNavLabel(pathname, opexNav, cashflowNav);
   const homeHref = roleHomeHref(role);
 
   useEffect(() => {

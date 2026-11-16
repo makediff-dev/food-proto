@@ -37,6 +37,7 @@ const DOCUMENT_COLLECTION_KEYS = {
   derivativeNorms: 'object',
   creditors: 'object',
   creditResourceMonths: 'object',
+  creditResourceDays: 'object',
   propertyTaxMonths: 'object',
   taxPaymentDays: 'object',
 } as const satisfies Record<DocumentCollectionKey, 'object' | 'string'>;

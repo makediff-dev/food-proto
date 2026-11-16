@@ -1,10 +1,13 @@
 import { rejectName } from '@/domain/directory';
 import {
   type Creditor,
+  type CreditResourceDay,
+  type CreditResourceDayLine,
   type CreditResourceMonth,
   type CreditResourceMonthLine,
   isDeletionMark,
   isMonthKey,
+  isOccurredOn,
   type PrototypeDocument,
 } from '@/domain/document';
 
@@ -16,6 +19,7 @@ const CHAIN_START = '2000-01';
 export type CreditFieldRejection =
   | 'missing'
   | 'month'
+  | 'day'
   | 'name'
   | 'empty'
   | 'too-long'
@@ -24,13 +28,9 @@ export type CreditFieldRejection =
   | 'rate'
   | 'archived';
 
-export type CreditMonthField =
-  | 'planReceived'
-  | 'factReceived'
-  | 'planRepaid'
-  | 'factRepaid'
-  | 'planInterest'
-  | 'factInterest';
+export type CreditMonthField = 'planReceived' | 'planRepaid' | 'planInterest';
+
+export type CreditDayField = 'received' | 'repaid' | 'interest';
 
 export interface CreditCreditorRowView {
   creditorId: string;
@@ -92,6 +92,10 @@ export function creditResourceMonthsList(document: PrototypeDocument): CreditRes
   return document.creditResourceMonths ?? [];
 }
 
+export function creditResourceDaysList(document: PrototypeDocument): CreditResourceDay[] {
+  return document.creditResourceDays ?? [];
+}
+
 export function activeCreditors(document: PrototypeDocument): Creditor[] {
   return creditorsList(document).filter((item) => item.deletedAt === null);
 }
@@ -104,32 +108,87 @@ function monthRecord(document: PrototypeDocument, month: string): CreditResource
   return creditResourceMonthsList(document).find((item) => item.month === month) ?? null;
 }
 
-function storedLine(document: PrototypeDocument, month: string, creditorId: string): CreditResourceMonthLine | null {
+function dayRecord(document: PrototypeDocument, occurredOn: string): CreditResourceDay | null {
+  return creditResourceDaysList(document).find((item) => item.occurredOn === occurredOn) ?? null;
+}
+
+function storedMonthLine(
+  document: PrototypeDocument,
+  month: string,
+  creditorId: string,
+): CreditResourceMonthLine | null {
   return monthRecord(document, month)?.lines.find((item) => item.creditorId === creditorId) ?? null;
 }
 
-function emptyLine(creditorId: string, month: string): CreditResourceMonthLine {
+function storedDayLine(
+  document: PrototypeDocument,
+  occurredOn: string,
+  creditorId: string,
+): CreditResourceDayLine | null {
+  return dayRecord(document, occurredOn)?.lines.find((item) => item.creditorId === creditorId) ?? null;
+}
+
+function emptyMonthLine(creditorId: string, month: string): CreditResourceMonthLine {
   return {
     id: `credit-line:${month}:${creditorId}`,
     creditorId,
     planReceived: 0,
-    factReceived: 0,
     planRepaid: 0,
-    factRepaid: 0,
     planInterest: 0,
-    factInterest: 0,
   };
 }
 
-function lineAmounts(line: CreditResourceMonthLine | null): Omit<CreditResourceMonthLine, 'id' | 'creditorId'> {
+function emptyDayLine(creditorId: string, occurredOn: string): CreditResourceDayLine {
+  return {
+    id: `credit-day-line:${occurredOn}:${creditorId}`,
+    creditorId,
+    received: 0,
+    repaid: 0,
+    interest: 0,
+  };
+}
+
+function planAmounts(
+  line: CreditResourceMonthLine | null,
+): Pick<CreditResourceMonthLine, 'planReceived' | 'planRepaid' | 'planInterest'> {
   return {
     planReceived: line?.planReceived ?? 0,
-    factReceived: line?.factReceived ?? 0,
     planRepaid: line?.planRepaid ?? 0,
-    factRepaid: line?.factRepaid ?? 0,
     planInterest: line?.planInterest ?? 0,
-    factInterest: line?.factInterest ?? 0,
   };
+}
+
+function dayAmounts(
+  line: CreditResourceDayLine | null,
+): Pick<CreditResourceDayLine, 'received' | 'repaid' | 'interest'> {
+  return {
+    received: line?.received ?? 0,
+    repaid: line?.repaid ?? 0,
+    interest: line?.interest ?? 0,
+  };
+}
+
+function monthFactAmounts(
+  document: PrototypeDocument,
+  month: string,
+  creditorId: string,
+): { factReceived: number; factRepaid: number; factInterest: number } {
+  let factReceived = 0;
+  let factRepaid = 0;
+  let factInterest = 0;
+  for (const day of creditResourceDaysList(document)) {
+    if (!day.occurredOn.startsWith(`${month}-`)) {
+      continue;
+    }
+    const line = day.lines.find((item) => item.creditorId === creditorId);
+    if (!line) {
+      continue;
+    }
+    factReceived += line.received;
+    factRepaid += line.repaid;
+    factInterest += line.interest;
+  }
+  return { factReceived, factRepaid, factInterest };
 }
 
 /**
@@ -139,34 +198,41 @@ function lineAmounts(line: CreditResourceMonthLine | null): Omit<CreditResourceM
  */
 export function openingPrincipal(document: PrototypeDocument, creditor: Creditor, month: string): number {
   let balance = 0;
-  for (const record of creditResourceMonthsList(document)) {
-    if (record.month >= month || record.month < CHAIN_START) {
+  for (const day of creditResourceDaysList(document)) {
+    const dayMonth = day.occurredOn.slice(0, 7);
+    if (dayMonth >= month || dayMonth < CHAIN_START) {
       continue;
     }
-    const line = record.lines.find((item) => item.creditorId === creditor.id);
+    const line = day.lines.find((item) => item.creditorId === creditor.id);
     if (!line) {
       continue;
     }
-    balance += line.factReceived - line.factRepaid;
+    balance += line.received - line.repaid;
   }
   return balance;
 }
 
-function lineHasActivity(amounts: Omit<CreditResourceMonthLine, 'id' | 'creditorId'>): boolean {
-  return (
-    amounts.planReceived !== 0 ||
-    amounts.factReceived !== 0 ||
-    amounts.planRepaid !== 0 ||
-    amounts.factRepaid !== 0 ||
-    amounts.planInterest !== 0 ||
-    amounts.factInterest !== 0
-  );
+function planHasActivity(
+  amounts: Pick<CreditResourceMonthLine, 'planReceived' | 'planRepaid' | 'planInterest'>,
+): boolean {
+  return amounts.planReceived !== 0 || amounts.planRepaid !== 0 || amounts.planInterest !== 0;
+}
+
+function dayHasActivity(amounts: Pick<CreditResourceDayLine, 'received' | 'repaid' | 'interest'>): boolean {
+  return amounts.received !== 0 || amounts.repaid !== 0 || amounts.interest !== 0;
 }
 
 function creditorVisibleInMonth(document: PrototypeDocument, creditor: Creditor, month: string): boolean {
   const opening = openingPrincipal(document, creditor, month);
-  const amounts = lineAmounts(storedLine(document, month, creditor.id));
-  return opening !== 0 || lineHasActivity(amounts);
+  const plan = planAmounts(storedMonthLine(document, month, creditor.id));
+  const fact = monthFactAmounts(document, month, creditor.id);
+  return (
+    opening !== 0 ||
+    planHasActivity(plan) ||
+    fact.factReceived !== 0 ||
+    fact.factRepaid !== 0 ||
+    fact.factInterest !== 0
+  );
 }
 
 export type CreditMonthViewOptions = {
@@ -198,10 +264,11 @@ function gridCreditors(document: PrototypeDocument, month: string, options?: Cre
 }
 
 function rowView(document: PrototypeDocument, month: string, creditor: Creditor): CreditCreditorRowView {
-  const amounts = lineAmounts(storedLine(document, month, creditor.id));
+  const plan = planAmounts(storedMonthLine(document, month, creditor.id));
+  const fact = monthFactAmounts(document, month, creditor.id);
   const opening = openingPrincipal(document, creditor, month);
-  const planClosing = opening + amounts.planReceived - amounts.planRepaid;
-  const factClosing = opening + amounts.factReceived - amounts.factRepaid;
+  const planClosing = opening + plan.planReceived - plan.planRepaid;
+  const factClosing = opening + fact.factReceived - fact.factRepaid;
   return {
     creditorId: creditor.id,
     name: creditor.name,
@@ -209,18 +276,18 @@ function rowView(document: PrototypeDocument, month: string, creditor: Creditor)
     initialPrincipal: creditor.initialPrincipal,
     interestRateHundredths: creditor.interestRateHundredths,
     openingPrincipal: opening,
-    planReceived: amounts.planReceived,
-    factReceived: amounts.factReceived,
-    varianceReceived: amounts.factReceived - amounts.planReceived,
-    planRepaid: amounts.planRepaid,
-    factRepaid: amounts.factRepaid,
-    varianceRepaid: amounts.factRepaid - amounts.planRepaid,
+    planReceived: plan.planReceived,
+    factReceived: fact.factReceived,
+    varianceReceived: fact.factReceived - plan.planReceived,
+    planRepaid: plan.planRepaid,
+    factRepaid: fact.factRepaid,
+    varianceRepaid: fact.factRepaid - plan.planRepaid,
     planClosingPrincipal: planClosing,
     factClosingPrincipal: factClosing,
     varianceClosingPrincipal: factClosing - planClosing,
-    planInterest: amounts.planInterest,
-    factInterest: amounts.factInterest,
-    varianceInterest: amounts.factInterest - amounts.planInterest,
+    planInterest: plan.planInterest,
+    factInterest: fact.factInterest,
+    varianceInterest: fact.factInterest - plan.planInterest,
   };
 }
 
@@ -252,6 +319,15 @@ export function creditResourcesMonthView(
       varianceInterest: sum((row) => row.varianceInterest),
     },
   };
+}
+
+/** Суммы факта кредитора на день (для экрана ввода факта). */
+export function creditDayAmounts(
+  document: PrototypeDocument,
+  occurredOn: string,
+  creditorId: string,
+): { received: number; repaid: number; interest: number } {
+  return dayAmounts(storedDayLine(document, occurredOn, creditorId));
 }
 
 /** Сумма процентных платежей месяца для свода продаж и ДДС. */
@@ -452,10 +528,10 @@ export function setCreditMonthField(
   }
 
   const existing = monthRecord(document, month);
-  const current = storedLine(document, month, creditorId) ?? emptyLine(creditorId, month);
+  const current = storedMonthLine(document, month, creditorId) ?? emptyMonthLine(creditorId, month);
   const nextLine: CreditResourceMonthLine = { ...current, [field]: amount };
-  const amounts = lineAmounts(nextLine);
-  const keep = lineHasActivity(amounts);
+  const amounts = planAmounts(nextLine);
+  const keep = planHasActivity(amounts);
 
   if (!existing) {
     if (!keep) {
@@ -482,6 +558,76 @@ export function setCreditMonthField(
     ...document,
     creditResourceMonths: creditResourceMonthsList(document).map((item) =>
       item.month === month ? { ...item, lines } : item,
+    ),
+  };
+}
+
+export function setCreditDayFieldRejection(
+  document: PrototypeDocument,
+  occurredOn: string,
+  creditorId: string,
+  field: CreditDayField,
+  amount: number,
+): CreditFieldRejection | null {
+  if (!isOccurredOn(occurredOn)) {
+    return 'day';
+  }
+  const creditor = findCreditor(document, creditorId);
+  if (!creditor) {
+    return 'missing';
+  }
+  if (creditor.deletedAt !== null) {
+    return 'archived';
+  }
+  if (!isMoney(amount)) {
+    return 'amount';
+  }
+  void field;
+  return null;
+}
+
+export function setCreditDayField(
+  document: PrototypeDocument,
+  occurredOn: string,
+  creditorId: string,
+  field: CreditDayField,
+  amount: number,
+): PrototypeDocument {
+  if (setCreditDayFieldRejection(document, occurredOn, creditorId, field, amount)) {
+    return document;
+  }
+
+  const existing = dayRecord(document, occurredOn);
+  const current = storedDayLine(document, occurredOn, creditorId) ?? emptyDayLine(creditorId, occurredOn);
+  const nextLine: CreditResourceDayLine = { ...current, [field]: amount };
+  const amounts = dayAmounts(nextLine);
+  const keep = dayHasActivity(amounts);
+
+  if (!existing) {
+    if (!keep) {
+      return document;
+    }
+    return {
+      ...document,
+      creditResourceDays: [
+        ...creditResourceDaysList(document),
+        { id: `credit-day:${occurredOn}`, occurredOn, lines: [nextLine] },
+      ],
+    };
+  }
+
+  const without = existing.lines.filter((item) => item.creditorId !== creditorId);
+  const lines = keep ? [...without, nextLine] : without;
+  if (lines.length === 0) {
+    return {
+      ...document,
+      creditResourceDays: creditResourceDaysList(document).filter((item) => item.occurredOn !== occurredOn),
+    };
+  }
+  return {
+    ...document,
+    creditResourceDays: creditResourceDaysList(document).map((item) =>
+      item.occurredOn === occurredOn ? { ...item, lines } : item,
     ),
   };
 }

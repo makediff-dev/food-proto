@@ -19,8 +19,6 @@ import {
   setHrDayOutsourcingRejection,
   setHrDayStaff,
   setHrDayStaffRejection,
-  setHrMonthStaff,
-  setHrMonthStaffRejection,
   setHrOutsourcingPlan,
   setHrOutsourcingPlanRejection,
   setHrStaffPlan,
@@ -215,30 +213,12 @@ export function useOpex() {
       );
       return null;
     },
-    setHrMonthStaff(
-      month: string,
-      positionId: string,
-      headcountThousandths: number,
-      amountExVat: number,
-    ): HrFieldRejection | null {
-      const rejection = setHrMonthStaffRejection(document, month, positionId, headcountThousandths, amountExVat);
+    setHrDayStaff(occurredOn: string, positionId: string, amountExVat: number): HrFieldRejection | null {
+      const rejection = setHrDayStaffRejection(document, occurredOn, positionId, amountExVat);
       if (rejection) {
         return rejection;
       }
-      updateDocument((current) => setHrMonthStaff(current, month, positionId, headcountThousandths, amountExVat));
-      return null;
-    },
-    setHrDayStaff(
-      occurredOn: string,
-      positionId: string,
-      headcountThousandths: number,
-      amountExVat: number,
-    ): HrFieldRejection | null {
-      const rejection = setHrDayStaffRejection(document, occurredOn, positionId, headcountThousandths, amountExVat);
-      if (rejection) {
-        return rejection;
-      }
-      updateDocument((current) => setHrDayStaff(current, occurredOn, positionId, headcountThousandths, amountExVat));
+      updateDocument((current) => setHrDayStaff(current, occurredOn, positionId, amountExVat));
       return null;
     },
     setHrDayOutsourcing(

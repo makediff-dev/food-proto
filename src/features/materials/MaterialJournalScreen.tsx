@@ -35,7 +35,6 @@ export function MaterialJournalScreen({ month }: { month: string }) {
     <PageFrame
       title={MATERIALS_RECEIPTS_TITLE}
       full
-      lede="Приход от поставщика на склад 1 или склад 2. В отчёте это факт прихода."
       aside={
         canEditMaterialReceipts ? (
           <Link href={materialReceiptNewHref()} className={primaryButtonClassName}>

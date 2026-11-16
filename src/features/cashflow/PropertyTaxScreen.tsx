@@ -48,7 +48,6 @@ export function PropertyTaxScreen({ month }: { month: string }) {
     <PageFrame
       title={CASHFLOW_PLAN_TITLE}
       full
-      lede="План налога на имущество за месяц — итоговая сумма в рублях, без расчёта базы. Факт вводят подневно на «Вводе факта»."
       intro={
         <CashflowMonthBar
           month={selectedMonth}

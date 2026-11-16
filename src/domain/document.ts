@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 68 as const;
+export const SCHEMA_VERSION = 70 as const;
 
 /** Ставка налога на прибыль, %. `Svod!C6`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -274,17 +274,21 @@ export interface HrMonthPlan {
   outsourcingLines: HrMonthPlanOutsourcingLine[];
 }
 
-/** Месячный факт штатной должности (администрация и отдел продаж): численность и сумма отдельно. `HR!G/I`. */
+/**
+ * Месячный факт численности штатной должности.
+ * Больше не вводится и в расчётах не участвует; поле оставлено для старых документов.
+ */
 export interface HrMonthFactStaffLine {
   id: string;
   positionId: string;
   /** Люди за месяц, тысячные доли. 1 чел → 1000. */
   headcountThousandths: number;
-  /** Выплаченная сумма за месяц, копейки без НДС. */
-  amountExVat: number;
 }
 
-/** Месячный факт администрации и отдела продаж. На один месяц — одна запись. */
+/**
+ * Месячная численность администрации и отдела продаж.
+ * Больше не вводится; выплаты — в `hrDayFacts`. Массив `hrMonthFacts` оставлен для схемы.
+ */
 export interface HrMonthFact {
   id: string;
   /** `ГГГГ-ММ`. */
@@ -292,11 +296,11 @@ export interface HrMonthFact {
   staffLines: HrMonthFactStaffLine[];
 }
 
-/** Дневной факт штатной должности: численность и сумма отдельно. `HR!J` штатной строки. */
+/** Дневной факт штатной должности: выплаченная сумма. Численность в новых правках — 0. */
 export interface HrDayStaffLine {
   id: string;
   positionId: string;
-  /** Люди за день, тысячные доли. 2,64 чел → 2640. */
+  /** Устаревшее: люди за день. Новые записи пишут 0. */
   headcountThousandths: number;
   /** Выплаченная сумма, копейки без НДС. */
   amountExVat: number;
@@ -320,10 +324,10 @@ export interface HrDayFact {
 }
 
 /**
- * Ставки зарплатных налогов месяца, сотые доли процента: 13 % → 1300, 0,2 % → 20.
- * План и факт раздельно, как `HR!E86:H88`.
+ * Ставки зарплатных налогов месяца (план), сотые доли процента: 13 % → 1300, 0,2 % → 20.
+ * Факт-суммы НДФЛ, соцстраха и травматизма — дневные оплаты `taxPaymentDays`.
  * Ставка НДС аутсорса — у строки цеха в плане (`HrMonthPlanOutsourcingLine.vatPercent`);
- * поля `*OutsourcingVatHundredths` оставлены для старых документов и больше не правятся.
+ * `planOutsourcingVatHundredths` оставлен для старых документов и больше не правится.
  */
 export interface HrTaxRatesMonth {
   id: string;
@@ -333,11 +337,6 @@ export interface HrTaxRatesMonth {
   planInjuryHundredths: number;
   /** @deprecated Ставка НДС — у цеха в плане аутсорса. */
   planOutsourcingVatHundredths: number;
-  factNdflHundredths: number;
-  factSocialHundredths: number;
-  factInjuryHundredths: number;
-  /** @deprecated Ставка НДС — у цеха в плане аутсорса. */
-  factOutsourcingVatHundredths: number;
 }
 
 /** Два вида наёмного транспорта на листе `Transport`. */
@@ -556,18 +555,18 @@ export interface OpexMonthLine {
   id: string;
   /** Id статьи из `opexOtherLines`. */
   lineId: string;
+  /** План без НДС, копейки. */
   planExVat: number;
-  factExVat: number;
 }
 
-/** Ввод прочих операционных статей месяца. */
+/** План прочих операционных статей месяца. Факт — в `opexDayFacts`. */
 export interface OpexMonthLines {
   id: string;
   month: string;
   lines: OpexMonthLine[];
 }
 
-/** Дневной факт статьи поднятой категории прочих расходов. */
+/** Дневной факт статьи прочих расходов (в т.ч. поднятых категорий). */
 export interface OpexDayLine {
   id: string;
   /** Id статьи из `opexOtherLines`. */
@@ -905,34 +904,52 @@ export interface Creditor extends DeletableRecord {
   interestRateHundredths: number;
 }
 
-/** Строка движения тела кредита и процентных платежей кредитора за месяц. */
+/** Строка плана тела кредита и процентных платежей кредитора за месяц. */
 export interface CreditResourceMonthLine {
   id: string;
   /** Ссылка на `creditors`. Живёт и после удаления кредитора. */
   creditorId: string;
   /** План получения тела кредита, копейки. */
   planReceived: number;
-  /** Факт получения тела кредита, копейки. */
-  factReceived: number;
   /** План погашения тела кредита, копейки. */
   planRepaid: number;
-  /** Факт погашения тела кредита, копейки. То же поле для ДДС. */
-  factRepaid: number;
   /** План процентных платежей за месяц, копейки. Вводят вручную. */
   planInterest: number;
-  /** Факт процентных платежей за месяц, копейки. Вводят вручную. */
-  factInterest: number;
 }
 
 /**
- * Движение кредитных ресурсов месяца.
- * На один месяц — одна запись. Остаток на конец в документ не пишется.
+ * План кредитных ресурсов месяца.
+ * На один месяц — одна запись. Факт — в `creditResourceDays`. Остаток на конец в документ не пишется.
  */
 export interface CreditResourceMonth {
   id: string;
   /** `ГГГГ-ММ`. */
   month: string;
   lines: CreditResourceMonthLine[];
+}
+
+/** Строка факта тела кредита и процентных платежей кредитора за день. */
+export interface CreditResourceDayLine {
+  id: string;
+  /** Ссылка на `creditors`. Живёт и после удаления кредитора. */
+  creditorId: string;
+  /** Факт получения тела кредита, копейки. */
+  received: number;
+  /** Факт погашения тела кредита, копейки. То же поле для ДДС. */
+  repaid: number;
+  /** Факт процентных платежей, копейки. Вводят вручную. */
+  interest: number;
+}
+
+/**
+ * Дневной факт кредитных ресурсов.
+ * На один день — одна запись. Ноль день не хранит. Сумма дней месяца — факт в отчётах.
+ */
+export interface CreditResourceDay {
+  id: string;
+  /** `ГГГГ-ММ-ДД`. */
+  occurredOn: string;
+  lines: CreditResourceDayLine[];
 }
 
 /**
@@ -981,9 +998,12 @@ export interface PrototypeDocument {
   hrPositions: HrPosition[];
   /** План численности и зарплат по месяцам. */
   hrMonthPlans: HrMonthPlan[];
-  /** Месячный факт администрации и отдела продаж: численность и выплаты штатных. */
+  /** Месячная численность администрации и отдела продаж. */
   hrMonthFacts: HrMonthFact[];
-  /** Дневной факт цехов и РЦ: численность и выплаты штатных, часы и выплаты аутсорсинга. */
+  /**
+   * Дневной факт: выплаты администрации и отдела продаж (численность дня 0);
+   * численность и выплаты цехов и РЦ; часы и выплаты аутсорсинга.
+   */
   hrDayFacts: HrDayFact[];
   /** Ставки НДФЛ, соцстраха и травматизма по месяцам. */
   hrTaxRates: HrTaxRatesMonth[];
@@ -997,18 +1017,17 @@ export interface PrototypeDocument {
   transportOwnDayFacts: TransportOwnDayFact[];
   /** Справочник прочих статей `Operation Expense` (без HR и 7.1/7.2). */
   opexOtherLines: OpexOtherLine[];
-  /** Ввод прочих статей `Operation Expense` (без HR и 7.1/7.2). */
+  /** План прочих статей `Operation Expense` (без HR и 7.1/7.2). */
   opexMonthLines: OpexMonthLines[];
   /**
-   * Дневной факт статей поднятых категорий (`opexPromotedGroupCodes`).
-   * Пока категория в «Прочем», факт лежит в `opexMonthLines`; при поднятии месячный факт
-   * переносится на 1-е число, при возврате дни суммируются обратно в месяц.
+   * Дневной факт прочих статей (включая поднятые категории).
+   * Сумма дней месяца — факт в отчётах. Поднятие категории меняет только место в меню.
    */
   opexDayFacts: OpexDayFact[];
   /**
    * Коды групп прочих статей, вынесенных в отдельный раздел меню (отчёт / план / факт).
    * Группы 1 и 7 не поднимают: строки из HR и транспорта.
-   * У поднятой категории факт вводят по дням (`opexDayFacts`).
+   * Факт всех прочих статей — по дням (`opexDayFacts`).
    */
   opexPromotedGroupCodes: OpexGroupCode[];
   /**
@@ -1054,10 +1073,16 @@ export interface PrototypeDocument {
    */
   creditors: Creditor[];
   /**
-   * Получение, погашение тела и процентные платежи по месяцам.
+   * План получения, погашения тела и процентных платежей по месяцам.
    * Старый документ без поля читается как пустой массив.
    */
   creditResourceMonths: CreditResourceMonth[];
+  /**
+   * Дневной факт получения, погашения тела и процентных платежей.
+   * Сумма дней месяца — факт в отчёте по кредитам, ДДС и процентах свода.
+   * Старый документ без поля читается как пустой массив.
+   */
+  creditResourceDays: CreditResourceDay[];
   /**
    * План налога на имущество по месяцам итогом в рублях, без расчётов.
    * Факт — в `taxPaymentDays` (kind `property`).

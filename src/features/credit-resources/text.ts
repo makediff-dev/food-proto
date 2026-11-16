@@ -7,6 +7,7 @@ const MAX_CREDIT_MONEY_KOPECKS = 100_000_000_000;
 export const CREDIT_ERROR: Record<CreditFieldRejection, string> = {
   missing: 'Кредитор не найден.',
   month: 'Укажите месяц.',
+  day: 'Укажите день.',
   name: 'Укажите название.',
   empty: 'Укажите название.',
   'too-long': 'Слишком длинное название.',

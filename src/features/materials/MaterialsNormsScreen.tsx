@@ -23,11 +23,7 @@ export function MaterialsNormsScreen() {
   const materials = useMaterials();
   const products = activeProducts(materials.document);
   return (
-    <PageFrame
-      title={MATERIALS_NORMS_TITLE}
-      full
-      lede="Сколько упаковки и вспомогательных материалов этот склад расходует на одну штуку продукции. Выпуск общий, норму ставят на склад, который материал тратит. Пустая клетка — нормы нет. Расход в отчёте пока считается из рецептов, не из этих норм."
-    >
+    <PageFrame title={MATERIALS_NORMS_TITLE} full>
       <div className="flex flex-col gap-8">
         {MATERIAL_WAREHOUSES.map((warehouse) => {
           const rows = activeMaterials(materials.document, warehouse.id).filter(

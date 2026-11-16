@@ -110,7 +110,6 @@ export function OpexGroupFactScreen({ code, month, day }: { code: string; month:
     <PageFrame
       title={`${title} · ${OPEX_OTHER_FACT_TITLE}`}
       full
-      lede="Дневной факт статей без НДС. Статьи и названия правят во вводе плана этой категории."
       intro={
         <div className="flex items-center border border-line bg-sheet p-4">
           <input

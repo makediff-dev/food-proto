@@ -7,7 +7,7 @@ import { type HrDepartmentView, hrMonthView } from '@/domain/hr';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { OpexMonthBar, resolveOpexMonth } from '@/features/opex/OpexMonthBar';
 import { OPEX_HR_TITLE, opexHrHref } from '@/features/opex/paths';
-import { formatHours, formatQuantity, formatTaxRate } from '@/features/opex/text';
+import { formatHours, formatTaxRate } from '@/features/opex/text';
 import { useOpex } from '@/features/opex/use-opex';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
@@ -41,7 +41,6 @@ export function HrSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_HR_TITLE}
       full
-      lede="План и факт по подразделениям и должностям. У администрации и отдела продаж — месячный факт, у цехов и РЦ — из дневных строк. У аутсорса ставка и сумма — без НДС; процент НДС задают во вводе плана, сумма НДС — в ДДС. Зарплатные налоги только показывают."
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -69,12 +68,6 @@ export function HrSummaryScreen({ month }: { month: string }) {
                   </th>
                   <th scope="col" className={valueHead}>
                     <ColumnLabel label="План, ФОТ" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="Факт, чел" hint="У цехов и РЦ — сумма людей по дням / дни месяца" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="Факт, зарплата" />
                   </th>
                   <th scope="col" className={valueHead}>
                     <ColumnLabel label="Факт, ФОТ" />
@@ -107,12 +100,6 @@ export function HrSummaryScreen({ month }: { month: string }) {
                     <MoneyAmount amount={view.total.plan.fotExVat} />
                   </td>
                   <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                    {formatQuantity(view.total.fact.headcount)}
-                  </td>
-                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                    <MoneyAmount amount={view.total.fact.salaryExVat} />
-                  </td>
-                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
                     <MoneyAmount amount={view.total.fact.fotExVat} />
                   </td>
                 </tr>
@@ -141,13 +128,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
                     <ColumnLabel label="План, сумма" />
                   </th>
                   <th scope="col" className={valueHead}>
-                    <ColumnLabel label="Факт, база" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="Факт, %" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="Факт, сумма" />
+                    <ColumnLabel label="Факт, сумма" hint="Оплаты с «Налоги · Ввод факта»" />
                   </th>
                 </tr>
               </thead>
@@ -168,13 +149,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
                       <td className={`${valueCell} ${cellKindClassName.computed}`}>
                         <MoneyAmount amount={tax.planAmountExVat} />
                       </td>
-                      <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                        <MoneyAmount amount={tax.factBaseExVat} />
-                      </td>
                       <td className={`${valueCell} ${cellKindClassName.repeated}`}>
-                        {formatTaxRate(tax.factRateHundredths)}
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName.computed}`}>
                         <MoneyAmount amount={tax.factAmountExVat} />
                       </td>
                     </tr>
@@ -190,11 +165,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
                   <td className={`${valueCell} ${cellKindClassName.computed}`}>
                     <MoneyAmount amount={view.taxTotal.planAmountExVat} />
                   </td>
-                  <td className={`${valueCell} ${cellKindClassName.computed}`} />
-                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                    {formatTaxRate(view.taxTotal.factEffectiveHundredths)}
-                  </td>
-                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                  <td className={`${valueCell} ${cellKindClassName.repeated}`}>
                     <MoneyAmount amount={view.taxTotal.factAmountExVat} />
                   </td>
                 </tr>
@@ -239,10 +210,6 @@ function DepartmentBlock({ department }: { department: HrDepartmentView }) {
         <td className={`${valueCell} ${categoryBandClassName}`}>
           <MoneyAmount amount={department.plan.fotExVat} />
         </td>
-        <td className={`${valueCell} ${categoryBandClassName}`}>{formatQuantity(department.fact.headcount)}</td>
-        <td className={`${valueCell} ${categoryBandClassName}`}>
-          <MoneyAmount amount={department.fact.salaryExVat} />
-        </td>
         <td className={`${valueCell} ${categoryBandClassName}`}>
           <MoneyAmount amount={department.fact.fotExVat} />
         </td>
@@ -260,10 +227,6 @@ function DepartmentBlock({ department }: { department: HrDepartmentView }) {
               </td>
               <td className={`${valueCell} ${cellKindClassName.computed}`}>
                 <MoneyAmount amount={row.plan.fotExVat} />
-              </td>
-              <td className={`${valueCell} ${cellKindClassName.computed}`}>{formatQuantity(row.fact.headcount)}</td>
-              <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                <MoneyAmount amount={row.fact.salaryExVat} />
               </td>
               <td className={`${valueCell} ${cellKindClassName.computed}`}>
                 <MoneyAmount amount={row.fact.fotExVat} />
@@ -285,13 +248,6 @@ function DepartmentBlock({ department }: { department: HrDepartmentView }) {
           </td>
           <td className={`${valueCell} ${cellKindClassName.computed}`}>
             <MoneyAmount amount={outsourcing.planAmountExVat} />
-          </td>
-          <td className={`${valueCell} ${cellKindClassName.computed}`}>
-            {formatHours(outsourcing.factHoursThousandths)} ч
-          </td>
-          <td className={`${valueCell} ${cellKindClassName.computed}`}>
-            <MoneyAmount amount={outsourcing.factRateExVat} />
-            <span className="text-muted"> /ч</span>
           </td>
           <td className={`${valueCell} ${cellKindClassName.computed}`}>
             <MoneyAmount amount={outsourcing.factAmountExVat} />

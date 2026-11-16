@@ -20,17 +20,26 @@ export const OPEX_OTHER_PLAN_TITLE = 'Ввод плана';
 
 export const OPEX_OTHER_FACT_TITLE = 'Ввод факта';
 
+/** Пункт меню «Движение денежных средств». */
+export const OPEX_OTHER_FACT_NAV_LABEL = 'Прочие ОР · Ввод факта';
+
 export const OPEX_SUMMARY_HREF = '/opex';
 export const OPEX_HR_HREF = '/opex/hr';
 export const OPEX_HR_PLAN_HREF = '/opex/hr/plan';
-export const OPEX_HR_FACT_HREF = '/opex/hr/fact';
+/** Fact entry lives in the cashflow menu. */
+export const OPEX_HR_FACT_HREF = '/cashflow/hr/fact';
 export const OPEX_TRANSPORT_HREF = '/opex/transport';
 export const OPEX_TRANSPORT_PLAN_HREF = '/opex/transport/plan';
-export const OPEX_TRANSPORT_FACT_HREF = '/opex/transport/fact';
+/** Fact entry lives in the cashflow menu. */
+export const OPEX_TRANSPORT_FACT_HREF = '/cashflow/transport/fact';
 export const OPEX_OTHER_PLAN_HREF = '/opex/other/plan';
-export const OPEX_OTHER_FACT_HREF = '/opex/other/fact';
+/** Fact entry lives in the cashflow menu. */
+export const OPEX_OTHER_FACT_HREF = '/cashflow/other/fact';
 
 export const OPEX_GROUP_BASE_HREF = '/opex/group';
+
+/** Promoted-group fact entry lives in the cashflow menu. */
+export const OPEX_GROUP_FACT_BASE_HREF = '/cashflow/group';
 
 export function opexGroupHrefPath(code: string): string {
   return `${OPEX_GROUP_BASE_HREF}/${code}`;
@@ -41,7 +50,19 @@ export function opexGroupPlanHrefPath(code: string): string {
 }
 
 export function opexGroupFactHrefPath(code: string): string {
-  return `${opexGroupHrefPath(code)}/fact`;
+  return `${OPEX_GROUP_FACT_BASE_HREF}/${code}/fact`;
+}
+
+export function opexHrefWithQuery(path: string, params: { month?: string; day?: string }): string {
+  const query = new URLSearchParams();
+  if (params.month) {
+    query.set('month', params.month);
+  }
+  if (params.day) {
+    query.set('day', params.day);
+  }
+  const suffix = query.toString();
+  return suffix ? `${path}?${suffix}` : path;
 }
 
 export function parseOpexMonthQuery(params: { month?: string }): { month: string } {
@@ -113,8 +134,13 @@ export function opexOtherPlanHref(options: { month: string; currentMonth: string
   return monthHref(OPEX_OTHER_PLAN_HREF, options.month, options.currentMonth);
 }
 
-export function opexOtherFactHref(options: { month: string; currentMonth: string }): string {
-  return monthHref(OPEX_OTHER_FACT_HREF, options.month, options.currentMonth);
+export function opexOtherFactHref(options: {
+  month: string;
+  day: string;
+  currentMonth: string;
+  todayDay: string;
+}): string {
+  return dayHref(OPEX_OTHER_FACT_HREF, options.month, options.day, options.currentMonth, options.todayDay);
 }
 
 export function opexGroupHref(options: { code: string; month: string; currentMonth: string }): string {

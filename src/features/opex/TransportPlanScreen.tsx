@@ -54,7 +54,6 @@ export function TransportPlanScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_TRANSPORT_PLAN_TITLE}
       full
-      lede="План наёмного транспорта по контрагентам и план топлива собственных автомобилей. Ставку НДС контрагента и НДС топлива правят в колонке «НДС» — сумма попадает в «Отчет по налогам»."
       intro={
         <OpexMonthBar
           month={selectedMonth}

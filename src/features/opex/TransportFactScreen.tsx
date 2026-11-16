@@ -4,16 +4,18 @@ import { useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 
 import { isOccurredOn } from '@/domain/document';
+import { maxProductionEntryOccurredOn } from '@/domain/production-journal';
 import { defaultSalesFactDay, monthDates } from '@/domain/sales-fact';
-import { monthKeyFromDate } from '@/domain/sales-plan';
+import { monthKeyFromDate, planMonthOpen } from '@/domain/sales-plan';
 import { transportHireDayValue, transportMonthView, transportOwnDayValue } from '@/domain/transport';
 import { QuantityCell } from '@/features/materials/QuantityCell';
-import { OpexMonthBar, resolveOpexMonth } from '@/features/opex/OpexMonthBar';
+import { resolveOpexMonth } from '@/features/opex/OpexMonthBar';
 import { OPEX_TRANSPORT_FACT_TITLE, opexTransportFactHref } from '@/features/opex/paths';
 import { parseOpexMoney, TRANSPORT_ERROR } from '@/features/opex/text';
 import { useOpex } from '@/features/opex/use-opex';
 import { useRole } from '@/features/roles/RoleProvider';
 import { monthFieldClassName } from '@/features/sales/fields';
+import { MonthStep } from '@/features/shell/MonthStep';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
   ColumnLabel,
@@ -28,8 +30,23 @@ import {
   tableFrameClassName,
 } from '@/features/table';
 
+const DAY_MIN = '2000-01-01';
+
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
 const valueCell = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
+
+/** Соседний календарный день, в том числе через границу месяца. */
+function shiftCalendarDay(date: string, offset: -1 | 1): string | null {
+  if (!isOccurredOn(date)) {
+    return null;
+  }
+
+  const year = Number(date.slice(0, 4));
+  const month = Number(date.slice(5, 7));
+  const day = Number(date.slice(8, 10));
+  const next = new Date(year, month - 1, day + offset);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+}
 
 export function TransportFactScreen({ month, day }: { month: string; day: string }) {
   const today = useMemo(() => new Date(), []);
@@ -37,20 +54,30 @@ export function TransportFactScreen({ month, day }: { month: string; day: string
   const selectedMonth = resolveOpexMonth(month, today, currentMonth);
   const fallbackDay = defaultSalesFactDay(selectedMonth, today);
   const selectedDay = resolveDay(selectedMonth, day, fallbackDay);
+  const maxDay = maxProductionEntryOccurredOn(today);
+  const previousDay = shiftCalendarDay(selectedDay, -1);
+  const nextDay = shiftCalendarDay(selectedDay, 1);
   const opex = useOpex();
   const { canEditSalesOpex } = useRole();
   const router = useRouter();
   const editable = opex.hydrated && canEditSalesOpex;
   const view = useMemo(() => transportMonthView(opex.document, selectedMonth), [opex.document, selectedMonth]);
 
-  function open(next: { month?: string; day?: string }) {
-    const targetMonth = next.month ?? selectedMonth;
-    const targetFallback = defaultSalesFactDay(targetMonth, today);
-    const targetDay = resolveDay(targetMonth, next.day ?? selectedDay, targetFallback);
+  function open(nextDayValue: string) {
+    if (!isOccurredOn(nextDayValue)) {
+      return;
+    }
+    if (nextDayValue < DAY_MIN || nextDayValue > maxDay) {
+      return;
+    }
+    const targetMonth = nextDayValue.slice(0, 7);
+    if (!planMonthOpen(targetMonth, today)) {
+      return;
+    }
     router.push(
       opexTransportFactHref({
         month: targetMonth,
-        day: targetDay,
+        day: nextDayValue,
         currentMonth,
         todayDay: defaultSalesFactDay(currentMonth, today),
       }),
@@ -62,24 +89,37 @@ export function TransportFactScreen({ month, day }: { month: string; day: string
     <PageFrame
       title={OPEX_TRANSPORT_FACT_TITLE}
       full
-      lede="Дневной факт наёмного транспорта и показания собственных автомобилей."
       intro={
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
-          <OpexMonthBar month={selectedMonth} today={today} onOpen={(next) => open({ month: next })} />
-          <div className="flex items-center border border-line bg-sheet p-4">
+        <div className="w-full border border-line bg-sheet p-4">
+          <div className="flex items-center gap-2">
+            <MonthStep
+              label="Предыдущий день"
+              direction="previous"
+              disabled={previousDay === null || previousDay < DAY_MIN || !planMonthOpen(previousDay.slice(0, 7), today)}
+              onClick={() => {
+                if (previousDay) {
+                  open(previousDay);
+                }
+              }}
+            />
             <input
               type="date"
               aria-label="День"
-              min={`${selectedMonth}-01`}
-              max={monthDates(selectedMonth).at(-1) ?? `${selectedMonth}-01`}
+              min={DAY_MIN}
+              max={maxDay}
               value={selectedDay}
-              onChange={(event) => {
-                const next = event.target.value;
-                if (next.startsWith(`${selectedMonth}-`)) {
-                  open({ day: next });
+              onChange={(event) => open(event.target.value)}
+              className={monthFieldClassName}
+            />
+            <MonthStep
+              label="Следующий день"
+              direction="next"
+              disabled={nextDay === null || nextDay > maxDay || !planMonthOpen(nextDay.slice(0, 7), today)}
+              onClick={() => {
+                if (nextDay) {
+                  open(nextDay);
                 }
               }}
-              className={monthFieldClassName}
             />
           </div>
         </div>

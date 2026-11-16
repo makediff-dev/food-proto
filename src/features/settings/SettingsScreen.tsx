@@ -14,7 +14,7 @@ import { PageFrame } from '@/features/shell/PageFrame';
 
 export function SettingsScreen() {
   return (
-    <PageFrame title={SETTINGS_TITLE} lede="Роль просмотра, обмен файлами данных и матрица прав." wide>
+    <PageFrame title={SETTINGS_TITLE} wide>
       <div className="flex flex-col gap-8">
         <RoleSection />
         <MockSection />

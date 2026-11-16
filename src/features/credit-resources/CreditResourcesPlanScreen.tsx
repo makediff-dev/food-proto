@@ -60,7 +60,6 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
     <PageFrame
       title={CREDIT_RESOURCES_PLAN_TITLE}
       full
-      lede="Справочник кредиторов и план месяца: сумма кредита (справочно), ставка, получение, погашение тела и процентные платежи. Тело появляется с месяца получения."
       intro={
         <CreditMonthBar
           month={selectedMonth}

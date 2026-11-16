@@ -1,13 +1,11 @@
-import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
-import { OtherFactScreen } from '@/features/opex/OtherFactScreen';
-import { OPEX_OTHER_FACT_TITLE, parseOpexMonthQuery } from '@/features/opex/paths';
+import { OPEX_OTHER_FACT_HREF, opexHrefWithQuery } from '@/features/opex/paths';
 
-export const metadata: Metadata = {
-  title: OPEX_OTHER_FACT_TITLE,
-};
-
-export default async function OpexOtherFactPage({ searchParams }: { searchParams: Promise<{ month?: string }> }) {
-  const query = parseOpexMonthQuery(await searchParams);
-  return <OtherFactScreen month={query.month} />;
+export default async function OpexOtherFactRedirectPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
+  redirect(opexHrefWithQuery(OPEX_OTHER_FACT_HREF, await searchParams));
 }

@@ -40,7 +40,6 @@ export function DerivativeMovementPlanScreen({ month }: { month: string }) {
     <PageFrame
       title={DERIVATIVE_MOVEMENT_PLAN_TITLE}
       full
-      lede="Нормативный минимум и максимум остатка производных на конец месяца. Рекомендуемый объём приводит остаток с начала месяца к середине интервала с учётом плана расхода."
       intro={
         <MaterialMonthBar
           month={selectedMonth}

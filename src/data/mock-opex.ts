@@ -6,6 +6,7 @@ import {
   type HrShopDepartmentId,
   type HrTaxRatesMonth,
   isHrShopDepartmentId,
+  type OpexDayFact,
   type OpexMonthLines,
   type TransportCarrier,
   type TransportHireDayFact,
@@ -472,16 +473,8 @@ export const mockHrMonthPlans: HrMonthPlan[] = MOCK_MONTHS.map((month) => ({
   })),
 }));
 
-export const mockHrMonthFacts: HrMonthFact[] = MOCK_MONTHS.map((month) => ({
-  id: `hr-month-fact:${month}`,
-  month,
-  staffLines: STAFF_SEEDS.filter((seed) => !isShopPositionId(seed.positionId)).map((seed) => ({
-    id: `hr-month-staff:${month}:${seed.positionId}`,
-    positionId: seed.positionId,
-    headcountThousandths: people(1),
-    amountExVat: monthOfficeFactAmount(month, rub(seed.salaryRub)),
-  })),
-}));
+/** Месячная численность больше не вводится; массив оставлен для схемы документа. */
+export const mockHrMonthFacts: HrMonthFact[] = [];
 
 export const mockHrDayFacts: HrDayFact[] = (() => {
   const byDate = new Map<string, HrDayFact>();
@@ -501,6 +494,20 @@ export const mockHrDayFacts: HrDayFact[] = (() => {
   };
 
   for (const month of MOCK_MONTHS) {
+    for (const seed of STAFF_SEEDS.filter((item) => !isShopPositionId(item.positionId))) {
+      const occurredOn = `${month}-01`;
+      const amountExVat = monthOfficeFactAmount(month, rub(seed.salaryRub));
+      if (amountExVat === 0) {
+        continue;
+      }
+      ensure(occurredOn).staffLines.push({
+        id: `hr-day:${occurredOn}:${seed.positionId}`,
+        positionId: seed.positionId,
+        headcountThousandths: 0,
+        amountExVat,
+      });
+    }
+
     for (const seed of STAFF_SEEDS.filter((item) => isShopPositionId(item.positionId))) {
       const dates = staffFactDates(month, seed.positionId);
       const amounts = staffFactAmounts(month, rub(seed.salaryRub), dates);
@@ -508,7 +515,7 @@ export const mockHrDayFacts: HrDayFact[] = (() => {
         ensure(occurredOn).staffLines.push({
           id: `hr-day:${occurredOn}:${seed.positionId}`,
           positionId: seed.positionId,
-          headcountThousandths: people(1),
+          headcountThousandths: 0,
           amountExVat: amounts[index] ?? 0,
         });
       });
@@ -539,10 +546,6 @@ export const mockHrTaxRates: HrTaxRatesMonth[] = MOCK_MONTHS.map((month) => ({
   planSocialHundredths: DEFAULT_SOCIAL_HUNDREDTHS,
   planInjuryHundredths: DEFAULT_INJURY_HUNDREDTHS,
   planOutsourcingVatHundredths: DEFAULT_OUTSOURCING_VAT_HUNDREDTHS,
-  factNdflHundredths: DEFAULT_NDFL_HUNDREDTHS,
-  factSocialHundredths: DEFAULT_SOCIAL_HUNDREDTHS,
-  factInjuryHundredths: DEFAULT_INJURY_HUNDREDTHS,
-  factOutsourcingVatHundredths: DEFAULT_OUTSOURCING_VAT_HUNDREDTHS,
 }));
 
 export const mockTransportHireMonthPlans: TransportHireMonthPlan[] = MOCK_MONTHS.map((month) => ({
@@ -624,11 +627,31 @@ export const mockOpexMonthLines: OpexMonthLines[] = MOCK_MONTHS.map((month) => (
   id: `opex-lines:${month}`,
   month,
   lines: OTHER_SEEDS[month]
-    .filter((seed) => seed.planRub !== 0 || seed.factRub !== 0)
+    .filter((seed) => seed.planRub !== 0)
     .map((seed) => ({
       id: `opex-lines:${month}:${seed.lineId}`,
       lineId: seed.lineId,
       planExVat: rub(seed.planRub),
-      factExVat: rub(seed.factRub),
     })),
 }));
+
+/** Факт прочих статей — на 1-е число месяца. */
+export const mockOpexDayFacts: OpexDayFact[] = MOCK_MONTHS.flatMap((month) => {
+  const lines = OTHER_SEEDS[month]
+    .filter((seed) => seed.factRub !== 0)
+    .map((seed) => ({
+      id: `opex-day-line:${month}-01:${seed.lineId}`,
+      lineId: seed.lineId,
+      amountExVat: rub(seed.factRub),
+    }));
+  if (lines.length === 0) {
+    return [];
+  }
+  return [
+    {
+      id: `opex-day:${month}-01`,
+      occurredOn: `${month}-01`,
+      lines,
+    },
+  ];
+});

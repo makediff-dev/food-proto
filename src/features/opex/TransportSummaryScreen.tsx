@@ -109,7 +109,6 @@ export function TransportSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_TRANSPORT_TITLE}
       full
-      lede="План и факт перевозок: наёмный транспорт по контрагентам и топливо собственных автомобилей."
       intro={
         <OpexMonthBar
           month={selectedMonth}

@@ -24,26 +24,16 @@ const PLAN_FIELD: Record<'ndfl' | 'social' | 'injury', HrTaxRateField> = {
   injury: 'planInjuryHundredths',
 };
 
-const FACT_FIELD: Record<'ndfl' | 'social' | 'injury', HrTaxRateField> = {
-  ndfl: 'factNdflHundredths',
-  social: 'factSocialHundredths',
-  injury: 'factInjuryHundredths',
-};
-
-/** Ставки НДФЛ, соцстраха и травматизма месяца. База и сумма считаются. Ставку НДС аутсорса задают у цеха во вводе плана; суммы с НДС — в ДДС. */
+/** Плановые ставки НДФЛ, соцстраха и травматизма месяца. База и сумма считаются. Ставку НДС аутсорса задают у цеха во вводе плана; суммы с НДС — в ДДС. */
 export function HrTaxRateBlock({
-  side,
   taxes,
   editable,
   onRate,
 }: {
-  side: 'plan' | 'fact';
   taxes: HrTaxLineView[];
   editable: boolean;
   onRate: (field: HrTaxRateField, rateHundredths: number) => string | null;
 }) {
-  const fields = side === 'plan' ? PLAN_FIELD : FACT_FIELD;
-  const rateHint = side === 'fact' ? 'На весь месяц, не на выбранный день' : undefined;
   const editableTaxes = taxes.filter(
     (tax): tax is HrTaxLineView & { id: 'ndfl' | 'social' | 'injury' } => tax.id !== 'outsourcing-vat',
   );
@@ -63,7 +53,7 @@ export function HrTaxRateBlock({
                 <ColumnLabel label="База" />
               </th>
               <th scope="col" className={valueHead}>
-                <ColumnLabel label="%" hint={rateHint} />
+                <ColumnLabel label="%" />
               </th>
               <th scope="col" className={valueHead}>
                 <ColumnLabel label="Сумма" />
@@ -71,36 +61,31 @@ export function HrTaxRateBlock({
             </tr>
           </thead>
           <tbody>
-            {editableTaxes.map((tax) => {
-              const rate = side === 'plan' ? tax.planRateHundredths : tax.factRateHundredths;
-              const base = side === 'plan' ? tax.planBaseExVat : tax.factBaseExVat;
-              const amount = side === 'plan' ? tax.planAmountExVat : tax.factAmountExVat;
-              return (
-                <tr key={tax.id}>
-                  <th scope="row" className={entityNameRowClassName('repeated')}>
-                    {tax.name}
-                  </th>
-                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                    <MoneyAmount amount={base} />
-                  </td>
-                  <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-                    {editable ? (
-                      <HundredthsCell
-                        label={`Ставка, ${tax.name}`}
-                        value={rate}
-                        invalidMessage={HR_ERROR.taxRate}
-                        onChange={(next) => onRate(fields[tax.id], next)}
-                      />
-                    ) : (
-                      formatTaxRate(rate)
-                    )}
-                  </td>
-                  <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                    <MoneyAmount amount={amount} />
-                  </td>
-                </tr>
-              );
-            })}
+            {editableTaxes.map((tax) => (
+              <tr key={tax.id}>
+                <th scope="row" className={entityNameRowClassName('repeated')}>
+                  {tax.name}
+                </th>
+                <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                  <MoneyAmount amount={tax.planBaseExVat} />
+                </td>
+                <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
+                  {editable ? (
+                    <HundredthsCell
+                      label={`Ставка, ${tax.name}`}
+                      value={tax.planRateHundredths}
+                      invalidMessage={HR_ERROR.taxRate}
+                      onChange={(next) => onRate(PLAN_FIELD[tax.id], next)}
+                    />
+                  ) : (
+                    formatTaxRate(tax.planRateHundredths)
+                  )}
+                </td>
+                <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                  <MoneyAmount amount={tax.planAmountExVat} />
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

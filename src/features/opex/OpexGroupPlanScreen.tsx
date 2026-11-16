@@ -75,7 +75,6 @@ export function OpexGroupPlanScreen({ code, month }: { code: string; month: stri
     <PageFrame
       title={`${title} · ${OPEX_OTHER_PLAN_TITLE}`}
       full
-      lede="План статей без НДС за месяц. Ставку НДС расхода правят в колонке «НДС» — сумма попадает в «Отчет по налогам». Факт вводят по дням. Можно вернуть категорию в «Прочее» — дневные суммы сложатся в месяц."
       intro={
         <div className="flex flex-wrap items-end gap-3">
           <OpexMonthBar

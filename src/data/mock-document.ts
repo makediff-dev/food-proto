@@ -1,4 +1,4 @@
-import { mockCreditors, mockCreditResourceMonths } from '@/data/mock-credit';
+import { mockCreditors, mockCreditResourceDays, mockCreditResourceMonths } from '@/data/mock-credit';
 import { mockMaterials } from '@/data/mock-materials';
 import {
   mockHrDayFacts,
@@ -6,6 +6,7 @@ import {
   mockHrMonthPlans,
   mockHrPositions,
   mockHrTaxRates,
+  mockOpexDayFacts,
   mockOpexMonthLines,
   mockTransportCarriers,
   mockTransportHireDayFacts,
@@ -798,7 +799,7 @@ export const mockDocument: PrototypeDocument = {
   transportOwnDayFacts: mockTransportOwnDayFacts,
   opexOtherLines: catalogOpexOtherLines(),
   opexMonthLines: mockOpexMonthLines,
-  opexDayFacts: [],
+  opexDayFacts: mockOpexDayFacts,
   opexPromotedGroupCodes: [],
   finishedGoodsOpenings,
   finishedGoodsNorms,
@@ -812,6 +813,7 @@ export const mockDocument: PrototypeDocument = {
   derivativeNorms: [],
   creditors: mockCreditors,
   creditResourceMonths: mockCreditResourceMonths,
+  creditResourceDays: mockCreditResourceDays,
   propertyTaxMonths: mockPropertyTaxMonths,
   taxPaymentDays: mockPropertyTaxPayments,
 };
@@ -920,6 +922,10 @@ export function createMockDocument(): PrototypeDocument {
     })),
     creditors: mockDocument.creditors.map((item) => ({ ...item })),
     creditResourceMonths: mockDocument.creditResourceMonths.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    creditResourceDays: mockDocument.creditResourceDays.map((item) => ({
       ...item,
       lines: item.lines.map((line) => ({ ...line })),
     })),

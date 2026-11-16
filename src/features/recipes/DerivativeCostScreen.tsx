@@ -23,7 +23,6 @@ export function DerivativeCostScreen({ month }: { month: string }) {
     <PageFrame
       title={RECIPES_COST_TITLE}
       full
-      lede="Плановая и фактическая себестоимость производных из рецепта и цен сырья."
       intro={
         <MaterialMonthBar
           month={selectedMonth}

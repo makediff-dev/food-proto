@@ -84,7 +84,6 @@ export function OpexSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_SUMMARY_TITLE}
       full
-      lede="План, факт и отклонение статей без НДС. HR и транспорт — из своих экранов; прочие — из «Прочее · Ввод плана» и «Прочее · Ввод факта»."
       intro={
         <OpexMonthBar
           month={selectedMonth}

@@ -148,7 +148,6 @@ export function CashflowFactScreen({ month, day }: { month: string; day: string 
     <PageFrame
       title={CASHFLOW_FACT_TITLE}
       full
-      lede="Оплаты налогов за день. Сумма месяца — факт в отчёте по налогам; НДС, прибыль и имущество — ещё в отчёте общем. Минус — возврат."
       intro={
         <div className="w-full border border-line bg-sheet p-4">
           <div className="flex items-center gap-2">

@@ -66,7 +66,6 @@ export function OpexGroupSummaryScreen({ code, month }: { code: string; month: s
     <PageFrame
       title={title}
       full
-      lede="План и факт статей без НДС. План — за месяц, факт — сумма дней. Ввод — на страницах плана и факта этой категории."
       intro={
         <OpexMonthBar
           month={selectedMonth}

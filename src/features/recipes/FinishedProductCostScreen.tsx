@@ -23,7 +23,6 @@ export function FinishedProductCostScreen({ month }: { month: string }) {
     <PageFrame
       title={RECIPES_FINISHED_COST_TITLE}
       full
-      lede="Плановая и фактическая себестоимость готовой продукции из рецепта и цен сырья."
       intro={
         <MaterialMonthBar
           month={selectedMonth}

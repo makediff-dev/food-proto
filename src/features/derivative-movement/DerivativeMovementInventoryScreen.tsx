@@ -37,7 +37,6 @@ export function DerivativeMovementInventoryScreen({ month }: { month: string }) 
     <PageFrame
       title={DERIVATIVE_MOVEMENT_INVENTORY_TITLE}
       full
-      lede="Факт остатка производных на конец месяца. Переносится на начало следующего месяца."
       intro={
         <MaterialMonthBar
           month={selectedMonth}

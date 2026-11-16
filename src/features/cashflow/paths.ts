@@ -2,9 +2,9 @@ export const CASHFLOW_SECTION_TITLE = 'Движение денежных сре�
 
 export const CASHFLOW_SUMMARY_TITLE = 'Отчет общий';
 
-export const CASHFLOW_PLAN_TITLE = 'Ввод плана';
+export const CASHFLOW_PLAN_TITLE = 'Налоги · Ввод плана';
 
-export const CASHFLOW_FACT_TITLE = 'Ввод факта';
+export const CASHFLOW_FACT_TITLE = 'Налоги · Ввод факта';
 
 export const CASHFLOW_SUMMARY_HREF = '/cashflow';
 

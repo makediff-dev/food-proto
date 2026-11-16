@@ -3,11 +3,9 @@ import type { ReactNode } from 'react';
 export function PageFrame({
   title,
   back,
-  lede,
   wide = false,
   full = false,
   fill = false,
-  ledeFull = false,
   intro,
   aside,
   children,
@@ -15,16 +13,13 @@ export function PageFrame({
   title: ReactNode;
   /** Слева от заголовка, обычно иконка «Назад». */
   back?: ReactNode;
-  lede?: string;
   wide?: boolean;
   full?: boolean;
   /** Занять высоту родителя: шапка страницы сверху, children растягиваются. */
   fill?: boolean;
-  /** Фраза под заголовком на всю ширину колонки, без узкого max-width. */
-  ledeFull?: boolean;
-  /** Под заголовком и фразой, на всю ширину колонки. */
+  /** Под заголовком, на всю ширину колонки. */
   intro?: ReactNode;
-  /** Справа, параллельно заголовку. Фраза и intro ниже — на всю ширину. */
+  /** Справа, параллельно заголовку. intro ниже — на всю ширину. */
   aside?: ReactNode;
   children?: ReactNode;
 }) {
@@ -43,24 +38,11 @@ export function PageFrame({
     heading
   );
 
-  const ledeBlock = lede ? (
-    <p
-      className={
-        full || ledeFull
-          ? 'mt-2 w-full max-w-none text-sm leading-6 text-muted'
-          : 'mt-2 max-w-2xl text-sm leading-6 text-muted'
-      }
-    >
-      {lede}
-    </p>
-  ) : null;
-
   const introBlock = intro ? <div className="mt-3">{intro}</div> : null;
 
   const titleBlock = (
     <div className="min-w-0 flex-1">
       {titleRow}
-      {ledeBlock}
       {introBlock}
     </div>
   );
@@ -85,7 +67,6 @@ export function PageFrame({
             <div className="min-w-0 flex-1">{titleRow}</div>
             <div className="w-full shrink-0 sm:w-auto">{aside}</div>
           </div>
-          {ledeBlock}
           {introBlock}
         </div>
       ) : fill ? (

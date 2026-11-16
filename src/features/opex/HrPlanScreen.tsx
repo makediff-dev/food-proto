@@ -60,7 +60,6 @@ export function HrPlanScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_HR_PLAN_TITLE}
       full
-      lede="Плановая численность и зарплата по должностям. Аутсорсинг — отдельной таблицей: часы, ставка без НДС, сумма и процент НДС по цехам (суммы с НДС — в ДДС). Ниже — ставки зарплатных налогов."
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -169,7 +168,6 @@ export function HrPlanScreen({ month }: { month: string }) {
         </section>
 
         <HrTaxRateBlock
-          side="plan"
           taxes={view.taxes.filter((tax) => tax.id !== 'outsourcing-vat')}
           editable={editable}
           onRate={(field, rateHundredths) => {

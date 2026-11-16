@@ -26,7 +26,6 @@ export function MaterialsSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={MATERIALS_SUMMARY_TITLE}
       full
-      lede="Остаток на начало — конец прошлого месяца по инвентаризации. План конца: начало + приход − расход. Факт конца — инвентаризация. План и факт расхода в производстве считаются из выпуска по рецептам. Склад 1 и склад 2 здесь не складываются."
       intro={
         <MaterialMonthBar
           month={selectedMonth}

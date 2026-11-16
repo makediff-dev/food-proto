@@ -301,9 +301,7 @@ function amountsForOtherLine(
 ): { planExVat: number; factExVat: number } {
   const stored = storedLine(opexLines(document, month), line.id);
   const planExVat = line.kind === 'agency' ? agencyPlanExVat(revenueWithVat) : (stored?.planExVat ?? 0);
-  const factExVat = promotedSet(document).has(line.groupCode)
-    ? dayFactAmount(document, month, line.id)
-    : (stored?.factExVat ?? 0);
+  const factExVat = dayFactAmount(document, month, line.id);
   return { planExVat, factExVat };
 }
 
@@ -543,6 +541,29 @@ export function operatingExpenseOtherGroupMonthView(
   });
 }
 
+function applyDayFactToGroup(
+  group: OpexOtherGroupView,
+  occurredOn: string,
+  document: PrototypeDocument,
+): OpexOtherGroupView {
+  const day = (document.opexDayFacts ?? []).find((item) => item.occurredOn === occurredOn);
+  const lines = group.lines.map((line) => {
+    const factExVat = day?.lines.find((item) => item.lineId === line.id)?.amountExVat ?? 0;
+    return {
+      ...line,
+      factExVat,
+      varianceExVat: factExVat - line.planExVat,
+    };
+  });
+  const totalFactExVat = lines.reduce((sum, item) => sum + item.factExVat, 0);
+  return {
+    ...group,
+    lines,
+    totalFactExVat,
+    totalVarianceExVat: totalFactExVat - group.totalPlanExVat,
+  };
+}
+
 /** Та же группа на дату: факт — сумма (значение) дня, план — месячный. */
 export function operatingExpenseOtherGroupDayView(
   document: PrototypeDocument,
@@ -558,21 +579,28 @@ export function operatingExpenseOtherGroupDayView(
   if (!base) {
     return null;
   }
-  const day = (document.opexDayFacts ?? []).find((item) => item.occurredOn === occurredOn);
-  const lines = base.lines.map((line) => {
-    const factExVat = day?.lines.find((item) => item.lineId === line.id)?.amountExVat ?? 0;
-    return {
-      ...line,
-      factExVat,
-      varianceExVat: factExVat - line.planExVat,
-    };
-  });
-  const totalFactExVat = lines.reduce((sum, item) => sum + item.factExVat, 0);
+  return applyDayFactToGroup(base, occurredOn, document);
+}
+
+/** Категории «Прочего» на дату: факт дня, план месяца; поднятые группы не входят. */
+export function operatingExpenseOtherDayView(
+  document: PrototypeDocument,
+  occurredOn: string,
+  revenueWithVat: number,
+): OpexOtherMonthView | null {
+  if (!isOccurredOn(occurredOn)) {
+    return null;
+  }
+  const month = occurredOn.slice(0, 7);
+  const base = operatingExpenseOtherMonthView(document, month, revenueWithVat);
+  const groups = base.groups.map((group) => applyDayFactToGroup(group, occurredOn, document));
+  const totalFact = groups.reduce((sum, group) => sum + group.totalFactExVat, 0);
   return {
-    ...base,
-    lines,
-    totalFactExVat,
-    totalVarianceExVat: totalFactExVat - base.totalPlanExVat,
+    month,
+    groups,
+    totalPlanExVat: base.totalPlanExVat,
+    totalFactExVat: totalFact,
+    totalVarianceExVat: totalFact - base.totalPlanExVat,
   };
 }
 
@@ -589,23 +617,21 @@ export function promoteOpexGroupRejection(document: PrototypeDocument, groupCode
   return null;
 }
 
-function writeMonthLineAmounts(
+function writeMonthLinePlan(
   document: PrototypeDocument,
   month: string,
   lineId: string,
   planExVat: number,
-  factExVat: number,
 ): PrototypeDocument {
   const existing = opexLines(document, month);
   const nextLine: OpexMonthLine = {
     id: `opex-line:${month}:${lineId}`,
     lineId,
     planExVat,
-    factExVat,
   };
 
   if (!existing) {
-    if (planExVat === 0 && factExVat === 0) {
+    if (planExVat === 0) {
       return document;
     }
     return {
@@ -615,7 +641,7 @@ function writeMonthLineAmounts(
   }
 
   const without = existing.lines.filter((item) => item.lineId !== lineId);
-  const lines = planExVat === 0 && factExVat === 0 ? without : [...without, nextLine];
+  const lines = planExVat === 0 ? without : [...without, nextLine];
   if (lines.length === 0) {
     return {
       ...document,
@@ -666,71 +692,12 @@ function writeDayLineAmount(
   };
 }
 
-function lineIdsForGroup(document: PrototypeDocument, groupCode: OpexGroupCode): Set<string> {
-  return new Set(document.opexOtherLines.filter((item) => item.groupCode === groupCode).map((item) => item.id));
-}
-
-/** Месячный факт → 1-е число; план остаётся в месяце. */
-function migrateMonthFactToDayOne(document: PrototypeDocument, groupCode: OpexGroupCode): PrototypeDocument {
-  const lineIds = lineIdsForGroup(document, groupCode);
-  let next = document;
-  for (const monthBlock of document.opexMonthLines) {
-    for (const line of monthBlock.lines) {
-      if (!lineIds.has(line.lineId) || line.factExVat === 0) {
-        continue;
-      }
-      next = writeDayLineAmount(next, `${monthBlock.month}-01`, line.lineId, line.factExVat);
-      next = writeMonthLineAmounts(next, monthBlock.month, line.lineId, line.planExVat, 0);
-    }
-  }
-  return next;
-}
-
-/** Сумма дней → месячный факт; дневные строки группы стираются. */
-function foldDayFactsIntoMonth(document: PrototypeDocument, groupCode: OpexGroupCode): PrototypeDocument {
-  const lineIds = lineIdsForGroup(document, groupCode);
-  const dayFacts = document.opexDayFacts ?? [];
-  const sums = new Map<string, Map<string, number>>();
-
-  for (const day of dayFacts) {
-    const month = day.occurredOn.slice(0, 7);
-    for (const line of day.lines) {
-      if (!lineIds.has(line.lineId)) {
-        continue;
-      }
-      const byLine = sums.get(month) ?? new Map<string, number>();
-      byLine.set(line.lineId, (byLine.get(line.lineId) ?? 0) + line.amountExVat);
-      sums.set(month, byLine);
-    }
-  }
-
-  let next = document;
-  for (const [month, byLine] of sums) {
-    for (const [lineId, factExVat] of byLine) {
-      const stored = storedLine(opexLines(next, month), lineId);
-      next = writeMonthLineAmounts(next, month, lineId, stored?.planExVat ?? 0, factExVat);
-    }
-  }
-
-  next = {
-    ...next,
-    opexDayFacts: (next.opexDayFacts ?? [])
-      .map((day) => ({
-        ...day,
-        lines: day.lines.filter((line) => !lineIds.has(line.lineId)),
-      }))
-      .filter((day) => day.lines.length > 0),
-  };
-  return next;
-}
-
 export function promoteOpexGroup(document: PrototypeDocument, groupCode: OpexGroupCode): PrototypeDocument {
   if (promoteOpexGroupRejection(document, groupCode)) {
     return document;
   }
-  const migrated = migrateMonthFactToDayOne(document, groupCode);
-  const next = [...migrated.opexPromotedGroupCodes, groupCode].sort((a, b) => Number(a) - Number(b));
-  return { ...migrated, opexPromotedGroupCodes: next };
+  const next = [...document.opexPromotedGroupCodes, groupCode].sort((a, b) => Number(a) - Number(b));
+  return { ...document, opexPromotedGroupCodes: next };
 }
 
 export function demoteOpexGroupRejection(document: PrototypeDocument, groupCode: string): OpexFieldRejection | null {
@@ -747,10 +714,9 @@ export function demoteOpexGroup(document: PrototypeDocument, groupCode: OpexGrou
   if (demoteOpexGroupRejection(document, groupCode)) {
     return document;
   }
-  const folded = foldDayFactsIntoMonth(document, groupCode);
   return {
-    ...folded,
-    opexPromotedGroupCodes: folded.opexPromotedGroupCodes.filter((code) => code !== groupCode),
+    ...document,
+    opexPromotedGroupCodes: document.opexPromotedGroupCodes.filter((code) => code !== groupCode),
   };
 }
 
@@ -775,6 +741,9 @@ export function setOpexLineRejection(
   if (!isMonthKey(month)) {
     return 'month';
   }
+  if (side === 'fact') {
+    return 'daily';
+  }
   const line = findOtherLine(document, lineId);
   if (!line) {
     return 'missing';
@@ -782,11 +751,8 @@ export function setOpexLineRejection(
   if (line.deletedAt !== null) {
     return 'archived';
   }
-  if (line.kind === 'agency' && side === 'plan') {
+  if (line.kind === 'agency') {
     return 'line';
-  }
-  if (side === 'fact' && promotedSet(document).has(line.groupCode)) {
-    return 'daily';
   }
   if (!isMoney(amountExVat)) {
     return 'amount';
@@ -804,11 +770,7 @@ export function setOpexLine(
   if (setOpexLineRejection(document, month, lineId, side, amountExVat)) {
     return document;
   }
-  const existing = opexLines(document, month);
-  const current = storedLine(existing, lineId);
-  const nextPlan = side === 'plan' ? amountExVat : (current?.planExVat ?? 0);
-  const nextFact = side === 'fact' ? amountExVat : (current?.factExVat ?? 0);
-  return writeMonthLineAmounts(document, month, lineId, nextPlan, nextFact);
+  return writeMonthLinePlan(document, month, lineId, amountExVat);
 }
 
 export function setOpexDayLineRejection(
@@ -826,9 +788,6 @@ export function setOpexDayLineRejection(
   }
   if (line.deletedAt !== null) {
     return 'archived';
-  }
-  if (!promotedSet(document).has(line.groupCode)) {
-    return 'not-promoted';
   }
   if (!isMoney(amountExVat)) {
     return 'amount';

@@ -3,27 +3,27 @@
 import { useRouter } from 'next/navigation';
 import { Fragment, useMemo, useState } from 'react';
 
-import { HR_DEPARTMENT_IDS, type HrDepartmentId, isHrShopDepartmentId, isOccurredOn } from '@/domain/document';
+import { HR_DEPARTMENT_IDS, type HrDepartmentId, isOccurredOn } from '@/domain/document';
 import {
   HR_DEPARTMENT_LABELS,
   type HrOutsourcingRowView,
   hrDayOutsourcingValue,
   hrDayStaffValue,
-  hrMonthStaffValue,
   hrMonthView,
   outsourcingAmountExVat,
 } from '@/domain/hr';
+import { maxProductionEntryOccurredOn } from '@/domain/production-journal';
 import { defaultSalesFactDay, monthDates } from '@/domain/sales-fact';
-import { monthKeyFromDate } from '@/domain/sales-plan';
+import { monthKeyFromDate, planMonthOpen } from '@/domain/sales-plan';
 import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
-import { HrTaxRateBlock } from '@/features/opex/HrTaxRateBlock';
-import { OpexMonthBar, resolveOpexMonth } from '@/features/opex/OpexMonthBar';
+import { resolveOpexMonth } from '@/features/opex/OpexMonthBar';
 import { OPEX_HR_FACT_TITLE, opexHrFactHref } from '@/features/opex/paths';
 import { HR_ERROR, parseOpexMoney } from '@/features/opex/text';
 import { useOpex } from '@/features/opex/use-opex';
 import { useRole } from '@/features/roles/RoleProvider';
 import { monthFieldClassName } from '@/features/sales/fields';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
+import { MonthStep } from '@/features/shell/MonthStep';
 import { PageFrame } from '@/features/shell/PageFrame';
 import {
   ColumnLabel,
@@ -41,6 +41,8 @@ import {
   tableFrameClassName,
 } from '@/features/table';
 
+const DAY_MIN = '2000-01-01';
+
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
 const valueCell = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
 
@@ -50,25 +52,40 @@ type FactDepartment = {
   positions: { id: string; name: string }[];
 };
 
+/** Соседний календарный день, в том числе через границу месяца. */
+function shiftCalendarDay(date: string, offset: -1 | 1): string | null {
+  if (!isOccurredOn(date)) {
+    return null;
+  }
+
+  const year = Number(date.slice(0, 4));
+  const month = Number(date.slice(5, 7));
+  const day = Number(date.slice(8, 10));
+  const next = new Date(year, month - 1, day + offset);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+}
+
 export function HrFactScreen({ month, day }: { month: string; day: string }) {
   const today = useMemo(() => new Date(), []);
   const currentMonth = monthKeyFromDate(today);
   const selectedMonth = resolveOpexMonth(month, today, currentMonth);
   const fallbackDay = defaultSalesFactDay(selectedMonth, today);
   const selectedDay = resolveDay(selectedMonth, day, fallbackDay);
+  const maxDay = maxProductionEntryOccurredOn(today);
+  const previousDay = shiftCalendarDay(selectedDay, -1);
+  const nextDay = shiftCalendarDay(selectedDay, 1);
   const opex = useOpex();
   const { canEditSalesOpex } = useRole();
   const router = useRouter();
   const editable = opex.hydrated && canEditSalesOpex;
   const view = useMemo(() => hrMonthView(opex.document, selectedMonth), [opex.document, selectedMonth]);
-  const taxes = view.taxes;
   const outsourcingRows = useMemo(
     () => view.departments.flatMap((department) => (department.outsourcing ? [department.outsourcing] : [])),
     [view.departments],
   );
 
-  const officeDepartments = useMemo((): FactDepartment[] => {
-    return HR_DEPARTMENT_IDS.filter((departmentId) => !isHrShopDepartmentId(departmentId)).map((departmentId) => {
+  const staffDepartments = useMemo((): FactDepartment[] => {
+    return HR_DEPARTMENT_IDS.map((departmentId) => {
       const positions = opex.document.hrPositions
         .filter((item) => item.departmentId === departmentId && item.kind === 'staff' && item.deletedAt === null)
         .map((item) => ({ id: item.id, name: item.name }));
@@ -77,30 +94,24 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
         name: HR_DEPARTMENT_LABELS[departmentId],
         positions,
       };
-    });
+    }).filter((department) => department.positions.length > 0);
   }, [opex.document]);
 
-  const shopDepartments = useMemo((): FactDepartment[] => {
-    return HR_DEPARTMENT_IDS.filter((departmentId) => isHrShopDepartmentId(departmentId)).map((departmentId) => {
-      const positions = opex.document.hrPositions
-        .filter((item) => item.departmentId === departmentId && item.kind === 'staff' && item.deletedAt === null)
-        .map((item) => ({ id: item.id, name: item.name }));
-      return {
-        departmentId,
-        name: HR_DEPARTMENT_LABELS[departmentId],
-        positions,
-      };
-    });
-  }, [opex.document]);
-
-  function open(next: { month?: string; day?: string }) {
-    const targetMonth = next.month ?? selectedMonth;
-    const targetFallback = defaultSalesFactDay(targetMonth, today);
-    const targetDay = resolveDay(targetMonth, next.day ?? selectedDay, targetFallback);
+  function openDay(nextDayValue: string) {
+    if (!isOccurredOn(nextDayValue)) {
+      return;
+    }
+    if (nextDayValue < DAY_MIN || nextDayValue > maxDay) {
+      return;
+    }
+    const targetMonth = nextDayValue.slice(0, 7);
+    if (!planMonthOpen(targetMonth, today)) {
+      return;
+    }
     router.push(
       opexHrFactHref({
         month: targetMonth,
-        day: targetDay,
+        day: nextDayValue,
         currentMonth,
         todayDay: defaultSalesFactDay(currentMonth, today),
       }),
@@ -112,22 +123,52 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
     <PageFrame
       title={OPEX_HR_FACT_TITLE}
       full
-      lede="Месячный факт администрации и отдела продаж и дневной факт цехов и РЦ. Аутсорсинг — отдельной таблицей: часы, ставка и сумма без НДС. Ставка НДС цеха задаётся во вводе плана и идёт в ДДС. Ставки зарплатных налогов — на месяц, внизу экрана."
-      intro={<OpexMonthBar month={selectedMonth} today={today} onOpen={(next) => open({ month: next })} />}
+      intro={
+        <div className="w-full border border-line bg-sheet p-4">
+          <div className="flex items-center gap-2">
+            <MonthStep
+              label="Предыдущий день"
+              direction="previous"
+              disabled={previousDay === null || previousDay < DAY_MIN || !planMonthOpen(previousDay.slice(0, 7), today)}
+              onClick={() => {
+                if (previousDay) {
+                  openDay(previousDay);
+                }
+              }}
+            />
+            <input
+              type="date"
+              aria-label="День"
+              min={DAY_MIN}
+              max={maxDay}
+              value={selectedDay}
+              onChange={(event) => openDay(event.target.value)}
+              className={monthFieldClassName}
+            />
+            <MonthStep
+              label="Следующий день"
+              direction="next"
+              disabled={nextDay === null || nextDay > maxDay || !planMonthOpen(nextDay.slice(0, 7), today)}
+              onClick={() => {
+                if (nextDay) {
+                  openDay(nextDay);
+                }
+              }}
+            />
+          </div>
+        </div>
+      }
     >
       <div className="flex flex-col gap-6">
         <section className="flex flex-col gap-2">
-          <h2 className="px-1 text-sm font-medium">Администрация и отдел продаж</h2>
+          <h2 className="px-1 text-sm font-medium">Выплаты</h2>
           <div className={tableFrameClassName}>
             <table className={tableClassName}>
-              <caption className="sr-only">{`Факт HR за ${selectedMonth}`}</caption>
+              <caption className="sr-only">{`Выплаты HR на ${selectedDay}`}</caption>
               <thead>
                 <tr>
                   <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                     <ColumnLabel label="Наименование" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="Кол-во" />
                   </th>
                   <th scope="col" className={valueHead}>
                     <ColumnLabel label="Сумма" />
@@ -135,18 +176,56 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
                 </tr>
               </thead>
               <tbody>
-                {officeDepartments.map((department) => (
+                {staffDepartments.map((department) => (
                   <DepartmentBlock
                     key={department.departmentId}
                     department={department}
                     editable={editable}
-                    staff={(positionId) => hrMonthStaffValue(opex.document, selectedMonth, positionId)}
-                    onStaff={(positionId, headcountThousandths, amountExVat) => {
-                      const rejection = opex.setHrMonthStaff(
-                        selectedMonth,
-                        positionId,
-                        headcountThousandths,
-                        amountExVat,
+                    amount={(positionId) => hrDayStaffValue(opex.document, selectedDay, positionId)}
+                    onAmount={(positionId, amountExVat) => {
+                      const rejection = opex.setHrDayStaff(selectedDay, positionId, amountExVat);
+                      return rejection ? HR_ERROR[rejection] : null;
+                    }}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section className="flex flex-col gap-2">
+          <h2 className="px-1 text-sm font-medium">Аутсорсинг</h2>
+          <div className={tableFrameClassName}>
+            <table className={tableClassName}>
+              <caption className="sr-only">{`Факт аутсорсинга на ${selectedDay}`}</caption>
+              <thead>
+                <tr>
+                  <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                    <ColumnLabel label="Цех" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="Часы" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="Ставка" />
+                  </th>
+                  <th scope="col" className={valueHead}>
+                    <ColumnLabel label="Сумма" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {outsourcingRows.map((row) => (
+                  <OutsourcingFactRow
+                    key={row.departmentId}
+                    row={row}
+                    editable={editable}
+                    values={hrDayOutsourcingValue(opex.document, selectedDay, row.departmentId)}
+                    onChange={(hourThousandths, rateExVat) => {
+                      const rejection = opex.setHrDayOutsourcing(
+                        selectedDay,
+                        row.departmentId,
+                        hourThousandths,
+                        rateExVat,
                       );
                       return rejection ? HR_ERROR[rejection] : null;
                     }}
@@ -156,116 +235,6 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
             </table>
           </div>
         </section>
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center border border-line bg-sheet p-4">
-            <input
-              type="date"
-              aria-label="День"
-              min={`${selectedMonth}-01`}
-              max={monthDates(selectedMonth).at(-1) ?? `${selectedMonth}-01`}
-              value={selectedDay}
-              onChange={(event) => {
-                const next = event.target.value;
-                if (next.startsWith(`${selectedMonth}-`)) {
-                  open({ day: next });
-                }
-              }}
-              className={monthFieldClassName}
-            />
-          </div>
-          <section className="flex flex-col gap-2">
-            <h2 className="px-1 text-sm font-medium">Цеха</h2>
-            <div className={tableFrameClassName}>
-              <table className={tableClassName}>
-                <caption className="sr-only">{`Факт HR на ${selectedDay}`}</caption>
-                <thead>
-                  <tr>
-                    <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                      <ColumnLabel label="Наименование" />
-                    </th>
-                    <th scope="col" className={valueHead}>
-                      <ColumnLabel label="Кол-во" />
-                    </th>
-                    <th scope="col" className={valueHead}>
-                      <ColumnLabel label="Сумма" />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shopDepartments.map((department) => (
-                    <DepartmentBlock
-                      key={department.departmentId}
-                      department={department}
-                      editable={editable}
-                      staff={(positionId) => hrDayStaffValue(opex.document, selectedDay, positionId)}
-                      onStaff={(positionId, headcountThousandths, amountExVat) => {
-                        const rejection = opex.setHrDayStaff(
-                          selectedDay,
-                          positionId,
-                          headcountThousandths,
-                          amountExVat,
-                        );
-                        return rejection ? HR_ERROR[rejection] : null;
-                      }}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-          <section className="flex flex-col gap-2">
-            <h2 className="px-1 text-sm font-medium">Аутсорсинг</h2>
-            <div className={tableFrameClassName}>
-              <table className={tableClassName}>
-                <caption className="sr-only">{`Факт аутсорсинга на ${selectedDay}`}</caption>
-                <thead>
-                  <tr>
-                    <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                      <ColumnLabel label="Цех" />
-                    </th>
-                    <th scope="col" className={valueHead}>
-                      <ColumnLabel label="Часы" />
-                    </th>
-                    <th scope="col" className={valueHead}>
-                      <ColumnLabel label="Ставка" />
-                    </th>
-                    <th scope="col" className={valueHead}>
-                      <ColumnLabel label="Сумма" />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {outsourcingRows.map((row) => (
-                    <OutsourcingFactRow
-                      key={row.departmentId}
-                      row={row}
-                      editable={editable}
-                      values={hrDayOutsourcingValue(opex.document, selectedDay, row.departmentId)}
-                      onChange={(hourThousandths, rateExVat) => {
-                        const rejection = opex.setHrDayOutsourcing(
-                          selectedDay,
-                          row.departmentId,
-                          hourThousandths,
-                          rateExVat,
-                        );
-                        return rejection ? HR_ERROR[rejection] : null;
-                      }}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </div>
-        <HrTaxRateBlock
-          side="fact"
-          taxes={taxes.filter((tax) => tax.id !== 'outsourcing-vat')}
-          editable={editable}
-          onRate={(field, rateHundredths) => {
-            const rejection = opex.setHrTaxRate(selectedMonth, field, rateHundredths);
-            return rejection ? HR_ERROR[rejection] : null;
-          }}
-        />
       </div>
     </PageFrame>
   );
@@ -274,13 +243,13 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
 function DepartmentBlock({
   department,
   editable,
-  staff,
-  onStaff,
+  amount,
+  onAmount,
 }: {
   department: FactDepartment;
   editable: boolean;
-  staff: (positionId: string) => { headcountThousandths: number; amountExVat: number };
-  onStaff: (positionId: string, headcountThousandths: number, amountExVat: number) => string | null;
+  amount: (positionId: string) => number;
+  onAmount: (positionId: string, amountExVat: number) => string | null;
 }) {
   const [open, setOpen] = useState(true);
   const count = department.positions.length;
@@ -306,11 +275,10 @@ function DepartmentBlock({
           </div>
         </th>
         <td className={`${valueCell} ${categoryBandClassName}`} />
-        <td className={`${valueCell} ${categoryBandClassName}`} />
       </tr>
       {open
         ? department.positions.map((position) => {
-            const values = staff(position.id);
+            const value = amount(position.id);
             return (
               <tr key={position.id}>
                 <th scope="row" className={entityNameRowClassName('repeated')}>
@@ -318,28 +286,15 @@ function DepartmentBlock({
                 </th>
                 <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
                   {editable ? (
-                    <QuantityCell
-                      label={`Численность, ${position.name}`}
-                      value={values.headcountThousandths}
-                      unit="чел"
-                      blankIfZero
-                      onChange={(next) => onStaff(position.id, next, values.amountExVat)}
-                    />
-                  ) : (
-                    <QuantityRead value={values.headcountThousandths} unit="чел" />
-                  )}
-                </td>
-                <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-                  {editable ? (
                     <MoneyCell
                       label={`Сумма, ${position.name}`}
-                      value={values.amountExVat}
+                      value={value}
                       parse={parseOpexMoney}
                       invalidMessage={HR_ERROR.amount}
-                      onChange={(next) => onStaff(position.id, values.headcountThousandths, next)}
+                      onChange={(next) => onAmount(position.id, next)}
                     />
                   ) : (
-                    <MoneyAmount amount={values.amountExVat} />
+                    <MoneyAmount amount={value} />
                   )}
                 </td>
               </tr>

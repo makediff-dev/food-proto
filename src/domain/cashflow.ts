@@ -172,6 +172,9 @@ function earliestCashflowMonth(document: PrototypeDocument, month: string): stri
   for (const item of document.creditResourceMonths ?? []) {
     consider(item.month);
   }
+  for (const item of document.creditResourceDays ?? []) {
+    consider(item.occurredOn.slice(0, 7));
+  }
   for (const item of document.propertyTaxMonths ?? []) {
     consider(item.month);
   }

@@ -208,8 +208,6 @@ function transportExpenseVat(document: PrototypeDocument, month: string): VatMon
 function payrollLine(document: PrototypeDocument, month: string): VatReportLine {
   const children = hrMonthView(document, month)
     .taxes.filter((item) => item.id === 'ndfl' || item.id === 'social' || item.id === 'injury')
-    .map((item) =>
-      line(`payroll:${item.id}`, item.name, item.planAmountExVat, taxPaymentMonthTotal(document, item.id, month)),
-    );
+    .map((item) => line(`payroll:${item.id}`, item.name, item.planAmountExVat, item.factAmountExVat));
   return line('payroll', 'Зарплатные налоги', 0, 0, children);
 }

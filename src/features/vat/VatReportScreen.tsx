@@ -192,7 +192,6 @@ export function VatReportScreen({ month }: { month: string }) {
     <PageFrame
       title={VAT_REPORT_SUMMARY_TITLE}
       full
-      lede="План НДС — расчёт с продаж и к зачету. Факт НДС, зарплатных налогов, прибыли и имущества — из «Ввода факта». План имущества — на «Вводе плана»."
       intro={
         <CashflowMonthBar
           month={selectedMonth}

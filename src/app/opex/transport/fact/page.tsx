@@ -1,17 +1,11 @@
-import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
-import { OPEX_TRANSPORT_FACT_TITLE, parseOpexDayQuery } from '@/features/opex/paths';
-import { TransportFactScreen } from '@/features/opex/TransportFactScreen';
+import { OPEX_TRANSPORT_FACT_HREF, opexHrefWithQuery } from '@/features/opex/paths';
 
-export const metadata: Metadata = {
-  title: OPEX_TRANSPORT_FACT_TITLE,
-};
-
-export default async function OpexTransportFactPage({
+export default async function OpexTransportFactRedirectPage({
   searchParams,
 }: {
   searchParams: Promise<{ month?: string; day?: string }>;
 }) {
-  const query = parseOpexDayQuery(await searchParams);
-  return <TransportFactScreen month={query.month} day={query.day} />;
+  redirect(opexHrefWithQuery(OPEX_TRANSPORT_FACT_HREF, await searchParams));
 }

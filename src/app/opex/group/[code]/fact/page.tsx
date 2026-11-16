@@ -1,17 +1,8 @@
-import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
 
-import { isOpexGroupCode } from '@/domain/document';
-import { opexGroupName } from '@/domain/operating-expense';
-import { OpexGroupFactScreen } from '@/features/opex/OpexGroupFactScreen';
-import { OPEX_OTHER_FACT_TITLE, parseOpexDayQuery } from '@/features/opex/paths';
+import { opexGroupFactHrefPath, opexHrefWithQuery } from '@/features/opex/paths';
 
-export async function generateMetadata({ params }: { params: Promise<{ code: string }> }): Promise<Metadata> {
-  const { code } = await params;
-  const name = isOpexGroupCode(code) ? opexGroupName(code) : 'Категория расходов';
-  return { title: `${name} · ${OPEX_OTHER_FACT_TITLE}` };
-}
-
-export default async function OpexGroupFactPage({
+export default async function OpexGroupFactRedirectPage({
   params,
   searchParams,
 }: {
@@ -19,6 +10,5 @@ export default async function OpexGroupFactPage({
   searchParams: Promise<{ month?: string; day?: string }>;
 }) {
   const { code } = await params;
-  const query = parseOpexDayQuery(await searchParams);
-  return <OpexGroupFactScreen code={code} month={query.month} day={query.day} />;
+  redirect(opexHrefWithQuery(opexGroupFactHrefPath(code), await searchParams));
 }

@@ -4,6 +4,7 @@ import { useDocumentStore } from '@/data/DocumentProvider';
 import {
   addCreditor,
   addCreditorRejection,
+  type CreditDayField,
   type CreditFieldRejection,
   type CreditMonthField,
   deleteCreditor,
@@ -11,6 +12,8 @@ import {
   renameCreditorRejection,
   restoreCreditor,
   restoreCreditorRejection,
+  setCreditDayField,
+  setCreditDayFieldRejection,
   setCreditMonthField,
   setCreditMonthFieldRejection,
   setCreditorInitialPrincipal,
@@ -80,6 +83,19 @@ export function useCreditResources() {
         return rejection;
       }
       updateDocument((current) => setCreditMonthField(current, month, creditorId, field, amount));
+      return null;
+    },
+    setDayField(
+      occurredOn: string,
+      creditorId: string,
+      field: CreditDayField,
+      amount: number,
+    ): CreditFieldRejection | null {
+      const rejection = setCreditDayFieldRejection(document, occurredOn, creditorId, field, amount);
+      if (rejection) {
+        return rejection;
+      }
+      updateDocument((current) => setCreditDayField(current, occurredOn, creditorId, field, amount));
       return null;
     },
   };

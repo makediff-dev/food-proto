@@ -137,7 +137,6 @@ export function CreditResourcesSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={CREDIT_RESOURCES_SUMMARY_TITLE}
       full
-      lede="Остатки и оборот тела кредита по банкам и частным кредиторам. Процентные платежи входят в сводку продаж и в ДДС."
       intro={
         <CreditMonthBar
           month={selectedMonth}
