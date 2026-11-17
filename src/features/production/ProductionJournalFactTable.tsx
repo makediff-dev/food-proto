@@ -178,11 +178,7 @@ function CategoryBlock({
     <>
       <tr>
         {dateCell}
-        <th
-          scope="row"
-          className={categoryNameRowDayFactClassName(false, { stack: 'belowHead' })}
-          style={categoryStickyStyle}
-        >
+        <th scope="row" className={categoryNameRowDayFactClassName({ stack: 'belowHead' })} style={categoryStickyStyle}>
           <div className="flex items-center gap-2">
             <button
               type="button"

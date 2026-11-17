@@ -1,7 +1,7 @@
 # Graph Report - food-proto  (2026-11-17)
 
 ## Corpus Check
-- 297 files · ~178,600 words
+- 297 files · ~179,022 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 8 file(s) not represented in the graph (top: .mdc 5, (none) 1, .ico 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `da5d8319`
+- Built from commit: `b543167f`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -512,7 +512,7 @@ Nodes (3): DerivativePage(), metadata, DerivativeEditScreen()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `next` connect `next` to `SummaryTable.tsx`, `shiftMonth`, `SalesJournalScreen.tsx`, `package.json`, `sales-fact.ts`, `DerivativeCreateScreen.tsx`, `cashflow/paths.ts`, `derivative-movement.ts`, `PropertyTaxScreen.tsx`, `TransportSummaryScreen`, `ProductionEntryScreen.tsx`, `OpexGroupPlanScreen`, `SaleScreen.tsx`, `ColumnLabel`, `DocumentProvider.tsx`, `FinishedProductsScreen.tsx`, `FinishedGoodsFactScreen.tsx`, `AppShell.tsx`, `consumption/page.tsx`, `planMonthOpen`, `MaterialsNormsScreen.tsx`, `vat/paths.ts`, `ProductionJournalFactScreen.tsx`, `recipes/paths.ts`, `credit-resources/paths.ts`, `SaleScreen`, `index.ts`, `ProductionPlanScreen.tsx`, `opex/paths.ts`, `derivatives.ts`, `sales-plan.ts`, `recipes/new/page.tsx`, `monthKeyFromDate`, `SettingsScreen.tsx`, `RecipeJournalsTable.tsx`, `DerivativeEditScreen`?**
-  _High betweenness centrality (0.079) - this node is a cross-community bridge._
+  _High betweenness centrality (0.077) - this node is a cross-community bridge._
 - **What connects `@biomejs/biome`, `@tailwindcss/postcss`, `@types/node` to the rest of the system?**
   _8 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `use-opex.ts` be split into smaller, more focused modules?**

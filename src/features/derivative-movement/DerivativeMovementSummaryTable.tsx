@@ -42,9 +42,15 @@ type ColumnKey =
   | 'factReceipt'
   | 'factReceiptPrice'
   | 'factReceiptCost'
+  | 'realReceipt'
+  | 'realReceiptPrice'
+  | 'realReceiptCost'
   | 'receiptDeviation'
   | 'receiptDeviationPrice'
   | 'receiptDeviationCost'
+  | 'receiptToPlanDeviation'
+  | 'receiptToPlanDeviationPrice'
+  | 'receiptToPlanDeviationCost'
   | 'planConsumption'
   | 'planConsumptionPrice'
   | 'planConsumptionCost'
@@ -83,7 +89,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
       {
         key: 'planReceipt',
         label: 'Кол-во',
-        hint: 'Рекомендуемый объём выпуска из ввода плана',
+        hint: 'Рекомендуемый объём выпуска под плановое производство',
       },
       {
         key: 'planReceiptPrice',
@@ -94,17 +100,39 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
       {
         key: 'factReceipt',
         label: 'Кол-во',
-        hint: 'Сколько производных действительно произвели',
+        hint: 'Рекомендуемый объём выпуска под фактическое производство',
       },
       {
         key: 'factReceiptPrice',
         label: 'Себест.',
-        hint: 'Себестоимость единицы по фактическим ценам расхода сырья',
+        hint: 'Себестоимость единицы по фактическим ценам и расходу сырья',
       },
       { key: 'factReceiptCost', label: 'Стоимость' },
-      { key: 'receiptDeviation', label: 'Кол-во', hint: 'Реальный − план' },
+      {
+        key: 'realReceipt',
+        label: 'Кол-во',
+        hint: 'Сколько производных действительно произвели',
+      },
+      {
+        key: 'realReceiptPrice',
+        label: 'Себест.',
+        hint: 'Себестоимость единицы по фактическим ценам и расходу сырья',
+      },
+      { key: 'realReceiptCost', label: 'Стоимость' },
+      {
+        key: 'receiptDeviation',
+        label: 'Кол-во',
+        hint: 'Реальный факт − расчётный факт',
+      },
       { key: 'receiptDeviationPrice', label: 'Себест.' },
       { key: 'receiptDeviationCost', label: 'Стоимость' },
+      {
+        key: 'receiptToPlanDeviation',
+        label: 'Кол-во',
+        hint: 'Реальный факт − план',
+      },
+      { key: 'receiptToPlanDeviationPrice', label: 'Себест.' },
+      { key: 'receiptToPlanDeviationCost', label: 'Стоимость' },
     ],
   },
   {
@@ -205,12 +233,18 @@ const COLUMN_KIND: Record<ColumnKey, CellKind> = {
   planReceipt: 'computed',
   planReceiptPrice: 'computed',
   planReceiptCost: 'computed',
-  factReceipt: 'repeated',
+  factReceipt: 'computed',
   factReceiptPrice: 'computed',
   factReceiptCost: 'computed',
+  realReceipt: 'repeated',
+  realReceiptPrice: 'computed',
+  realReceiptCost: 'computed',
   receiptDeviation: 'computed',
   receiptDeviationPrice: 'computed',
   receiptDeviationCost: 'computed',
+  receiptToPlanDeviation: 'computed',
+  receiptToPlanDeviationPrice: 'computed',
+  receiptToPlanDeviationCost: 'computed',
   planConsumption: 'computed',
   planConsumptionPrice: 'computed',
   planConsumptionCost: 'computed',
@@ -308,7 +342,7 @@ function WorkshopBlock({
   return (
     <>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false, { stack: 'belowHead' })} style={categoryStickyStyle}>
+        <th scope="row" className={categoryNameRowClassName({ stack: 'belowHead' })} style={categoryStickyStyle}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -355,18 +389,38 @@ function WorkshopCell({ column, section }: { column: ColumnKey; section: Derivat
   if (column === 'factReceiptCost') {
     return (
       <VatMoneyCell
-        label="Фактическая стоимость прихода"
+        label="Расчётная стоимость прихода"
         withVat={section.factReceiptCost.withVat}
         exVat={section.factReceiptCost.exVat}
+      />
+    );
+  }
+  if (column === 'realReceiptCost') {
+    return (
+      <VatMoneyCell
+        label="Реальная стоимость прихода"
+        withVat={section.realReceiptCost.withVat}
+        exVat={section.realReceiptCost.exVat}
       />
     );
   }
   if (column === 'receiptDeviationCost') {
     return (
       <VatMoneyCell
-        label="Отклонение стоимости прихода"
+        label="Отклонение стоимости прихода к расчёту"
         withVat={section.receiptDeviationCost.withVat}
         exVat={section.receiptDeviationCost.exVat}
+        signed
+        sense="cost"
+      />
+    );
+  }
+  if (column === 'receiptToPlanDeviationCost') {
+    return (
+      <VatMoneyCell
+        label="Отклонение стоимости прихода к плану"
+        withVat={section.receiptToPlanDeviationCost.withVat}
+        exVat={section.receiptToPlanDeviationCost.exVat}
         signed
         sense="cost"
       />
@@ -501,6 +555,7 @@ function RowCell({ column, row }: { column: ColumnKey; row: DerivativeMovementRo
     case 'factReceipt':
       return <QuantityRead value={row.factReceiptQuantity} unit={unit} />;
     case 'factReceiptPrice':
+    case 'realReceiptPrice':
       return (
         <VatMoneyCell
           label="Фактическая цена прихода"
@@ -511,9 +566,19 @@ function RowCell({ column, row }: { column: ColumnKey; row: DerivativeMovementRo
     case 'factReceiptCost':
       return (
         <VatMoneyCell
-          label="Фактическая стоимость прихода"
+          label="Расчётная стоимость прихода"
           withVat={row.factReceiptCost.withVat}
           exVat={row.factReceiptCost.exVat}
+        />
+      );
+    case 'realReceipt':
+      return <QuantityRead value={row.realReceiptQuantity} unit={unit} />;
+    case 'realReceiptCost':
+      return (
+        <VatMoneyCell
+          label="Реальная стоимость прихода"
+          withVat={row.realReceiptCost.withVat}
+          exVat={row.realReceiptCost.exVat}
         />
       );
     case 'receiptDeviation':
@@ -521,7 +586,7 @@ function RowCell({ column, row }: { column: ColumnKey; row: DerivativeMovementRo
     case 'receiptDeviationPrice':
       return (
         <VatMoneyCell
-          label="Отклонение цены прихода"
+          label="Отклонение цены прихода к расчёту"
           withVat={row.receiptDeviationPrice.withVat}
           exVat={row.receiptDeviationPrice.exVat}
           signed
@@ -531,9 +596,31 @@ function RowCell({ column, row }: { column: ColumnKey; row: DerivativeMovementRo
     case 'receiptDeviationCost':
       return (
         <VatMoneyCell
-          label="Отклонение стоимости прихода"
+          label="Отклонение стоимости прихода к расчёту"
           withVat={row.receiptDeviationCost.withVat}
           exVat={row.receiptDeviationCost.exVat}
+          signed
+          sense="cost"
+        />
+      );
+    case 'receiptToPlanDeviation':
+      return <QuantityRead value={row.receiptToPlanDeviationQuantity} unit={unit} signed />;
+    case 'receiptToPlanDeviationPrice':
+      return (
+        <VatMoneyCell
+          label="Отклонение цены прихода к плану"
+          withVat={row.receiptToPlanDeviationPrice.withVat}
+          exVat={row.receiptToPlanDeviationPrice.exVat}
+          signed
+          sense="cost"
+        />
+      );
+    case 'receiptToPlanDeviationCost':
+      return (
+        <VatMoneyCell
+          label="Отклонение стоимости прихода к плану"
+          withVat={row.receiptToPlanDeviationCost.withVat}
+          exVat={row.receiptToPlanDeviationCost.exVat}
           signed
           sense="cost"
         />

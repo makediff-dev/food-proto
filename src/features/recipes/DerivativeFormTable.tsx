@@ -396,7 +396,7 @@ function GroupBlock({
   return (
     <>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false)}>
+        <th scope="row" className={categoryNameRowClassName()}>
           <div className="flex items-center gap-2">
             <button
               type="button"

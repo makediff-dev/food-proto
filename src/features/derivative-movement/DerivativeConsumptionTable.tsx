@@ -132,7 +132,7 @@ export function DerivativeConsumptionTable({
         <thead ref={headRef} className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
-            <th scope="colgroup" className={`${blockHeadingClassName} ${tableBorder.rightThick}`}>
+            <th colSpan={2} scope="colgroup" className={`${blockHeadingClassName} ${tableBorder.rightThick}`}>
               {keepWithNext('Произведено производных')}
             </th>
             <th colSpan={2} scope="colgroup" className={`${blockHeadingClassName} ${tableBorder.rightThick}`}>
@@ -142,6 +142,9 @@ export function DerivativeConsumptionTable({
           <tr>
             <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               <ColumnLabel label="Производная" />
+            </th>
+            <th scope="col" className={valueHead}>
+              <ColumnLabel label="Расчёт" hint="Необходимый объём выпуска по рецепту на выпуск этого дня" />
             </th>
             <th scope="col" className={`${columnHeadingClassName} ${tableBorder.rightThick}`}>
               <ColumnLabel label="Реальный" hint="Сколько производных действительно произвели за этот день" />
@@ -193,11 +196,7 @@ function SectionBlock({
   return (
     <>
       <tr>
-        <th
-          scope="row"
-          className={categoryNameRowClassName(editable, { stack: 'belowHead' })}
-          style={categoryStickyStyle}
-        >
+        <th scope="row" className={categoryNameRowClassName({ stack: 'belowHead' })} style={categoryStickyStyle}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -214,6 +213,7 @@ function SectionBlock({
             </span>
           </div>
         </th>
+        <td className={`${bandCell} ${stickyCategoryCellClassName}`} style={categoryStickyStyle} />
         <td className={`${bandEnd} ${stickyCategoryCellClassName}`} style={categoryStickyStyle} />
         <td className={`${bandCell} ${stickyCategoryCellClassName}`} style={categoryStickyStyle} />
         <td className={`${bandEnd} ${stickyCategoryCellClassName}`} style={categoryStickyStyle} />
@@ -258,6 +258,9 @@ function DerivativeRow({
           </span>
         </span>
       </th>
+      <td className={`${valueCell} ${cellKindClassName.computed}`}>
+        <QuantityRead value={row.calculated} unit={row.unit} />
+      </td>
       <td className={`${valueEnd} ${cellKindClassName[inputKind(editable)]}`}>
         {editable ? (
           <QuantityCell

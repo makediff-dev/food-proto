@@ -77,12 +77,20 @@ export const DERIVATIVE_RECEIPT_SUB_BANNERS: ReportSubBannerGroup[] = [
     keys: ['planReceipt', 'planReceiptPrice', 'planReceiptCost'],
   },
   {
-    label: 'реальный',
+    label: 'расчётный',
     keys: ['factReceipt', 'factReceiptPrice', 'factReceiptCost'],
   },
   {
-    label: 'отклонение',
+    label: 'реальный',
+    keys: ['realReceipt', 'realReceiptPrice', 'realReceiptCost'],
+  },
+  {
+    label: 'откл. к расчёту',
     keys: ['receiptDeviation', 'receiptDeviationPrice', 'receiptDeviationCost'],
+  },
+  {
+    label: 'откл. к плану',
+    keys: ['receiptToPlanDeviation', 'receiptToPlanDeviationPrice', 'receiptToPlanDeviationCost'],
   },
 ];
 

@@ -59,9 +59,7 @@ function LineRows({
   const hasChildren = Boolean(line.children && line.children.length > 0);
   const open = openIds.has(line.id);
   const isGroup = depth === 0 || (hasChildren && depth <= 1);
-  const nameRow = isGroup
-    ? categoryNameRowClassName(false, { stack: 'belowHead' })
-    : entityNameRowClassName('repeated');
+  const nameRow = isGroup ? categoryNameRowClassName({ stack: 'belowHead' }) : entityNameRowClassName('repeated');
   /** Группа — итог (computed / полоса категории); лист — повтор из другой таблицы. */
   const sideKind: CellKind = hasChildren ? 'computed' : 'repeated';
   const amountFill = isGroup ? categoryBandClassName : cellKindClassName[sideKind];

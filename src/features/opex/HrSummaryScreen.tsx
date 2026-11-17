@@ -87,7 +87,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
                   />
                 ))}
                 <tr className="font-medium">
-                  <th scope="row" className={categoryNameRowClassName(false)}>
+                  <th scope="row" className={categoryNameRowClassName()}>
                     <span className={categoryNameClassName}>
                       <span className="group relative cursor-help">
                         <span className="border-b border-dotted border-muted">ВСЕГО</span>
@@ -161,7 +161,7 @@ export function HrSummaryScreen({ month }: { month: string }) {
                     </tr>
                   ))}
                 <tr className="font-medium">
-                  <th scope="row" className={categoryNameRowClassName(false)}>
+                  <th scope="row" className={categoryNameRowClassName()}>
                     <span className={categoryNameClassName}>ВСЕГО</span>
                   </th>
                   <td className={`${valueCell} ${cellKindClassName.computed}`} />
@@ -198,7 +198,7 @@ function DepartmentBlock({
   return (
     <Fragment>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false, { stack: 'belowHead' })} style={categoryStickyStyle}>
+        <th scope="row" className={categoryNameRowClassName({ stack: 'belowHead' })} style={categoryStickyStyle}>
           <div className="flex items-center gap-2">
             <button
               type="button"

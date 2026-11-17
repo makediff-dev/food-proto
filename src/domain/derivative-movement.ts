@@ -52,7 +52,7 @@ export type DerivativeMovementRow = {
   /** Остаток на начало: инвентаризация конца прошлого месяца, тысячные доли. */
   openingQuantity: number;
   /**
-   * План прихода (выпуска) на месяц: рекомендуемый объём.
+   * План прихода (выпуска) на месяц: рекомендуемый объём под плановое производство.
    */
   planReceiptQuantity: number;
   /** Плановая цена 1 единицы прихода — как плановая цена расхода. */
@@ -60,19 +60,29 @@ export type DerivativeMovementRow = {
   /** Плановая стоимость прихода: плановая цена × план прихода. */
   planReceiptCost: MaterialMoney;
   /**
-   * Реальный приход (выпуск) на месяц: сумма дневного ввода за месяц.
+   * Расчётный приход (выпуск) на месяц: рекомендуемый объём под фактическое производство.
    */
   factReceiptQuantity: number;
   /** Фактическая цена 1 единицы прихода — как фактическая цена расхода. */
   factReceiptPrice: MaterialMoney;
-  /** Реальная стоимость прихода: фактическая цена × реальный приход. */
+  /** Расчётная стоимость прихода: фактическая цена × расчётный приход. */
   factReceiptCost: MaterialMoney;
-  /** Отклонение количества прихода: реальный − план. */
+  /** Реальный приход (выпуск) на месяц: сумма дневного ввода за месяц. */
+  realReceiptQuantity: number;
+  /** Реальная стоимость прихода: фактическая цена × реальный приход. */
+  realReceiptCost: MaterialMoney;
+  /** Отклонение количества прихода к расчёту: реальный − расчётный. */
   receiptDeviationQuantity: number;
-  /** Отклонение цены прихода: факт − план. */
+  /** Отклонение цены прихода к расчёту: 0. */
   receiptDeviationPrice: MaterialMoney;
-  /** Отклонение стоимости прихода: реальный − план. */
+  /** Отклонение стоимости прихода к расчёту: реальный − расчётный. */
   receiptDeviationCost: MaterialMoney;
+  /** Отклонение количества прихода к плану: реальный − план. */
+  receiptToPlanDeviationQuantity: number;
+  /** Отклонение цены прихода к плану: фактическая − плановая. */
+  receiptToPlanDeviationPrice: MaterialMoney;
+  /** Отклонение стоимости прихода к плану: реальный − план. */
+  receiptToPlanDeviationCost: MaterialMoney;
   /** План расхода на выпуск месяца, тысячные доли единицы производной. */
   planConsumptionQuantity: number;
   /** Плановая цена 1 единицы производной (шт или кг) по плановым ценам сырья. */
@@ -151,10 +161,14 @@ export type DerivativeMovementSection = {
   rows: DerivativeMovementRow[];
   /** Сумма плановой стоимости прихода по цеху. */
   planReceiptCost: MaterialMoney;
-  /** Сумма фактической стоимости прихода по цеху. */
+  /** Сумма расчётной стоимости прихода по цеху. */
   factReceiptCost: MaterialMoney;
-  /** Сумма отклонения стоимости прихода по цеху. */
+  /** Сумма реальной стоимости прихода по цеху. */
+  realReceiptCost: MaterialMoney;
+  /** Сумма отклонения стоимости прихода к расчёту по цеху. */
   receiptDeviationCost: MaterialMoney;
+  /** Сумма отклонения стоимости прихода к плану по цеху. */
+  receiptToPlanDeviationCost: MaterialMoney;
   /** Сумма плановой стоимости расхода по цеху. */
   planConsumptionCost: MaterialMoney;
   /** Сумма расчётной стоимости расхода по цеху. */
@@ -546,11 +560,18 @@ function buildRow(
   const planReceiptQuantity = recommendedQuantity;
   const planReceiptPrice = planConsumptionPrice;
   const planReceiptCost = costForQuantity(planReceiptPrice, planReceiptQuantity);
-  const factReceiptQuantity = realReceiptQuantityForDerivative(document, item.id, month);
+  const factReceiptQuantity = recommendedDerivativeVolumeQuantity(
+    openingQuantity,
+    factConsumptionQuantity,
+    norm.minQuantity,
+    norm.maxQuantity,
+  );
   const factReceiptPrice = factConsumptionPrice;
   const factReceiptCost = costForQuantity(factReceiptPrice, factReceiptQuantity);
+  const realReceiptQuantity = realReceiptQuantityForDerivative(document, item.id, month);
+  const realReceiptCost = costForQuantity(factReceiptPrice, realReceiptQuantity);
   const bookClosingQuantity = openingQuantity + planReceiptQuantity - planConsumptionQuantity;
-  const currentClosingQuantity = openingQuantity + factReceiptQuantity - realConsumptionQuantity;
+  const currentClosingQuantity = openingQuantity + realReceiptQuantity - realConsumptionQuantity;
   const currentClosingDeviationQuantity = currentClosingQuantity - bookClosingQuantity;
   const currentClosingDeviationCost = costForQuantity(factConsumptionPrice, currentClosingDeviationQuantity);
   const closingDeviationQuantity = hasInventoryLine ? inventoryClosingQuantity - bookClosingQuantity : null;
@@ -580,9 +601,14 @@ function buildRow(
     factReceiptQuantity,
     factReceiptPrice,
     factReceiptCost,
-    receiptDeviationQuantity: factReceiptQuantity - planReceiptQuantity,
-    receiptDeviationPrice: subtractMoney(factReceiptPrice, planReceiptPrice),
-    receiptDeviationCost: subtractMoney(factReceiptCost, planReceiptCost),
+    realReceiptQuantity,
+    realReceiptCost,
+    receiptDeviationQuantity: realReceiptQuantity - factReceiptQuantity,
+    receiptDeviationPrice: ZERO_MONEY,
+    receiptDeviationCost: subtractMoney(realReceiptCost, factReceiptCost),
+    receiptToPlanDeviationQuantity: realReceiptQuantity - planReceiptQuantity,
+    receiptToPlanDeviationPrice: subtractMoney(factReceiptPrice, planReceiptPrice),
+    receiptToPlanDeviationCost: subtractMoney(realReceiptCost, planReceiptCost),
     planConsumptionQuantity,
     planConsumptionPrice,
     planConsumptionCost,
@@ -625,7 +651,12 @@ export function derivativeMovementMonth(document: PrototypeDocument, month: stri
         rows,
         planReceiptCost: rows.reduce((sum, row) => sumMoney(sum, row.planReceiptCost), ZERO_MONEY),
         factReceiptCost: rows.reduce((sum, row) => sumMoney(sum, row.factReceiptCost), ZERO_MONEY),
+        realReceiptCost: rows.reduce((sum, row) => sumMoney(sum, row.realReceiptCost), ZERO_MONEY),
         receiptDeviationCost: rows.reduce((sum, row) => sumMoney(sum, row.receiptDeviationCost), ZERO_MONEY),
+        receiptToPlanDeviationCost: rows.reduce(
+          (sum, row) => sumMoney(sum, row.receiptToPlanDeviationCost),
+          ZERO_MONEY,
+        ),
         planConsumptionCost: rows.reduce((sum, row) => sumMoney(sum, row.planConsumptionCost), ZERO_MONEY),
         factConsumptionCost: rows.reduce((sum, row) => sumMoney(sum, row.factConsumptionCost), ZERO_MONEY),
         realConsumptionCost: rows.reduce((sum, row) => sumMoney(sum, row.realConsumptionCost), ZERO_MONEY),

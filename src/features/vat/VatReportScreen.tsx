@@ -65,9 +65,7 @@ function LineRows({
   const hasChildren = Boolean(line.children && line.children.length > 0);
   const open = openIds.has(line.id);
   const isGroup = depth === 0 || hasChildren;
-  const nameRow = isGroup
-    ? categoryNameRowClassName(false, { stack: 'belowHead' })
-    : entityNameRowClassName('repeated');
+  const nameRow = isGroup ? categoryNameRowClassName({ stack: 'belowHead' }) : entityNameRowClassName('repeated');
   const sideKind: CellKind = hasChildren ? 'computed' : 'repeated';
   const amountFill = isGroup ? categoryBandClassName : cellKindClassName[sideKind];
   const varianceFill = isGroup ? categoryBandClassName : cellKindClassName.computed;
@@ -168,7 +166,7 @@ function ResultRow({
   total?: boolean;
   categoryStickyStyle?: CSSProperties;
 }) {
-  const nameClass = total ? totalNameClassName : categoryNameRowClassName(false, { stack: 'belowHead' });
+  const nameClass = total ? totalNameClassName : categoryNameRowClassName({ stack: 'belowHead' });
   const valueClass = total
     ? `${totalValueClassName} ${columnDividerClassName}`
     : `${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName}`;
@@ -256,11 +254,7 @@ export function VatReportScreen({ month }: { month: string }) {
           </thead>
           <tbody>
             <tr>
-              <th
-                scope="row"
-                className={categoryNameRowClassName(false, { stack: 'belowHead' })}
-                style={categoryStickyStyle}
-              >
+              <th scope="row" className={categoryNameRowClassName({ stack: 'belowHead' })} style={categoryStickyStyle}>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"

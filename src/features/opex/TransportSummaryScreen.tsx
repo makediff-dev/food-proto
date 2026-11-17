@@ -194,7 +194,7 @@ export function TransportSummaryScreen({ month }: { month: string }) {
                       </tr>
                     ))}
                     <tr className="font-medium">
-                      <th scope="row" className={categoryNameRowClassName(false)}>
+                      <th scope="row" className={categoryNameRowClassName()}>
                         Итого
                       </th>
                       <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('planQty')}`}>
@@ -295,7 +295,7 @@ export function TransportSummaryScreen({ month }: { month: string }) {
                   </tr>
                 ))}
                 <tr className="font-medium">
-                  <th scope="row" className={categoryNameRowClassName(false)}>
+                  <th scope="row" className={categoryNameRowClassName()}>
                     Итого
                   </th>
                   <td
