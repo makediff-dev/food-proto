@@ -35,6 +35,7 @@ export function MaterialsInventoryScreen({ month }: { month: string }) {
     <PageFrame
       title={MATERIALS_INVENTORY_TITLE}
       full
+      fill
       intro={
         <MaterialMonthBar
           month={selectedMonth}
@@ -43,11 +44,13 @@ export function MaterialsInventoryScreen({ month }: { month: string }) {
         />
       }
     >
-      <MaterialsInventoryTable
-        groups={view.groups}
-        editable={materials.hydrated && canEditInventory}
-        onClosing={closingError}
-      />
+      <div className="min-h-0 flex-1">
+        <MaterialsInventoryTable
+          groups={view.groups}
+          editable={materials.hydrated && canEditInventory}
+          onClosing={closingError}
+        />
+      </div>
     </PageFrame>
   );
 }

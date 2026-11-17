@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 
 import type { FinishedGoodsGroup, FinishedGoodsRow, FinishedGoodsTotals } from '@/domain/finished-goods';
 import {
@@ -25,14 +25,16 @@ import {
   Muted,
   nameHeadingClassName,
   ProductIndex,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   TableNumber,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
   tableFrameExpandedClassName,
+  tableFrameScrollClassName,
   totalNameClassName,
   totalValueClassName,
+  useStickyTableHead,
   VatMoneyCell,
 } from '@/features/table';
 
@@ -186,11 +188,13 @@ export function FinishedGoodsMonthTable({
   expanded?: boolean;
   caption?: string;
 }) {
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
+
   return (
-    <div className={expanded ? tableFrameExpandedClassName : tableFrameClassName}>
+    <div className={expanded ? tableFrameExpandedClassName : tableFrameScrollClassName}>
       <table className={tableClassName}>
         <caption className="sr-only">{caption}</caption>
-        <thead className={stickyHeadClassName}>
+        <thead ref={headRef} className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             {COLUMN_GROUPS.map((group, index) => (
@@ -227,7 +231,7 @@ export function FinishedGoodsMonthTable({
         </thead>
         <tbody>
           {groups.map((group) => (
-            <CategoryBlock key={group.categoryId} group={group} />
+            <CategoryBlock key={group.categoryId} group={group} categoryStickyStyle={categoryStickyStyle} />
           ))}
           <tr>
             <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
@@ -248,14 +252,20 @@ export function FinishedGoodsMonthTable({
   );
 }
 
-function CategoryBlock({ group }: { group: FinishedGoodsGroup }) {
+function CategoryBlock({
+  group,
+  categoryStickyStyle,
+}: {
+  group: FinishedGoodsGroup;
+  categoryStickyStyle: CSSProperties | undefined;
+}) {
   const [open, setOpen] = useState(true);
   const productCount = group.rows.length;
 
   return (
     <>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false)}>
+        <th scope="row" className={categoryNameRowClassName(false, { stack: 'belowHead' })} style={categoryStickyStyle}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -278,7 +288,8 @@ function CategoryBlock({ group }: { group: FinishedGoodsGroup }) {
         {COLUMNS.map((column) => (
           <td
             key={`group:${column.key}`}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${categoryBandClassName} ${groupEndClass(column.key)}`}
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${stickyCategoryCellClassName} ${categoryBandClassName} ${groupEndClass(column.key)}`}
+            style={categoryStickyStyle}
           >
             <TotalsCell column={column.key} totals={group.totals} />
           </td>

@@ -112,6 +112,7 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
       <PageFrame
         title={PRODUCTION_PLAN_TITLE}
         full
+        fill
         intro={
           <div className="w-full border border-line bg-sheet p-4">
             <div className="flex items-center gap-2">
@@ -145,9 +146,9 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
           </div>
         }
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
           {missing.length > 0 ? (
-            <div className="flex flex-col gap-3 border border-line bg-sheet p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex shrink-0 flex-col gap-3 border border-line bg-sheet p-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm leading-6 text-ink">В справочнике есть товары, которых нет в этом плане.</p>
               <div className="flex flex-col gap-2 sm:items-end">
                 <button type="button" onClick={addMissing} className={`w-full sm:w-auto ${primaryButtonClassName}`}>
@@ -161,7 +162,7 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
 
           {hasTable ? (
             <section
-              className={tableExpanded ? 'fixed inset-0 z-50 bg-paper' : undefined}
+              className={tableExpanded ? 'fixed inset-0 z-50 bg-paper' : 'min-h-0 flex-1'}
               aria-label={tableExpanded ? 'Таблица на весь экран' : 'Таблица плана производства'}
             >
               <ProductionPlanTable
@@ -173,7 +174,7 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
               />
             </section>
           ) : (
-            <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
+            <p className="shrink-0 border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
               {categories.length === 0
                 ? 'Добавьте категорию и товар во «Вводе плана». План производства строится по товарам.'
                 : 'Добавьте товар во «Вводе плана». План производства строится по товарам.'}

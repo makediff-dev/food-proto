@@ -23,9 +23,10 @@ import {
   entityNameRowClassName,
   MoneyCell,
   nameHeadingClassName,
+  stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
 } from '@/features/table';
 
 const DAY_MIN = '2000-01-01';
@@ -148,6 +149,7 @@ export function CashflowFactScreen({ month, day }: { month: string; day: string 
     <PageFrame
       title={CASHFLOW_FACT_TITLE}
       full
+      fill
       intro={
         <div className="w-full border border-line bg-sheet p-4">
           <div className="flex items-center gap-2">
@@ -184,10 +186,10 @@ export function CashflowFactScreen({ month, day }: { month: string; day: string 
         </div>
       }
     >
-      <div className={tableFrameClassName}>
+      <div className={tableFrameScrollClassName}>
         <table className={tableClassName}>
           <caption className="sr-only">{`Оплаты налогов за ${selectedDay}`}</caption>
-          <thead>
+          <thead className={stickyHeadClassName}>
             <tr>
               <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                 <ColumnLabel label="Статья" />

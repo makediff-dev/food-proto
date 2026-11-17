@@ -22,10 +22,12 @@ import {
   columnHeadingClassName,
   MoneyAmount,
   nameHeadingClassName,
+  stickyHeadClassName,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
   totalNameClassName,
   totalValueClassName,
+  useStickyTableHead,
 } from '@/features/table';
 
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
@@ -79,6 +81,7 @@ export function OpexGroupFactScreen({ code, month, day }: { code: string; month:
     }
     return operatingExpenseOtherGroupDayView(opex.document, selectedDay, groupCode, totals?.revenueWithVat ?? 0);
   }, [groupCode, promoted, opex.document, selectedDay, totals?.revenueWithVat]);
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
 
   function open(nextDay: string) {
     if (!groupCode || !isOccurredOn(nextDay)) {
@@ -110,6 +113,7 @@ export function OpexGroupFactScreen({ code, month, day }: { code: string; month:
     <PageFrame
       title={`${title} · ${OPEX_OTHER_FACT_TITLE}`}
       full
+      fill
       intro={
         <div className="flex items-center border border-line bg-sheet p-4">
           <input
@@ -124,10 +128,10 @@ export function OpexGroupFactScreen({ code, month, day }: { code: string; month:
         </div>
       }
     >
-      <div className={tableFrameClassName}>
+      <div className={tableFrameScrollClassName}>
         <table className={tableClassName}>
           <caption className="sr-only">{`${title}, факт за ${selectedDay}`}</caption>
-          <thead>
+          <thead ref={headRef} className={stickyHeadClassName}>
             <tr>
               <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                 <ColumnLabel label="Наименование" />
@@ -142,6 +146,7 @@ export function OpexGroupFactScreen({ code, month, day }: { code: string; month:
               group={view}
               side="fact"
               editable={editable}
+              categoryStickyStyle={categoryStickyStyle}
               onAmount={(lineId, amount) => {
                 const rejection = opex.setOpexDayLine(selectedDay, lineId, amount);
                 return rejection ? OPEX_LINE_ERROR[rejection] : null;

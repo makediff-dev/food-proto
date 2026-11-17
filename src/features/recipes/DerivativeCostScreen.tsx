@@ -23,6 +23,7 @@ export function DerivativeCostScreen({ month }: { month: string }) {
     <PageFrame
       title={RECIPES_COST_TITLE}
       full
+      fill
       intro={
         <MaterialMonthBar
           month={selectedMonth}

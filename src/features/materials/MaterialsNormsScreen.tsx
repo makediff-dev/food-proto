@@ -16,28 +16,27 @@ import {
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
 } from '@/features/table';
 
 export function MaterialsNormsScreen() {
   const materials = useMaterials();
   const products = activeProducts(materials.document);
   return (
-    <PageFrame title={MATERIALS_NORMS_TITLE} full>
-      <div className="flex flex-col gap-8">
-        {MATERIAL_WAREHOUSES.map((warehouse) => {
-          const rows = activeMaterials(materials.document, warehouse.id).filter(
-            (item) => item.groupId === NORMED_MATERIAL_GROUP_ID,
-          );
-          return (
-            <section key={warehouse.id} className="flex flex-col gap-2">
-              <h2 className="text-sm text-ink">{warehouse.name}</h2>
-              {rows.length === 0 ? (
-                <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
-                  В этой группе позиций нет. Добавьте наименование во вводе плана.
-                </p>
-              ) : (
-                <div className={tableFrameClassName}>
+    <PageFrame title={MATERIALS_NORMS_TITLE} full fill>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="flex flex-col gap-8">
+          {MATERIAL_WAREHOUSES.map((warehouse) => {
+            const rows = activeMaterials(materials.document, warehouse.id).filter(
+              (item) => item.groupId === NORMED_MATERIAL_GROUP_ID,
+            );
+            return (
+              <section key={warehouse.id} className="flex flex-col gap-2">
+                <h2 className="text-sm text-ink">{warehouse.name}</h2>
+                {rows.length === 0 ? (
+                  <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
+                    В этой группе позиций нет. Добавьте наименование во вводе плана.
+                  </p>
+                ) : (
                   <table className={tableClassName}>
                     <caption className="sr-only">Нормы {warehouse.name}</caption>
                     <thead className={stickyHeadClassName}>
@@ -97,11 +96,11 @@ export function MaterialsNormsScreen() {
                       ))}
                     </tbody>
                   </table>
-                </div>
-              )}
-            </section>
-          );
-        })}
+                )}
+              </section>
+            );
+          })}
+        </div>
       </div>
     </PageFrame>
   );

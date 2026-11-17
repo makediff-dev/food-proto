@@ -26,6 +26,7 @@ export function MaterialsSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={MATERIALS_SUMMARY_TITLE}
       full
+      fill
       intro={
         <MaterialMonthBar
           month={selectedMonth}

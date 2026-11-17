@@ -62,6 +62,7 @@ export function MaterialsPlanScreen({ month }: { month: string }) {
     <PageFrame
       title={MATERIALS_PLAN_TITLE}
       full
+      fill
       intro={
         <MaterialMonthBar
           month={selectedMonth}
@@ -70,32 +71,36 @@ export function MaterialsPlanScreen({ month }: { month: string }) {
         />
       }
     >
-      <MaterialsPlanTable
-        groups={view.groups}
-        editable={planEditable}
-        onField={fieldError}
-        onEdit={
-          planEditable
-            ? (materialId) => {
-                const material = materialById(materials.document, materialId);
-                if (material && material.deletedAt === null) {
-                  setDialog({ mode: 'edit', material });
+      <div className="min-h-0 flex-1">
+        <MaterialsPlanTable
+          groups={view.groups}
+          editable={planEditable}
+          onField={fieldError}
+          onEdit={
+            planEditable
+              ? (materialId) => {
+                  const material = materialById(materials.document, materialId);
+                  if (material && material.deletedAt === null) {
+                    setDialog({ mode: 'edit', material });
+                  }
                 }
-              }
-            : undefined
-        }
-        onDelete={
-          planEditable
-            ? (materialId, name) => {
-                const confirmed = window.confirm(`Удалить «${name}»? Позиция пропадёт из рабочего списка.`);
-                if (confirmed) {
-                  materials.remove(materialId);
+              : undefined
+          }
+          onDelete={
+            planEditable
+              ? (materialId, name) => {
+                  const confirmed = window.confirm(`Удалить «${name}»? Позиция пропадёт из рабочего списка.`);
+                  if (confirmed) {
+                    materials.remove(materialId);
+                  }
                 }
-              }
-            : undefined
-        }
-        onAdd={planEditable ? (groupId, warehouseId) => setDialog({ mode: 'create', groupId, warehouseId }) : undefined}
-      />
+              : undefined
+          }
+          onAdd={
+            planEditable ? (groupId, warehouseId) => setDialog({ mode: 'create', groupId, warehouseId }) : undefined
+          }
+        />
+      </div>
       {dialog && planEditable ? (
         <MaterialDialog
           state={dialog}

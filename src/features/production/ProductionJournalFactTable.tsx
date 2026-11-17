@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 import {
   adjacentDay,
@@ -35,13 +35,16 @@ import {
   Muted,
   nameHeadingClassName,
   ProductIndex,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   TableNumber,
   tableBorder,
   tableFrameExpandedClassName,
+  tableFrameScrollClassName,
   totalNameClassName,
   totalValueClassName,
   useOpenCategories,
+  useStickyTableHead,
   VatMoneyCell,
 } from '@/features/table';
 
@@ -73,18 +76,13 @@ export function ProductionJournalFactTable({
   expanded?: boolean;
 }) {
   const { toggleCategory, categoryOpen } = useOpenCategories();
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
 
   return (
-    <div
-      className={
-        expanded
-          ? tableFrameExpandedClassName
-          : 'h-full min-h-0 contain-paint overflow-auto border border-line bg-sheet'
-      }
-    >
+    <div className={expanded ? tableFrameExpandedClassName : tableFrameScrollClassName}>
       <table className={dayFactTableClassName}>
         <caption className="sr-only">Факт выпуска по дням</caption>
-        <thead className={stickyHeadClassName}>
+        <thead ref={headRef} className={stickyHeadClassName}>
           <tr>
             <th colSpan={2} className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             <th colSpan={COLUMNS.length + 1} scope="colgroup" className={blockHeadingClassName}>
@@ -130,6 +128,7 @@ export function ProductionJournalFactTable({
                   group={group}
                   open={categoryOpen(group.categoryId)}
                   dateCell={groupIndex === 0 ? dateCell : null}
+                  categoryStickyStyle={categoryStickyStyle}
                   onToggle={() => toggleCategory(group.categoryId)}
                 />
               ))}
@@ -164,11 +163,13 @@ function CategoryBlock({
   group,
   open,
   dateCell,
+  categoryStickyStyle,
   onToggle,
 }: {
   group: ProductionJournalFactGroup;
   open: boolean;
   dateCell: ReactNode;
+  categoryStickyStyle: CSSProperties | undefined;
   onToggle: () => void;
 }) {
   const productCount = group.rows.length;
@@ -177,7 +178,11 @@ function CategoryBlock({
     <>
       <tr>
         {dateCell}
-        <th scope="row" className={categoryNameRowDayFactClassName(false)}>
+        <th
+          scope="row"
+          className={categoryNameRowDayFactClassName(false, { stack: 'belowHead' })}
+          style={categoryStickyStyle}
+        >
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -200,12 +205,17 @@ function CategoryBlock({
         {COLUMNS.map((column) => (
           <td
             key={column.key}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${categoryBandClassName} ${columnDividerClassName}`}
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${stickyCategoryCellClassName} ${categoryBandClassName} ${columnDividerClassName}`}
+            style={categoryStickyStyle}
           >
             <TotalCell column={column.key} totals={group.totals} />
           </td>
         ))}
-        <td aria-hidden className={dayFactSpacerBandClassName} />
+        <td
+          aria-hidden
+          className={`${dayFactSpacerBandClassName} ${stickyCategoryCellClassName}`}
+          style={categoryStickyStyle}
+        />
       </tr>
       {open ? group.rows.map((row, index) => <ProductRow key={row.productId} row={row} index={index + 1} />) : null}
     </>

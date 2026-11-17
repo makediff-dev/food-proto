@@ -40,6 +40,7 @@ export function DerivativeMovementPlanScreen({ month }: { month: string }) {
     <PageFrame
       title={DERIVATIVE_MOVEMENT_PLAN_TITLE}
       full
+      fill
       intro={
         <MaterialMonthBar
           month={selectedMonth}
@@ -48,23 +49,28 @@ export function DerivativeMovementPlanScreen({ month }: { month: string }) {
         />
       }
     >
-      <div className="flex flex-col gap-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-4">
         {invalidNormRanges ? (
-          <p role="alert" className="border border-caution/60 bg-caution/10 px-4 py-3 text-sm leading-6 text-ink">
+          <p
+            role="alert"
+            className="shrink-0 border border-caution/60 bg-caution/10 px-4 py-3 text-sm leading-6 text-ink"
+          >
             У части производных минимум больше максимума — норматив противоречивый. Исправьте значения в колонках «Мин.»
             и «Макс.» (ячейки подсвечены).
           </p>
         ) : null}
         {view.sections.every((section) => section.rows.length === 0) ? (
-          <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
+          <p className="shrink-0 border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
             Производных пока нет. Добавьте их в рецептурных журналах.
           </p>
         ) : (
-          <DerivativeMovementPlanTable
-            sections={view.sections}
-            editable={movement.hydrated && canEditMovementPlan}
-            onNorm={normError}
-          />
+          <div className="min-h-0 flex-1">
+            <DerivativeMovementPlanTable
+              sections={view.sections}
+              editable={movement.hydrated && canEditMovementPlan}
+              onNorm={normError}
+            />
+          </div>
         )}
       </div>
     </PageFrame>

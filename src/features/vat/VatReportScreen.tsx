@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Fragment, useMemo, useState } from 'react';
+import { type CSSProperties, Fragment, useMemo, useState } from 'react';
 
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { type VatMoneySide, type VatReportLine, vatReportMonthView } from '@/domain/vat-report';
@@ -21,12 +21,14 @@ import {
   MoneyAmount,
   MoneyCell,
   nameHeadingClassName,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
   totalNameClassName,
   totalValueClassName,
+  useStickyTableHead,
 } from '@/features/table';
 import { VAT_REPORT_SUMMARY_TITLE, vatReportSummaryHref } from '@/features/vat/paths';
 import { useVatReport } from '@/features/vat/use-vat-report';
@@ -52,16 +54,20 @@ function LineRows({
   depth,
   openIds,
   toggle,
+  categoryStickyStyle,
 }: {
   line: VatReportLine;
   depth: number;
   openIds: Set<string>;
   toggle: (id: string) => void;
+  categoryStickyStyle?: CSSProperties;
 }) {
   const hasChildren = Boolean(line.children && line.children.length > 0);
   const open = openIds.has(line.id);
   const isGroup = depth === 0 || hasChildren;
-  const nameRow = isGroup ? categoryNameRowClassName(false) : entityNameRowClassName('repeated');
+  const nameRow = isGroup
+    ? categoryNameRowClassName(false, { stack: 'belowHead' })
+    : entityNameRowClassName('repeated');
   const sideKind: CellKind = hasChildren ? 'computed' : 'repeated';
   const amountFill = isGroup ? categoryBandClassName : cellKindClassName[sideKind];
   const varianceFill = isGroup ? categoryBandClassName : cellKindClassName.computed;
@@ -69,7 +75,7 @@ function LineRows({
   return (
     <Fragment>
       <tr>
-        <th scope="row" className={nameRow}>
+        <th scope="row" className={nameRow} style={isGroup ? categoryStickyStyle : undefined}>
           <div className="flex items-center gap-2" style={{ paddingLeft: `${depth * 1.25}rem` }}>
             {hasChildren ? (
               <button
@@ -93,11 +99,20 @@ function LineRows({
           amountFill={amountFill}
           varianceFill={varianceFill}
           hideFact={hideVatCalcFact(line.id)}
+          sticky={isGroup}
+          categoryStickyStyle={categoryStickyStyle}
         />
       </tr>
       {hasChildren && open
         ? line.children?.map((child) => (
-            <LineRows key={child.id} line={child} depth={depth + 1} openIds={openIds} toggle={toggle} />
+            <LineRows
+              key={child.id}
+              line={child}
+              depth={depth + 1}
+              openIds={openIds}
+              toggle={toggle}
+              categoryStickyStyle={categoryStickyStyle}
+            />
           ))
         : null}
     </Fragment>
@@ -109,19 +124,26 @@ function AmountCells({
   amountFill,
   varianceFill,
   hideFact = false,
+  sticky = false,
+  categoryStickyStyle,
 }: {
   line: VatReportLine;
   amountFill: string;
   varianceFill: string;
   hideFact?: boolean;
+  sticky?: boolean;
+  categoryStickyStyle?: CSSProperties;
 }) {
+  const stickyClass = sticky ? stickyCategoryCellClassName : '';
   return (
     <>
-      <td className={`${valueCell} ${amountFill}`}>
+      <td className={`${valueCell} ${stickyClass} ${amountFill}`} style={sticky ? categoryStickyStyle : undefined}>
         <MoneyAmount amount={line.amounts.plan} />
       </td>
-      <td className={`${valueCell} ${amountFill}`}>{hideFact ? null : <MoneyAmount amount={line.amounts.fact} />}</td>
-      <td className={`${valueCellEnd} ${varianceFill}`}>
+      <td className={`${valueCell} ${stickyClass} ${amountFill}`} style={sticky ? categoryStickyStyle : undefined}>
+        {hideFact ? null : <MoneyAmount amount={line.amounts.fact} />}
+      </td>
+      <td className={`${valueCellEnd} ${stickyClass} ${varianceFill}`} style={sticky ? categoryStickyStyle : undefined}>
         {hideFact ? null : (
           <MoneyCell
             label={`Откл., ${line.name}`}
@@ -135,29 +157,40 @@ function AmountCells({
   );
 }
 
-function ResultRow({ label, amounts, total = false }: { label: string; amounts: VatMoneySide; total?: boolean }) {
-  const nameClass = total ? totalNameClassName : categoryNameRowClassName(false);
+function ResultRow({
+  label,
+  amounts,
+  total = false,
+  categoryStickyStyle,
+}: {
+  label: string;
+  amounts: VatMoneySide;
+  total?: boolean;
+  categoryStickyStyle?: CSSProperties;
+}) {
+  const nameClass = total ? totalNameClassName : categoryNameRowClassName(false, { stack: 'belowHead' });
   const valueClass = total
     ? `${totalValueClassName} ${columnDividerClassName}`
-    : `${valueCell} ${categoryBandClassName}`;
+    : `${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName}`;
   const endClass = total
     ? `${totalValueClassName} ${tableBorder.rightThick}`
-    : `${valueCellEnd} ${categoryBandClassName}`;
+    : `${valueCellEnd} ${stickyCategoryCellClassName} ${categoryBandClassName}`;
+  const stickyStyle = total ? undefined : categoryStickyStyle;
   return (
     <tr>
-      <th scope="row" className={nameClass}>
+      <th scope="row" className={nameClass} style={stickyStyle}>
         <div className="flex items-center gap-2" style={total ? undefined : { paddingLeft: '1.25rem' }}>
           <span className="inline-block size-8 shrink-0" aria-hidden />
           <span className={total ? undefined : categoryNameClassName}>{label}</span>
         </div>
       </th>
-      <td className={valueClass}>
+      <td className={valueClass} style={stickyStyle}>
         <MoneyAmount amount={amounts.plan} />
       </td>
-      <td className={valueClass}>
+      <td className={valueClass} style={stickyStyle}>
         <MoneyAmount amount={amounts.fact} />
       </td>
-      <td className={endClass}>
+      <td className={endClass} style={stickyStyle}>
         <MoneyCell label={`Откл., ${label}`} value={amounts.variance} signed sense="cost" />
       </td>
     </tr>
@@ -175,6 +208,7 @@ export function VatReportScreen({ month }: { month: string }) {
     () => new Set([VAT_CALC_ID, view.deductible.id, view.payroll.id]),
   );
   const vatCalcOpen = openIds.has(VAT_CALC_ID);
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
 
   function toggle(id: string) {
     setOpenIds((current) => {
@@ -192,6 +226,7 @@ export function VatReportScreen({ month }: { month: string }) {
     <PageFrame
       title={VAT_REPORT_SUMMARY_TITLE}
       full
+      fill
       intro={
         <CashflowMonthBar
           month={selectedMonth}
@@ -200,10 +235,10 @@ export function VatReportScreen({ month }: { month: string }) {
         />
       }
     >
-      <div className={tableFrameClassName}>
+      <div className={tableFrameScrollClassName}>
         <table className={tableClassName}>
           <caption className="sr-only">{`Налоги за ${selectedMonth}`}</caption>
-          <thead className={stickyHeadClassName}>
+          <thead ref={headRef} className={stickyHeadClassName}>
             <tr>
               <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                 <ColumnLabel label="Статья" />
@@ -221,7 +256,11 @@ export function VatReportScreen({ month }: { month: string }) {
           </thead>
           <tbody>
             <tr>
-              <th scope="row" className={categoryNameRowClassName(false)}>
+              <th
+                scope="row"
+                className={categoryNameRowClassName(false, { stack: 'belowHead' })}
+                style={categoryStickyStyle}
+              >
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -238,19 +277,37 @@ export function VatReportScreen({ month }: { month: string }) {
               </th>
               {vatCalcOpen ? (
                 <>
-                  <td className={`${valueCell} ${categoryBandClassName}`} />
-                  <td className={`${valueCell} ${categoryBandClassName}`} />
-                  <td className={`${valueCellEnd} ${categoryBandClassName}`} />
+                  <td
+                    className={`${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName}`}
+                    style={categoryStickyStyle}
+                  />
+                  <td
+                    className={`${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName}`}
+                    style={categoryStickyStyle}
+                  />
+                  <td
+                    className={`${valueCellEnd} ${stickyCategoryCellClassName} ${categoryBandClassName}`}
+                    style={categoryStickyStyle}
+                  />
                 </>
               ) : (
                 <>
-                  <td className={`${valueCell} ${categoryBandClassName}`}>
+                  <td
+                    className={`${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName}`}
+                    style={categoryStickyStyle}
+                  >
                     <MoneyAmount amount={view.payable.plan} />
                   </td>
-                  <td className={`${valueCell} ${categoryBandClassName}`}>
+                  <td
+                    className={`${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName}`}
+                    style={categoryStickyStyle}
+                  >
                     <MoneyAmount amount={view.payable.fact} />
                   </td>
-                  <td className={`${valueCellEnd} ${categoryBandClassName}`}>
+                  <td
+                    className={`${valueCellEnd} ${stickyCategoryCellClassName} ${categoryBandClassName}`}
+                    style={categoryStickyStyle}
+                  >
                     <MoneyCell label="Откл., НДС к уплате" value={view.payable.variance} signed sense="cost" />
                   </td>
                 </>
@@ -258,14 +315,44 @@ export function VatReportScreen({ month }: { month: string }) {
             </tr>
             {vatCalcOpen ? (
               <>
-                <LineRows line={view.sales} depth={1} openIds={openIds} toggle={toggle} />
-                <LineRows line={view.deductible} depth={1} openIds={openIds} toggle={toggle} />
-                <ResultRow label="НДС к уплате" amounts={view.payable} />
+                <LineRows
+                  line={view.sales}
+                  depth={1}
+                  openIds={openIds}
+                  toggle={toggle}
+                  categoryStickyStyle={categoryStickyStyle}
+                />
+                <LineRows
+                  line={view.deductible}
+                  depth={1}
+                  openIds={openIds}
+                  toggle={toggle}
+                  categoryStickyStyle={categoryStickyStyle}
+                />
+                <ResultRow label="НДС к уплате" amounts={view.payable} categoryStickyStyle={categoryStickyStyle} />
               </>
             ) : null}
-            <LineRows line={view.payroll} depth={0} openIds={openIds} toggle={toggle} />
-            <LineRows line={view.profit} depth={0} openIds={openIds} toggle={toggle} />
-            <LineRows line={view.property} depth={0} openIds={openIds} toggle={toggle} />
+            <LineRows
+              line={view.payroll}
+              depth={0}
+              openIds={openIds}
+              toggle={toggle}
+              categoryStickyStyle={categoryStickyStyle}
+            />
+            <LineRows
+              line={view.profit}
+              depth={0}
+              openIds={openIds}
+              toggle={toggle}
+              categoryStickyStyle={categoryStickyStyle}
+            />
+            <LineRows
+              line={view.property}
+              depth={0}
+              openIds={openIds}
+              toggle={toggle}
+              categoryStickyStyle={categoryStickyStyle}
+            />
             <ResultRow label="Всего налоги" amounts={view.total} total />
           </tbody>
         </table>

@@ -23,7 +23,7 @@ import {
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
   totalNameClassName,
   totalValueClassName,
 } from '@/features/table';
@@ -137,6 +137,7 @@ export function CreditResourcesSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={CREDIT_RESOURCES_SUMMARY_TITLE}
       full
+      fill
       intro={
         <CreditMonthBar
           month={selectedMonth}
@@ -145,7 +146,7 @@ export function CreditResourcesSummaryScreen({ month }: { month: string }) {
         />
       }
     >
-      <div className={tableFrameClassName}>
+      <div className={tableFrameScrollClassName}>
         <table className={tableClassName}>
           <caption className="sr-only">{`Кредитные ресурсы за ${selectedMonth}`}</caption>
           <thead className={stickyHeadClassName}>

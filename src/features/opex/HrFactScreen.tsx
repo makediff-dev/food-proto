@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Fragment, useMemo, useState } from 'react';
+import { type CSSProperties, Fragment, useMemo, useState } from 'react';
 
 import { HR_DEPARTMENT_IDS, type HrDepartmentId, isOccurredOn } from '@/domain/document';
 import {
@@ -37,8 +37,10 @@ import {
   MoneyAmount,
   MoneyCell,
   nameHeadingClassName,
+  stickyCategoryCellClassName,
+  stickyHeadClassName,
   tableClassName,
-  tableFrameClassName,
+  useStickyTableHead,
 } from '@/features/table';
 
 const DAY_MIN = '2000-01-01';
@@ -119,10 +121,13 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
     );
   }
 
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
+
   return (
     <PageFrame
       title={OPEX_HR_FACT_TITLE}
       full
+      fill
       intro={
         <div className="w-full border border-line bg-sheet p-4">
           <div className="flex items-center gap-2">
@@ -159,13 +164,13 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
         </div>
       }
     >
-      <div className="flex flex-col gap-6">
-        <section className="flex flex-col gap-2">
-          <h2 className="px-1 text-sm font-medium">Выплаты</h2>
-          <div className={tableFrameClassName}>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="flex flex-col gap-6">
+          <section className="flex flex-col gap-2">
+            <h2 className="px-1 text-sm font-medium">Выплаты</h2>
             <table className={tableClassName}>
               <caption className="sr-only">{`Выплаты HR на ${selectedDay}`}</caption>
-              <thead>
+              <thead ref={headRef} className={stickyHeadClassName}>
                 <tr>
                   <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                     <ColumnLabel label="Наименование" />
@@ -181,6 +186,7 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
                     key={department.departmentId}
                     department={department}
                     editable={editable}
+                    categoryStickyStyle={categoryStickyStyle}
                     amount={(positionId) => hrDayStaffValue(opex.document, selectedDay, positionId)}
                     onAmount={(positionId, amountExVat) => {
                       const rejection = opex.setHrDayStaff(selectedDay, positionId, amountExVat);
@@ -190,14 +196,12 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
                 ))}
               </tbody>
             </table>
-          </div>
-        </section>
-        <section className="flex flex-col gap-2">
-          <h2 className="px-1 text-sm font-medium">Аутсорсинг</h2>
-          <div className={tableFrameClassName}>
+          </section>
+          <section className="flex flex-col gap-2">
+            <h2 className="px-1 text-sm font-medium">Аутсорсинг</h2>
             <table className={tableClassName}>
               <caption className="sr-only">{`Факт аутсорсинга на ${selectedDay}`}</caption>
-              <thead>
+              <thead className={stickyHeadClassName}>
                 <tr>
                   <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                     <ColumnLabel label="Цех" />
@@ -233,8 +237,8 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
                 ))}
               </tbody>
             </table>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
     </PageFrame>
   );
@@ -245,11 +249,13 @@ function DepartmentBlock({
   editable,
   amount,
   onAmount,
+  categoryStickyStyle,
 }: {
   department: FactDepartment;
   editable: boolean;
   amount: (positionId: string) => number;
   onAmount: (positionId: string, amountExVat: number) => string | null;
+  categoryStickyStyle?: CSSProperties;
 }) {
   const [open, setOpen] = useState(true);
   const count = department.positions.length;
@@ -257,7 +263,7 @@ function DepartmentBlock({
   return (
     <Fragment>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false)}>
+        <th scope="row" className={categoryNameRowClassName(false, { stack: 'belowHead' })} style={categoryStickyStyle}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -274,7 +280,10 @@ function DepartmentBlock({
             </span>
           </div>
         </th>
-        <td className={`${valueCell} ${categoryBandClassName}`} />
+        <td
+          className={`${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName}`}
+          style={categoryStickyStyle}
+        />
       </tr>
       {open
         ? department.positions.map((position) => {

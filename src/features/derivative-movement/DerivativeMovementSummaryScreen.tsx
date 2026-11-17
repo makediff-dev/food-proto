@@ -23,6 +23,7 @@ export function DerivativeMovementSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={DERIVATIVE_MOVEMENT_SUMMARY_TITLE}
       full
+      fill
       intro={
         <MaterialMonthBar
           month={selectedMonth}
@@ -38,7 +39,9 @@ export function DerivativeMovementSummaryScreen({ month }: { month: string }) {
           Производных пока нет. Добавьте их в рецептурных журналах.
         </p>
       ) : (
-        <DerivativeMovementSummaryTable sections={view.sections} />
+        <div className="min-h-0 flex-1">
+          <DerivativeMovementSummaryTable sections={view.sections} />
+        </div>
       )}
     </PageFrame>
   );

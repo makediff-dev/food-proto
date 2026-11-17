@@ -27,10 +27,12 @@ import {
   columnHeadingClassName,
   MoneyAmount,
   nameHeadingClassName,
+  stickyHeadClassName,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
   totalNameClassName,
   totalValueClassName,
+  useStickyTableHead,
 } from '@/features/table';
 
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
@@ -64,6 +66,7 @@ export function OpexGroupPlanScreen({ code, month }: { code: string; month: stri
     }
     return operatingExpenseOtherGroupMonthView(opex.document, selectedMonth, groupCode, totals?.revenueWithVat ?? 0);
   }, [groupCode, promoted, opex.document, selectedMonth, totals?.revenueWithVat]);
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
 
   if (!groupCode || !promoted || !view) {
     return null;
@@ -75,6 +78,7 @@ export function OpexGroupPlanScreen({ code, month }: { code: string; month: stri
     <PageFrame
       title={`${title} · ${OPEX_OTHER_PLAN_TITLE}`}
       full
+      fill
       intro={
         <div className="flex flex-wrap items-end gap-3">
           <OpexMonthBar
@@ -104,10 +108,10 @@ export function OpexGroupPlanScreen({ code, month }: { code: string; month: stri
         </div>
       }
     >
-      <div className={tableFrameClassName}>
+      <div className={tableFrameScrollClassName}>
         <table className={tableClassName}>
           <caption className="sr-only">{`${title}, план за ${selectedMonth}`}</caption>
-          <thead>
+          <thead ref={headRef} className={stickyHeadClassName}>
             <tr>
               <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                 <ColumnLabel label="Наименование" />
@@ -125,6 +129,7 @@ export function OpexGroupPlanScreen({ code, month }: { code: string; month: stri
               group={view}
               side="plan"
               editable={editable}
+              categoryStickyStyle={categoryStickyStyle}
               onRename={(lineId, name) => {
                 const rejection = opex.renameOpexOtherLine(lineId, name);
                 return rejection ? OPEX_LINE_ERROR[rejection] : null;

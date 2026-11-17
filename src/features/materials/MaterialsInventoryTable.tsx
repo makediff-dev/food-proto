@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 
 import type { MaterialWarehouseId } from '@/domain/document';
 import type {
@@ -24,10 +24,12 @@ import {
   keepWithNext,
   nameHeadingClassName,
   ProductIndex,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
+  useStickyTableHead,
 } from '@/features/table';
 
 type ColumnKey = 'bookClosing' | 'closing' | 'closingDeviation';
@@ -72,12 +74,13 @@ export function MaterialsInventoryTable({
   onClosing: (warehouseId: MaterialWarehouseId, materialId: string, quantity: number) => string | null;
 }) {
   const sections = buildSections(groups);
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
 
   return (
-    <div className={tableFrameClassName}>
+    <div className={tableFrameScrollClassName}>
       <table className={tableClassName}>
         <caption className="sr-only">Инвентаризация: сырьё и материалы</caption>
-        <thead className={stickyHeadClassName}>
+        <thead ref={headRef} className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             <th colSpan={COLUMNS.length} scope="colgroup" className={blockHeadingClassName}>
@@ -97,7 +100,13 @@ export function MaterialsInventoryTable({
         </thead>
         <tbody>
           {sections.map((section) => (
-            <SectionBlock key={section.key} section={section} editable={editable} onClosing={onClosing} />
+            <SectionBlock
+              key={section.key}
+              section={section}
+              editable={editable}
+              categoryStickyStyle={categoryStickyStyle}
+              onClosing={onClosing}
+            />
           ))}
         </tbody>
       </table>
@@ -108,10 +117,12 @@ export function MaterialsInventoryTable({
 function SectionBlock({
   section,
   editable,
+  categoryStickyStyle,
   onClosing,
 }: {
   section: InventorySection;
   editable: boolean;
+  categoryStickyStyle: CSSProperties | undefined;
   onClosing: (warehouseId: MaterialWarehouseId, materialId: string, quantity: number) => string | null;
 }) {
   const [open, setOpen] = useState(true);
@@ -120,7 +131,11 @@ function SectionBlock({
   return (
     <>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false)}>
+        <th
+          scope="row"
+          className={categoryNameRowClassName(editable, { stack: 'belowHead' })}
+          style={categoryStickyStyle}
+        >
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -138,7 +153,11 @@ function SectionBlock({
           </div>
         </th>
         {COLUMNS.map((column) => (
-          <td key={`group:${column.key}`} className={bandCellClassName}>
+          <td
+            key={`group:${column.key}`}
+            className={`${bandCellClassName} ${stickyCategoryCellClassName}`}
+            style={categoryStickyStyle}
+          >
             {count > 0 ? <InventoryTotal column={column.key} totals={section.warehouse.totals} /> : null}
           </td>
         ))}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 
 import { costWithVat } from '@/domain/cost';
 import type { MaterialGroupId, MaterialWarehouseId } from '@/domain/document';
@@ -31,10 +31,12 @@ import {
   nameCellKind,
   nameHeadingClassName,
   ProductIndex,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
+  useStickyTableHead,
   VatMoneyCell,
 } from '@/features/table';
 
@@ -105,12 +107,13 @@ export function MaterialsPlanTable({
   onAdd?: (groupId: MaterialGroupId, warehouseId: MaterialWarehouseId) => void;
 }) {
   const sections = buildSections(groups);
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
 
   return (
-    <div className={tableFrameClassName}>
+    <div className={tableFrameScrollClassName}>
       <table className={tableClassName}>
         <caption className="sr-only">Ввод плана: сырьё и материалы</caption>
-        <thead className={stickyHeadClassName}>
+        <thead ref={headRef} className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             <th colSpan={COLUMNS.length} scope="colgroup" className={blockHeadingClassName}>
@@ -134,6 +137,7 @@ export function MaterialsPlanTable({
               key={section.key}
               section={section}
               editable={editable}
+              categoryStickyStyle={categoryStickyStyle}
               onField={onField}
               onEdit={onEdit}
               onDelete={onDelete}
@@ -149,6 +153,7 @@ export function MaterialsPlanTable({
 function SectionBlock({
   section,
   editable,
+  categoryStickyStyle,
   onField,
   onEdit,
   onDelete,
@@ -156,6 +161,7 @@ function SectionBlock({
 }: {
   section: PlanSection;
   editable: boolean;
+  categoryStickyStyle: CSSProperties | undefined;
   onField: (
     warehouseId: MaterialWarehouseId,
     materialId: string,
@@ -172,7 +178,11 @@ function SectionBlock({
   return (
     <>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false)}>
+        <th
+          scope="row"
+          className={categoryNameRowClassName(editable, { stack: 'belowHead' })}
+          style={categoryStickyStyle}
+        >
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -206,7 +216,8 @@ function SectionBlock({
         {COLUMNS.map((column) => (
           <td
             key={`group:${column.key}`}
-            className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${categoryBandClassName} ${columnDividerClassName}`}
+            className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${stickyCategoryCellClassName} ${categoryBandClassName} ${columnDividerClassName}`}
+            style={categoryStickyStyle}
           >
             {count > 0 ? <PlanTotal column={column.key} totals={section.warehouse.totals} /> : null}
           </td>

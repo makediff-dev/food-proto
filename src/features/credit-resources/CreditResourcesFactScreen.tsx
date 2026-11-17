@@ -27,7 +27,7 @@ import {
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
 } from '@/features/table';
 
 const DAY_MIN = '2000-01-01';
@@ -117,6 +117,7 @@ export function CreditResourcesFactScreen({ month, day }: { month: string; day: 
     <PageFrame
       title={CREDIT_RESOURCES_FACT_TITLE}
       full
+      fill
       intro={
         <div className="w-full border border-line bg-sheet p-4">
           <div className="flex items-center gap-2">
@@ -153,7 +154,7 @@ export function CreditResourcesFactScreen({ month, day }: { month: string; day: 
         </div>
       }
     >
-      <div className={tableFrameClassName}>
+      <div className={tableFrameScrollClassName}>
         <table className={tableClassName}>
           <caption className="sr-only">{`Факт кредитных ресурсов на ${selectedDay}`}</caption>
           <thead className={stickyHeadClassName}>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Fragment, useMemo, useState } from 'react';
+import { type CSSProperties, Fragment, useMemo, useState } from 'react';
 
 import { type OpexGroupView, operatingExpenseMonthView } from '@/domain/operating-expense';
 import { monthKeyFromDate, salesPlanForMonth, salesPlanTotals } from '@/domain/sales-plan';
@@ -27,12 +27,14 @@ import {
   MoneyAmount,
   nameHeadingClassName,
   PercentCell,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
   totalNameClassName,
   totalValueClassName,
+  useStickyTableHead,
 } from '@/features/table';
 
 type ColumnKey = 'plan' | 'fact' | 'variance' | 'planShare' | 'factShare';
@@ -79,11 +81,13 @@ export function OpexSummaryScreen({ month }: { month: string }) {
       operatingExpenseMonthView(opex.document, selectedMonth, totals?.revenueWithVat ?? 0, totals?.revenueExVat ?? 0),
     [opex.document, selectedMonth, totals?.revenueExVat, totals?.revenueWithVat],
   );
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
 
   return (
     <PageFrame
       title={OPEX_SUMMARY_TITLE}
       full
+      fill
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -92,10 +96,10 @@ export function OpexSummaryScreen({ month }: { month: string }) {
         />
       }
     >
-      <div className={tableFrameClassName}>
+      <div className={tableFrameScrollClassName}>
         <table className={tableClassName}>
           <caption className="sr-only">{`Операционные расходы за ${selectedMonth}, без НДС`}</caption>
-          <thead className={stickyHeadClassName}>
+          <thead ref={headRef} className={stickyHeadClassName}>
             <tr>
               <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
               {COLUMN_GROUPS.map((group, index) => (
@@ -126,7 +130,7 @@ export function OpexSummaryScreen({ month }: { month: string }) {
           </thead>
           <tbody>
             {view.groups.map((group) => (
-              <GroupBlock key={group.id} group={group} />
+              <GroupBlock key={group.id} group={group} categoryStickyStyle={categoryStickyStyle} />
             ))}
             <tr>
               <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
@@ -151,14 +155,14 @@ export function OpexSummaryScreen({ month }: { month: string }) {
   );
 }
 
-function GroupBlock({ group }: { group: OpexGroupView }) {
+function GroupBlock({ group, categoryStickyStyle }: { group: OpexGroupView; categoryStickyStyle?: CSSProperties }) {
   const [open, setOpen] = useState(true);
   const count = group.lines.length;
 
   return (
     <Fragment>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false)}>
+        <th scope="row" className={categoryNameRowClassName(false, { stack: 'belowHead' })} style={categoryStickyStyle}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -178,19 +182,34 @@ function GroupBlock({ group }: { group: OpexGroupView }) {
             </span>
           </div>
         </th>
-        <td className={`${valueCell} ${categoryBandClassName} ${columnEdgeClass('plan')}`}>
+        <td
+          className={`${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName} ${columnEdgeClass('plan')}`}
+          style={categoryStickyStyle}
+        >
           <MoneyAmount amount={group.planExVat} />
         </td>
-        <td className={`${valueCell} ${categoryBandClassName} ${columnEdgeClass('fact')}`}>
+        <td
+          className={`${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName} ${columnEdgeClass('fact')}`}
+          style={categoryStickyStyle}
+        >
           <MoneyAmount amount={group.factExVat} />
         </td>
-        <td className={`${valueCell} ${categoryBandClassName} ${columnEdgeClass('variance')}`}>
+        <td
+          className={`${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName} ${columnEdgeClass('variance')}`}
+          style={categoryStickyStyle}
+        >
           <MoneyAmount amount={group.varianceExVat} signed sense="cost" />
         </td>
-        <td className={`${valueCell} ${categoryBandClassName} ${columnEdgeClass('planShare')}`}>
+        <td
+          className={`${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName} ${columnEdgeClass('planShare')}`}
+          style={categoryStickyStyle}
+        >
           <PercentCell value={group.planShareHundredths} scale="hundredths" />
         </td>
-        <td className={`${valueCell} ${categoryBandClassName} ${columnEdgeClass('factShare')}`}>
+        <td
+          className={`${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName} ${columnEdgeClass('factShare')}`}
+          style={categoryStickyStyle}
+        >
           <PercentCell value={group.factShareHundredths} scale="hundredths" />
         </td>
       </tr>

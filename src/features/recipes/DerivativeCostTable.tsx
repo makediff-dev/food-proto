@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { type CSSProperties, useMemo, useState } from 'react';
 
 import { useDocumentStore } from '@/data/DocumentProvider';
 import { type DerivativeCostRow, type DerivativeCostSection, derivativeCostDetail } from '@/domain/derivative-cost';
@@ -24,10 +24,12 @@ import {
   keepWithNext,
   nameHeadingClassName,
   ProductIndex,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
+  useStickyTableHead,
 } from '@/features/table';
 
 type ColumnKey =
@@ -87,11 +89,13 @@ export function DerivativeCostTable({
   sections: readonly DerivativeCostSection[];
   month: string;
 }) {
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
+
   return (
-    <div className={tableFrameClassName}>
+    <div className={tableFrameScrollClassName}>
       <table className={tableClassName}>
         <caption className="sr-only">Себестоимость производных: план и факт за килограмм и за штуку</caption>
-        <thead className={stickyHeadClassName}>
+        <thead ref={headRef} className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             {COLUMN_GROUPS.map((group, index) => (
@@ -122,7 +126,12 @@ export function DerivativeCostTable({
         </thead>
         <tbody>
           {sections.map((section) => (
-            <WorkshopBlock key={section.workshopId} section={section} month={month} />
+            <WorkshopBlock
+              key={section.workshopId}
+              section={section}
+              month={month}
+              categoryStickyStyle={categoryStickyStyle}
+            />
           ))}
         </tbody>
       </table>
@@ -130,14 +139,22 @@ export function DerivativeCostTable({
   );
 }
 
-function WorkshopBlock({ section, month }: { section: DerivativeCostSection; month: string }) {
+function WorkshopBlock({
+  section,
+  month,
+  categoryStickyStyle,
+}: {
+  section: DerivativeCostSection;
+  month: string;
+  categoryStickyStyle?: CSSProperties;
+}) {
   const [open, setOpen] = useState(true);
   const count = section.rows.length;
 
   return (
     <>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false)}>
+        <th scope="row" className={categoryNameRowClassName(false, { stack: 'belowHead' })} style={categoryStickyStyle}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -157,7 +174,8 @@ function WorkshopBlock({ section, month }: { section: DerivativeCostSection; mon
         {COLUMNS.map((column) => (
           <td
             key={`group:${column.key}`}
-            className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${categoryBandClassName} ${columnEdgeClass(column.key)}`}
+            className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${stickyCategoryCellClassName} ${categoryBandClassName} ${columnEdgeClass(column.key)}`}
+            style={categoryStickyStyle}
           />
         ))}
       </tr>

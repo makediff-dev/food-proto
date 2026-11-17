@@ -145,6 +145,7 @@ function Workspace({
       <PageFrame
         title={title}
         full
+        fill
         aside={
           isActual ? (
             <button
@@ -221,10 +222,10 @@ function Workspace({
           </div>
         }
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
           {hasTable ? (
             <section
-              className={tableExpanded ? 'fixed inset-0 z-50 bg-paper' : undefined}
+              className={tableExpanded ? 'fixed inset-0 z-50 bg-paper' : 'min-h-0 flex-1'}
               aria-label={tableExpanded ? 'Таблица на весь экран' : 'Таблица фактического производства'}
             >
               <ProductionFactTable
@@ -240,7 +241,7 @@ function Workspace({
               />
             </section>
           ) : (
-            <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
+            <p className="shrink-0 border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
               {categories.length === 0 ? (
                 <>
                   Категорий пока нет.{' '}

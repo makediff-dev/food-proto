@@ -24,7 +24,6 @@ import {
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
 } from '@/features/table';
 
 const valueEnd = `${columnHeadingClassName} ${tableBorder.rightThick}`;
@@ -56,6 +55,7 @@ export function PropertyTaxScreen({ month }: { month: string }) {
     <PageFrame
       title={CASHFLOW_PLAN_TITLE}
       full
+      fill
       intro={
         <CashflowMonthBar
           month={selectedMonth}
@@ -64,8 +64,8 @@ export function PropertyTaxScreen({ month }: { month: string }) {
         />
       }
     >
-      <div className="flex flex-col gap-8">
-        <div className={tableFrameClassName}>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="flex flex-col gap-8">
           <table className={tableClassName}>
             <caption className="sr-only">{`Ставка налога на прибыль за ${selectedMonth}`}</caption>
             <thead className={stickyHeadClassName}>
@@ -102,8 +102,6 @@ export function PropertyTaxScreen({ month }: { month: string }) {
               </tr>
             </tbody>
           </table>
-        </div>
-        <div className={tableFrameClassName}>
           <table className={tableClassName}>
             <caption className="sr-only">{`План налога на имущество за ${selectedMonth}`}</caption>
             <thead className={stickyHeadClassName}>

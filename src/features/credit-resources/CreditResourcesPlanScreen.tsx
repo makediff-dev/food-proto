@@ -27,7 +27,7 @@ import {
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
 } from '@/features/table';
 
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
@@ -60,6 +60,7 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
     <PageFrame
       title={CREDIT_RESOURCES_PLAN_TITLE}
       full
+      fill
       intro={
         <CreditMonthBar
           month={selectedMonth}
@@ -85,194 +86,196 @@ export function CreditResourcesPlanScreen({ month }: { month: string }) {
         </div>
       ) : null}
 
-      <div className={tableFrameClassName}>
-        <table className={tableClassName}>
-          <caption className="sr-only">{`План кредитных ресурсов за ${selectedMonth}`}</caption>
-          <thead className={stickyHeadClassName}>
-            <tr>
-              <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                <ColumnLabel label="Наименование" />
-              </th>
-              <th scope="col" className={valueHead}>
-                <ColumnLabel label="Сумма кредита" />
-              </th>
-              <th scope="col" className={groupEnd}>
-                <ColumnLabel label="Ставка, %" />
-              </th>
-              <th scope="col" className={valueHead}>
-                <ColumnLabel label="Получение, план" />
-              </th>
-              <th scope="col" className={valueHead}>
-                <ColumnLabel label="Погашение, план" />
-              </th>
-              <th scope="col" className={groupEnd}>
-                <ColumnLabel label="Проценты, план" />
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {view.rows.length === 0 ? (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className={tableFrameScrollClassName}>
+          <table className={tableClassName}>
+            <caption className="sr-only">{`План кредитных ресурсов за ${selectedMonth}`}</caption>
+            <thead className={stickyHeadClassName}>
               <tr>
-                <td colSpan={6} className="border-b border-b-line px-3 py-6 text-sm text-muted">
-                  Кредиторов пока нет. Нажмите «Добавить кредитора».
-                </td>
+                <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                  <ColumnLabel label="Наименование" />
+                </th>
+                <th scope="col" className={valueHead}>
+                  <ColumnLabel label="Сумма кредита" />
+                </th>
+                <th scope="col" className={groupEnd}>
+                  <ColumnLabel label="Ставка, %" />
+                </th>
+                <th scope="col" className={valueHead}>
+                  <ColumnLabel label="Получение, план" />
+                </th>
+                <th scope="col" className={valueHead}>
+                  <ColumnLabel label="Погашение, план" />
+                </th>
+                <th scope="col" className={groupEnd}>
+                  <ColumnLabel label="Проценты, план" />
+                </th>
               </tr>
-            ) : null}
-            {view.rows.map((row) => {
-              const rowEditable = editable && !row.deleted;
-              return (
-                <tr key={row.creditorId}>
-                  <th scope="row" className={entityNameRowClassName(rowEditable ? 'assigned' : 'repeated')}>
-                    <div className="flex w-full items-center gap-2">
-                      <span className="min-w-0 flex-1">
-                        {rowEditable ? (
-                          <GridText
-                            label={`Название, ${row.name}`}
-                            value={row.name}
-                            invalidMessage={FIELD_ERROR.empty}
-                            onCommit={(name) => {
-                              const rejection = credit.renameCreditor(row.creditorId, name);
-                              return rejection ? CREDIT_ERROR[rejection] : null;
-                            }}
-                          />
-                        ) : (
-                          <span className="text-sm leading-8 text-ink">
-                            {row.name}
-                            {row.deleted ? <span className="text-muted"> (архив)</span> : null}
-                          </span>
-                        )}
-                      </span>
-                      {editable && !row.deleted ? (
-                        <button
-                          type="button"
-                          aria-label={`Удалить ${row.name}`}
-                          title="Удалить"
-                          className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                          onClick={() => {
-                            const confirmed = window.confirm(
-                              `Удалить «${row.name}»? Кредитор пропадёт из рабочего списка.`,
-                            );
-                            if (confirmed) {
-                              credit.deleteCreditor(row.creditorId);
-                            }
-                          }}
-                        >
-                          <IconTrash />
-                        </button>
-                      ) : null}
-                      {editable && row.deleted ? (
-                        <button
-                          type="button"
-                          aria-label={`Вернуть ${row.name}`}
-                          title="Вернуть"
-                          className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                          onClick={() => {
-                            const rejection = credit.restoreCreditor(row.creditorId);
-                            if (rejection) {
-                              window.alert(CREDIT_ERROR[rejection]);
-                            }
-                          }}
-                        >
-                          <IconUndo />
-                        </button>
-                      ) : null}
-                    </div>
-                  </th>
-                  <td className={`${valueCell} ${cellKindClassName[inputKind(rowEditable)]}`}>
-                    <MoneyCell
-                      label={`Сумма кредита, ${row.name}`}
-                      value={row.initialPrincipal}
-                      parse={parseCreditMoney}
-                      onChange={
-                        rowEditable
-                          ? (amount) => {
-                              const rejection = credit.setInitialPrincipal(row.creditorId, amount);
-                              return rejection ? CREDIT_ERROR[rejection] : null;
-                            }
-                          : undefined
-                      }
-                    />
-                  </td>
-                  <td className={`${valueEnd} ${cellKindClassName[inputKind(rowEditable)]}`}>
-                    <HundredthsCell
-                      label={`Ставка, ${row.name}`}
-                      value={row.interestRateHundredths}
-                      invalidMessage={CREDIT_ERROR.rate}
-                      onChange={
-                        rowEditable
-                          ? (rate) => {
-                              const rejection = credit.setInterestRate(row.creditorId, rate);
-                              return rejection ? CREDIT_ERROR[rejection] : null;
-                            }
-                          : undefined
-                      }
-                    />
-                  </td>
-                  <td className={`${valueCell} ${cellKindClassName[inputKind(rowEditable)]}`}>
-                    <MoneyCell
-                      label={`Получение, план, ${row.name}`}
-                      value={row.planReceived}
-                      parse={parseCreditMoney}
-                      onChange={
-                        rowEditable
-                          ? (amount) => {
-                              const rejection = credit.setMonthField(
-                                selectedMonth,
-                                row.creditorId,
-                                'planReceived',
-                                amount,
-                              );
-                              return rejection ? CREDIT_ERROR[rejection] : null;
-                            }
-                          : undefined
-                      }
-                    />
-                  </td>
-                  <td className={`${valueCell} ${cellKindClassName[inputKind(rowEditable)]}`}>
-                    <MoneyCell
-                      label={`Погашение, план, ${row.name}`}
-                      value={row.planRepaid}
-                      parse={parseCreditMoney}
-                      onChange={
-                        rowEditable
-                          ? (amount) => {
-                              const rejection = credit.setMonthField(
-                                selectedMonth,
-                                row.creditorId,
-                                'planRepaid',
-                                amount,
-                              );
-                              return rejection ? CREDIT_ERROR[rejection] : null;
-                            }
-                          : undefined
-                      }
-                    />
-                  </td>
-                  <td className={`${valueEnd} ${cellKindClassName[inputKind(rowEditable)]}`}>
-                    <MoneyCell
-                      label={`Проценты, план, ${row.name}`}
-                      value={row.planInterest}
-                      parse={parseCreditMoney}
-                      onChange={
-                        rowEditable
-                          ? (amount) => {
-                              const rejection = credit.setMonthField(
-                                selectedMonth,
-                                row.creditorId,
-                                'planInterest',
-                                amount,
-                              );
-                              return rejection ? CREDIT_ERROR[rejection] : null;
-                            }
-                          : undefined
-                      }
-                    />
+            </thead>
+            <tbody>
+              {view.rows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="border-b border-b-line px-3 py-6 text-sm text-muted">
+                    Кредиторов пока нет. Нажмите «Добавить кредитора».
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              ) : null}
+              {view.rows.map((row) => {
+                const rowEditable = editable && !row.deleted;
+                return (
+                  <tr key={row.creditorId}>
+                    <th scope="row" className={entityNameRowClassName(rowEditable ? 'assigned' : 'repeated')}>
+                      <div className="flex w-full items-center gap-2">
+                        <span className="min-w-0 flex-1">
+                          {rowEditable ? (
+                            <GridText
+                              label={`Название, ${row.name}`}
+                              value={row.name}
+                              invalidMessage={FIELD_ERROR.empty}
+                              onCommit={(name) => {
+                                const rejection = credit.renameCreditor(row.creditorId, name);
+                                return rejection ? CREDIT_ERROR[rejection] : null;
+                              }}
+                            />
+                          ) : (
+                            <span className="text-sm leading-8 text-ink">
+                              {row.name}
+                              {row.deleted ? <span className="text-muted"> (архив)</span> : null}
+                            </span>
+                          )}
+                        </span>
+                        {editable && !row.deleted ? (
+                          <button
+                            type="button"
+                            aria-label={`Удалить ${row.name}`}
+                            title="Удалить"
+                            className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                            onClick={() => {
+                              const confirmed = window.confirm(
+                                `Удалить «${row.name}»? Кредитор пропадёт из рабочего списка.`,
+                              );
+                              if (confirmed) {
+                                credit.deleteCreditor(row.creditorId);
+                              }
+                            }}
+                          >
+                            <IconTrash />
+                          </button>
+                        ) : null}
+                        {editable && row.deleted ? (
+                          <button
+                            type="button"
+                            aria-label={`Вернуть ${row.name}`}
+                            title="Вернуть"
+                            className="inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                            onClick={() => {
+                              const rejection = credit.restoreCreditor(row.creditorId);
+                              if (rejection) {
+                                window.alert(CREDIT_ERROR[rejection]);
+                              }
+                            }}
+                          >
+                            <IconUndo />
+                          </button>
+                        ) : null}
+                      </div>
+                    </th>
+                    <td className={`${valueCell} ${cellKindClassName[inputKind(rowEditable)]}`}>
+                      <MoneyCell
+                        label={`Сумма кредита, ${row.name}`}
+                        value={row.initialPrincipal}
+                        parse={parseCreditMoney}
+                        onChange={
+                          rowEditable
+                            ? (amount) => {
+                                const rejection = credit.setInitialPrincipal(row.creditorId, amount);
+                                return rejection ? CREDIT_ERROR[rejection] : null;
+                              }
+                            : undefined
+                        }
+                      />
+                    </td>
+                    <td className={`${valueEnd} ${cellKindClassName[inputKind(rowEditable)]}`}>
+                      <HundredthsCell
+                        label={`Ставка, ${row.name}`}
+                        value={row.interestRateHundredths}
+                        invalidMessage={CREDIT_ERROR.rate}
+                        onChange={
+                          rowEditable
+                            ? (rate) => {
+                                const rejection = credit.setInterestRate(row.creditorId, rate);
+                                return rejection ? CREDIT_ERROR[rejection] : null;
+                              }
+                            : undefined
+                        }
+                      />
+                    </td>
+                    <td className={`${valueCell} ${cellKindClassName[inputKind(rowEditable)]}`}>
+                      <MoneyCell
+                        label={`Получение, план, ${row.name}`}
+                        value={row.planReceived}
+                        parse={parseCreditMoney}
+                        onChange={
+                          rowEditable
+                            ? (amount) => {
+                                const rejection = credit.setMonthField(
+                                  selectedMonth,
+                                  row.creditorId,
+                                  'planReceived',
+                                  amount,
+                                );
+                                return rejection ? CREDIT_ERROR[rejection] : null;
+                              }
+                            : undefined
+                        }
+                      />
+                    </td>
+                    <td className={`${valueCell} ${cellKindClassName[inputKind(rowEditable)]}`}>
+                      <MoneyCell
+                        label={`Погашение, план, ${row.name}`}
+                        value={row.planRepaid}
+                        parse={parseCreditMoney}
+                        onChange={
+                          rowEditable
+                            ? (amount) => {
+                                const rejection = credit.setMonthField(
+                                  selectedMonth,
+                                  row.creditorId,
+                                  'planRepaid',
+                                  amount,
+                                );
+                                return rejection ? CREDIT_ERROR[rejection] : null;
+                              }
+                            : undefined
+                        }
+                      />
+                    </td>
+                    <td className={`${valueEnd} ${cellKindClassName[inputKind(rowEditable)]}`}>
+                      <MoneyCell
+                        label={`Проценты, план, ${row.name}`}
+                        value={row.planInterest}
+                        parse={parseCreditMoney}
+                        onChange={
+                          rowEditable
+                            ? (amount) => {
+                                const rejection = credit.setMonthField(
+                                  selectedMonth,
+                                  row.creditorId,
+                                  'planInterest',
+                                  amount,
+                                );
+                                return rejection ? CREDIT_ERROR[rejection] : null;
+                              }
+                            : undefined
+                        }
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {addOpen ? (

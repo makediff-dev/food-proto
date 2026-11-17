@@ -26,8 +26,8 @@ import {
   MoneyAmount,
   MoneyCell,
   nameHeadingClassName,
+  stickyHeadClassName,
   tableClassName,
-  tableFrameClassName,
 } from '@/features/table';
 
 const DAY_MIN = '2000-01-01';
@@ -89,6 +89,7 @@ export function TransportFactScreen({ month, day }: { month: string; day: string
     <PageFrame
       title={OPEX_TRANSPORT_FACT_TITLE}
       full
+      fill
       intro={
         <div className="w-full border border-line bg-sheet p-4">
           <div className="flex items-center gap-2">
@@ -125,14 +126,14 @@ export function TransportFactScreen({ month, day }: { month: string; day: string
         </div>
       }
     >
-      <div className="flex flex-col gap-6">
-        {view.hire.map((block) => (
-          <section key={block.kind} className="flex flex-col gap-2">
-            <h2 className="px-1 text-sm font-medium">{block.name}</h2>
-            <div className={tableFrameClassName}>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="flex flex-col gap-6">
+          {view.hire.map((block) => (
+            <section key={block.kind} className="flex flex-col gap-2">
+              <h2 className="px-1 text-sm font-medium">{block.name}</h2>
               <table className={tableClassName}>
                 <caption className="sr-only">{`Факт, ${block.name}, ${selectedDay}`}</caption>
-                <thead>
+                <thead className={stickyHeadClassName}>
                   <tr>
                     <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                       <ColumnLabel label="Контрагент" />
@@ -202,16 +203,14 @@ export function TransportFactScreen({ month, day }: { month: string; day: string
                     })}
                 </tbody>
               </table>
-            </div>
-          </section>
-        ))}
+            </section>
+          ))}
 
-        <section className="flex flex-col gap-2">
-          <h2 className="px-1 text-sm font-medium">Собственный транспорт</h2>
-          <div className={tableFrameClassName}>
+          <section className="flex flex-col gap-2">
+            <h2 className="px-1 text-sm font-medium">Собственный транспорт</h2>
             <table className={tableClassName}>
               <caption className="sr-only">{`Факт собственного транспорта, ${selectedDay}`}</caption>
-              <thead>
+              <thead className={stickyHeadClassName}>
                 <tr>
                   <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                     <ColumnLabel label="Автомобиль" />
@@ -281,8 +280,8 @@ export function TransportFactScreen({ month, day }: { month: string; day: string
                   })}
               </tbody>
             </table>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
     </PageFrame>
   );

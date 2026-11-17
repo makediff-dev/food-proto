@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Fragment, useMemo, useState } from 'react';
+import { type CSSProperties, Fragment, useMemo, useState } from 'react';
 
 import { type CashflowLineView, cashflowMonthView } from '@/domain/cashflow';
 import { monthKeyFromDate } from '@/domain/sales-plan';
@@ -23,12 +23,14 @@ import {
   MoneyAmount,
   MoneyCell,
   nameHeadingClassName,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
   totalNameClassName,
   totalValueClassName,
+  useStickyTableHead,
 } from '@/features/table';
 
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
@@ -44,6 +46,7 @@ function LineRows({
   openIds,
   toggle,
   sense,
+  categoryStickyStyle,
 }: {
   line: CashflowLineView;
   depth: number;
@@ -51,11 +54,14 @@ function LineRows({
   toggle: (id: string) => void;
   /** Доходы: факт выше плана — хорошо; расходы: факт ниже плана — хорошо. */
   sense: VarianceSense;
+  categoryStickyStyle?: CSSProperties;
 }) {
   const hasChildren = Boolean(line.children && line.children.length > 0);
   const open = openIds.has(line.id);
   const isGroup = depth === 0 || (hasChildren && depth <= 1);
-  const nameRow = isGroup ? categoryNameRowClassName(false) : entityNameRowClassName('repeated');
+  const nameRow = isGroup
+    ? categoryNameRowClassName(false, { stack: 'belowHead' })
+    : entityNameRowClassName('repeated');
   /** Группа — итог (computed / полоса категории); лист — повтор из другой таблицы. */
   const sideKind: CellKind = hasChildren ? 'computed' : 'repeated';
   const amountFill = isGroup ? categoryBandClassName : cellKindClassName[sideKind];
@@ -64,7 +70,7 @@ function LineRows({
   return (
     <Fragment>
       <tr>
-        <th scope="row" className={nameRow}>
+        <th scope="row" className={nameRow} style={isGroup ? categoryStickyStyle : undefined}>
           <div className="flex items-center gap-2" style={{ paddingLeft: `${depth * 1.25}rem` }}>
             {hasChildren ? (
               <button
@@ -83,19 +89,36 @@ function LineRows({
             <span className={isGroup ? categoryNameClassName : 'text-sm'}>{line.name}</span>
           </div>
         </th>
-        <td className={`${valueCell} ${amountFill}`}>
+        <td
+          className={`${valueCell} ${isGroup ? stickyCategoryCellClassName : ''} ${amountFill}`}
+          style={isGroup ? categoryStickyStyle : undefined}
+        >
           <MoneyAmount amount={line.amounts.plan} />
         </td>
-        <td className={`${valueCell} ${amountFill}`}>
+        <td
+          className={`${valueCell} ${isGroup ? stickyCategoryCellClassName : ''} ${amountFill}`}
+          style={isGroup ? categoryStickyStyle : undefined}
+        >
           <MoneyAmount amount={line.amounts.fact} />
         </td>
-        <td className={`${valueCellEnd} ${varianceFill}`}>
+        <td
+          className={`${valueCellEnd} ${isGroup ? stickyCategoryCellClassName : ''} ${varianceFill}`}
+          style={isGroup ? categoryStickyStyle : undefined}
+        >
           <MoneyCell label={`Откл., ${line.name}`} value={line.amounts.variance} signed sense={sense} />
         </td>
       </tr>
       {hasChildren && open
         ? line.children?.map((child) => (
-            <LineRows key={child.id} line={child} depth={depth + 1} openIds={openIds} toggle={toggle} sense={sense} />
+            <LineRows
+              key={child.id}
+              line={child}
+              depth={depth + 1}
+              openIds={openIds}
+              toggle={toggle}
+              sense={sense}
+              categoryStickyStyle={categoryStickyStyle}
+            />
           ))
         : null}
     </Fragment>
@@ -114,6 +137,7 @@ export function CashflowSummaryScreen({ month }: { month: string }) {
   const router = useRouter();
   const view = useMemo(() => cashflowMonthView(cashflow.document, selectedMonth), [cashflow.document, selectedMonth]);
   const [openIds, setOpenIds] = useState<Set<string>>(() => defaultOpenIds(view));
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
 
   function toggle(id: string) {
     setOpenIds((current) => {
@@ -131,6 +155,7 @@ export function CashflowSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={CASHFLOW_SUMMARY_TITLE}
       full
+      fill
       intro={
         <CashflowMonthBar
           month={selectedMonth}
@@ -139,10 +164,10 @@ export function CashflowSummaryScreen({ month }: { month: string }) {
         />
       }
     >
-      <div className={tableFrameClassName}>
+      <div className={tableFrameScrollClassName}>
         <table className={tableClassName}>
           <caption className="sr-only">{`Движение денежных средств за ${selectedMonth}`}</caption>
-          <thead className={stickyHeadClassName}>
+          <thead ref={headRef} className={stickyHeadClassName}>
             <tr>
               <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                 <ColumnLabel label="Статья" />
@@ -173,8 +198,22 @@ export function CashflowSummaryScreen({ month }: { month: string }) {
                 <MoneyCell label="Откл., остаток на начало" value={view.opening.variance} signed sense="income" />
               </td>
             </tr>
-            <LineRows line={view.income} depth={0} openIds={openIds} toggle={toggle} sense="income" />
-            <LineRows line={view.expense} depth={0} openIds={openIds} toggle={toggle} sense="cost" />
+            <LineRows
+              line={view.income}
+              depth={0}
+              openIds={openIds}
+              toggle={toggle}
+              sense="income"
+              categoryStickyStyle={categoryStickyStyle}
+            />
+            <LineRows
+              line={view.expense}
+              depth={0}
+              openIds={openIds}
+              toggle={toggle}
+              sense="cost"
+              categoryStickyStyle={categoryStickyStyle}
+            />
             <tr>
               <th scope="row" className={totalNameClassName}>
                 Остаток денежных средств на конец периода

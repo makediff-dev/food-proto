@@ -37,12 +37,15 @@ export {
   gridNameClassName,
   nameCellKind,
   nameHeadingClassName,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   tableBorder,
   tableClassName,
   tableFrameClassName,
   tableFrameExpandedClassName,
+  tableFrameScrollClassName,
   totalNameClassName,
   totalValueClassName,
 } from '@/features/table/styles';
 export { useOpenCategories } from '@/features/table/use-open-categories';
+export { useStickyTableHead } from '@/features/table/use-sticky-table-head';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 
 import type { UnitCost } from '@/domain/cost';
 import { amountExVat } from '@/domain/money';
@@ -33,14 +33,16 @@ import {
   PercentCell,
   ProductIndex,
   StackedPair,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   TableNumber,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
   tableFrameExpandedClassName,
+  tableFrameScrollClassName,
   totalNameClassName,
   totalValueClassName,
+  useStickyTableHead,
   VatMoneyCell,
 } from '@/features/table';
 
@@ -186,12 +188,13 @@ export function SummaryTable({
         : factIsForecast
           ? 'Отчет общий: план, факт (прогноз) и отклонение'
           : 'Отчет общий: план, факт и отклонение';
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
 
   return (
-    <div className={expanded ? tableFrameExpandedClassName : tableFrameClassName}>
+    <div className={expanded ? tableFrameExpandedClassName : tableFrameScrollClassName}>
       <table className={tableClassName}>
         <caption className="sr-only">{caption}</caption>
-        <thead className={stickyHeadClassName}>
+        <thead ref={headRef} className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             <th
@@ -264,6 +267,7 @@ export function SummaryTable({
               varianceColumns={varianceColumns}
               lastPlanKey={lastPlanKey}
               lastFactKey={lastFactKey}
+              categoryStickyStyle={categoryStickyStyle}
             />
           ))}
           {showTotals ? (
@@ -312,6 +316,7 @@ function CategoryBlock({
   varianceColumns,
   lastPlanKey,
   lastFactKey,
+  categoryStickyStyle,
 }: {
   group: SummaryGroup;
   part: 'full' | 'plan';
@@ -320,6 +325,7 @@ function CategoryBlock({
   varianceColumns: readonly { key: VarianceKey; label: string }[];
   lastPlanKey: SideKey | undefined;
   lastFactKey: SideKey | undefined;
+  categoryStickyStyle: CSSProperties | undefined;
 }) {
   const header = categoryBandClassName;
   const [open, setOpen] = useState(true);
@@ -330,7 +336,13 @@ function CategoryBlock({
   return (
     <>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(catalogEditable && Boolean(edit) && !group.deleted)}>
+        <th
+          scope="row"
+          className={categoryNameRowClassName(catalogEditable && Boolean(edit) && !group.deleted, {
+            stack: 'belowHead',
+          })}
+          style={categoryStickyStyle}
+        >
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -392,7 +404,8 @@ function CategoryBlock({
         {sideColumns.map((column) => (
           <td
             key={`plan-group:${column.key}`}
-            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header} ${sectionRightClass('plan', column.key, part, lastPlanKey, lastFactKey)}`}
+            className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${stickyCategoryCellClassName} ${header} ${sectionRightClass('plan', column.key, part, lastPlanKey, lastFactKey)}`}
+            style={categoryStickyStyle}
           >
             {group.plan ? <SideCell column={column.key} side={group.plan} kind="total" /> : <Empty />}
           </td>
@@ -401,7 +414,8 @@ function CategoryBlock({
           ? sideColumns.map((column) => (
               <td
                 key={`fact-group:${column.key}`}
-                className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${header} ${sectionRightClass('fact', column.key, part, lastPlanKey, lastFactKey)}`}
+                className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle last:border-r-0 ${stickyCategoryCellClassName} ${header} ${sectionRightClass('fact', column.key, part, lastPlanKey, lastFactKey)}`}
+                style={categoryStickyStyle}
               >
                 <SideCell column={column.key} side={group.fact} kind="total" />
               </td>
@@ -411,7 +425,8 @@ function CategoryBlock({
           ? varianceColumns.map((column) => (
               <td
                 key={`var-group:${column.key}`}
-                className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${header} ${columnDividerClassName}`}
+                className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${stickyCategoryCellClassName} ${header} ${columnDividerClassName}`}
+                style={categoryStickyStyle}
               >
                 <VarianceCell column={column.key} variance={group.variance} />
               </td>

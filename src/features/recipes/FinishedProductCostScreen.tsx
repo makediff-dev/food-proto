@@ -23,6 +23,7 @@ export function FinishedProductCostScreen({ month }: { month: string }) {
     <PageFrame
       title={RECIPES_FINISHED_COST_TITLE}
       full
+      fill
       intro={
         <MaterialMonthBar
           month={selectedMonth}

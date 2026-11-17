@@ -25,7 +25,6 @@ import {
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
 } from '@/features/table';
 
 type HireColumnKey =
@@ -109,6 +108,7 @@ export function TransportSummaryScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_TRANSPORT_TITLE}
       full
+      fill
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -117,13 +117,13 @@ export function TransportSummaryScreen({ month }: { month: string }) {
         />
       }
     >
-      <div className="flex flex-col gap-6">
-        {view.hire.map((block) => {
-          const columns = hireColumns();
-          return (
-            <section key={block.kind} className="flex flex-col gap-2">
-              <h2 className="px-1 text-sm font-medium">{block.name}</h2>
-              <div className={tableFrameClassName}>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="flex flex-col gap-6">
+          {view.hire.map((block) => {
+            const columns = hireColumns();
+            return (
+              <section key={block.kind} className="flex flex-col gap-2">
+                <h2 className="px-1 text-sm font-medium">{block.name}</h2>
                 <table className={tableClassName}>
                   <caption className="sr-only">{`${block.name}, ${selectedMonth}`}</caption>
                   <thead className={stickyHeadClassName}>
@@ -234,14 +234,12 @@ export function TransportSummaryScreen({ month }: { month: string }) {
                     </tr>
                   </tbody>
                 </table>
-              </div>
-            </section>
-          );
-        })}
+              </section>
+            );
+          })}
 
-        <section className="flex flex-col gap-2">
-          <h2 className="px-1 text-sm font-medium">Собственный транспорт</h2>
-          <div className={tableFrameClassName}>
+          <section className="flex flex-col gap-2">
+            <h2 className="px-1 text-sm font-medium">Собственный транспорт</h2>
             <table className={tableClassName}>
               <caption className="sr-only">{`Собственный транспорт, ${selectedMonth}`}</caption>
               <thead className={stickyHeadClassName}>
@@ -317,8 +315,8 @@ export function TransportSummaryScreen({ month }: { month: string }) {
                 </tr>
               </tbody>
             </table>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
     </PageFrame>
   );

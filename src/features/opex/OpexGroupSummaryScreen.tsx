@@ -20,8 +20,9 @@ import {
   HintedText,
   MoneyAmount,
   nameHeadingClassName,
+  stickyHeadClassName,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
   totalNameClassName,
   totalValueClassName,
 } from '@/features/table';
@@ -66,6 +67,7 @@ export function OpexGroupSummaryScreen({ code, month }: { code: string; month: s
     <PageFrame
       title={title}
       full
+      fill
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -76,10 +78,10 @@ export function OpexGroupSummaryScreen({ code, month }: { code: string; month: s
         />
       }
     >
-      <div className={tableFrameClassName}>
+      <div className={tableFrameScrollClassName}>
         <table className={tableClassName}>
           <caption className="sr-only">{`${title}, отчёт за ${selectedMonth}`}</caption>
-          <thead>
+          <thead className={stickyHeadClassName}>
             <tr>
               <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                 <ColumnLabel label="Наименование" />

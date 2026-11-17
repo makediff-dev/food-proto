@@ -91,6 +91,7 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
       <PageFrame
         title={MOVEMENT_PLAN_TITLE}
         full
+        fill
         intro={
           <div className="w-full border border-line bg-sheet p-4">
             <div className="flex items-center gap-2">
@@ -124,16 +125,19 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
           </div>
         }
       >
-        <div className="flex flex-col gap-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
           {invalidNormRanges ? (
-            <p role="alert" className="border border-caution/60 bg-caution/10 px-4 py-3 text-sm leading-6 text-ink">
+            <p
+              role="alert"
+              className="shrink-0 border border-caution/60 bg-caution/10 px-4 py-3 text-sm leading-6 text-ink"
+            >
               У части товаров минимум больше максимума — норматив противоречивый. Исправьте значения в колонках «Мин.» и
               «Макс.» (ячейки подсвечены).
             </p>
           ) : null}
           {hasTable ? (
             <section
-              className={tableExpanded ? 'fixed inset-0 z-50 bg-paper' : undefined}
+              className={tableExpanded ? 'fixed inset-0 z-50 bg-paper' : 'min-h-0 flex-1'}
               aria-label={tableExpanded ? 'Таблица на весь экран' : 'Таблица планирования движения'}
             >
               <MovementPlanTable
@@ -147,7 +151,7 @@ function Workspace({ month, currentMonth, today }: { month: string; currentMonth
               />
             </section>
           ) : (
-            <p className="border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
+            <p className="shrink-0 border border-line bg-sheet px-4 py-4 text-sm leading-6 text-muted">
               {categories.length === 0
                 ? 'Добавьте категорию и товар во «Вводе плана» продаж. Ввод плана движения строится по товарам.'
                 : 'Добавьте товар во «Вводе плана» продаж. Ввод плана движения строится по товарам.'}

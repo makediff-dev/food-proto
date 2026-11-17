@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 
 import type { DerivativeMovementRow, DerivativeMovementSection } from '@/domain/derivative-movement';
 import { MaterialNormDeviation } from '@/features/materials/MaterialNormDeviation';
@@ -25,10 +25,12 @@ import {
   keepWithNext,
   nameHeadingClassName,
   ProductIndex,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
+  useStickyTableHead,
   VatMoneyCell,
 } from '@/features/table';
 
@@ -242,11 +244,13 @@ function columnEdgeClass(key: ColumnKey): string {
 }
 
 export function DerivativeMovementSummaryTable({ sections }: { sections: readonly DerivativeMovementSection[] }) {
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
+
   return (
-    <div className={tableFrameClassName}>
+    <div className={tableFrameScrollClassName}>
       <table className={tableClassName}>
         <caption className="sr-only">Движение производных: остатки, приход, расход и норматив</caption>
-        <thead className={stickyHeadClassName}>
+        <thead ref={headRef} className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             {COLUMN_GROUPS.map((group, index) => (
@@ -283,7 +287,7 @@ export function DerivativeMovementSummaryTable({ sections }: { sections: readonl
         </thead>
         <tbody>
           {sections.map((section) => (
-            <WorkshopBlock key={section.workshopId} section={section} />
+            <WorkshopBlock key={section.workshopId} section={section} categoryStickyStyle={categoryStickyStyle} />
           ))}
         </tbody>
       </table>
@@ -291,14 +295,20 @@ export function DerivativeMovementSummaryTable({ sections }: { sections: readonl
   );
 }
 
-function WorkshopBlock({ section }: { section: DerivativeMovementSection }) {
+function WorkshopBlock({
+  section,
+  categoryStickyStyle,
+}: {
+  section: DerivativeMovementSection;
+  categoryStickyStyle: CSSProperties | undefined;
+}) {
   const [open, setOpen] = useState(true);
   const count = section.rows.length;
 
   return (
     <>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false)}>
+        <th scope="row" className={categoryNameRowClassName(false, { stack: 'belowHead' })} style={categoryStickyStyle}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -318,7 +328,8 @@ function WorkshopBlock({ section }: { section: DerivativeMovementSection }) {
         {COLUMNS.map((column) => (
           <td
             key={`group:${column.key}`}
-            className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${categoryBandClassName} ${columnEdgeClass(column.key)}`}
+            className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${stickyCategoryCellClassName} ${categoryBandClassName} ${columnEdgeClass(column.key)}`}
+            style={categoryStickyStyle}
           >
             <WorkshopCell column={column.key} section={section} />
           </td>

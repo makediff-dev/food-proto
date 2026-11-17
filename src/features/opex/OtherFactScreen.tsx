@@ -23,10 +23,12 @@ import {
   columnHeadingClassName,
   MoneyAmount,
   nameHeadingClassName,
+  stickyHeadClassName,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
   totalNameClassName,
   totalValueClassName,
+  useStickyTableHead,
 } from '@/features/table';
 
 const DAY_MIN = '2000-01-01';
@@ -84,6 +86,7 @@ export function OtherFactScreen({ month, day }: { month: string; day: string }) 
     () => operatingExpenseOtherDayView(opex.document, selectedDay, totals?.revenueWithVat ?? 0),
     [opex.document, selectedDay, totals?.revenueWithVat],
   );
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
 
   function open(nextDayValue: string) {
     if (!isOccurredOn(nextDayValue)) {
@@ -115,6 +118,7 @@ export function OtherFactScreen({ month, day }: { month: string; day: string }) 
     <PageFrame
       title={OPEX_OTHER_FACT_TITLE}
       full
+      fill
       intro={
         <div className="w-full border border-line bg-sheet p-4">
           <div className="flex items-center gap-2">
@@ -151,10 +155,10 @@ export function OtherFactScreen({ month, day }: { month: string; day: string }) 
         </div>
       }
     >
-      <div className={tableFrameClassName}>
+      <div className={tableFrameScrollClassName}>
         <table className={tableClassName}>
           <caption className="sr-only">{`Прочие операционные расходы, факт на ${selectedDay}`}</caption>
-          <thead>
+          <thead ref={headRef} className={stickyHeadClassName}>
             <tr>
               <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                 <ColumnLabel label="Наименование" />
@@ -171,6 +175,7 @@ export function OtherFactScreen({ month, day }: { month: string; day: string }) 
                 group={group}
                 side="fact"
                 editable={editable}
+                categoryStickyStyle={categoryStickyStyle}
                 onAmount={(lineId, amount) => {
                   const rejection = opex.setOpexDayLine(selectedDay, lineId, amount);
                   return rejection ? OPEX_LINE_ERROR[rejection] : null;

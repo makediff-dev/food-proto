@@ -100,6 +100,7 @@ export function MaterialsConsumptionScreen({ month, day }: { month: string; day:
     <PageFrame
       title={MATERIALS_CONSUMPTION_TITLE}
       full
+      fill
       intro={
         <div className="w-full border border-line bg-sheet p-4">
           <div className="flex items-center gap-2">
@@ -136,12 +137,14 @@ export function MaterialsConsumptionScreen({ month, day }: { month: string; day:
         </div>
       }
     >
-      <MaterialsConsumptionTable
-        document={materials.document}
-        day={selectedDay}
-        editable={editable}
-        onReal={realError}
-      />
+      <div className="min-h-0 flex-1">
+        <MaterialsConsumptionTable
+          document={materials.document}
+          day={selectedDay}
+          editable={editable}
+          onReal={realError}
+        />
+      </div>
     </PageFrame>
   );
 }

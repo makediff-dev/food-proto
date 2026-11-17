@@ -22,10 +22,12 @@ import {
   columnHeadingClassName,
   MoneyAmount,
   nameHeadingClassName,
+  stickyHeadClassName,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
   totalNameClassName,
   totalValueClassName,
+  useStickyTableHead,
 } from '@/features/table';
 
 const valueHead = `${columnHeadingClassName} ${columnDividerClassName}`;
@@ -46,11 +48,13 @@ export function OtherPlanScreen({ month }: { month: string }) {
     () => operatingExpenseOtherMonthView(opex.document, selectedMonth, totals?.revenueWithVat ?? 0),
     [opex.document, selectedMonth, totals?.revenueWithVat],
   );
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
 
   return (
     <PageFrame
       title={OPEX_OTHER_PLAN_TITLE}
       full
+      fill
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -59,10 +63,10 @@ export function OtherPlanScreen({ month }: { month: string }) {
         />
       }
     >
-      <div className={tableFrameClassName}>
+      <div className={tableFrameScrollClassName}>
         <table className={tableClassName}>
           <caption className="sr-only">{`Прочие операционные расходы, план за ${selectedMonth}`}</caption>
-          <thead>
+          <thead ref={headRef} className={stickyHeadClassName}>
             <tr>
               <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                 <ColumnLabel label="Наименование" />
@@ -82,6 +86,7 @@ export function OtherPlanScreen({ month }: { month: string }) {
                 group={group}
                 side="plan"
                 editable={editable}
+                categoryStickyStyle={categoryStickyStyle}
                 onRename={(lineId, name) => {
                   const rejection = opex.renameOpexOtherLine(lineId, name);
                   return rejection ? OPEX_LINE_ERROR[rejection] : null;

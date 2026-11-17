@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 
 import type {
   MaterialGroupMovement,
@@ -28,10 +28,12 @@ import {
   keepWithNext,
   nameHeadingClassName,
   ProductIndex,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
+  useStickyTableHead,
   VatMoneyCell,
 } from '@/features/table';
 
@@ -233,11 +235,17 @@ export function MaterialsSummaryTable({ groups }: { groups: readonly MaterialGro
     );
   }
 
+  return <MaterialsSummaryGrid sections={sections} />;
+}
+
+function MaterialsSummaryGrid({ sections }: { sections: readonly SummarySection[] }) {
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
+
   return (
-    <div className={tableFrameClassName}>
+    <div className={tableFrameScrollClassName}>
       <table className={tableClassName}>
         <caption className="sr-only">Отчет общий: сырьё и материалы за месяц</caption>
-        <thead className={stickyHeadClassName}>
+        <thead ref={headRef} className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             {COLUMN_GROUPS.map((group, index) => (
@@ -274,7 +282,7 @@ export function MaterialsSummaryTable({ groups }: { groups: readonly MaterialGro
         </thead>
         <tbody>
           {sections.map((section) => (
-            <SectionBlock key={section.key} section={section} />
+            <SectionBlock key={section.key} section={section} categoryStickyStyle={categoryStickyStyle} />
           ))}
         </tbody>
       </table>
@@ -282,14 +290,20 @@ export function MaterialsSummaryTable({ groups }: { groups: readonly MaterialGro
   );
 }
 
-function SectionBlock({ section }: { section: SummarySection }) {
+function SectionBlock({
+  section,
+  categoryStickyStyle,
+}: {
+  section: SummarySection;
+  categoryStickyStyle: CSSProperties | undefined;
+}) {
   const [open, setOpen] = useState(true);
   const count = section.warehouse.rows.length;
 
   return (
     <>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false)}>
+        <th scope="row" className={categoryNameRowClassName(false, { stack: 'belowHead' })} style={categoryStickyStyle}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -309,7 +323,8 @@ function SectionBlock({ section }: { section: SummarySection }) {
         {COLUMNS.map((column) => (
           <td
             key={`group:${column.key}`}
-            className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${categoryBandClassName} ${groupEndClass(column.key)}`}
+            className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${stickyCategoryCellClassName} ${categoryBandClassName} ${groupEndClass(column.key)}`}
+            style={categoryStickyStyle}
           >
             <TotalsCell column={column.key} totals={section.warehouse.totals} />
           </td>

@@ -37,6 +37,7 @@ export function DerivativeMovementInventoryScreen({ month }: { month: string }) 
     <PageFrame
       title={DERIVATIVE_MOVEMENT_INVENTORY_TITLE}
       full
+      fill
       intro={
         <MaterialMonthBar
           month={selectedMonth}
@@ -52,11 +53,13 @@ export function DerivativeMovementInventoryScreen({ month }: { month: string }) 
           Производных пока нет. Добавьте их в рецептурных журналах.
         </p>
       ) : (
-        <DerivativeMovementInventoryTable
-          sections={view.sections}
-          editable={movement.hydrated && canEditInventory}
-          onClosing={closingError}
-        />
+        <div className="min-h-0 flex-1">
+          <DerivativeMovementInventoryTable
+            sections={view.sections}
+            editable={movement.hydrated && canEditInventory}
+            onClosing={closingError}
+          />
+        </div>
       )}
     </PageFrame>
   );

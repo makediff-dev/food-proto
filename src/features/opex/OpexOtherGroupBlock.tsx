@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useState } from 'react';
+import { type CSSProperties, Fragment, useState } from 'react';
 
 import type { OpexOtherGroupView } from '@/domain/operating-expense';
 import { AGENCY_LINE_HINT, OPEX_LINE_ERROR, parseOpexMoney } from '@/features/opex/text';
@@ -18,6 +18,7 @@ import {
   MoneyAmount,
   MoneyCell,
   PercentCell,
+  stickyCategoryCellClassName,
 } from '@/features/table';
 
 const valueCell = `border-b border-b-line px-1.5 py-2 text-right align-middle ${columnDividerClassName}`;
@@ -33,10 +34,12 @@ export function OtherGroupBlock({
   onDelete,
   onRestore,
   onPromote,
+  categoryStickyStyle,
 }: {
   group: OpexOtherGroupView;
   side: 'plan' | 'fact';
   editable: boolean;
+  categoryStickyStyle?: CSSProperties;
   onRename?: (lineId: string, name: string) => string | null;
   onAmount: (lineId: string, amount: number) => string | null;
   /** Колонка ставки НДС — только на вводе плана прочих статей. */
@@ -56,7 +59,7 @@ export function OtherGroupBlock({
   return (
     <Fragment>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false)}>
+        <th scope="row" className={categoryNameRowClassName(false, { stack: 'belowHead' })} style={categoryStickyStyle}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -101,8 +104,16 @@ export function OtherGroupBlock({
             ) : null}
           </div>
         </th>
-        {showVat ? <td className={`${valueCell} ${categoryBandClassName}`} /> : null}
-        <td className={`${valueCell} ${categoryBandClassName}`}>
+        {showVat ? (
+          <td
+            className={`${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName}`}
+            style={categoryStickyStyle}
+          />
+        ) : null}
+        <td
+          className={`${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName}`}
+          style={categoryStickyStyle}
+        >
           <MoneyAmount amount={total} />
         </td>
       </tr>

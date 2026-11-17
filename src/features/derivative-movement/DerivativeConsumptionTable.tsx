@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { type CSSProperties, useMemo, useState } from 'react';
 
 import {
   calculatedConsumptionQuantityForDerivativeDay,
@@ -26,10 +26,12 @@ import {
   entityNameRowClassName,
   nameHeadingClassName,
   ProductIndex,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
+  useStickyTableHead,
 } from '@/features/table';
 
 type ConsumptionLine = {
@@ -102,6 +104,7 @@ export function DerivativeConsumptionTable({
   onReal: (derivativeId: string, quantity: number) => string | null;
 }) {
   const sections = useMemo(() => buildSections(document, day), [document, day]);
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
 
   if (sections.length === 0) {
     return (
@@ -112,10 +115,10 @@ export function DerivativeConsumptionTable({
   }
 
   return (
-    <div className={tableFrameClassName}>
+    <div className={tableFrameScrollClassName}>
       <table className={tableClassName}>
         <caption className="sr-only">{`Расход в производстве, ${day}`}</caption>
-        <thead className={stickyHeadClassName}>
+        <thead ref={headRef} className={stickyHeadClassName}>
           <tr>
             <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               <ColumnLabel label="Производная" />
@@ -130,7 +133,13 @@ export function DerivativeConsumptionTable({
         </thead>
         <tbody>
           {sections.map((section) => (
-            <SectionBlock key={section.key} section={section} editable={editable} onReal={onReal} />
+            <SectionBlock
+              key={section.key}
+              section={section}
+              editable={editable}
+              categoryStickyStyle={categoryStickyStyle}
+              onReal={onReal}
+            />
           ))}
         </tbody>
       </table>
@@ -141,10 +150,12 @@ export function DerivativeConsumptionTable({
 function SectionBlock({
   section,
   editable,
+  categoryStickyStyle,
   onReal,
 }: {
   section: ConsumptionSection;
   editable: boolean;
+  categoryStickyStyle: CSSProperties | undefined;
   onReal: (derivativeId: string, quantity: number) => string | null;
 }) {
   const [open, setOpen] = useState(true);
@@ -153,7 +164,11 @@ function SectionBlock({
   return (
     <>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false)}>
+        <th
+          scope="row"
+          className={categoryNameRowClassName(editable, { stack: 'belowHead' })}
+          style={categoryStickyStyle}
+        >
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -170,8 +185,8 @@ function SectionBlock({
             </span>
           </div>
         </th>
-        <td className={bandCell} />
-        <td className={bandEnd} />
+        <td className={`${bandCell} ${stickyCategoryCellClassName}`} style={categoryStickyStyle} />
+        <td className={`${bandEnd} ${stickyCategoryCellClassName}`} style={categoryStickyStyle} />
       </tr>
       {open
         ? section.rows.map((row, index) => (

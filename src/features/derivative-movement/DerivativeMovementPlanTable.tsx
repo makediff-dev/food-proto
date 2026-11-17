@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 
 import type {
   DerivativeMovementRow,
@@ -25,10 +25,12 @@ import {
   keepWithNext,
   nameHeadingClassName,
   ProductIndex,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
+  useStickyTableHead,
 } from '@/features/table';
 
 type ColumnKey = 'min' | 'max' | 'normDeviation' | 'recommended';
@@ -64,11 +66,13 @@ export function DerivativeMovementPlanTable({
   editable: boolean;
   onNorm: (derivativeId: string, field: DerivativeNormField, value: number) => string | null;
 }) {
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
+
   return (
-    <div className={tableFrameClassName}>
+    <div className={tableFrameScrollClassName}>
       <table className={tableClassName}>
         <caption className="sr-only">Ввод плана: движение производных</caption>
-        <thead className={stickyHeadClassName}>
+        <thead ref={headRef} className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             <th colSpan={COLUMNS.length} scope="colgroup" className={blockHeadingClassName}>
@@ -92,7 +96,13 @@ export function DerivativeMovementPlanTable({
         </thead>
         <tbody>
           {sections.map((section) => (
-            <WorkshopBlock key={section.workshopId} section={section} editable={editable} onNorm={onNorm} />
+            <WorkshopBlock
+              key={section.workshopId}
+              section={section}
+              editable={editable}
+              categoryStickyStyle={categoryStickyStyle}
+              onNorm={onNorm}
+            />
           ))}
         </tbody>
       </table>
@@ -103,10 +113,12 @@ export function DerivativeMovementPlanTable({
 function WorkshopBlock({
   section,
   editable,
+  categoryStickyStyle,
   onNorm,
 }: {
   section: DerivativeMovementSection;
   editable: boolean;
+  categoryStickyStyle: CSSProperties | undefined;
   onNorm: (derivativeId: string, field: DerivativeNormField, value: number) => string | null;
 }) {
   const [open, setOpen] = useState(true);
@@ -115,7 +127,11 @@ function WorkshopBlock({
   return (
     <>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false)}>
+        <th
+          scope="row"
+          className={categoryNameRowClassName(editable, { stack: 'belowHead' })}
+          style={categoryStickyStyle}
+        >
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -135,7 +151,8 @@ function WorkshopBlock({
         {COLUMNS.map((column) => (
           <td
             key={`group:${column.key}`}
-            className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${categoryBandClassName} ${columnDividerClassName}`}
+            className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${stickyCategoryCellClassName} ${categoryBandClassName} ${columnDividerClassName}`}
+            style={categoryStickyStyle}
           />
         ))}
       </tr>

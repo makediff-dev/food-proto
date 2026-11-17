@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Fragment, useMemo, useState } from 'react';
+import { type CSSProperties, Fragment, useMemo, useState } from 'react';
 
 import type { HrDepartmentId, HrShopDepartmentId } from '@/domain/document';
 import { HR_DEPARTMENT_LABELS, type HrDepartmentView, type HrOutsourcingRowView, hrMonthView } from '@/domain/hr';
@@ -31,8 +31,10 @@ import {
   MoneyCell,
   nameHeadingClassName,
   PercentCell,
+  stickyCategoryCellClassName,
+  stickyHeadClassName,
   tableClassName,
-  tableFrameClassName,
+  useStickyTableHead,
 } from '@/features/table';
 
 const deleteIconButtonClassName =
@@ -55,11 +57,13 @@ export function HrPlanScreen({ month }: { month: string }) {
     () => view.departments.flatMap((department) => (department.outsourcing ? [department.outsourcing] : [])),
     [view.departments],
   );
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
 
   return (
     <PageFrame
       title={OPEX_HR_PLAN_TITLE}
       full
+      fill
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -68,13 +72,13 @@ export function HrPlanScreen({ month }: { month: string }) {
         />
       }
     >
-      <div className="flex flex-col gap-6">
-        <section className="flex flex-col gap-2">
-          <h2 className="px-1 text-sm font-medium">Должности</h2>
-          <div className={tableFrameClassName}>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="flex flex-col gap-6">
+          <section className="flex flex-col gap-2">
+            <h2 className="px-1 text-sm font-medium">Должности</h2>
             <table className={tableClassName}>
               <caption className="sr-only">{`План HR за ${selectedMonth}`}</caption>
-              <thead>
+              <thead ref={headRef} className={stickyHeadClassName}>
                 <tr>
                   <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                     <ColumnLabel label="Наименование" />
@@ -96,6 +100,7 @@ export function HrPlanScreen({ month }: { month: string }) {
                     key={department.departmentId}
                     department={department}
                     editable={editable}
+                    categoryStickyStyle={categoryStickyStyle}
                     onAdd={
                       editable
                         ? () => {
@@ -117,15 +122,13 @@ export function HrPlanScreen({ month }: { month: string }) {
                 ))}
               </tbody>
             </table>
-          </div>
-        </section>
+          </section>
 
-        <section className="flex flex-col gap-2">
-          <h2 className="px-1 text-sm font-medium">Аутсорсинг</h2>
-          <div className={tableFrameClassName}>
+          <section className="flex flex-col gap-2">
+            <h2 className="px-1 text-sm font-medium">Аутсорсинг</h2>
             <table className={tableClassName}>
               <caption className="sr-only">{`План аутсорсинга за ${selectedMonth}`}</caption>
-              <thead>
+              <thead className={stickyHeadClassName}>
                 <tr>
                   <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                     <ColumnLabel label="Цех" />
@@ -164,17 +167,17 @@ export function HrPlanScreen({ month }: { month: string }) {
                 ))}
               </tbody>
             </table>
-          </div>
-        </section>
+          </section>
 
-        <HrTaxRateBlock
-          taxes={view.taxes.filter((tax) => tax.id !== 'outsourcing-vat')}
-          editable={editable}
-          onRate={(field, rateHundredths) => {
-            const rejection = opex.setHrTaxRate(selectedMonth, field, rateHundredths);
-            return rejection ? HR_ERROR[rejection] : null;
-          }}
-        />
+          <HrTaxRateBlock
+            taxes={view.taxes.filter((tax) => tax.id !== 'outsourcing-vat')}
+            editable={editable}
+            onRate={(field, rateHundredths) => {
+              const rejection = opex.setHrTaxRate(selectedMonth, field, rateHundredths);
+              return rejection ? HR_ERROR[rejection] : null;
+            }}
+          />
+        </div>
       </div>
       {addDepartment && editable ? (
         <AddPositionDialog
@@ -200,12 +203,14 @@ function DepartmentBlock({
   onAdd,
   onStaffPlan,
   onDelete,
+  categoryStickyStyle,
 }: {
   department: HrDepartmentView;
   editable: boolean;
   onAdd?: () => void;
   onStaffPlan: (positionId: string, headcount: number, salaryExVat: number) => string | null;
   onDelete: (positionId: string, name: string) => void;
+  categoryStickyStyle?: CSSProperties;
 }) {
   const [open, setOpen] = useState(true);
   const count = department.staff.length;
@@ -213,7 +218,7 @@ function DepartmentBlock({
   return (
     <Fragment>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false)}>
+        <th scope="row" className={categoryNameRowClassName(false, { stack: 'belowHead' })} style={categoryStickyStyle}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -244,11 +249,22 @@ function DepartmentBlock({
             ) : null}
           </div>
         </th>
-        <td className={`${valueCell} ${categoryBandClassName}`}>{department.plan.headcount}</td>
-        <td className={`${valueCell} ${categoryBandClassName}`}>
+        <td
+          className={`${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName}`}
+          style={categoryStickyStyle}
+        >
+          {department.plan.headcount}
+        </td>
+        <td
+          className={`${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName}`}
+          style={categoryStickyStyle}
+        >
           <MoneyAmount amount={department.plan.salaryExVat} />
         </td>
-        <td className={`${valueCell} ${categoryBandClassName}`}>
+        <td
+          className={`${valueCell} ${stickyCategoryCellClassName} ${categoryBandClassName}`}
+          style={categoryStickyStyle}
+        >
           <MoneyAmount amount={department.planPayrollExVat} />
         </td>
       </tr>

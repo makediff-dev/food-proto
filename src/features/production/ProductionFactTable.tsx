@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useState } from 'react';
+import { type CSSProperties, type ReactNode, useState } from 'react';
 
 import type {
   ProductionFactGroup,
@@ -26,14 +26,16 @@ import {
   Muted,
   nameHeadingClassName,
   ProductIndex,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   TableNumber,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
   tableFrameExpandedClassName,
+  tableFrameScrollClassName,
   totalNameClassName,
   totalValueClassName,
+  useStickyTableHead,
   VatMoneyCell,
 } from '@/features/table';
 
@@ -95,12 +97,13 @@ export function ProductionFactTable({
       : factIsForecast
         ? 'Производство: план, факт (прогноз) и отклонение'
         : 'Производство: план, факт и отклонение';
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
 
   return (
-    <div className={expanded ? tableFrameExpandedClassName : tableFrameClassName}>
+    <div className={expanded ? tableFrameExpandedClassName : tableFrameScrollClassName}>
       <table className={tableClassName}>
         <caption className="sr-only">{caption}</caption>
-        <thead className={stickyHeadClassName}>
+        <thead ref={headRef} className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             <SectionHeading label={planHeader} span={PLAN_COLUMNS.length} />
@@ -121,7 +124,12 @@ export function ProductionFactTable({
         </thead>
         <tbody>
           {groups.map((group) => (
-            <CategoryBlock key={group.categoryId} group={group} recommendedByProduct={recommendedByProduct} />
+            <CategoryBlock
+              key={group.categoryId}
+              group={group}
+              recommendedByProduct={recommendedByProduct}
+              categoryStickyStyle={categoryStickyStyle}
+            />
           ))}
           <tr>
             <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
@@ -140,9 +148,11 @@ export function ProductionFactTable({
 function CategoryBlock({
   group,
   recommendedByProduct,
+  categoryStickyStyle,
 }: {
   group: ProductionFactGroup;
   recommendedByProduct: ReadonlyMap<string, number>;
+  categoryStickyStyle: CSSProperties | undefined;
 }) {
   const [open, setOpen] = useState(true);
   const productCount = group.rows.length;
@@ -151,7 +161,7 @@ function CategoryBlock({
   return (
     <>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false)}>
+        <th scope="row" className={categoryNameRowClassName(false, { stack: 'belowHead' })} style={categoryStickyStyle}>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -171,9 +181,14 @@ function CategoryBlock({
             {group.deleted ? <span className="text-sm text-muted">(архив)</span> : null}
           </div>
         </th>
-        <SideCells kind="plan" side={group.plan} recommendedPieces={recommendedPieces} />
-        <SideCells kind="fact" side={group.fact} />
-        <VarianceCells variance={group.variance} />
+        <SideCells
+          kind="plan"
+          side={group.plan}
+          recommendedPieces={recommendedPieces}
+          categoryStickyStyle={categoryStickyStyle}
+        />
+        <SideCells kind="fact" side={group.fact} categoryStickyStyle={categoryStickyStyle} />
+        <VarianceCells variance={group.variance} categoryStickyStyle={categoryStickyStyle} />
       </tr>
       {open
         ? group.rows.map((row, index) => (
@@ -239,14 +254,22 @@ function SideCells({
   side,
   recommendedPieces = 0,
   total = false,
+  categoryStickyStyle,
 }: {
   kind: SectionKind;
   side: ProductionFactSide;
   recommendedPieces?: number;
   total?: boolean;
+  categoryStickyStyle?: CSSProperties;
 }) {
   return columnsOf(kind).map((column) => (
-    <MetricCell key={`${kind}:${column.key}`} kind={kind} column={column.key} total={total}>
+    <MetricCell
+      key={`${kind}:${column.key}`}
+      kind={kind}
+      column={column.key}
+      total={total}
+      categoryStickyStyle={categoryStickyStyle}
+    >
       {column.key === 'recommended' ? (
         <Pieces value={recommendedPieces} />
       ) : (
@@ -256,9 +279,23 @@ function SideCells({
   ));
 }
 
-function VarianceCells({ variance, total = false }: { variance: ProductionFactVariance; total?: boolean }) {
+function VarianceCells({
+  variance,
+  total = false,
+  categoryStickyStyle,
+}: {
+  variance: ProductionFactVariance;
+  total?: boolean;
+  categoryStickyStyle?: CSSProperties;
+}) {
   return FACT_COLUMNS.map((column) => (
-    <MetricCell key={`variance:${column.key}`} kind="variance" column={column.key} total={total}>
+    <MetricCell
+      key={`variance:${column.key}`}
+      kind="variance"
+      column={column.key}
+      total={total}
+      categoryStickyStyle={categoryStickyStyle}
+    >
       <VarianceValue column={column.key} variance={variance} />
     </MetricCell>
   ));
@@ -377,12 +414,14 @@ function MetricCell({
   column,
   total = false,
   sheet = false,
+  categoryStickyStyle,
   children,
 }: {
   kind: SectionKind;
   column: ColumnKey;
   total?: boolean;
   sheet?: boolean;
+  categoryStickyStyle?: CSSProperties;
   children: ReactNode;
 }) {
   const fill = kind === 'plan' ? cellKindClassName.repeated : cellKindClassName.computed;
@@ -394,7 +433,8 @@ function MetricCell({
 
   return (
     <td
-      className={`w-px px-1.5 py-2 text-right align-middle last:border-r-0 ${tone} ${sheet ? fill : ''} ${sectionRightClass(kind, column)}`}
+      className={`w-px px-1.5 py-2 text-right align-middle last:border-r-0 ${tone} ${categoryStickyStyle ? stickyCategoryCellClassName : ''} ${sheet ? fill : ''} ${sectionRightClass(kind, column)}`}
+      style={categoryStickyStyle}
     >
       {children}
     </td>

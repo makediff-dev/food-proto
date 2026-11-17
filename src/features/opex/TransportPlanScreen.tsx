@@ -28,8 +28,8 @@ import {
   nameCellKind,
   nameHeadingClassName,
   PercentCell,
+  stickyHeadClassName,
   tableClassName,
-  tableFrameClassName,
 } from '@/features/table';
 
 const deleteIconButtonClassName =
@@ -54,6 +54,7 @@ export function TransportPlanScreen({ month }: { month: string }) {
     <PageFrame
       title={OPEX_TRANSPORT_PLAN_TITLE}
       full
+      fill
       intro={
         <OpexMonthBar
           month={selectedMonth}
@@ -62,22 +63,22 @@ export function TransportPlanScreen({ month }: { month: string }) {
         />
       }
     >
-      <div className="flex flex-col gap-6">
-        {view.hire.map((block) => (
-          <section key={block.kind} className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-              <h2 className="text-sm font-medium">{block.name}</h2>
-              {editable ? (
-                <button type="button" className={primaryButtonClassName} onClick={() => setAddKind(block.kind)}>
-                  <IconPlus />
-                  Добавить контрагента
-                </button>
-              ) : null}
-            </div>
-            <div className={tableFrameClassName}>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="flex flex-col gap-6">
+          {view.hire.map((block) => (
+            <section key={block.kind} className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+                <h2 className="text-sm font-medium">{block.name}</h2>
+                {editable ? (
+                  <button type="button" className={primaryButtonClassName} onClick={() => setAddKind(block.kind)}>
+                    <IconPlus />
+                    Добавить контрагента
+                  </button>
+                ) : null}
+              </div>
               <table className={tableClassName}>
                 <caption className="sr-only">{`План, ${block.name}`}</caption>
-                <thead>
+                <thead className={stickyHeadClassName}>
                   <tr>
                     <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                       <ColumnLabel label="Контрагент" />
@@ -212,24 +213,22 @@ export function TransportPlanScreen({ month }: { month: string }) {
                   })}
                 </tbody>
               </table>
-            </div>
-          </section>
-        ))}
+            </section>
+          ))}
 
-        <section className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-            <h2 className="text-sm font-medium">Собственный транспорт</h2>
-            {editable ? (
-              <button type="button" className={primaryButtonClassName} onClick={() => setAddingVehicle(true)}>
-                <IconPlus />
-                Добавить автомобиль
-              </button>
-            ) : null}
-          </div>
-          <div className={tableFrameClassName}>
+          <section className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+              <h2 className="text-sm font-medium">Собственный транспорт</h2>
+              {editable ? (
+                <button type="button" className={primaryButtonClassName} onClick={() => setAddingVehicle(true)}>
+                  <IconPlus />
+                  Добавить автомобиль
+                </button>
+              ) : null}
+            </div>
             <table className={tableClassName}>
               <caption className="sr-only">План собственного транспорта</caption>
-              <thead>
+              <thead className={stickyHeadClassName}>
                 <tr>
                   <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
                     <ColumnLabel label="Автомобиль" />
@@ -393,8 +392,8 @@ export function TransportPlanScreen({ month }: { month: string }) {
                 })}
               </tbody>
             </table>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
       {addKind && editable ? (
         <AddNamedDialog

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { type CSSProperties, useState } from 'react';
 
 import type { DerivativeMovementRow, DerivativeMovementSection } from '@/domain/derivative-movement';
 import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
@@ -18,10 +18,12 @@ import {
   keepWithNext,
   nameHeadingClassName,
   ProductIndex,
+  stickyCategoryCellClassName,
   stickyHeadClassName,
   tableBorder,
   tableClassName,
-  tableFrameClassName,
+  tableFrameScrollClassName,
+  useStickyTableHead,
 } from '@/features/table';
 
 export function DerivativeMovementInventoryTable({
@@ -33,11 +35,13 @@ export function DerivativeMovementInventoryTable({
   editable: boolean;
   onClosing: (derivativeId: string, quantity: number) => string | null;
 }) {
+  const { headRef, categoryStickyStyle } = useStickyTableHead();
+
   return (
-    <div className={tableFrameClassName}>
+    <div className={tableFrameScrollClassName}>
       <table className={tableClassName}>
         <caption className="sr-only">Инвентаризация производных: остаток на конец</caption>
-        <thead className={stickyHeadClassName}>
+        <thead ref={headRef} className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
             <th scope="colgroup" className={blockHeadingClassName}>
@@ -55,7 +59,13 @@ export function DerivativeMovementInventoryTable({
         </thead>
         <tbody>
           {sections.map((section) => (
-            <WorkshopBlock key={section.workshopId} section={section} editable={editable} onClosing={onClosing} />
+            <WorkshopBlock
+              key={section.workshopId}
+              section={section}
+              editable={editable}
+              categoryStickyStyle={categoryStickyStyle}
+              onClosing={onClosing}
+            />
           ))}
         </tbody>
       </table>
@@ -66,10 +76,12 @@ export function DerivativeMovementInventoryTable({
 function WorkshopBlock({
   section,
   editable,
+  categoryStickyStyle,
   onClosing,
 }: {
   section: DerivativeMovementSection;
   editable: boolean;
+  categoryStickyStyle: CSSProperties | undefined;
   onClosing: (derivativeId: string, quantity: number) => string | null;
 }) {
   const [open, setOpen] = useState(true);
@@ -78,7 +90,11 @@ function WorkshopBlock({
   return (
     <>
       <tr>
-        <th scope="row" className={categoryNameRowClassName(false)}>
+        <th
+          scope="row"
+          className={categoryNameRowClassName(editable, { stack: 'belowHead' })}
+          style={categoryStickyStyle}
+        >
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -96,7 +112,8 @@ function WorkshopBlock({
           </div>
         </th>
         <td
-          className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${categoryBandClassName} ${columnDividerClassName}`}
+          className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${stickyCategoryCellClassName} ${categoryBandClassName} ${columnDividerClassName}`}
+          style={categoryStickyStyle}
         />
       </tr>
       {open

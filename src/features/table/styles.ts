@@ -26,17 +26,23 @@ export function nameCellKind(editable: boolean): NameCellKind {
 }
 
 const entityNameRowBaseClassName =
-  'z-10 w-px max-w-max whitespace-nowrap border-r-[1.5px] border-r-muted px-3 py-2 text-left align-middle font-normal text-ink';
+  'w-px max-w-max whitespace-nowrap border-r-[1.5px] border-r-muted px-3 py-2 text-left align-middle font-normal text-ink';
 
 type EntityNameRowOptions = {
   variant?: 'default' | 'dayFact';
   bottomBorder?: string;
+  /** belowHead — строка категории под закреплённой шапкой (выше обычных sticky-имён). */
+  stack?: 'row' | 'belowHead';
 };
+
+function nameStackClassName(stack: EntityNameRowOptions['stack']): string {
+  return stack === 'belowHead' ? 'z-[25]' : 'z-10';
+}
 
 function entityNameRowClassNameInternal(kind: NameCellKind, options?: EntityNameRowOptions): string {
   const sticky = options?.variant === 'dayFact' ? 'sticky left-10' : 'sticky left-0';
   const bottom = options?.bottomBorder ?? 'border-b border-b-line';
-  return `${sticky} ${entityNameRowBaseClassName} ${bottom} ${cellKindClassName[kind]}`;
+  return `${sticky} ${nameStackClassName(options?.stack)} ${entityNameRowBaseClassName} ${bottom} ${cellKindClassName[kind]}`;
 }
 
 /** Sticky-ячейка названия товара, категории или сырья в обычной сетке. */
@@ -56,7 +62,7 @@ function categoryNameRowClassNameInternal(editable: boolean, options?: EntityNam
   const sticky = options?.variant === 'dayFact' ? 'sticky left-10' : 'sticky left-0';
   const bottom = options?.bottomBorder ?? 'border-b border-b-line';
   const fill = editable ? cellKindClassName.assigned : categoryBandClassName;
-  return `${sticky} ${entityNameRowBaseClassName} ${bottom} ${fill}`;
+  return `${sticky} ${nameStackClassName(options?.stack)} ${entityNameRowBaseClassName} ${bottom} ${fill}`;
 }
 
 /** Название категории: band, пока не редактируют справочник на этом экране. */
@@ -80,6 +86,13 @@ export const gridNameClassName =
   'absolute inset-0 w-full cursor-text appearance-none border-0 bg-transparent p-0 text-left text-sm leading-8 text-ink shadow-none outline-none';
 
 export const tableFrameClassName = 'contain-paint overflow-x-auto border border-line bg-sheet';
+
+/**
+ * Скролл-порт сетки при PageFrame fill: вертикальный sticky шапки работает
+ * только здесь (не в tableFrameClassName с overflow-x-auto).
+ * contain-paint не даёт широкой таблице растянуть прокрутку страницы.
+ */
+export const tableFrameScrollClassName = 'h-full min-h-0 contain-paint overflow-auto border border-line bg-sheet';
 
 export const tableFrameExpandedClassName = 'h-dvh contain-paint overflow-auto bg-sheet';
 
@@ -105,6 +118,12 @@ export const dayFactSpacerBandClassName = 'w-full min-w-0 border-b border-b-line
 export const dayFactSpacerTotalClassName = 'w-full min-w-0 border-y-[3px] border-y-muted bg-sheet p-0';
 
 export const stickyHeadClassName = 'sticky top-0 z-30';
+
+/**
+ * Клетка строки категории под закреплённой шапкой: `top` задаёт вызывающий (высота thead).
+ * Для имени — `categoryNameRowClassName(..., { stack: 'belowHead' })`.
+ */
+export const stickyCategoryCellClassName = 'sticky z-20';
 
 /** Строка категории: темнее клетки ввода. */
 export const categoryBandClassName = 'bg-band';
