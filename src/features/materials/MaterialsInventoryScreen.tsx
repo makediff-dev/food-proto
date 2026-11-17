@@ -8,7 +8,6 @@ import { materialMovementMonth } from '@/domain/materials';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { MaterialMonthBar, resolveMaterialMonth } from '@/features/materials/MaterialMonthBar';
 import { MaterialsInventoryTable } from '@/features/materials/MaterialsInventoryTable';
-import { MaterialsWarehouseBlocks } from '@/features/materials/MaterialsWarehouseBlocks';
 import { MATERIALS_INVENTORY_TITLE, materialsInventoryHref } from '@/features/materials/paths';
 import { MATERIAL_OPENING_ERROR } from '@/features/materials/text';
 import { useMaterials } from '@/features/materials/use-materials';
@@ -44,17 +43,10 @@ export function MaterialsInventoryScreen({ month }: { month: string }) {
         />
       }
     >
-      <MaterialsWarehouseBlocks
+      <MaterialsInventoryTable
         groups={view.groups}
-        renderWarehouse={(group, warehouse) => (
-          <MaterialsInventoryTable
-            caption={`${group.name}, ${warehouse.name}, инвентаризация`}
-            rows={warehouse.rows}
-            totals={warehouse.totals}
-            editable={materials.hydrated && canEditInventory}
-            onClosing={(materialId, quantity) => closingError(warehouse.warehouseId, materialId, quantity)}
-          />
-        )}
+        editable={materials.hydrated && canEditInventory}
+        onClosing={closingError}
       />
     </PageFrame>
   );

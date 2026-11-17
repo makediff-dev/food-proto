@@ -17,7 +17,6 @@ import { materialById, materialMovementMonth } from '@/domain/materials';
 import { monthKeyFromDate } from '@/domain/sales-plan';
 import { MaterialMonthBar, resolveMaterialMonth } from '@/features/materials/MaterialMonthBar';
 import { MaterialsPlanTable } from '@/features/materials/MaterialsPlanTable';
-import { MaterialsWarehouseBlocks } from '@/features/materials/MaterialsWarehouseBlocks';
 import { MATERIALS_PLAN_TITLE, materialsPlanHref } from '@/features/materials/paths';
 import {
   formatQuantityDraft,
@@ -29,7 +28,6 @@ import { useMaterials } from '@/features/materials/use-materials';
 import { useRole } from '@/features/roles/RoleProvider';
 import { fieldClassName, primaryButtonClassName } from '@/features/sales/fields';
 import { Dialog } from '@/features/shell/Dialog';
-import { IconPlus } from '@/features/shell/Icons';
 import { PageFrame } from '@/features/shell/PageFrame';
 
 type MaterialDialogState =
@@ -72,53 +70,31 @@ export function MaterialsPlanScreen({ month }: { month: string }) {
         />
       }
     >
-      <MaterialsWarehouseBlocks
+      <MaterialsPlanTable
         groups={view.groups}
-        renderWarehouseExtra={
+        editable={planEditable}
+        onField={fieldError}
+        onEdit={
           planEditable
-            ? (group, warehouse) => (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDialog({ mode: 'create', groupId: group.groupId, warehouseId: warehouse.warehouseId })
-                  }
-                  className={primaryButtonClassName}
-                >
-                  <IconPlus />
-                  Добавить
-                </button>
-              )
+            ? (materialId) => {
+                const material = materialById(materials.document, materialId);
+                if (material && material.deletedAt === null) {
+                  setDialog({ mode: 'edit', material });
+                }
+              }
             : undefined
         }
-        renderWarehouse={(group, warehouse) => (
-          <MaterialsPlanTable
-            caption={`${group.name}, ${warehouse.name}, план`}
-            rows={warehouse.rows}
-            totals={warehouse.totals}
-            editable={planEditable}
-            onField={(materialId, field, value) => fieldError(warehouse.warehouseId, materialId, field, value)}
-            onEdit={
-              planEditable
-                ? (materialId) => {
-                    const material = materialById(materials.document, materialId);
-                    if (material && material.deletedAt === null) {
-                      setDialog({ mode: 'edit', material });
-                    }
-                  }
-                : undefined
-            }
-            onDelete={
-              planEditable
-                ? (materialId, name) => {
-                    const confirmed = window.confirm(`Удалить «${name}»? Позиция пропадёт из рабочего списка.`);
-                    if (confirmed) {
-                      materials.remove(materialId);
-                    }
-                  }
-                : undefined
-            }
-          />
-        )}
+        onDelete={
+          planEditable
+            ? (materialId, name) => {
+                const confirmed = window.confirm(`Удалить «${name}»? Позиция пропадёт из рабочего списка.`);
+                if (confirmed) {
+                  materials.remove(materialId);
+                }
+              }
+            : undefined
+        }
+        onAdd={planEditable ? (groupId, warehouseId) => setDialog({ mode: 'create', groupId, warehouseId }) : undefined}
       />
       {dialog && planEditable ? (
         <MaterialDialog

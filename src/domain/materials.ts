@@ -8,6 +8,8 @@ import {
   MATERIAL_UNITS,
   MATERIAL_WAREHOUSES,
   type Material,
+  type MaterialConsumptionDay,
+  type MaterialConsumptionDayLine,
   type MaterialGroupId,
   type MaterialMonthPlan,
   type MaterialMonthPlanLine,
@@ -93,19 +95,30 @@ export interface MaterialMovementRow {
   /** Отклонение стоимости прихода: факт − план. */
   receiptDeviationCost: MaterialMoney;
   planConsumptionQuantity: number;
+  /** Расчётный факт: расход на фактический выпуск по рецептам. */
   factConsumptionQuantity: number;
+  /** Реальный факт: сумма дневного ввода за месяц. */
+  realConsumptionQuantity: number;
+  /** Отклонение к расчёту: реальный − расчётный. */
   consumptionDeviationQuantity: number;
+  /** Отклонение к плану: реальный − план. */
+  consumptionToPlanDeviationQuantity: number;
   planConsumptionCost: MaterialMoney;
   factConsumptionCost: MaterialMoney;
+  realConsumptionCost: MaterialMoney;
   /** Цена расхода: цена прихода, если приход был, иначе плановая цена. `DSM Meat!R8`. */
   consumptionPrice: MaterialMoney;
-  /** Отклонение цены расхода: факт − план. */
+  /** Отклонение цены к расчёту: 0 (одна фактическая цена). */
   consumptionDeviationPrice: MaterialMoney;
-  /** Отклонение стоимости расхода: факт − план. */
+  /** Отклонение стоимости к расчёту: реальный − расчётный. */
   consumptionDeviationCost: MaterialMoney;
+  /** Отклонение цены к плану: фактическая − плановая. */
+  consumptionToPlanDeviationPrice: MaterialMoney;
+  /** Отклонение стоимости к плану: реальный − план. */
+  consumptionToPlanDeviationCost: MaterialMoney;
   /** План конца: начало + план прихода − план расхода. */
   bookClosingQuantity: number;
-  /** Текущий расчёт: начало + факт прихода − факт расхода. */
+  /** Текущий расчёт: начало + факт прихода − реальный расход. */
   currentClosingQuantity: number;
   currentClosingDeviationQuantity: number;
   currentClosingDeviationCost: MaterialMoney;
@@ -135,10 +148,14 @@ export interface MaterialMovementTotals {
   receiptDeviationCost: MaterialMoney;
   planConsumptionQuantity: number | null;
   factConsumptionQuantity: number | null;
+  realConsumptionQuantity: number | null;
   consumptionDeviationQuantity: number | null;
+  consumptionToPlanDeviationQuantity: number | null;
   planConsumptionCost: MaterialMoney;
   factConsumptionCost: MaterialMoney;
+  realConsumptionCost: MaterialMoney;
   consumptionDeviationCost: MaterialMoney;
+  consumptionToPlanDeviationCost: MaterialMoney;
   bookClosingQuantity: number | null;
   currentClosingQuantity: number | null;
   currentClosingDeviationQuantity: number | null;
@@ -192,6 +209,10 @@ export function materialOpeningsList(document: PrototypeDocument): MaterialOpeni
 
 export function materialReceiptsList(document: PrototypeDocument): MaterialReceipt[] {
   return document.materialReceipts ?? [];
+}
+
+export function materialConsumptionDaysList(document: PrototypeDocument): MaterialConsumptionDay[] {
+  return document.materialConsumptionDays ?? [];
 }
 
 export function activeMaterials(document: PrototypeDocument, warehouseId?: MaterialWarehouseId): Material[] {
@@ -856,6 +877,19 @@ function productionPieces(document: PrototypeDocument, month: string, mode: 'pla
   return pieces;
 }
 
+function productionPiecesForDay(document: PrototypeDocument, occurredOn: string): Map<string, number> {
+  const pieces = new Map<string, number>();
+  for (const entry of document.productionEntries ?? []) {
+    if (entry.occurredOn !== occurredOn) {
+      continue;
+    }
+    for (const line of entry.lines) {
+      pieces.set(line.productId, (pieces.get(line.productId) ?? 0) + line.pieces);
+    }
+  }
+  return pieces;
+}
+
 function receiptFact(
   document: PrototypeDocument,
   month: string,
@@ -917,18 +951,57 @@ export function materialConsumptionPrice(
  */
 function consumptionQuantity(
   document: PrototypeDocument,
-  _warehouseId: MaterialWarehouseId,
   materialId: string,
-  _mode: 'plan' | 'fact',
   piecesByProduct: ReadonlyMap<string, number>,
-  _planConsumption: number,
-  _factConsumption: number,
 ): number {
   return consumptionQuantityForComponent(
     document,
     { kind: 'material', id: materialId },
     (productId) => piecesByProduct.get(productId) ?? 0,
   );
+}
+
+/** Реальный расход позиции за месяц: сумма дневного ввода. */
+export function realConsumptionQuantityForMaterial(
+  document: PrototypeDocument,
+  month: string,
+  warehouseId: MaterialWarehouseId,
+  materialId: string,
+): number {
+  let total = 0;
+  for (const day of materialConsumptionDaysList(document)) {
+    if (day.warehouseId !== warehouseId || !day.occurredOn.startsWith(`${month}-`)) {
+      continue;
+    }
+    for (const line of day.lines) {
+      if (line.materialId === materialId) {
+        total += line.quantity;
+      }
+    }
+  }
+  return total;
+}
+
+/** Реальный расход позиции за один день. Нет строки — 0. */
+export function realConsumptionQuantityForMaterialDay(
+  document: PrototypeDocument,
+  occurredOn: string,
+  warehouseId: MaterialWarehouseId,
+  materialId: string,
+): number {
+  const day = materialConsumptionDaysList(document).find(
+    (item) => item.occurredOn === occurredOn && item.warehouseId === warehouseId,
+  );
+  return day?.lines.find((line) => line.materialId === materialId)?.quantity ?? 0;
+}
+
+/** Расчётный расход позиции за день: рецепт × выпуск этого дня. */
+export function calculatedConsumptionQuantityForMaterialDay(
+  document: PrototypeDocument,
+  occurredOn: string,
+  materialId: string,
+): number {
+  return consumptionQuantity(document, materialId, productionPiecesForDay(document, occurredOn));
 }
 
 /**
@@ -953,7 +1026,7 @@ export function bookClosingQuantity(
   const planLine = planLineFor(document, month, warehouseId, materialId);
   const planReceipt = planLine?.receiptQuantity ?? 0;
   const planPieces = productionPieces(document, month, 'plan');
-  const planConsumption = consumptionQuantity(document, warehouseId, materialId, 'plan', planPieces, 0, 0);
+  const planConsumption = consumptionQuantity(document, materialId, planPieces);
   return closingMaterialQuantity(opening, planReceipt, planConsumption);
 }
 
@@ -978,26 +1051,11 @@ function movementRow(
   const openingQuantity = openingQuantityFor(document, month, warehouseId, material.id);
   const receipt = receiptFact(document, month, warehouseId, material.id, material.vatPercent);
   const planReceiptQuantity = planLine?.receiptQuantity ?? 0;
-  const planConsumptionQuantity = consumptionQuantity(
-    document,
-    warehouseId,
-    material.id,
-    'plan',
-    planPieces,
-    planLine?.consumptionQuantity ?? 0,
-    planLine?.factConsumptionQuantity ?? 0,
-  );
-  const factConsumptionQuantity = consumptionQuantity(
-    document,
-    warehouseId,
-    material.id,
-    'fact',
-    factPieces,
-    planLine?.consumptionQuantity ?? 0,
-    planLine?.factConsumptionQuantity ?? 0,
-  );
+  const planConsumptionQuantity = consumptionQuantity(document, material.id, planPieces);
+  const factConsumptionQuantity = consumptionQuantity(document, material.id, factPieces);
+  const realConsumptionQuantity = realConsumptionQuantityForMaterial(document, month, warehouseId, material.id);
   const bookClosing = closingMaterialQuantity(openingQuantity, planReceiptQuantity, planConsumptionQuantity);
-  const currentClosing = closingMaterialQuantity(openingQuantity, receipt.quantity, factConsumptionQuantity);
+  const currentClosing = closingMaterialQuantity(openingQuantity, receipt.quantity, realConsumptionQuantity);
   const currentClosingDeviation = currentClosing - bookClosing;
   const closingQuantity = inventoryQuantityFor(document, month, warehouseId, material.id);
   const hasInventoryLine = hasStoredMaterialInventoryLine(document, month, warehouseId, material.id);
@@ -1023,6 +1081,7 @@ function movementRow(
       : { withVat: factReceiptPrice.withVat - planPrice.withVat, exVat: factReceiptPrice.exVat - planPrice.exVat };
   const planConsumptionCost = moneyOf(priceWithVat, planConsumptionQuantity, material.vatPercent);
   const factConsumptionCost = moneyOf(valuation, factConsumptionQuantity, material.vatPercent);
+  const realConsumptionCost = moneyOf(valuation, realConsumptionQuantity, material.vatPercent);
 
   return {
     materialId: material.id,
@@ -1045,15 +1104,20 @@ function movementRow(
     receiptDeviationCost,
     planConsumptionQuantity,
     factConsumptionQuantity,
-    consumptionDeviationQuantity: factConsumptionQuantity - planConsumptionQuantity,
+    realConsumptionQuantity,
+    consumptionDeviationQuantity: realConsumptionQuantity - factConsumptionQuantity,
+    consumptionToPlanDeviationQuantity: realConsumptionQuantity - planConsumptionQuantity,
     planConsumptionCost,
     factConsumptionCost,
+    realConsumptionCost,
     consumptionPrice,
-    consumptionDeviationPrice: {
+    consumptionDeviationPrice: ZERO_MONEY,
+    consumptionDeviationCost: subtractMoney(realConsumptionCost, factConsumptionCost),
+    consumptionToPlanDeviationPrice: {
       withVat: consumptionPrice.withVat - planPrice.withVat,
       exVat: consumptionPrice.exVat - planPrice.exVat,
     },
-    consumptionDeviationCost: subtractMoney(factConsumptionCost, planConsumptionCost),
+    consumptionToPlanDeviationCost: subtractMoney(realConsumptionCost, planConsumptionCost),
     bookClosingQuantity: bookClosing,
     currentClosingQuantity: currentClosing,
     currentClosingDeviationQuantity: currentClosingDeviation,
@@ -1088,6 +1152,14 @@ function referencedMaterialIds(
       ids.add(line.materialId);
     }
   }
+  for (const day of materialConsumptionDaysList(document)) {
+    if (day.warehouseId !== warehouseId || !day.occurredOn.startsWith(`${month}-`)) {
+      continue;
+    }
+    for (const line of day.lines) {
+      ids.add(line.materialId);
+    }
+  }
   for (const norm of materialNormsList(document)) {
     if (norm.deletedAt === null && norm.warehouseId === warehouseId) {
       ids.add(norm.materialId);
@@ -1117,13 +1189,15 @@ function gridMaterials(
     if (referenced.has(item.id)) {
       return true;
     }
-    const planConsumption = consumptionQuantity(document, warehouseId, item.id, 'plan', planPieces, 0, 0);
-    const factConsumption = consumptionQuantity(document, warehouseId, item.id, 'fact', factPieces, 0, 0);
+    const planConsumption = consumptionQuantity(document, item.id, planPieces);
+    const factConsumption = consumptionQuantity(document, item.id, factPieces);
+    const realConsumption = realConsumptionQuantityForMaterial(document, month, warehouseId, item.id);
     return (
       openingQuantityFor(document, month, warehouseId, item.id) !== 0 ||
       inventoryQuantityFor(document, month, warehouseId, item.id) !== 0 ||
       planConsumption !== 0 ||
       factConsumption !== 0 ||
+      realConsumption !== 0 ||
       bookClosingQuantity(document, month, warehouseId, item.id) !== 0
     );
   });
@@ -1143,10 +1217,14 @@ function emptyTotals(): MaterialMovementTotals {
     receiptDeviationCost: ZERO_MONEY,
     planConsumptionQuantity: null,
     factConsumptionQuantity: null,
+    realConsumptionQuantity: null,
     consumptionDeviationQuantity: null,
+    consumptionToPlanDeviationQuantity: null,
     planConsumptionCost: ZERO_MONEY,
     factConsumptionCost: ZERO_MONEY,
+    realConsumptionCost: ZERO_MONEY,
     consumptionDeviationCost: ZERO_MONEY,
+    consumptionToPlanDeviationCost: ZERO_MONEY,
     bookClosingQuantity: null,
     currentClosingQuantity: null,
     currentClosingDeviationQuantity: null,
@@ -1171,7 +1249,9 @@ type MaterialMovementMoneyTotals = Pick<
   | 'receiptDeviationCost'
   | 'planConsumptionCost'
   | 'factConsumptionCost'
+  | 'realConsumptionCost'
   | 'consumptionDeviationCost'
+  | 'consumptionToPlanDeviationCost'
   | 'currentClosingDeviationCost'
   | 'closingInventoryDeviationCost'
   | 'closingCost'
@@ -1187,7 +1267,12 @@ function sumRows(rows: readonly MaterialMovementRow[]): MaterialMovementTotals {
       receiptDeviationCost: addMoney(total.receiptDeviationCost, row.receiptDeviationCost),
       planConsumptionCost: addMoney(total.planConsumptionCost, row.planConsumptionCost),
       factConsumptionCost: addMoney(total.factConsumptionCost, row.factConsumptionCost),
+      realConsumptionCost: addMoney(total.realConsumptionCost, row.realConsumptionCost),
       consumptionDeviationCost: addMoney(total.consumptionDeviationCost, row.consumptionDeviationCost),
+      consumptionToPlanDeviationCost: addMoney(
+        total.consumptionToPlanDeviationCost,
+        row.consumptionToPlanDeviationCost,
+      ),
       currentClosingDeviationCost: addMoney(total.currentClosingDeviationCost, row.currentClosingDeviationCost),
       closingInventoryDeviationCost: addMoneyNullable(
         total.closingInventoryDeviationCost,
@@ -1202,7 +1287,9 @@ function sumRows(rows: readonly MaterialMovementRow[]): MaterialMovementTotals {
       receiptDeviationCost: ZERO_MONEY,
       planConsumptionCost: ZERO_MONEY,
       factConsumptionCost: ZERO_MONEY,
+      realConsumptionCost: ZERO_MONEY,
       consumptionDeviationCost: ZERO_MONEY,
+      consumptionToPlanDeviationCost: ZERO_MONEY,
       currentClosingDeviationCost: ZERO_MONEY,
       closingInventoryDeviationCost: null as MaterialMoney | null,
       closingCost: ZERO_MONEY,
@@ -1226,7 +1313,9 @@ function sumRows(rows: readonly MaterialMovementRow[]): MaterialMovementTotals {
     receiptDeviationQuantity: sum((row) => row.receiptDeviationQuantity),
     planConsumptionQuantity: sum((row) => row.planConsumptionQuantity),
     factConsumptionQuantity: sum((row) => row.factConsumptionQuantity),
+    realConsumptionQuantity: sum((row) => row.realConsumptionQuantity),
     consumptionDeviationQuantity: sum((row) => row.consumptionDeviationQuantity),
+    consumptionToPlanDeviationQuantity: sum((row) => row.consumptionToPlanDeviationQuantity),
     bookClosingQuantity: sum((row) => row.bookClosingQuantity),
     currentClosingQuantity: sum((row) => row.currentClosingQuantity),
     currentClosingDeviationQuantity: sum((row) => row.currentClosingDeviationQuantity),
@@ -1387,4 +1476,111 @@ export function materialReceiptsInMonth(
       (left, right) =>
         right.occurredOn.localeCompare(left.occurredOn) || left.supplierName.localeCompare(right.supplierName, 'ru'),
     );
+}
+
+export type MaterialConsumptionRejection = 'warehouse' | 'date' | 'closed' | 'material' | 'locked' | 'quantity';
+
+function materialConsumptionDayRecord(
+  document: PrototypeDocument,
+  occurredOn: string,
+  warehouseId: MaterialWarehouseId,
+): MaterialConsumptionDay | null {
+  return (
+    materialConsumptionDaysList(document).find(
+      (item) => item.occurredOn === occurredOn && item.warehouseId === warehouseId,
+    ) ?? null
+  );
+}
+
+function emptyMaterialConsumptionLine(materialId: string, occurredOn: string): MaterialConsumptionDayLine {
+  return {
+    id: `material-consumption-line:${occurredOn}:${materialId}`,
+    materialId,
+    quantity: 0,
+  };
+}
+
+export function setMaterialConsumptionDayRejection(
+  document: PrototypeDocument,
+  occurredOn: string,
+  warehouseId: MaterialWarehouseId,
+  materialId: string,
+  quantity: number,
+  today: Date,
+): MaterialConsumptionRejection | null {
+  if (!isMaterialWarehouseId(warehouseId)) {
+    return 'warehouse';
+  }
+  if (!occurredOnOpen(occurredOn, today)) {
+    return isOccurredOn(occurredOn) ? 'closed' : 'date';
+  }
+  const material = materialById(document, materialId);
+  if (!material || material.warehouseId !== warehouseId) {
+    return 'material';
+  }
+  if (material.deletedAt !== null) {
+    return 'locked';
+  }
+  if (!isQuantityThousandths(quantity, false) || quantity < 0) {
+    return 'quantity';
+  }
+  return null;
+}
+
+/**
+ * Пишет реальный расход позиции за день.
+ * Ноль снимает строку; пустой день вырезается из документа.
+ */
+export function setMaterialConsumptionDayQuantity(
+  document: PrototypeDocument,
+  occurredOn: string,
+  warehouseId: MaterialWarehouseId,
+  materialId: string,
+  quantity: number,
+  today: Date,
+): PrototypeDocument {
+  if (setMaterialConsumptionDayRejection(document, occurredOn, warehouseId, materialId, quantity, today)) {
+    return document;
+  }
+
+  const existing = materialConsumptionDayRecord(document, occurredOn, warehouseId);
+  const keep = quantity > 0;
+  const nextLine: MaterialConsumptionDayLine = {
+    ...(existing?.lines.find((line) => line.materialId === materialId) ??
+      emptyMaterialConsumptionLine(materialId, occurredOn)),
+    quantity,
+  };
+
+  if (!existing) {
+    if (!keep) {
+      return document;
+    }
+    return {
+      ...document,
+      materialConsumptionDays: [
+        ...materialConsumptionDaysList(document),
+        {
+          id: `material-consumption:${occurredOn}:${warehouseId}`,
+          warehouseId,
+          occurredOn,
+          lines: [nextLine],
+        },
+      ],
+    };
+  }
+
+  const without = existing.lines.filter((line) => line.materialId !== materialId);
+  const lines = keep ? [...without, nextLine] : without;
+  if (lines.length === 0) {
+    return {
+      ...document,
+      materialConsumptionDays: materialConsumptionDaysList(document).filter((item) => item.id !== existing.id),
+    };
+  }
+  return {
+    ...document,
+    materialConsumptionDays: materialConsumptionDaysList(document).map((item) =>
+      item.id === existing.id ? { ...item, lines } : item,
+    ),
+  };
 }

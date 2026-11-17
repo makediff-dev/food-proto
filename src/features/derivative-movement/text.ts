@@ -1,4 +1,8 @@
-import type { DerivativeNormRejection, DerivativeOpeningRejection } from '@/domain/derivative-movement';
+import type {
+  DerivativeConsumptionRejection,
+  DerivativeNormRejection,
+  DerivativeOpeningRejection,
+} from '@/domain/derivative-movement';
 
 export const DERIVATIVE_OPENING_ERROR: Record<DerivativeOpeningRejection, string> = {
   month: 'Этот месяц выбрать нельзя.',
@@ -14,4 +18,12 @@ export const DERIVATIVE_NORM_ERROR: Record<DerivativeNormRejection, string> = {
   derivative: 'Производная не найдена.',
   locked: 'Удалённую производную не меняют.',
   quantity: 'Укажите количество.',
+};
+
+export const DERIVATIVE_CONSUMPTION_ERROR: Record<DerivativeConsumptionRejection, string> = {
+  date: 'Укажите дату.',
+  closed: 'Этот день сейчас нельзя править.',
+  derivative: 'Производная не найдена.',
+  locked: 'Удалённую производную не меняют.',
+  quantity: 'Укажите количество больше либо равное нулю.',
 };

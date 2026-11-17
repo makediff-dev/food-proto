@@ -1,5 +1,6 @@
 import type { MaterialWeightPair } from '@/domain/document';
 import type {
+  MaterialConsumptionRejection,
   MaterialDocumentRejection,
   MaterialNameRejection,
   MaterialNormRejection,
@@ -103,4 +104,13 @@ export const MATERIAL_DOCUMENT_ERROR: Record<MaterialDocumentRejection, string> 
   price: 'Укажите цену.',
   normed: 'Расход этой позиции считается по норме на выпуск.',
   missing: 'Запись не найдена.',
+};
+
+export const MATERIAL_CONSUMPTION_ERROR: Record<MaterialConsumptionRejection, string> = {
+  warehouse: 'Выберите склад.',
+  date: 'Укажите дату.',
+  closed: 'Этот день сейчас нельзя править.',
+  material: 'Позиция не найдена.',
+  locked: 'Удалённую позицию не меняют.',
+  quantity: 'Укажите количество больше либо равное нулю.',
 };

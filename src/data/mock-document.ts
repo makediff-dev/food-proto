@@ -17,11 +17,18 @@ import {
 } from '@/data/mock-opex';
 import { mockPropertyTaxMonths, mockPropertyTaxPayments } from '@/data/mock-property-tax';
 import {
+  calculatedConsumptionQuantityForDerivativeDay,
+  setDerivativeConsumptionDayQuantity,
+} from '@/domain/derivative-movement';
+import {
   catalogCategories,
   catalogOpexOtherLines,
   type Derivative,
+  type DerivativeConsumptionDay,
   type FinishedGoodsNorm,
   type FinishedGoodsOpening,
+  MATERIAL_WAREHOUSES,
+  type MaterialConsumptionDay,
   type Product,
   type ProductionEntry,
   type ProductionPlan,
@@ -30,6 +37,11 @@ import {
   type SalesPlan,
   SCHEMA_VERSION,
 } from '@/domain/document';
+import {
+  calculatedConsumptionQuantityForMaterialDay,
+  materialsList,
+  setMaterialConsumptionDayQuantity,
+} from '@/domain/materials';
 
 /**
  * Мок: два салата, одно горячее, гамбургер и сэндвич без рецепта.
@@ -594,6 +606,52 @@ function productionFromOrders(drafts: readonly OrderDraft[]): ProductionEntry[] 
   }));
 }
 
+/** +10 % с округлением половины вверх до тысячных. */
+function boostTenPercent(quantity: number): number {
+  return Math.round((quantity * 11) / 10);
+}
+
+/**
+ * Реальный расход дней выпуска: как расчёт по рецепту,
+ * говядина склада 1 и котлета — на 10 % больше (перерасход на отчёте).
+ */
+function mockConsumptionDays(base: PrototypeDocument): {
+  materialConsumptionDays: MaterialConsumptionDay[];
+  derivativeConsumptionDays: DerivativeConsumptionDay[];
+} {
+  const days = [...new Set((base.productionEntries ?? []).map((entry) => entry.occurredOn))].sort();
+  const today = new Date('2026-11-16T12:00:00.000Z');
+  let document = base;
+
+  for (const occurredOn of days) {
+    for (const warehouse of MATERIAL_WAREHOUSES) {
+      for (const material of materialsList(document).filter((item) => item.warehouseId === warehouse.id)) {
+        const calculated = calculatedConsumptionQuantityForMaterialDay(document, occurredOn, material.id);
+        if (calculated <= 0) {
+          continue;
+        }
+        const quantity =
+          warehouse.id === 'warehouse-1' && material.id === 'material-beef' ? boostTenPercent(calculated) : calculated;
+        document = setMaterialConsumptionDayQuantity(document, occurredOn, warehouse.id, material.id, quantity, today);
+      }
+    }
+
+    for (const derivative of document.derivatives ?? []) {
+      const calculated = calculatedConsumptionQuantityForDerivativeDay(document, occurredOn, derivative.id);
+      if (calculated <= 0) {
+        continue;
+      }
+      const quantity = derivative.id === 'derivative-cutlet' ? boostTenPercent(calculated) : calculated;
+      document = setDerivativeConsumptionDayQuantity(document, occurredOn, derivative.id, quantity, today);
+    }
+  }
+
+  return {
+    materialConsumptionDays: document.materialConsumptionDays ?? [],
+    derivativeConsumptionDays: document.derivativeConsumptionDays ?? [],
+  };
+}
+
 const salesPlans: SalesPlan[] = [salesPlan('2026-09'), salesPlan('2026-10'), salesPlan('2026-11', novemberPlanPieces)];
 const productionPlans: ProductionPlan[] = [
   productionPlan('2026-09'),
@@ -778,7 +836,7 @@ const mockDerivatives: Derivative[] = [
   },
 ];
 
-export const mockDocument: PrototypeDocument = {
+const mockDocumentBase: PrototypeDocument = {
   schemaVersion: SCHEMA_VERSION,
   categories: catalogCategories(),
   products: [caesar, olivier, goulash, burger, sandwich],
@@ -808,15 +866,25 @@ export const mockDocument: PrototypeDocument = {
   materialMonthPlans: mockMaterials.materialMonthPlans,
   materialOpenings: mockMaterials.materialOpenings,
   materialReceipts: mockMaterials.materialReceipts,
+  materialConsumptionDays: [],
   derivatives: mockDerivatives,
   derivativeOpenings: [],
   derivativeNorms: [],
+  derivativeConsumptionDays: [],
   creditors: mockCreditors,
   creditResourceMonths: mockCreditResourceMonths,
   creditResourceDays: mockCreditResourceDays,
   propertyTaxMonths: mockPropertyTaxMonths,
   taxPaymentDays: mockPropertyTaxPayments,
   profitTaxRateChanges: [],
+};
+
+const mockConsumption = mockConsumptionDays(mockDocumentBase);
+
+export const mockDocument: PrototypeDocument = {
+  ...mockDocumentBase,
+  materialConsumptionDays: mockConsumption.materialConsumptionDays,
+  derivativeConsumptionDays: mockConsumption.derivativeConsumptionDays,
 };
 
 export function createMockDocument(): PrototypeDocument {
@@ -909,6 +977,10 @@ export function createMockDocument(): PrototypeDocument {
       ...item,
       lines: item.lines.map((line) => ({ ...line })),
     })),
+    materialConsumptionDays: mockDocument.materialConsumptionDays.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
     derivatives: mockDocument.derivatives.map((item) => ({
       ...item,
       lines: item.lines.map((line) => ({ ...line })),
@@ -918,6 +990,10 @@ export function createMockDocument(): PrototypeDocument {
       lines: item.lines.map((line) => ({ ...line })),
     })),
     derivativeNorms: mockDocument.derivativeNorms.map((item) => ({
+      ...item,
+      lines: item.lines.map((line) => ({ ...line })),
+    })),
+    derivativeConsumptionDays: mockDocument.derivativeConsumptionDays.map((item) => ({
       ...item,
       lines: item.lines.map((line) => ({ ...line })),
     })),

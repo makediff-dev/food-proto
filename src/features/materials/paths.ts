@@ -8,12 +8,20 @@ export const MATERIALS_INVENTORY_TITLE = 'Инвентаризация';
 
 export const MATERIALS_RECEIPTS_TITLE = 'Приход от поставщика';
 
+export const MATERIALS_CONSUMPTION_TITLE = 'Расход в производстве';
+
 export const MATERIALS_NORMS_TITLE = 'Нормы расхода';
 
 export const NEW_MATERIAL_RECEIPT_TITLE = 'Новый приход';
 
+export const MATERIALS_CONSUMPTION_HREF = '/materials/consumption';
+
 export function parseMaterialMonthQuery(params: { month?: string }): { month: string } {
   return { month: params.month ?? '' };
+}
+
+export function parseMaterialDayQuery(params: { month?: string; day?: string }): { month: string; day: string } {
+  return { month: params.month ?? '', day: params.day ?? '' };
 }
 
 function monthHref(path: string, month: string, currentMonth: string): string {
@@ -21,6 +29,18 @@ function monthHref(path: string, month: string, currentMonth: string): string {
     return path;
   }
   return `${path}?month=${month}`;
+}
+
+function dayHref(path: string, month: string, day: string, currentMonth: string, todayDay: string): string {
+  const params = new URLSearchParams();
+  if (month && month !== currentMonth) {
+    params.set('month', month);
+  }
+  if (day && day !== todayDay) {
+    params.set('day', day);
+  }
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
 }
 
 export function materialsSummaryHref(options: { month: string; currentMonth: string }): string {
@@ -49,4 +69,13 @@ export function materialReceiptNewHref(): string {
 
 export function materialsNormsHref(): string {
   return '/materials/norms';
+}
+
+export function materialsConsumptionHref(options: {
+  month: string;
+  day: string;
+  currentMonth: string;
+  todayDay: string;
+}): string {
+  return dayHref(MATERIALS_CONSUMPTION_HREF, options.month, options.day, options.currentMonth, options.todayDay);
 }

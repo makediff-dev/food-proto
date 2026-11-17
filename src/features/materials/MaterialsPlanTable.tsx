@@ -1,16 +1,28 @@
 'use client';
 
+import { useState } from 'react';
+
 import { costWithVat } from '@/domain/cost';
-import type { MaterialMovementRow, MaterialMovementTotals, MaterialPlanField } from '@/domain/materials';
+import type { MaterialGroupId, MaterialWarehouseId } from '@/domain/document';
+import type {
+  MaterialGroupMovement,
+  MaterialMovementRow,
+  MaterialMovementTotals,
+  MaterialPlanField,
+  MaterialWarehouseMovement,
+} from '@/domain/materials';
 import { MaterialNormDeviation } from '@/features/materials/MaterialNormDeviation';
 import { MATERIALS_RECEIPTS_TITLE } from '@/features/materials/paths';
 import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
 import { formatMaterialWeightPair } from '@/features/materials/text';
-import { IconPencil, IconTrash } from '@/features/shell/Icons';
+import { IconChevronDown, IconChevronRight, IconPencil, IconPlus, IconTrash } from '@/features/shell/Icons';
 import {
   blockCornerClassName,
   blockHeadingClassName,
   type CellKind,
+  categoryBandClassName,
+  categoryNameClassName,
+  categoryNameRowClassName,
   cellKindClassName,
   columnDividerClassName,
   columnHeadingClassName,
@@ -18,16 +30,23 @@ import {
   keepWithNext,
   nameCellKind,
   nameHeadingClassName,
+  ProductIndex,
   stickyHeadClassName,
   tableBorder,
   tableClassName,
   tableFrameClassName,
-  totalNameClassName,
-  totalValueClassName,
   VatMoneyCell,
 } from '@/features/table';
 
 type ColumnKey = 'price' | 'planReceipt' | 'planReceiptCost' | 'min' | 'max' | 'normDeviation' | 'recommended';
+
+type PlanSection = {
+  key: string;
+  label: string;
+  groupId: MaterialGroupId;
+  warehouseId: MaterialWarehouseId;
+  warehouse: MaterialWarehouseMovement;
+};
 
 function materialUnitHint(row: Pick<MaterialMovementRow, 'unit' | 'weight'>): string {
   if (row.weight === null) {
@@ -50,27 +69,47 @@ function planColumnKind(column: (typeof COLUMNS)[number]): CellKind {
   return column.editable ? 'assigned' : 'computed';
 }
 
+function buildSections(groups: readonly MaterialGroupMovement[]): PlanSection[] {
+  return groups.flatMap((group) =>
+    group.warehouses.map((warehouse) => ({
+      key: `${group.groupId}:${warehouse.warehouseId}`,
+      label: `${group.name}, ${warehouse.name}`,
+      groupId: group.groupId,
+      warehouseId: warehouse.warehouseId,
+      warehouse,
+    })),
+  );
+}
+
+const iconButtonClassName =
+  'inline-flex size-8 shrink-0 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink';
+
 export function MaterialsPlanTable({
-  caption,
-  rows,
-  totals,
+  groups,
   editable,
   onField,
   onEdit,
   onDelete,
+  onAdd,
 }: {
-  caption: string;
-  rows: MaterialMovementRow[];
-  totals: MaterialMovementTotals;
+  groups: readonly MaterialGroupMovement[];
   editable: boolean;
-  onField: (materialId: string, field: MaterialPlanField, value: number) => string | null;
+  onField: (
+    warehouseId: MaterialWarehouseId,
+    materialId: string,
+    field: MaterialPlanField,
+    value: number,
+  ) => string | null;
   onEdit?: (materialId: string) => void;
   onDelete?: (materialId: string, name: string) => void;
+  onAdd?: (groupId: MaterialGroupId, warehouseId: MaterialWarehouseId) => void;
 }) {
+  const sections = buildSections(groups);
+
   return (
     <div className={tableFrameClassName}>
       <table className={tableClassName}>
-        <caption className="sr-only">{caption}</caption>
+        <caption className="sr-only">Ввод плана: сырьё и материалы</caption>
         <thead className={stickyHeadClassName}>
           <tr>
             <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
@@ -90,62 +129,181 @@ export function MaterialsPlanTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.materialId}>
-              <th scope="row" className={entityNameRowClassName(nameCellKind(editable && !row.deleted))}>
-                <span className="inline-flex w-full items-center gap-2">
-                  <span className="min-w-0 flex-1">
-                    {row.name}
-                    {row.deleted ? <span className="text-muted"> (архив)</span> : null}
-                    <span className="text-muted"> · {materialUnitHint(row)}</span>
-                  </span>
-                  {editable && !row.deleted && onEdit && onDelete ? (
-                    <span className="ml-auto inline-flex shrink-0 items-center">
-                      <button
-                        type="button"
-                        aria-label={`Изменить ${row.name}`}
-                        title="Изменить"
-                        onClick={() => onEdit(row.materialId)}
-                        className="inline-flex size-8 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                      >
-                        <IconPencil />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Удалить ${row.name}`}
-                        title="Удалить"
-                        onClick={() => onDelete(row.materialId, row.name)}
-                        className="inline-flex size-8 items-center justify-center text-muted outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-                      >
-                        <IconTrash />
-                      </button>
-                    </span>
-                  ) : null}
-                </span>
-              </th>
-              {COLUMNS.map((column) => (
-                <td
-                  key={column.key}
-                  className={`border-b border-b-line px-2 py-2 text-right align-middle ${columnDividerClassName} ${cellKindClassName[planColumnKind(column)]}`}
-                >
-                  <PlanCell column={column.key} row={row} editable={editable && !row.deleted} onField={onField} />
-                </td>
-              ))}
-            </tr>
+          {sections.map((section) => (
+            <SectionBlock
+              key={section.key}
+              section={section}
+              editable={editable}
+              onField={onField}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onAdd={onAdd}
+            />
           ))}
-          <tr>
-            <th scope="row" className={`sticky left-0 z-10 ${totalNameClassName}`}>
-              {totals.unit ? 'Всего' : 'Сумма'}
-            </th>
-            {COLUMNS.map((column) => (
-              <td key={column.key} className={`${totalValueClassName} ${columnDividerClassName}`}>
-                <PlanTotal column={column.key} totals={totals} />
-              </td>
-            ))}
-          </tr>
         </tbody>
       </table>
     </div>
+  );
+}
+
+function SectionBlock({
+  section,
+  editable,
+  onField,
+  onEdit,
+  onDelete,
+  onAdd,
+}: {
+  section: PlanSection;
+  editable: boolean;
+  onField: (
+    warehouseId: MaterialWarehouseId,
+    materialId: string,
+    field: MaterialPlanField,
+    value: number,
+  ) => string | null;
+  onEdit?: (materialId: string) => void;
+  onDelete?: (materialId: string, name: string) => void;
+  onAdd?: (groupId: MaterialGroupId, warehouseId: MaterialWarehouseId) => void;
+}) {
+  const [open, setOpen] = useState(true);
+  const count = section.warehouse.rows.length;
+
+  return (
+    <>
+      <tr>
+        <th scope="row" className={categoryNameRowClassName(false)}>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-label={open ? `Свернуть ${section.label}` : `Развернуть ${section.label}`}
+              title={open ? 'Свернуть' : 'Развернуть'}
+              onClick={() => setOpen((current) => !current)}
+              className={iconButtonClassName}
+            >
+              {open ? <IconChevronDown /> : <IconChevronRight />}
+            </button>
+            <span className={categoryNameClassName}>
+              {section.label} ({count})
+            </span>
+            {onAdd ? (
+              <button
+                type="button"
+                aria-label={`Добавить позицию в ${section.label}`}
+                title="Добавить позицию"
+                onClick={() => {
+                  setOpen(true);
+                  onAdd(section.groupId, section.warehouseId);
+                }}
+                className={iconButtonClassName}
+              >
+                <IconPlus />
+              </button>
+            ) : null}
+          </div>
+        </th>
+        {COLUMNS.map((column) => (
+          <td
+            key={`group:${column.key}`}
+            className={`w-px border-b border-b-line px-2 py-2 text-right align-middle ${categoryBandClassName} ${columnDividerClassName}`}
+          >
+            {count > 0 ? <PlanTotal column={column.key} totals={section.warehouse.totals} /> : null}
+          </td>
+        ))}
+      </tr>
+      {open && count === 0 ? (
+        <tr>
+          <th scope="row" className={entityNameRowClassName('repeated')}>
+            <span className="text-sm text-muted">
+              {editable ? 'Позиций нет. Добавьте наименование.' : 'Позиций нет.'}
+            </span>
+          </th>
+          {COLUMNS.map((column) => (
+            <td
+              key={`empty:${column.key}`}
+              className={`border-b border-b-line px-2 py-2 ${columnDividerClassName} ${cellKindClassName.computed}`}
+            />
+          ))}
+        </tr>
+      ) : null}
+      {open
+        ? section.warehouse.rows.map((row, index) => (
+            <MaterialRow
+              key={row.materialId}
+              row={row}
+              index={index + 1}
+              editable={editable}
+              onField={(materialId, field, value) => onField(section.warehouseId, materialId, field, value)}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            />
+          ))
+        : null}
+    </>
+  );
+}
+
+function MaterialRow({
+  row,
+  index,
+  editable,
+  onField,
+  onEdit,
+  onDelete,
+}: {
+  row: MaterialMovementRow;
+  index: number;
+  editable: boolean;
+  onField: (materialId: string, field: MaterialPlanField, value: number) => string | null;
+  onEdit?: (materialId: string) => void;
+  onDelete?: (materialId: string, name: string) => void;
+}) {
+  const canEdit = editable && !row.deleted;
+
+  return (
+    <tr>
+      <th scope="row" className={entityNameRowClassName(nameCellKind(canEdit))}>
+        <span className="inline-flex w-full items-center gap-2">
+          <ProductIndex index={index} />
+          <span className="min-w-0 flex-1">
+            {row.name}
+            {row.deleted ? <span className="text-muted"> (архив)</span> : null}
+            <span className="text-muted"> · {materialUnitHint(row)}</span>
+          </span>
+          {canEdit && onEdit && onDelete ? (
+            <span className="ml-auto inline-flex shrink-0 items-center">
+              <button
+                type="button"
+                aria-label={`Изменить ${row.name}`}
+                title="Изменить"
+                onClick={() => onEdit(row.materialId)}
+                className={iconButtonClassName}
+              >
+                <IconPencil />
+              </button>
+              <button
+                type="button"
+                aria-label={`Удалить ${row.name}`}
+                title="Удалить"
+                onClick={() => onDelete(row.materialId, row.name)}
+                className={iconButtonClassName}
+              >
+                <IconTrash />
+              </button>
+            </span>
+          ) : null}
+        </span>
+      </th>
+      {COLUMNS.map((column) => (
+        <td
+          key={column.key}
+          className={`border-b border-b-line px-2 py-2 text-right align-middle ${columnDividerClassName} ${cellKindClassName[planColumnKind(column)]}`}
+        >
+          <PlanCell column={column.key} row={row} editable={canEdit} onField={onField} />
+        </td>
+      ))}
+    </tr>
   );
 }
 

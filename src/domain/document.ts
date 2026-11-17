@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 71 as const;
+export const SCHEMA_VERSION = 72 as const;
 
 /** Ставка налога на прибыль по умолчанию, %. `Svod!C6`. С месяца может смениться — `profitTaxRateChanges`. */
 export const PROFIT_TAX_PERCENT = 20;
@@ -779,6 +779,47 @@ export interface MaterialReceipt {
   lines: MaterialReceiptLine[];
 }
 
+/** Строка реального расхода сырья в производство за день. */
+export interface MaterialConsumptionDayLine {
+  id: string;
+  materialId: string;
+  /** Количество, тысячные доли единицы. Больше нуля. */
+  quantity: number;
+}
+
+/**
+ * Реальный расход сырья склада за день.
+ * На один день и один склад — одна запись. Ноль и пустой день не хранят.
+ * Сумма дней месяца — реальный факт расхода в отчёте.
+ */
+export interface MaterialConsumptionDay {
+  id: string;
+  warehouseId: MaterialWarehouseId;
+  /** `ГГГГ-ММ-ДД`. */
+  occurredOn: string;
+  lines: MaterialConsumptionDayLine[];
+}
+
+/** Строка реального расхода производной в производство за день. */
+export interface DerivativeConsumptionDayLine {
+  id: string;
+  derivativeId: string;
+  /** Количество, тысячные доли единицы. Больше нуля. */
+  quantity: number;
+}
+
+/**
+ * Реальный расход производных за день.
+ * На один день — одна запись. Ноль и пустой день не хранят.
+ * Сумма дней месяца — реальный факт расхода в отчёте.
+ */
+export interface DerivativeConsumptionDay {
+  id: string;
+  /** `ГГГГ-ММ-ДД`. */
+  occurredOn: string;
+  lines: DerivativeConsumptionDayLine[];
+}
+
 /**
  * Цех производных. Цифра в id совпадает со складом сырья: `*-1` → склад 1, `*-2` → склад 2.
  * Справочник фиксирован; в документ не пишется.
@@ -1066,6 +1107,11 @@ export interface PrototypeDocument {
   /** Приходы от поставщика. Удаление вырезает запись. */
   materialReceipts: MaterialReceipt[];
   /**
+   * Реальный расход сырья в производство по дням.
+   * Старый документ без поля читается как пустой массив.
+   */
+  materialConsumptionDays: MaterialConsumptionDay[];
+  /**
    * Производные по цехам. Старый документ без поля читается как пустой массив.
    */
   derivatives: Derivative[];
@@ -1079,6 +1125,11 @@ export interface PrototypeDocument {
    * Старый документ без поля читается как пустой массив.
    */
   derivativeNorms: DerivativeNorm[];
+  /**
+   * Реальный расход производных в производство по дням.
+   * Старый документ без поля читается как пустой массив.
+   */
+  derivativeConsumptionDays: DerivativeConsumptionDay[];
   /**
    * Кредиторы (банки и частные лица).
    * Старый документ без поля читается как пустой массив.

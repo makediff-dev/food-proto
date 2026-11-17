@@ -18,6 +18,8 @@ import {
   renameMaterial,
   restoreMaterial,
   saveMaterialReceipt,
+  setMaterialConsumptionDayQuantity,
+  setMaterialConsumptionDayRejection,
   setMaterialNorm,
   setMaterialNormRejection,
   setMaterialOpening,
@@ -140,6 +142,29 @@ export function useMaterials() {
     },
     removeReceipt(id: string) {
       store.updateDocument((current) => deleteMaterialReceipt(current, id));
+    },
+    setConsumptionDay(
+      occurredOn: string,
+      warehouseId: MaterialWarehouseId,
+      materialId: string,
+      quantity: number,
+      today: Date,
+    ) {
+      const rejection = setMaterialConsumptionDayRejection(
+        store.document,
+        occurredOn,
+        warehouseId,
+        materialId,
+        quantity,
+        today,
+      );
+      if (rejection) {
+        return rejection;
+      }
+      store.updateDocument((current) =>
+        setMaterialConsumptionDayQuantity(current, occurredOn, warehouseId, materialId, quantity, today),
+      );
+      return null;
     },
   };
 }

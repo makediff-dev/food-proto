@@ -1,6 +1,7 @@
 import { CASHFLOW_SUMMARY_HREF } from '@/features/cashflow/paths';
 import { CREDIT_RESOURCES_SUMMARY_HREF } from '@/features/credit-resources/paths';
 import {
+  DERIVATIVE_MOVEMENT_CONSUMPTION_HREF,
   DERIVATIVE_MOVEMENT_INVENTORY_HREF,
   DERIVATIVE_MOVEMENT_PLAN_HREF,
   DERIVATIVE_MOVEMENT_SUMMARY_HREF,
@@ -66,7 +67,9 @@ export function pathnameSection(pathname: string): NavSectionId | null {
     pathname === DERIVATIVE_MOVEMENT_PLAN_HREF ||
     pathname.startsWith(`${DERIVATIVE_MOVEMENT_PLAN_HREF}/`) ||
     pathname === DERIVATIVE_MOVEMENT_INVENTORY_HREF ||
-    pathname.startsWith(`${DERIVATIVE_MOVEMENT_INVENTORY_HREF}/`)
+    pathname.startsWith(`${DERIVATIVE_MOVEMENT_INVENTORY_HREF}/`) ||
+    pathname === DERIVATIVE_MOVEMENT_CONSUMPTION_HREF ||
+    pathname.startsWith(`${DERIVATIVE_MOVEMENT_CONSUMPTION_HREF}/`)
   ) {
     return 'derivativeMovement';
   }

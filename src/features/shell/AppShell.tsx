@@ -25,6 +25,8 @@ import {
   CREDIT_RESOURCES_SUMMARY_TITLE,
 } from '@/features/credit-resources/paths';
 import {
+  DERIVATIVE_MOVEMENT_CONSUMPTION_HREF,
+  DERIVATIVE_MOVEMENT_CONSUMPTION_TITLE,
   DERIVATIVE_MOVEMENT_INVENTORY_HREF,
   DERIVATIVE_MOVEMENT_INVENTORY_TITLE,
   DERIVATIVE_MOVEMENT_PLAN_HREF,
@@ -34,6 +36,8 @@ import {
   DERIVATIVE_MOVEMENT_SUMMARY_TITLE,
 } from '@/features/derivative-movement/paths';
 import {
+  MATERIALS_CONSUMPTION_HREF,
+  MATERIALS_CONSUMPTION_TITLE,
   MATERIALS_INVENTORY_TITLE,
   MATERIALS_PLAN_TITLE,
   MATERIALS_RECEIPTS_TITLE,
@@ -152,6 +156,11 @@ const DERIVATIVE_MOVEMENT_NAV: readonly NavItem[] = [
     label: DERIVATIVE_MOVEMENT_INVENTORY_TITLE,
     navKind: 'input',
   },
+  {
+    href: DERIVATIVE_MOVEMENT_CONSUMPTION_HREF,
+    label: DERIVATIVE_MOVEMENT_CONSUMPTION_TITLE,
+    navKind: 'input',
+  },
 ];
 
 const MATERIALS_NAV: readonly NavItem[] = [
@@ -159,6 +168,7 @@ const MATERIALS_NAV: readonly NavItem[] = [
   { href: '/materials/plan', label: MATERIALS_PLAN_TITLE, navKind: 'input' },
   { href: '/materials/inventory', label: MATERIALS_INVENTORY_TITLE, navKind: 'input' },
   { href: '/materials/receipts', label: MATERIALS_RECEIPTS_TITLE, navKind: 'input' },
+  { href: MATERIALS_CONSUMPTION_HREF, label: MATERIALS_CONSUMPTION_TITLE, navKind: 'input' },
 ];
 
 function buildOpexNav(promotedGroupCodes: readonly OpexGroupCode[]): NavItem[] {

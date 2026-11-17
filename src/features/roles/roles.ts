@@ -38,6 +38,7 @@ export type RolePermissions = {
   canEditInventory: boolean;
   canEditMaterialsPlan: boolean;
   canEditMaterialReceipts: boolean;
+  canEditMaterialConsumption: boolean;
   canEditCreditAndCashflow: boolean;
   canViewSalesFinance: boolean;
 };
@@ -61,6 +62,7 @@ const ALL_EDIT: Omit<RolePermissions, 'sections'> = {
   canEditInventory: true,
   canEditMaterialsPlan: true,
   canEditMaterialReceipts: true,
+  canEditMaterialConsumption: true,
   canEditCreditAndCashflow: true,
   canViewSalesFinance: true,
 };
@@ -77,6 +79,7 @@ const NO_EDIT: Omit<RolePermissions, 'sections'> = {
   canEditInventory: false,
   canEditMaterialsPlan: false,
   canEditMaterialReceipts: false,
+  canEditMaterialConsumption: false,
   canEditCreditAndCashflow: false,
   canViewSalesFinance: false,
 };
@@ -111,6 +114,7 @@ export const ROLES: readonly RoleDefinition[] = [
     sections: ['materials', 'roles'],
     ...NO_EDIT,
     canEditMaterialReceipts: true,
+    canEditMaterialConsumption: true,
   },
   {
     id: 'economist',
@@ -161,6 +165,7 @@ export const PERMISSION_MATRIX_ROWS: readonly PermissionMatrixRow[] = [
   { kind: 'flag', key: 'canEditInventory', label: 'Правит инвентаризацию' },
   { kind: 'flag', key: 'canEditMaterialsPlan', label: 'Правит план сырья' },
   { kind: 'flag', key: 'canEditMaterialReceipts', label: 'Правит приходы сырья' },
+  { kind: 'flag', key: 'canEditMaterialConsumption', label: 'Правит расход сырья' },
   { kind: 'flag', key: 'canEditCreditAndCashflow', label: 'Правит кредиты и ДДС' },
 ];
 

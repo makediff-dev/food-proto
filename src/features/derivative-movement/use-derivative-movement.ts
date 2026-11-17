@@ -2,9 +2,12 @@
 
 import { useDocumentStore } from '@/data/DocumentProvider';
 import {
+  type DerivativeConsumptionRejection,
   type DerivativeNormField,
   type DerivativeNormRejection,
   type DerivativeOpeningRejection,
+  setDerivativeConsumptionDayQuantity,
+  setDerivativeConsumptionDayRejection,
   setDerivativeNorm,
   setDerivativeNormRejection,
   setDerivativeOpening,
@@ -37,6 +40,21 @@ export function useDerivativeMovement() {
         return rejection;
       }
       store.updateDocument((current) => setDerivativeNorm(current, month, derivativeId, field, value, today));
+      return null;
+    },
+    setConsumptionDay(
+      occurredOn: string,
+      derivativeId: string,
+      quantity: number,
+      today: Date,
+    ): DerivativeConsumptionRejection | null {
+      const rejection = setDerivativeConsumptionDayRejection(store.document, occurredOn, derivativeId, quantity, today);
+      if (rejection) {
+        return rejection;
+      }
+      store.updateDocument((current) =>
+        setDerivativeConsumptionDayQuantity(current, occurredOn, derivativeId, quantity, today),
+      );
       return null;
     },
   };

@@ -77,12 +77,20 @@ export const MATERIALS_CONSUMPTION_SUB_BANNERS: ReportSubBannerGroup[] = [
     keys: ['planConsumption', 'planConsumptionPrice', 'planConsumptionCost'],
   },
   {
-    label: 'факт',
+    label: 'расчётный',
     keys: ['factConsumption', 'factConsumptionPrice', 'factConsumptionCost'],
   },
   {
-    label: 'отклонение',
+    label: 'реальный',
+    keys: ['realConsumption', 'realConsumptionPrice', 'realConsumptionCost'],
+  },
+  {
+    label: 'откл. к расчёту',
     keys: ['consumptionDeviation', 'consumptionDeviationPrice', 'consumptionDeviationCost'],
+  },
+  {
+    label: 'откл. к плану',
+    keys: ['consumptionToPlanDeviation', 'consumptionToPlanDeviationPrice', 'consumptionToPlanDeviationCost'],
   },
 ];
 

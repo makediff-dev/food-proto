@@ -1,6 +1,8 @@
 import { derivativeConsumptionPrice } from '@/domain/derivative-cost';
 import { derivativeByIdOrNull, derivativeSections } from '@/domain/derivatives';
 import type {
+  DerivativeConsumptionDay,
+  DerivativeConsumptionDayLine,
   DerivativeNorm,
   DerivativeNormLine,
   DerivativeOpening,
@@ -9,10 +11,11 @@ import type {
   DerivativeWorkshopId,
   PrototypeDocument,
 } from '@/domain/document';
-import { isMonthKey } from '@/domain/document';
+import { isMonthKey, isOccurredOn } from '@/domain/document';
 import { plannedProductionVolumePieces } from '@/domain/finished-goods';
 import type { MaterialMoney } from '@/domain/materials';
 import { ratioRound } from '@/domain/money';
+import { maxProductionEntryOccurredOn } from '@/domain/production-journal';
 import { isQuantityThousandths, QUANTITY_SCALE } from '@/domain/quantity';
 import { consumptionQuantityForComponent } from '@/domain/recipe-consumption';
 import { planMonthOpen, shiftMonth } from '@/domain/sales-plan';
@@ -62,24 +65,34 @@ export type DerivativeMovementRow = {
   planConsumptionPrice: MaterialMoney;
   /** Плановая стоимость расхода: плановая цена × план расхода. */
   planConsumptionCost: MaterialMoney;
-  /** Факт расхода по фактическому выпуску месяца, тысячные доли единицы. */
+  /** Расчётный факт: расход на фактический выпуск по рецептам. */
   factConsumptionQuantity: number;
   /** Фактическая цена 1 единицы производной по фактическим ценам расхода сырья. */
   factConsumptionPrice: MaterialMoney;
-  /** Фактическая стоимость расхода: фактическая цена × факт расхода. */
+  /** Расчётная стоимость расхода: фактическая цена × расчётный расход. */
   factConsumptionCost: MaterialMoney;
-  /** Отклонение количества расхода: факт − план. */
+  /** Реальный факт: сумма дневного ввода за месяц. */
+  realConsumptionQuantity: number;
+  /** Реальная стоимость расхода: фактическая цена × реальный расход. */
+  realConsumptionCost: MaterialMoney;
+  /** Отклонение к расчёту: реальный − расчётный. */
   consumptionDeviationQuantity: number;
-  /** Отклонение цены расхода: факт − план. */
+  /** Отклонение цены к расчёту: 0. */
   consumptionDeviationPrice: MaterialMoney;
-  /** Отклонение стоимости расхода: факт − план. */
+  /** Отклонение стоимости к расчёту: реальный − расчётный. */
   consumptionDeviationCost: MaterialMoney;
+  /** Отклонение к плану: реальный − план. */
+  consumptionToPlanDeviationQuantity: number;
+  /** Отклонение цены к плану: фактическая − плановая. */
+  consumptionToPlanDeviationPrice: MaterialMoney;
+  /** Отклонение стоимости к плану: реальный − план. */
+  consumptionToPlanDeviationCost: MaterialMoney;
   /**
    * План остатка на конец: начало + план прихода − план расхода
    * (приход = рекомендуемый объём; целевой норматив (мин + макс) / 2, если объём не упирается в ноль).
    */
   bookClosingQuantity: number;
-  /** Расчётный факт конца: начало + факт прихода − факт расхода. */
+  /** Расчётный факт конца: начало + факт прихода − реальный расход. */
   currentClosingQuantity: number;
   /** Отклонение расчётного конца: расчётный факт − план. */
   currentClosingDeviationQuantity: number;
@@ -128,10 +141,14 @@ export type DerivativeMovementSection = {
   receiptDeviationCost: MaterialMoney;
   /** Сумма плановой стоимости расхода по цеху. */
   planConsumptionCost: MaterialMoney;
-  /** Сумма фактической стоимости расхода по цеху. */
+  /** Сумма расчётной стоимости расхода по цеху. */
   factConsumptionCost: MaterialMoney;
-  /** Сумма отклонения стоимости расхода по цеху. */
+  /** Сумма реальной стоимости расхода по цеху. */
+  realConsumptionCost: MaterialMoney;
+  /** Сумма отклонения стоимости к расчёту по цеху. */
   consumptionDeviationCost: MaterialMoney;
+  /** Сумма отклонения стоимости к плану по цеху. */
+  consumptionToPlanDeviationCost: MaterialMoney;
   /** Сумма стоимости отклонения расчётного конца по цеху. */
   currentClosingDeviationCost: MaterialMoney;
   /** Сумма стоимости отклонения инвентаризации по цеху. */
@@ -191,7 +208,7 @@ export function factProductionVolumePiecesForProduct(
 }
 
 /**
- * Факт расхода производной за месяц: те же рецепты, что у плана,
+ * Расчётный факт расхода производной за месяц: те же рецепты, что у плана,
  * объём — фактический выпуск месяца из журнала.
  * Тысячные доли единицы производной (шт или кг).
  */
@@ -203,6 +220,62 @@ export function factConsumptionQuantityForDerivative(
   return consumptionQuantityForComponent(document, { kind: 'derivative', id: derivativeId }, (productId) =>
     factProductionVolumePiecesForProduct(document, productId, month),
   );
+}
+
+export function derivativeConsumptionDaysList(document: PrototypeDocument): DerivativeConsumptionDay[] {
+  return document.derivativeConsumptionDays ?? [];
+}
+
+/** Реальный расход производной за месяц: сумма дневного ввода. */
+export function realConsumptionQuantityForDerivative(
+  document: PrototypeDocument,
+  derivativeId: string,
+  month: string,
+): number {
+  let total = 0;
+  for (const day of derivativeConsumptionDaysList(document)) {
+    if (!day.occurredOn.startsWith(`${month}-`)) {
+      continue;
+    }
+    for (const line of day.lines) {
+      if (line.derivativeId === derivativeId) {
+        total += line.quantity;
+      }
+    }
+  }
+  return total;
+}
+
+/** Реальный расход производной за один день. Нет строки — 0. */
+export function realConsumptionQuantityForDerivativeDay(
+  document: PrototypeDocument,
+  occurredOn: string,
+  derivativeId: string,
+): number {
+  const day = derivativeConsumptionDaysList(document).find((item) => item.occurredOn === occurredOn);
+  return day?.lines.find((line) => line.derivativeId === derivativeId)?.quantity ?? 0;
+}
+
+/** Расчётный расход производной за день: рецепт × выпуск этого дня. */
+export function calculatedConsumptionQuantityForDerivativeDay(
+  document: PrototypeDocument,
+  occurredOn: string,
+  derivativeId: string,
+): number {
+  return consumptionQuantityForComponent(document, { kind: 'derivative', id: derivativeId }, (productId) => {
+    let pieces = 0;
+    for (const entry of document.productionEntries ?? []) {
+      if (entry.occurredOn !== occurredOn) {
+        continue;
+      }
+      for (const line of entry.lines) {
+        if (line.productId === productId) {
+          pieces += line.pieces;
+        }
+      }
+    }
+    return pieces;
+  });
 }
 
 function sumMoney(left: MaterialMoney, right: MaterialMoney): MaterialMoney {
@@ -520,6 +593,8 @@ function buildRow(
   const factConsumptionQuantity = factConsumptionQuantityForDerivative(document, item.id, month);
   const factConsumptionPrice = derivativeConsumptionPrice(document, item.id, month, 'fact');
   const factConsumptionCost = costForQuantity(factConsumptionPrice, factConsumptionQuantity);
+  const realConsumptionQuantity = realConsumptionQuantityForDerivative(document, item.id, month);
+  const realConsumptionCost = costForQuantity(factConsumptionPrice, realConsumptionQuantity);
   const inventoryClosingQuantity = inventoryQuantityForDerivative(document, month, item.id);
   const hasInventoryLine = hasStoredDerivativeInventoryLine(document, month, item.id);
   const norm = normForDerivative(document, month, item.id);
@@ -536,7 +611,7 @@ function buildRow(
   const factReceiptPrice = factConsumptionPrice;
   const factReceiptCost = costForQuantity(factReceiptPrice, factReceiptQuantity);
   const bookClosingQuantity = openingQuantity + planReceiptQuantity - planConsumptionQuantity;
-  const currentClosingQuantity = openingQuantity + factReceiptQuantity - factConsumptionQuantity;
+  const currentClosingQuantity = openingQuantity + factReceiptQuantity - realConsumptionQuantity;
   const currentClosingDeviationQuantity = currentClosingQuantity - bookClosingQuantity;
   const currentClosingDeviationCost = costForQuantity(factConsumptionPrice, currentClosingDeviationQuantity);
   const closingDeviationQuantity = hasInventoryLine ? inventoryClosingQuantity - bookClosingQuantity : 0;
@@ -574,9 +649,14 @@ function buildRow(
     factConsumptionQuantity,
     factConsumptionPrice,
     factConsumptionCost,
-    consumptionDeviationQuantity: factConsumptionQuantity - planConsumptionQuantity,
-    consumptionDeviationPrice: subtractMoney(factConsumptionPrice, planConsumptionPrice),
-    consumptionDeviationCost: subtractMoney(factConsumptionCost, planConsumptionCost),
+    realConsumptionQuantity,
+    realConsumptionCost,
+    consumptionDeviationQuantity: realConsumptionQuantity - factConsumptionQuantity,
+    consumptionDeviationPrice: ZERO_MONEY,
+    consumptionDeviationCost: subtractMoney(realConsumptionCost, factConsumptionCost),
+    consumptionToPlanDeviationQuantity: realConsumptionQuantity - planConsumptionQuantity,
+    consumptionToPlanDeviationPrice: subtractMoney(factConsumptionPrice, planConsumptionPrice),
+    consumptionToPlanDeviationCost: subtractMoney(realConsumptionCost, planConsumptionCost),
     bookClosingQuantity,
     currentClosingQuantity,
     currentClosingDeviationQuantity,
@@ -608,7 +688,12 @@ export function derivativeMovementMonth(document: PrototypeDocument, month: stri
         receiptDeviationCost: rows.reduce((sum, row) => sumMoney(sum, row.receiptDeviationCost), ZERO_MONEY),
         planConsumptionCost: rows.reduce((sum, row) => sumMoney(sum, row.planConsumptionCost), ZERO_MONEY),
         factConsumptionCost: rows.reduce((sum, row) => sumMoney(sum, row.factConsumptionCost), ZERO_MONEY),
+        realConsumptionCost: rows.reduce((sum, row) => sumMoney(sum, row.realConsumptionCost), ZERO_MONEY),
         consumptionDeviationCost: rows.reduce((sum, row) => sumMoney(sum, row.consumptionDeviationCost), ZERO_MONEY),
+        consumptionToPlanDeviationCost: rows.reduce(
+          (sum, row) => sumMoney(sum, row.consumptionToPlanDeviationCost),
+          ZERO_MONEY,
+        ),
         currentClosingDeviationCost: rows.reduce(
           (sum, row) => sumMoney(sum, row.currentClosingDeviationCost),
           ZERO_MONEY,
@@ -623,4 +708,100 @@ export function derivativeMovementMonth(document: PrototypeDocument, month: stri
     .filter((section) => section.rows.length > 0);
 
   return { month, sections };
+}
+
+export type DerivativeConsumptionRejection = 'date' | 'closed' | 'derivative' | 'locked' | 'quantity';
+
+function derivativeConsumptionDayRecord(
+  document: PrototypeDocument,
+  occurredOn: string,
+): DerivativeConsumptionDay | null {
+  return derivativeConsumptionDaysList(document).find((item) => item.occurredOn === occurredOn) ?? null;
+}
+
+function emptyDerivativeConsumptionLine(derivativeId: string, occurredOn: string): DerivativeConsumptionDayLine {
+  return {
+    id: `derivative-consumption-line:${occurredOn}:${derivativeId}`,
+    derivativeId,
+    quantity: 0,
+  };
+}
+
+function occurredOnOpen(occurredOn: string, today: Date): boolean {
+  return isOccurredOn(occurredOn) && occurredOn >= '2000-01-01' && occurredOn <= maxProductionEntryOccurredOn(today);
+}
+
+export function setDerivativeConsumptionDayRejection(
+  document: PrototypeDocument,
+  occurredOn: string,
+  derivativeId: string,
+  quantity: number,
+  today: Date,
+): DerivativeConsumptionRejection | null {
+  if (!occurredOnOpen(occurredOn, today)) {
+    return isOccurredOn(occurredOn) ? 'closed' : 'date';
+  }
+  const derivative = derivativeByIdOrNull(document, derivativeId);
+  if (!derivative) {
+    return 'derivative';
+  }
+  if (derivative.deletedAt !== null) {
+    return 'locked';
+  }
+  if (!isQuantityThousandths(quantity, false) || quantity < 0) {
+    return 'quantity';
+  }
+  return null;
+}
+
+/**
+ * Пишет реальный расход производной за день.
+ * Ноль снимает строку; пустой день вырезается из документа.
+ */
+export function setDerivativeConsumptionDayQuantity(
+  document: PrototypeDocument,
+  occurredOn: string,
+  derivativeId: string,
+  quantity: number,
+  today: Date,
+): PrototypeDocument {
+  if (setDerivativeConsumptionDayRejection(document, occurredOn, derivativeId, quantity, today)) {
+    return document;
+  }
+
+  const existing = derivativeConsumptionDayRecord(document, occurredOn);
+  const keep = quantity > 0;
+  const nextLine: DerivativeConsumptionDayLine = {
+    ...(existing?.lines.find((line) => line.derivativeId === derivativeId) ??
+      emptyDerivativeConsumptionLine(derivativeId, occurredOn)),
+    quantity,
+  };
+
+  if (!existing) {
+    if (!keep) {
+      return document;
+    }
+    return {
+      ...document,
+      derivativeConsumptionDays: [
+        ...derivativeConsumptionDaysList(document),
+        { id: `derivative-consumption:${occurredOn}`, occurredOn, lines: [nextLine] },
+      ],
+    };
+  }
+
+  const without = existing.lines.filter((line) => line.derivativeId !== derivativeId);
+  const lines = keep ? [...without, nextLine] : without;
+  if (lines.length === 0) {
+    return {
+      ...document,
+      derivativeConsumptionDays: derivativeConsumptionDaysList(document).filter((item) => item.id !== existing.id),
+    };
+  }
+  return {
+    ...document,
+    derivativeConsumptionDays: derivativeConsumptionDaysList(document).map((item) =>
+      item.id === existing.id ? { ...item, lines } : item,
+    ),
+  };
 }
