@@ -34,6 +34,7 @@ import {
   stickyCategoryCellClassName,
   stickyHeadClassName,
   tableClassName,
+  tableFrameBorderClassName,
   useStickyTableHead,
 } from '@/features/table';
 
@@ -76,97 +77,101 @@ export function HrPlanScreen({ month }: { month: string }) {
         <div className="flex flex-col gap-6">
           <section className="flex flex-col gap-2">
             <h2 className="px-1 text-sm font-medium">Должности</h2>
-            <table className={tableClassName}>
-              <caption className="sr-only">{`План HR за ${selectedMonth}`}</caption>
-              <thead ref={headRef} className={stickyHeadClassName}>
-                <tr>
-                  <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                    <ColumnLabel label="Наименование" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="План, чел" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="План, зарплата" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="План, ФОТ" />
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {view.departments.map((department) => (
-                  <DepartmentBlock
-                    key={department.departmentId}
-                    department={department}
-                    editable={editable}
-                    categoryStickyStyle={categoryStickyStyle}
-                    onAdd={
-                      editable
-                        ? () => {
-                            setAddDepartment(department.departmentId);
-                          }
-                        : undefined
-                    }
-                    onStaffPlan={(positionId, headcount, salaryExVat) => {
-                      const rejection = opex.setHrStaffPlan(selectedMonth, positionId, headcount, salaryExVat);
-                      return rejection ? HR_ERROR[rejection] : null;
-                    }}
-                    onDelete={(positionId, name) => {
-                      const confirmed = window.confirm(`Удалить «${name}»? Должность пропадёт из рабочего списка.`);
-                      if (confirmed) {
-                        opex.deleteHrPosition(positionId);
+            <div className={tableFrameBorderClassName}>
+              <table className={tableClassName}>
+                <caption className="sr-only">{`План HR за ${selectedMonth}`}</caption>
+                <thead ref={headRef} className={stickyHeadClassName}>
+                  <tr>
+                    <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                      <ColumnLabel label="Наименование" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="План, чел" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="План, зарплата" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="План, ФОТ" />
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {view.departments.map((department) => (
+                    <DepartmentBlock
+                      key={department.departmentId}
+                      department={department}
+                      editable={editable}
+                      categoryStickyStyle={categoryStickyStyle}
+                      onAdd={
+                        editable
+                          ? () => {
+                              setAddDepartment(department.departmentId);
+                            }
+                          : undefined
                       }
-                    }}
-                  />
-                ))}
-              </tbody>
-            </table>
+                      onStaffPlan={(positionId, headcount, salaryExVat) => {
+                        const rejection = opex.setHrStaffPlan(selectedMonth, positionId, headcount, salaryExVat);
+                        return rejection ? HR_ERROR[rejection] : null;
+                      }}
+                      onDelete={(positionId, name) => {
+                        const confirmed = window.confirm(`Удалить «${name}»? Должность пропадёт из рабочего списка.`);
+                        if (confirmed) {
+                          opex.deleteHrPosition(positionId);
+                        }
+                      }}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
 
           <section className="flex flex-col gap-2">
             <h2 className="px-1 text-sm font-medium">Аутсорсинг</h2>
-            <table className={tableClassName}>
-              <caption className="sr-only">{`План аутсорсинга за ${selectedMonth}`}</caption>
-              <thead className={stickyHeadClassName}>
-                <tr>
-                  <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                    <ColumnLabel label="Цех" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="План, часы" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="План, ставка" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="План, сумма" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="НДС" />
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {outsourcingRows.map((row) => (
-                  <OutsourcingPlanRow
-                    key={row.departmentId}
-                    row={row}
-                    editable={editable}
-                    onChange={(departmentId, hoursThousandths, rateExVat, vatPercent) => {
-                      const rejection = opex.setHrOutsourcingPlan(
-                        selectedMonth,
-                        departmentId,
-                        hoursThousandths,
-                        rateExVat,
-                        vatPercent,
-                      );
-                      return rejection ? HR_ERROR[rejection] : null;
-                    }}
-                  />
-                ))}
-              </tbody>
-            </table>
+            <div className={tableFrameBorderClassName}>
+              <table className={tableClassName}>
+                <caption className="sr-only">{`План аутсорсинга за ${selectedMonth}`}</caption>
+                <thead className={stickyHeadClassName}>
+                  <tr>
+                    <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                      <ColumnLabel label="Цех" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="План, часы" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="План, ставка" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="План, сумма" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="НДС" />
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {outsourcingRows.map((row) => (
+                    <OutsourcingPlanRow
+                      key={row.departmentId}
+                      row={row}
+                      editable={editable}
+                      onChange={(departmentId, hoursThousandths, rateExVat, vatPercent) => {
+                        const rejection = opex.setHrOutsourcingPlan(
+                          selectedMonth,
+                          departmentId,
+                          hoursThousandths,
+                          rateExVat,
+                          vatPercent,
+                        );
+                        return rejection ? HR_ERROR[rejection] : null;
+                      }}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
 
           <HrTaxRateBlock
@@ -218,7 +223,7 @@ function DepartmentBlock({
   return (
     <Fragment>
       <tr>
-        <th scope="row" className={categoryNameRowClassName({ stack: 'belowHead' })} style={categoryStickyStyle}>
+        <th scope="row" className={categoryNameRowClassName(false, { stack: 'belowHead' })} style={categoryStickyStyle}>
           <div className="flex items-center gap-2">
             <button
               type="button"

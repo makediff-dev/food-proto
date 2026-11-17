@@ -41,6 +41,7 @@ export {
   stickyHeadClassName,
   tableBorder,
   tableClassName,
+  tableFrameBorderClassName,
   tableFrameClassName,
   tableFrameExpandedClassName,
   tableFrameScrollClassName,

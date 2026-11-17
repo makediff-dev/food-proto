@@ -88,11 +88,21 @@ export const gridNameClassName =
 export const tableFrameClassName = 'contain-paint overflow-x-auto border border-line bg-sheet';
 
 /**
+ * Рамка сетки без overflow: несколько таблиц на одном экране, вертикальный
+ * скролл и sticky шапки — у внешнего контейнера. overflow на рамке снова
+ * отрезал бы sticky top от этого скролла.
+ */
+export const tableFrameBorderClassName = 'border border-line bg-sheet';
+
+/**
  * Скролл-порт сетки при PageFrame fill: вертикальный sticky шапки работает
  * только здесь (не в tableFrameClassName с overflow-x-auto).
+ * max-h-full — не выше родителя; без h-full короткая таблица не тянет
+ * пустую полосу до низа экрана (горизонтальный скролл остаётся у строк).
  * contain-paint не даёт широкой таблице растянуть прокрутку страницы.
  */
-export const tableFrameScrollClassName = 'h-full min-h-0 contain-paint overflow-auto border border-line bg-sheet';
+export const tableFrameScrollClassName =
+  'max-h-full min-h-0 w-full contain-paint overflow-auto border border-line bg-sheet';
 
 export const tableFrameExpandedClassName = 'h-dvh contain-paint overflow-auto bg-sheet';
 

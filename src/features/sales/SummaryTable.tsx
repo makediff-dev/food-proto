@@ -338,7 +338,7 @@ function CategoryBlock({
       <tr>
         <th
           scope="row"
-          className={categoryNameRowClassName({
+          className={categoryNameRowClassName(Boolean(catalogEditable && edit && !group.deleted), {
             stack: 'belowHead',
           })}
           style={categoryStickyStyle}

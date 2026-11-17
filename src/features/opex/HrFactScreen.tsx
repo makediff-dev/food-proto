@@ -40,6 +40,7 @@ import {
   stickyCategoryCellClassName,
   stickyHeadClassName,
   tableClassName,
+  tableFrameBorderClassName,
   useStickyTableHead,
 } from '@/features/table';
 
@@ -168,75 +169,79 @@ export function HrFactScreen({ month, day }: { month: string; day: string }) {
         <div className="flex flex-col gap-6">
           <section className="flex flex-col gap-2">
             <h2 className="px-1 text-sm font-medium">Выплаты</h2>
-            <table className={tableClassName}>
-              <caption className="sr-only">{`Выплаты HR на ${selectedDay}`}</caption>
-              <thead ref={headRef} className={stickyHeadClassName}>
-                <tr>
-                  <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                    <ColumnLabel label="Наименование" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="Сумма" />
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {staffDepartments.map((department) => (
-                  <DepartmentBlock
-                    key={department.departmentId}
-                    department={department}
-                    editable={editable}
-                    categoryStickyStyle={categoryStickyStyle}
-                    amount={(positionId) => hrDayStaffValue(opex.document, selectedDay, positionId)}
-                    onAmount={(positionId, amountExVat) => {
-                      const rejection = opex.setHrDayStaff(selectedDay, positionId, amountExVat);
-                      return rejection ? HR_ERROR[rejection] : null;
-                    }}
-                  />
-                ))}
-              </tbody>
-            </table>
+            <div className={tableFrameBorderClassName}>
+              <table className={tableClassName}>
+                <caption className="sr-only">{`Выплаты HR на ${selectedDay}`}</caption>
+                <thead ref={headRef} className={stickyHeadClassName}>
+                  <tr>
+                    <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                      <ColumnLabel label="Наименование" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="Сумма" />
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {staffDepartments.map((department) => (
+                    <DepartmentBlock
+                      key={department.departmentId}
+                      department={department}
+                      editable={editable}
+                      categoryStickyStyle={categoryStickyStyle}
+                      amount={(positionId) => hrDayStaffValue(opex.document, selectedDay, positionId)}
+                      onAmount={(positionId, amountExVat) => {
+                        const rejection = opex.setHrDayStaff(selectedDay, positionId, amountExVat);
+                        return rejection ? HR_ERROR[rejection] : null;
+                      }}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
           <section className="flex flex-col gap-2">
             <h2 className="px-1 text-sm font-medium">Аутсорсинг</h2>
-            <table className={tableClassName}>
-              <caption className="sr-only">{`Факт аутсорсинга на ${selectedDay}`}</caption>
-              <thead className={stickyHeadClassName}>
-                <tr>
-                  <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                    <ColumnLabel label="Цех" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="Часы" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="Ставка" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="Сумма" />
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {outsourcingRows.map((row) => (
-                  <OutsourcingFactRow
-                    key={row.departmentId}
-                    row={row}
-                    editable={editable}
-                    values={hrDayOutsourcingValue(opex.document, selectedDay, row.departmentId)}
-                    onChange={(hourThousandths, rateExVat) => {
-                      const rejection = opex.setHrDayOutsourcing(
-                        selectedDay,
-                        row.departmentId,
-                        hourThousandths,
-                        rateExVat,
-                      );
-                      return rejection ? HR_ERROR[rejection] : null;
-                    }}
-                  />
-                ))}
-              </tbody>
-            </table>
+            <div className={tableFrameBorderClassName}>
+              <table className={tableClassName}>
+                <caption className="sr-only">{`Факт аутсорсинга на ${selectedDay}`}</caption>
+                <thead className={stickyHeadClassName}>
+                  <tr>
+                    <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                      <ColumnLabel label="Цех" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="Часы" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="Ставка" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="Сумма" />
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {outsourcingRows.map((row) => (
+                    <OutsourcingFactRow
+                      key={row.departmentId}
+                      row={row}
+                      editable={editable}
+                      values={hrDayOutsourcingValue(opex.document, selectedDay, row.departmentId)}
+                      onChange={(hourThousandths, rateExVat) => {
+                        const rejection = opex.setHrDayOutsourcing(
+                          selectedDay,
+                          row.departmentId,
+                          hourThousandths,
+                          rateExVat,
+                        );
+                        return rejection ? HR_ERROR[rejection] : null;
+                      }}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </section>
         </div>
       </div>
@@ -263,7 +268,7 @@ function DepartmentBlock({
   return (
     <Fragment>
       <tr>
-        <th scope="row" className={categoryNameRowClassName({ stack: 'belowHead' })} style={categoryStickyStyle}>
+        <th scope="row" className={categoryNameRowClassName(false, { stack: 'belowHead' })} style={categoryStickyStyle}>
           <div className="flex items-center gap-2">
             <button
               type="button"

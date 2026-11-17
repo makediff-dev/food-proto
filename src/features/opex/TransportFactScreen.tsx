@@ -28,6 +28,7 @@ import {
   nameHeadingClassName,
   stickyHeadClassName,
   tableClassName,
+  tableFrameBorderClassName,
 } from '@/features/table';
 
 const DAY_MIN = '2000-01-01';
@@ -131,70 +132,149 @@ export function TransportFactScreen({ month, day }: { month: string; day: string
           {view.hire.map((block) => (
             <section key={block.kind} className="flex flex-col gap-2">
               <h2 className="px-1 text-sm font-medium">{block.name}</h2>
+              <div className={tableFrameBorderClassName}>
+                <table className={tableClassName}>
+                  <caption className="sr-only">{`Факт, ${block.name}, ${selectedDay}`}</caption>
+                  <thead className={stickyHeadClassName}>
+                    <tr>
+                      <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                        <ColumnLabel label="Контрагент" />
+                      </th>
+                      <th scope="col" className={valueHead}>
+                        <ColumnLabel label={`Кол-во, ${block.quantityUnit}`} />
+                      </th>
+                      <th scope="col" className={valueHead}>
+                        <ColumnLabel label="Сумма" />
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {block.carriers
+                      .filter((carrier) => !carrier.deleted)
+                      .map((carrier) => {
+                        const values = transportHireDayValue(opex.document, selectedDay, carrier.carrierId);
+                        return (
+                          <tr key={carrier.carrierId}>
+                            <th scope="row" className={entityNameRowClassName('repeated')}>
+                              {carrier.name}
+                            </th>
+                            <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
+                              {editable ? (
+                                <QuantityCell
+                                  label={`Кол-во, ${carrier.name}`}
+                                  value={values.quantityThousandths}
+                                  unit={block.quantityUnit}
+                                  onChange={(next) => {
+                                    const rejection = opex.setTransportHireDay(
+                                      selectedDay,
+                                      carrier.carrierId,
+                                      next,
+                                      values.amountExVat,
+                                    );
+                                    return rejection ? TRANSPORT_ERROR[rejection] : null;
+                                  }}
+                                />
+                              ) : (
+                                values.quantityThousandths
+                              )}
+                            </td>
+                            <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
+                              {editable ? (
+                                <MoneyCell
+                                  label={`Сумма, ${carrier.name}`}
+                                  value={values.amountExVat}
+                                  parse={parseOpexMoney}
+                                  invalidMessage={TRANSPORT_ERROR.amount}
+                                  onChange={(next) => {
+                                    const rejection = opex.setTransportHireDay(
+                                      selectedDay,
+                                      carrier.carrierId,
+                                      values.quantityThousandths,
+                                      next,
+                                    );
+                                    return rejection ? TRANSPORT_ERROR[rejection] : null;
+                                  }}
+                                />
+                              ) : (
+                                <MoneyAmount amount={values.amountExVat} />
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ))}
+
+          <section className="flex flex-col gap-2">
+            <h2 className="px-1 text-sm font-medium">Собственный транспорт</h2>
+            <div className={tableFrameBorderClassName}>
               <table className={tableClassName}>
-                <caption className="sr-only">{`Факт, ${block.name}, ${selectedDay}`}</caption>
+                <caption className="sr-only">{`Факт собственного транспорта, ${selectedDay}`}</caption>
                 <thead className={stickyHeadClassName}>
                   <tr>
                     <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                      <ColumnLabel label="Контрагент" />
+                      <ColumnLabel label="Автомобиль" />
                     </th>
                     <th scope="col" className={valueHead}>
-                      <ColumnLabel label={`Кол-во, ${block.quantityUnit}`} />
+                      <ColumnLabel label="Спидометр, км" hint="Показание на утро" />
                     </th>
                     <th scope="col" className={valueHead}>
-                      <ColumnLabel label="Сумма" />
+                      <ColumnLabel label="Цена топлива" />
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {block.carriers
-                    .filter((carrier) => !carrier.deleted)
-                    .map((carrier) => {
-                      const values = transportHireDayValue(opex.document, selectedDay, carrier.carrierId);
+                  {view.own
+                    .filter((vehicle) => !vehicle.deleted)
+                    .map((vehicle) => {
+                      const values = transportOwnDayValue(opex.document, selectedDay, vehicle.vehicleId);
                       return (
-                        <tr key={carrier.carrierId}>
+                        <tr key={vehicle.vehicleId}>
                           <th scope="row" className={entityNameRowClassName('repeated')}>
-                            {carrier.name}
+                            {vehicle.name}
                           </th>
                           <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
                             {editable ? (
                               <QuantityCell
-                                label={`Кол-во, ${carrier.name}`}
-                                value={values.quantityThousandths}
-                                unit={block.quantityUnit}
+                                label={`Спидометр, ${vehicle.name}`}
+                                value={values.odometerThousandths}
+                                unit="км"
                                 onChange={(next) => {
-                                  const rejection = opex.setTransportHireDay(
+                                  const rejection = opex.setTransportOwnDay(
                                     selectedDay,
-                                    carrier.carrierId,
+                                    vehicle.vehicleId,
                                     next,
-                                    values.amountExVat,
+                                    values.fuelPriceExVat,
                                   );
                                   return rejection ? TRANSPORT_ERROR[rejection] : null;
                                 }}
                               />
                             ) : (
-                              values.quantityThousandths
+                              values.odometerThousandths
                             )}
                           </td>
                           <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
                             {editable ? (
                               <MoneyCell
-                                label={`Сумма, ${carrier.name}`}
-                                value={values.amountExVat}
+                                label={`Цена топлива, ${vehicle.name}`}
+                                value={values.fuelPriceExVat}
                                 parse={parseOpexMoney}
-                                invalidMessage={TRANSPORT_ERROR.amount}
+                                invalidMessage={TRANSPORT_ERROR.price}
                                 onChange={(next) => {
-                                  const rejection = opex.setTransportHireDay(
+                                  const rejection = opex.setTransportOwnDay(
                                     selectedDay,
-                                    carrier.carrierId,
-                                    values.quantityThousandths,
+                                    vehicle.vehicleId,
+                                    values.odometerThousandths,
                                     next,
                                   );
                                   return rejection ? TRANSPORT_ERROR[rejection] : null;
                                 }}
                               />
                             ) : (
-                              <MoneyAmount amount={values.amountExVat} />
+                              <MoneyAmount amount={values.fuelPriceExVat} />
                             )}
                           </td>
                         </tr>
@@ -202,82 +282,7 @@ export function TransportFactScreen({ month, day }: { month: string; day: string
                     })}
                 </tbody>
               </table>
-            </section>
-          ))}
-
-          <section className="flex flex-col gap-2">
-            <h2 className="px-1 text-sm font-medium">Собственный транспорт</h2>
-            <table className={tableClassName}>
-              <caption className="sr-only">{`Факт собственного транспорта, ${selectedDay}`}</caption>
-              <thead className={stickyHeadClassName}>
-                <tr>
-                  <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                    <ColumnLabel label="Автомобиль" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="Спидометр, км" hint="Показание на утро" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="Цена топлива" />
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {view.own
-                  .filter((vehicle) => !vehicle.deleted)
-                  .map((vehicle) => {
-                    const values = transportOwnDayValue(opex.document, selectedDay, vehicle.vehicleId);
-                    return (
-                      <tr key={vehicle.vehicleId}>
-                        <th scope="row" className={entityNameRowClassName('repeated')}>
-                          {vehicle.name}
-                        </th>
-                        <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-                          {editable ? (
-                            <QuantityCell
-                              label={`Спидометр, ${vehicle.name}`}
-                              value={values.odometerThousandths}
-                              unit="км"
-                              onChange={(next) => {
-                                const rejection = opex.setTransportOwnDay(
-                                  selectedDay,
-                                  vehicle.vehicleId,
-                                  next,
-                                  values.fuelPriceExVat,
-                                );
-                                return rejection ? TRANSPORT_ERROR[rejection] : null;
-                              }}
-                            />
-                          ) : (
-                            values.odometerThousandths
-                          )}
-                        </td>
-                        <td className={`${valueCell} ${cellKindClassName[editable ? 'assigned' : 'computed']}`}>
-                          {editable ? (
-                            <MoneyCell
-                              label={`Цена топлива, ${vehicle.name}`}
-                              value={values.fuelPriceExVat}
-                              parse={parseOpexMoney}
-                              invalidMessage={TRANSPORT_ERROR.price}
-                              onChange={(next) => {
-                                const rejection = opex.setTransportOwnDay(
-                                  selectedDay,
-                                  vehicle.vehicleId,
-                                  values.odometerThousandths,
-                                  next,
-                                );
-                                return rejection ? TRANSPORT_ERROR[rejection] : null;
-                              }}
-                            />
-                          ) : (
-                            <MoneyAmount amount={values.fuelPriceExVat} />
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
+            </div>
           </section>
         </div>
       </div>

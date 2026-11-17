@@ -24,6 +24,7 @@ import {
   stickyHeadClassName,
   tableBorder,
   tableClassName,
+  tableFrameBorderClassName,
 } from '@/features/table';
 
 const valueEnd = `${columnHeadingClassName} ${tableBorder.rightThick}`;
@@ -66,77 +67,81 @@ export function PropertyTaxScreen({ month }: { month: string }) {
     >
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="flex flex-col gap-8">
-          <table className={tableClassName}>
-            <caption className="sr-only">{`Ставка налога на прибыль за ${selectedMonth}`}</caption>
-            <thead className={stickyHeadClassName}>
-              <tr>
-                <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                  <ColumnLabel label="Статья" />
-                </th>
-                <th scope="col" className={valueEnd}>
-                  <ColumnLabel label="Ставка" hint="Этот месяц и все следующие" />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th scope="row" className={entityNameRowClassName('repeated')}>
-                  Налог на прибыль
-                </th>
-                <td className={`${valueCellEnd} ${cellKindClassName[inputKind(editable)]}`}>
-                  <HundredthsCell
-                    label="Ставка налога на прибыль"
-                    value={profitTaxRate}
-                    unit="%"
-                    invalidMessage={PROFIT_TAX_ERROR.rate}
-                    onChange={
-                      editable
-                        ? (rateHundredths) => {
-                            const rejection = profitTax.setRate(selectedMonth, rateHundredths);
-                            return rejection ? PROFIT_TAX_ERROR[rejection] : null;
-                          }
-                        : undefined
-                    }
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <table className={tableClassName}>
-            <caption className="sr-only">{`План налога на имущество за ${selectedMonth}`}</caption>
-            <thead className={stickyHeadClassName}>
-              <tr>
-                <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                  <ColumnLabel label="Статья" />
-                </th>
-                <th scope="col" className={valueEnd}>
-                  <ColumnLabel label="План" />
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th scope="row" className={entityNameRowClassName('repeated')}>
-                  Налог на имущество
-                </th>
-                <td className={`${valueCellEnd} ${cellKindClassName[inputKind(editable)]}`}>
-                  <MoneyCell
-                    label="Налог на имущество, план"
-                    value={view.plan}
-                    parse={parsePropertyTaxMoney}
-                    onChange={
-                      editable
-                        ? (amount) => {
-                            const rejection = propertyTax.setPlan(selectedMonth, amount);
-                            return rejection ? PROPERTY_TAX_ERROR[rejection] : null;
-                          }
-                        : undefined
-                    }
-                  />
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div className={tableFrameBorderClassName}>
+            <table className={tableClassName}>
+              <caption className="sr-only">{`Ставка налога на прибыль за ${selectedMonth}`}</caption>
+              <thead className={stickyHeadClassName}>
+                <tr>
+                  <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                    <ColumnLabel label="Статья" />
+                  </th>
+                  <th scope="col" className={valueEnd}>
+                    <ColumnLabel label="Ставка" hint="Этот месяц и все следующие" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row" className={entityNameRowClassName('repeated')}>
+                    Налог на прибыль
+                  </th>
+                  <td className={`${valueCellEnd} ${cellKindClassName[inputKind(editable)]}`}>
+                    <HundredthsCell
+                      label="Ставка налога на прибыль"
+                      value={profitTaxRate}
+                      unit="%"
+                      invalidMessage={PROFIT_TAX_ERROR.rate}
+                      onChange={
+                        editable
+                          ? (rateHundredths) => {
+                              const rejection = profitTax.setRate(selectedMonth, rateHundredths);
+                              return rejection ? PROFIT_TAX_ERROR[rejection] : null;
+                            }
+                          : undefined
+                      }
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className={tableFrameBorderClassName}>
+            <table className={tableClassName}>
+              <caption className="sr-only">{`План налога на имущество за ${selectedMonth}`}</caption>
+              <thead className={stickyHeadClassName}>
+                <tr>
+                  <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                    <ColumnLabel label="Статья" />
+                  </th>
+                  <th scope="col" className={valueEnd}>
+                    <ColumnLabel label="План" />
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row" className={entityNameRowClassName('repeated')}>
+                    Налог на имущество
+                  </th>
+                  <td className={`${valueCellEnd} ${cellKindClassName[inputKind(editable)]}`}>
+                    <MoneyCell
+                      label="Налог на имущество, план"
+                      value={view.plan}
+                      parse={parsePropertyTaxMoney}
+                      onChange={
+                        editable
+                          ? (amount) => {
+                              const rejection = propertyTax.setPlan(selectedMonth, amount);
+                              return rejection ? PROPERTY_TAX_ERROR[rejection] : null;
+                            }
+                          : undefined
+                      }
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </PageFrame>

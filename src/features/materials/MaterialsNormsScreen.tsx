@@ -16,6 +16,7 @@ import {
   stickyHeadClassName,
   tableBorder,
   tableClassName,
+  tableFrameBorderClassName,
 } from '@/features/table';
 
 export function MaterialsNormsScreen() {
@@ -37,65 +38,67 @@ export function MaterialsNormsScreen() {
                     В этой группе позиций нет. Добавьте наименование во вводе плана.
                   </p>
                 ) : (
-                  <table className={tableClassName}>
-                    <caption className="sr-only">Нормы {warehouse.name}</caption>
-                    <thead className={stickyHeadClassName}>
-                      <tr>
-                        <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                          Наименование
-                        </th>
-                        {products.map((product) => (
-                          <th
-                            key={product.id}
-                            scope="col"
-                            className={`${columnHeadingClassName} ${tableBorder.rightThin}`}
-                          >
-                            {product.name}
+                  <div className={tableFrameBorderClassName}>
+                    <table className={tableClassName}>
+                      <caption className="sr-only">Нормы {warehouse.name}</caption>
+                      <thead className={stickyHeadClassName}>
+                        <tr>
+                          <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                            Наименование
                           </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((material) => (
-                        <tr key={material.id}>
-                          <th scope="row" className={entityNameRowClassName('repeated')}>
-                            {material.name}
-                            <span className="text-muted"> · {material.unit}/шт</span>
-                          </th>
-                          {products.map((product) => {
-                            const quantity = materialNormQuantity(
-                              materials.document,
-                              warehouse.id,
-                              material.id,
-                              product.id,
-                            );
-                            return (
-                              <td
-                                key={product.id}
-                                className={`border-b border-b-line px-2 py-2 text-right ${tableBorder.rightThin} ${cellKindClassName.assigned}`}
-                              >
-                                <NormCell
-                                  label={`Норма ${material.name} на ${product.name}, ${warehouse.name}`}
-                                  quantity={quantity}
-                                  unit={material.unit}
-                                  onCommit={(value) => {
-                                    const rejection = materials.setNorm(
-                                      warehouse.id,
-                                      material.id,
-                                      product.id,
-                                      value,
-                                      value === null ? new Date().toISOString() : null,
-                                    );
-                                    return rejection ? MATERIAL_NORM_ERROR[rejection] : null;
-                                  }}
-                                />
-                              </td>
-                            );
-                          })}
+                          {products.map((product) => (
+                            <th
+                              key={product.id}
+                              scope="col"
+                              className={`${columnHeadingClassName} ${tableBorder.rightThin}`}
+                            >
+                              {product.name}
+                            </th>
+                          ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {rows.map((material) => (
+                          <tr key={material.id}>
+                            <th scope="row" className={entityNameRowClassName('repeated')}>
+                              {material.name}
+                              <span className="text-muted"> · {material.unit}/шт</span>
+                            </th>
+                            {products.map((product) => {
+                              const quantity = materialNormQuantity(
+                                materials.document,
+                                warehouse.id,
+                                material.id,
+                                product.id,
+                              );
+                              return (
+                                <td
+                                  key={product.id}
+                                  className={`border-b border-b-line px-2 py-2 text-right ${tableBorder.rightThin} ${cellKindClassName.assigned}`}
+                                >
+                                  <NormCell
+                                    label={`Норма ${material.name} на ${product.name}, ${warehouse.name}`}
+                                    quantity={quantity}
+                                    unit={material.unit}
+                                    onCommit={(value) => {
+                                      const rejection = materials.setNorm(
+                                        warehouse.id,
+                                        material.id,
+                                        product.id,
+                                        value,
+                                        value === null ? new Date().toISOString() : null,
+                                      );
+                                      return rejection ? MATERIAL_NORM_ERROR[rejection] : null;
+                                    }}
+                                  />
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </section>
             );

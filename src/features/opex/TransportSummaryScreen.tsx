@@ -25,6 +25,7 @@ import {
   stickyHeadClassName,
   tableBorder,
   tableClassName,
+  tableFrameBorderClassName,
 } from '@/features/table';
 
 type HireColumnKey =
@@ -124,197 +125,217 @@ export function TransportSummaryScreen({ month }: { month: string }) {
             return (
               <section key={block.kind} className="flex flex-col gap-2">
                 <h2 className="px-1 text-sm font-medium">{block.name}</h2>
-                <table className={tableClassName}>
-                  <caption className="sr-only">{`${block.name}, ${selectedMonth}`}</caption>
-                  <thead className={stickyHeadClassName}>
-                    <tr>
-                      <th rowSpan={2} scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                        Контрагент
-                      </th>
-                      <ReportSubBannerColumnHeaders
-                        row="primary"
-                        columns={columns}
-                        subBannerGroups={HIRE_SUB_BANNERS}
-                        groupEndClass={hireGroupEndClass}
-                        lastColumnExtraClassName="last:border-r-0"
-                      />
-                    </tr>
-                    <tr>
-                      <ReportSubBannerColumnHeaders
-                        row="secondary"
-                        columns={columns}
-                        subBannerGroups={HIRE_SUB_BANNERS}
-                        groupEndClass={hireGroupEndClass}
-                      />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {block.carriers.map((carrier) => (
-                      <tr key={carrier.carrierId}>
-                        <th scope="row" className={entityNameRowClassName('repeated')}>
-                          {carrier.name}
-                          {carrier.deleted ? ' (архив)' : ''}
+                <div className={tableFrameBorderClassName}>
+                  <table className={tableClassName}>
+                    <caption className="sr-only">{`${block.name}, ${selectedMonth}`}</caption>
+                    <thead className={stickyHeadClassName}>
+                      <tr>
+                        <th rowSpan={2} scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                          Контрагент
+                        </th>
+                        <ReportSubBannerColumnHeaders
+                          row="primary"
+                          columns={columns}
+                          subBannerGroups={HIRE_SUB_BANNERS}
+                          groupEndClass={hireGroupEndClass}
+                          lastColumnExtraClassName="last:border-r-0"
+                        />
+                      </tr>
+                      <tr>
+                        <ReportSubBannerColumnHeaders
+                          row="secondary"
+                          columns={columns}
+                          subBannerGroups={HIRE_SUB_BANNERS}
+                          groupEndClass={hireGroupEndClass}
+                        />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {block.carriers.map((carrier) => (
+                        <tr key={carrier.carrierId}>
+                          <th scope="row" className={entityNameRowClassName('repeated')}>
+                            {carrier.name}
+                            {carrier.deleted ? ' (архив)' : ''}
+                          </th>
+                          <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('planQty')}`}>
+                            <QuantityRead value={carrier.planQuantityThousandths} unit={block.quantityUnit} />
+                          </td>
+                          <td
+                            className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('planPrice')}`}
+                          >
+                            <MoneyAmount amount={carrier.planUnitPriceExVat} />
+                          </td>
+                          <td
+                            className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('planAmount')}`}
+                          >
+                            <MoneyAmount amount={carrier.planAmountExVat} />
+                          </td>
+                          <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('factQty')}`}>
+                            <QuantityRead value={carrier.factQuantityThousandths} unit={block.quantityUnit} />
+                          </td>
+                          <td
+                            className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('factPrice')}`}
+                          >
+                            <MoneyCell
+                              label="Факт, цена"
+                              value={carrier.factQuantityThousandths > 0 ? carrier.factUnitPriceExVat : null}
+                            />
+                          </td>
+                          <td
+                            className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('factAmount')}`}
+                          >
+                            <MoneyAmount amount={carrier.factAmountExVat} />
+                          </td>
+                          <td
+                            className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('varianceQty')}`}
+                          >
+                            <QuantityRead
+                              value={carrier.varianceQuantityThousandths}
+                              unit={block.quantityUnit}
+                              signed
+                            />
+                          </td>
+                          <td
+                            className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('variancePrice')}`}
+                          >
+                            <MoneyCell label="Откл., цена" value={carrier.varianceUnitPriceExVat} signed sense="cost" />
+                          </td>
+                          <td
+                            className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('varianceAmount')}`}
+                          >
+                            <MoneyAmount amount={carrier.varianceAmountExVat} signed sense="cost" />
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="font-medium">
+                        <th scope="row" className={categoryNameRowClassName(false)}>
+                          Итого
                         </th>
                         <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('planQty')}`}>
-                          <QuantityRead value={carrier.planQuantityThousandths} unit={block.quantityUnit} />
+                          <QuantityRead value={block.planQuantityThousandths} unit={block.quantityUnit} />
                         </td>
                         <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('planPrice')}`}>
-                          <MoneyAmount amount={carrier.planUnitPriceExVat} />
+                          <MoneyAmount amount={block.planUnitPriceExVat} />
                         </td>
                         <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('planAmount')}`}>
-                          <MoneyAmount amount={carrier.planAmountExVat} />
+                          <MoneyAmount amount={block.planAmountExVat} />
                         </td>
                         <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('factQty')}`}>
-                          <QuantityRead value={carrier.factQuantityThousandths} unit={block.quantityUnit} />
+                          <QuantityRead value={block.factQuantityThousandths} unit={block.quantityUnit} />
                         </td>
                         <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('factPrice')}`}>
                           <MoneyCell
                             label="Факт, цена"
-                            value={carrier.factQuantityThousandths > 0 ? carrier.factUnitPriceExVat : null}
+                            value={block.factQuantityThousandths > 0 ? block.factUnitPriceExVat : null}
                           />
                         </td>
                         <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('factAmount')}`}>
-                          <MoneyAmount amount={carrier.factAmountExVat} />
+                          <MoneyAmount amount={block.factAmountExVat} />
                         </td>
                         <td
                           className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('varianceQty')}`}
                         >
-                          <QuantityRead value={carrier.varianceQuantityThousandths} unit={block.quantityUnit} signed />
+                          <QuantityRead value={block.varianceQuantityThousandths} unit={block.quantityUnit} signed />
                         </td>
                         <td
                           className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('variancePrice')}`}
                         >
-                          <MoneyCell label="Откл., цена" value={carrier.varianceUnitPriceExVat} signed sense="cost" />
+                          <MoneyCell label="Откл., цена" value={block.varianceUnitPriceExVat} signed sense="cost" />
                         </td>
                         <td
                           className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('varianceAmount')}`}
                         >
-                          <MoneyAmount amount={carrier.varianceAmountExVat} signed sense="cost" />
+                          <MoneyAmount amount={block.varianceAmountExVat} signed sense="cost" />
                         </td>
                       </tr>
-                    ))}
-                    <tr className="font-medium">
-                      <th scope="row" className={categoryNameRowClassName()}>
-                        Итого
-                      </th>
-                      <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('planQty')}`}>
-                        <QuantityRead value={block.planQuantityThousandths} unit={block.quantityUnit} />
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('planPrice')}`}>
-                        <MoneyAmount amount={block.planUnitPriceExVat} />
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('planAmount')}`}>
-                        <MoneyAmount amount={block.planAmountExVat} />
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('factQty')}`}>
-                        <QuantityRead value={block.factQuantityThousandths} unit={block.quantityUnit} />
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('factPrice')}`}>
-                        <MoneyCell
-                          label="Факт, цена"
-                          value={block.factQuantityThousandths > 0 ? block.factUnitPriceExVat : null}
-                        />
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('factAmount')}`}>
-                        <MoneyAmount amount={block.factAmountExVat} />
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('varianceQty')}`}>
-                        <QuantityRead value={block.varianceQuantityThousandths} unit={block.quantityUnit} signed />
-                      </td>
-                      <td
-                        className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('variancePrice')}`}
-                      >
-                        <MoneyCell label="Откл., цена" value={block.varianceUnitPriceExVat} signed sense="cost" />
-                      </td>
-                      <td
-                        className={`${valueCell} ${cellKindClassName.computed} ${hireGroupEndClass('varianceAmount')}`}
-                      >
-                        <MoneyAmount amount={block.varianceAmountExVat} signed sense="cost" />
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                    </tbody>
+                  </table>
+                </div>
               </section>
             );
           })}
 
           <section className="flex flex-col gap-2">
             <h2 className="px-1 text-sm font-medium">Собственный транспорт</h2>
-            <table className={tableClassName}>
-              <caption className="sr-only">{`Собственный транспорт, ${selectedMonth}`}</caption>
-              <thead className={stickyHeadClassName}>
-                <tr>
-                  <th rowSpan={2} scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                    Автомобиль
-                  </th>
-                  <ReportSubBannerColumnHeaders
-                    row="primary"
-                    columns={OWN_COLUMNS}
-                    subBannerGroups={OWN_SUB_BANNERS}
-                    groupEndClass={ownGroupEndClass}
-                    lastColumnExtraClassName="last:border-r-0"
-                  />
-                </tr>
-                <tr>
-                  <ReportSubBannerColumnHeaders
-                    row="secondary"
-                    columns={OWN_COLUMNS}
-                    subBannerGroups={OWN_SUB_BANNERS}
-                    groupEndClass={ownGroupEndClass}
-                  />
-                </tr>
-              </thead>
-              <tbody>
-                {view.own.map((vehicle) => (
-                  <tr key={vehicle.vehicleId}>
-                    <th scope="row" className={entityNameRowClassName('repeated')}>
-                      {vehicle.name}
-                      {vehicle.deleted ? ' (архив)' : ''}
+            <div className={tableFrameBorderClassName}>
+              <table className={tableClassName}>
+                <caption className="sr-only">{`Собственный транспорт, ${selectedMonth}`}</caption>
+                <thead className={stickyHeadClassName}>
+                  <tr>
+                    <th rowSpan={2} scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                      Автомобиль
                     </th>
-                    <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('planLiters')}`}>
-                      <QuantityRead value={vehicle.litersPer100KmThousandths} unit="л" />
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('planFuelPrice')}`}>
-                      <MoneyAmount amount={vehicle.planFuelPriceExVat} />
-                    </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('planKm')}`}>
-                      <QuantityRead value={vehicle.planKmThousandths} unit="км" />
-                    </td>
+                    <ReportSubBannerColumnHeaders
+                      row="primary"
+                      columns={OWN_COLUMNS}
+                      subBannerGroups={OWN_SUB_BANNERS}
+                      groupEndClass={ownGroupEndClass}
+                      lastColumnExtraClassName="last:border-r-0"
+                    />
+                  </tr>
+                  <tr>
+                    <ReportSubBannerColumnHeaders
+                      row="secondary"
+                      columns={OWN_COLUMNS}
+                      subBannerGroups={OWN_SUB_BANNERS}
+                      groupEndClass={ownGroupEndClass}
+                    />
+                  </tr>
+                </thead>
+                <tbody>
+                  {view.own.map((vehicle) => (
+                    <tr key={vehicle.vehicleId}>
+                      <th scope="row" className={entityNameRowClassName('repeated')}>
+                        {vehicle.name}
+                        {vehicle.deleted ? ' (архив)' : ''}
+                      </th>
+                      <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('planLiters')}`}>
+                        <QuantityRead value={vehicle.litersPer100KmThousandths} unit="л" />
+                      </td>
+                      <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('planFuelPrice')}`}>
+                        <MoneyAmount amount={vehicle.planFuelPriceExVat} />
+                      </td>
+                      <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('planKm')}`}>
+                        <QuantityRead value={vehicle.planKmThousandths} unit="км" />
+                      </td>
+                      <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('planAmount')}`}>
+                        <MoneyAmount amount={vehicle.planAmountExVat} />
+                      </td>
+                      <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('factKm')}`}>
+                        <QuantityRead value={vehicle.factKmThousandths} unit="км" />
+                      </td>
+                      <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('factAmount')}`}>
+                        <MoneyAmount amount={vehicle.factAmountExVat} />
+                      </td>
+                      <td
+                        className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('varianceAmount')}`}
+                      >
+                        <MoneyAmount amount={vehicle.varianceAmountExVat} signed sense="cost" />
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="font-medium">
+                    <th scope="row" className={categoryNameRowClassName(false)}>
+                      Итого
+                    </th>
+                    <td
+                      className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('planLiters')}`}
+                      colSpan={3}
+                    />
                     <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('planAmount')}`}>
-                      <MoneyAmount amount={vehicle.planAmountExVat} />
+                      <MoneyAmount amount={view.ownTotalPlanExVat} />
                     </td>
-                    <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('factKm')}`}>
-                      <QuantityRead value={vehicle.factKmThousandths} unit="км" />
-                    </td>
+                    <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('factKm')}`} />
                     <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('factAmount')}`}>
-                      <MoneyAmount amount={vehicle.factAmountExVat} />
+                      <MoneyAmount amount={view.ownTotalFactExVat} />
                     </td>
                     <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('varianceAmount')}`}>
-                      <MoneyAmount amount={vehicle.varianceAmountExVat} signed sense="cost" />
+                      <MoneyAmount amount={view.ownTotalFactExVat - view.ownTotalPlanExVat} signed sense="cost" />
                     </td>
                   </tr>
-                ))}
-                <tr className="font-medium">
-                  <th scope="row" className={categoryNameRowClassName()}>
-                    Итого
-                  </th>
-                  <td
-                    className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('planLiters')}`}
-                    colSpan={3}
-                  />
-                  <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('planAmount')}`}>
-                    <MoneyAmount amount={view.ownTotalPlanExVat} />
-                  </td>
-                  <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('factKm')}`} />
-                  <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('factAmount')}`}>
-                    <MoneyAmount amount={view.ownTotalFactExVat} />
-                  </td>
-                  <td className={`${valueCell} ${cellKindClassName.computed} ${ownGroupEndClass('varianceAmount')}`}>
-                    <MoneyAmount amount={view.ownTotalFactExVat - view.ownTotalPlanExVat} signed sense="cost" />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           </section>
         </div>
       </div>

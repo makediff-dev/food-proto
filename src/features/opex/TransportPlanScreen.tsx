@@ -30,6 +30,7 @@ import {
   PercentCell,
   stickyHeadClassName,
   tableClassName,
+  tableFrameBorderClassName,
 } from '@/features/table';
 
 const deleteIconButtonClassName =
@@ -76,142 +77,144 @@ export function TransportPlanScreen({ month }: { month: string }) {
                   </button>
                 ) : null}
               </div>
-              <table className={tableClassName}>
-                <caption className="sr-only">{`План, ${block.name}`}</caption>
-                <thead className={stickyHeadClassName}>
-                  <tr>
-                    <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                      <ColumnLabel label="Контрагент" />
-                    </th>
-                    <th scope="col" className={valueHead}>
-                      <ColumnLabel label={`Кол-во, ${block.quantityUnit}`} />
-                    </th>
-                    <th scope="col" className={valueHead}>
-                      <ColumnLabel label="Цена" />
-                    </th>
-                    <th scope="col" className={valueHead}>
-                      <ColumnLabel label="НДС" hint="Ставка НДС расхода, %. Сумма — в «Отчете по налогам»" />
-                    </th>
-                    <th scope="col" className={valueHead}>
-                      <ColumnLabel label="Сумма" />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {block.carriers.map((carrier) => {
-                    const canRename = editable && !carrier.deleted;
-                    return (
-                      <tr key={carrier.carrierId}>
-                        <th scope="row" className={entityNameRowClassName(nameCellKind(canRename))}>
-                          <div className="flex w-full items-center gap-2">
-                            <span className="min-w-0 flex-1">
-                              {canRename ? (
-                                <GridText
-                                  label={`Название, ${carrier.name}`}
-                                  value={carrier.name}
-                                  invalidMessage={FIELD_ERROR.empty}
-                                  onCommit={(next) => {
-                                    const rejection = opex.renameTransportCarrier(carrier.carrierId, next);
-                                    return rejection ? TRANSPORT_ERROR[rejection] : null;
+              <div className={tableFrameBorderClassName}>
+                <table className={tableClassName}>
+                  <caption className="sr-only">{`План, ${block.name}`}</caption>
+                  <thead className={stickyHeadClassName}>
+                    <tr>
+                      <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                        <ColumnLabel label="Контрагент" />
+                      </th>
+                      <th scope="col" className={valueHead}>
+                        <ColumnLabel label={`Кол-во, ${block.quantityUnit}`} />
+                      </th>
+                      <th scope="col" className={valueHead}>
+                        <ColumnLabel label="Цена" />
+                      </th>
+                      <th scope="col" className={valueHead}>
+                        <ColumnLabel label="НДС" hint="Ставка НДС расхода, %. Сумма — в «Отчете по налогам»" />
+                      </th>
+                      <th scope="col" className={valueHead}>
+                        <ColumnLabel label="Сумма" />
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {block.carriers.map((carrier) => {
+                      const canRename = editable && !carrier.deleted;
+                      return (
+                        <tr key={carrier.carrierId}>
+                          <th scope="row" className={entityNameRowClassName(nameCellKind(canRename))}>
+                            <div className="flex w-full items-center gap-2">
+                              <span className="min-w-0 flex-1">
+                                {canRename ? (
+                                  <GridText
+                                    label={`Название, ${carrier.name}`}
+                                    value={carrier.name}
+                                    invalidMessage={FIELD_ERROR.empty}
+                                    onCommit={(next) => {
+                                      const rejection = opex.renameTransportCarrier(carrier.carrierId, next);
+                                      return rejection ? TRANSPORT_ERROR[rejection] : null;
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="text-sm leading-8 text-ink">
+                                    {carrier.name}
+                                    {carrier.deleted ? <span className="text-muted"> (архив)</span> : null}
+                                  </span>
+                                )}
+                              </span>
+                              {editable && !carrier.deleted ? (
+                                <button
+                                  type="button"
+                                  aria-label={`Удалить ${carrier.name}`}
+                                  title="Удалить"
+                                  className={deleteIconButtonClassName}
+                                  onClick={() => {
+                                    const confirmed = window.confirm(
+                                      `Удалить «${carrier.name}»? Контрагент пропадёт из рабочего списка.`,
+                                    );
+                                    if (confirmed) {
+                                      opex.deleteTransportCarrier(carrier.carrierId);
+                                    }
                                   }}
-                                />
-                              ) : (
-                                <span className="text-sm leading-8 text-ink">
-                                  {carrier.name}
-                                  {carrier.deleted ? <span className="text-muted"> (архив)</span> : null}
-                                </span>
-                              )}
-                            </span>
+                                >
+                                  <IconTrash />
+                                </button>
+                              ) : null}
+                            </div>
+                          </th>
+                          <td
+                            className={`${valueCell} ${cellKindClassName[editable && !carrier.deleted ? 'assigned' : 'computed']}`}
+                          >
                             {editable && !carrier.deleted ? (
-                              <button
-                                type="button"
-                                aria-label={`Удалить ${carrier.name}`}
-                                title="Удалить"
-                                className={deleteIconButtonClassName}
-                                onClick={() => {
-                                  const confirmed = window.confirm(
-                                    `Удалить «${carrier.name}»? Контрагент пропадёт из рабочего списка.`,
+                              <QuantityCell
+                                label={`План, ${block.quantityUnit}, ${carrier.name}`}
+                                value={carrier.planQuantityThousandths}
+                                unit={block.quantityUnit}
+                                onChange={(next) => {
+                                  const rejection = opex.setTransportHirePlan(
+                                    selectedMonth,
+                                    carrier.carrierId,
+                                    next,
+                                    carrier.planUnitPriceExVat,
                                   );
-                                  if (confirmed) {
-                                    opex.deleteTransportCarrier(carrier.carrierId);
-                                  }
+                                  return rejection ? TRANSPORT_ERROR[rejection] : null;
                                 }}
-                              >
-                                <IconTrash />
-                              </button>
-                            ) : null}
-                          </div>
-                        </th>
-                        <td
-                          className={`${valueCell} ${cellKindClassName[editable && !carrier.deleted ? 'assigned' : 'computed']}`}
-                        >
-                          {editable && !carrier.deleted ? (
-                            <QuantityCell
-                              label={`План, ${block.quantityUnit}, ${carrier.name}`}
-                              value={carrier.planQuantityThousandths}
-                              unit={block.quantityUnit}
-                              onChange={(next) => {
-                                const rejection = opex.setTransportHirePlan(
-                                  selectedMonth,
-                                  carrier.carrierId,
-                                  next,
-                                  carrier.planUnitPriceExVat,
-                                );
-                                return rejection ? TRANSPORT_ERROR[rejection] : null;
-                              }}
+                              />
+                            ) : (
+                              carrier.planQuantityThousandths
+                            )}
+                          </td>
+                          <td
+                            className={`${valueCell} ${cellKindClassName[editable && !carrier.deleted ? 'assigned' : 'computed']}`}
+                          >
+                            {editable && !carrier.deleted ? (
+                              <MoneyCell
+                                label={`Цена, ${carrier.name}`}
+                                value={carrier.planUnitPriceExVat}
+                                parse={parseOpexMoney}
+                                invalidMessage={TRANSPORT_ERROR.price}
+                                onChange={(next) => {
+                                  const rejection = opex.setTransportHirePlan(
+                                    selectedMonth,
+                                    carrier.carrierId,
+                                    carrier.planQuantityThousandths,
+                                    next,
+                                  );
+                                  return rejection ? TRANSPORT_ERROR[rejection] : null;
+                                }}
+                              />
+                            ) : (
+                              <MoneyAmount amount={carrier.planUnitPriceExVat} />
+                            )}
+                          </td>
+                          <td
+                            className={`${valueCell} ${cellKindClassName[editable && !carrier.deleted ? 'assigned' : 'computed']}`}
+                          >
+                            <PercentCell
+                              label={`НДС, ${carrier.name}`}
+                              value={carrier.vatPercent}
+                              invalidMessage={TRANSPORT_ERROR.vat}
+                              onChange={
+                                editable && !carrier.deleted
+                                  ? (next) => {
+                                      const rejection = opex.setTransportCarrierVat(carrier.carrierId, next);
+                                      return rejection ? TRANSPORT_ERROR[rejection] : null;
+                                    }
+                                  : undefined
+                              }
                             />
-                          ) : (
-                            carrier.planQuantityThousandths
-                          )}
-                        </td>
-                        <td
-                          className={`${valueCell} ${cellKindClassName[editable && !carrier.deleted ? 'assigned' : 'computed']}`}
-                        >
-                          {editable && !carrier.deleted ? (
-                            <MoneyCell
-                              label={`Цена, ${carrier.name}`}
-                              value={carrier.planUnitPriceExVat}
-                              parse={parseOpexMoney}
-                              invalidMessage={TRANSPORT_ERROR.price}
-                              onChange={(next) => {
-                                const rejection = opex.setTransportHirePlan(
-                                  selectedMonth,
-                                  carrier.carrierId,
-                                  carrier.planQuantityThousandths,
-                                  next,
-                                );
-                                return rejection ? TRANSPORT_ERROR[rejection] : null;
-                              }}
-                            />
-                          ) : (
-                            <MoneyAmount amount={carrier.planUnitPriceExVat} />
-                          )}
-                        </td>
-                        <td
-                          className={`${valueCell} ${cellKindClassName[editable && !carrier.deleted ? 'assigned' : 'computed']}`}
-                        >
-                          <PercentCell
-                            label={`НДС, ${carrier.name}`}
-                            value={carrier.vatPercent}
-                            invalidMessage={TRANSPORT_ERROR.vat}
-                            onChange={
-                              editable && !carrier.deleted
-                                ? (next) => {
-                                    const rejection = opex.setTransportCarrierVat(carrier.carrierId, next);
-                                    return rejection ? TRANSPORT_ERROR[rejection] : null;
-                                  }
-                                : undefined
-                            }
-                          />
-                        </td>
-                        <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                          <MoneyAmount amount={carrier.planAmountExVat} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          </td>
+                          <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                            <MoneyAmount amount={carrier.planAmountExVat} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </section>
           ))}
 
@@ -225,170 +228,172 @@ export function TransportPlanScreen({ month }: { month: string }) {
                 </button>
               ) : null}
             </div>
-            <table className={tableClassName}>
-              <caption className="sr-only">План собственного транспорта</caption>
-              <thead className={stickyHeadClassName}>
-                <tr>
-                  <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
-                    <ColumnLabel label="Автомобиль" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="л/100 км" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="Цена топлива" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="План, км" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="НДС" hint="Ставка НДС топлива, %. Сумма — в «Отчете по налогам»" />
-                  </th>
-                  <th scope="col" className={valueHead}>
-                    <ColumnLabel label="Сумма" />
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {view.own.map((vehicle) => {
-                  const canRename = editable && !vehicle.deleted;
-                  return (
-                    <tr key={vehicle.vehicleId}>
-                      <th scope="row" className={entityNameRowClassName(nameCellKind(canRename))}>
-                        <div className="flex w-full items-center gap-2">
-                          <span className="min-w-0 flex-1">
-                            {canRename ? (
-                              <GridText
-                                label={`Название, ${vehicle.name}`}
-                                value={vehicle.name}
-                                invalidMessage={FIELD_ERROR.empty}
-                                onCommit={(next) => {
-                                  const rejection = opex.renameTransportVehicle(vehicle.vehicleId, next);
-                                  return rejection ? TRANSPORT_ERROR[rejection] : null;
+            <div className={tableFrameBorderClassName}>
+              <table className={tableClassName}>
+                <caption className="sr-only">План собственного транспорта</caption>
+                <thead className={stickyHeadClassName}>
+                  <tr>
+                    <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
+                      <ColumnLabel label="Автомобиль" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="л/100 км" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="Цена топлива" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="План, км" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="НДС" hint="Ставка НДС топлива, %. Сумма — в «Отчете по налогам»" />
+                    </th>
+                    <th scope="col" className={valueHead}>
+                      <ColumnLabel label="Сумма" />
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {view.own.map((vehicle) => {
+                    const canRename = editable && !vehicle.deleted;
+                    return (
+                      <tr key={vehicle.vehicleId}>
+                        <th scope="row" className={entityNameRowClassName(nameCellKind(canRename))}>
+                          <div className="flex w-full items-center gap-2">
+                            <span className="min-w-0 flex-1">
+                              {canRename ? (
+                                <GridText
+                                  label={`Название, ${vehicle.name}`}
+                                  value={vehicle.name}
+                                  invalidMessage={FIELD_ERROR.empty}
+                                  onCommit={(next) => {
+                                    const rejection = opex.renameTransportVehicle(vehicle.vehicleId, next);
+                                    return rejection ? TRANSPORT_ERROR[rejection] : null;
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-sm leading-8 text-ink">
+                                  {vehicle.name}
+                                  {vehicle.deleted ? <span className="text-muted"> (архив)</span> : null}
+                                </span>
+                              )}
+                            </span>
+                            {editable && !vehicle.deleted ? (
+                              <button
+                                type="button"
+                                aria-label={`Удалить ${vehicle.name}`}
+                                title="Удалить"
+                                className={deleteIconButtonClassName}
+                                onClick={() => {
+                                  const confirmed = window.confirm(
+                                    `Удалить «${vehicle.name}»? Автомобиль пропадёт из рабочего списка.`,
+                                  );
+                                  if (confirmed) {
+                                    opex.deleteTransportVehicle(vehicle.vehicleId);
+                                  }
                                 }}
-                              />
-                            ) : (
-                              <span className="text-sm leading-8 text-ink">
-                                {vehicle.name}
-                                {vehicle.deleted ? <span className="text-muted"> (архив)</span> : null}
-                              </span>
-                            )}
-                          </span>
+                              >
+                                <IconTrash />
+                              </button>
+                            ) : null}
+                          </div>
+                        </th>
+                        <td
+                          className={`${valueCell} ${cellKindClassName[editable && !vehicle.deleted ? 'assigned' : 'computed']}`}
+                        >
                           {editable && !vehicle.deleted ? (
-                            <button
-                              type="button"
-                              aria-label={`Удалить ${vehicle.name}`}
-                              title="Удалить"
-                              className={deleteIconButtonClassName}
-                              onClick={() => {
-                                const confirmed = window.confirm(
-                                  `Удалить «${vehicle.name}»? Автомобиль пропадёт из рабочего списка.`,
+                            <QuantityCell
+                              label={`л/100 км, ${vehicle.name}`}
+                              value={vehicle.litersPer100KmThousandths}
+                              unit="л"
+                              onChange={(next) => {
+                                const rejection = opex.setTransportOwnPlan(
+                                  selectedMonth,
+                                  vehicle.vehicleId,
+                                  next,
+                                  vehicle.planFuelPriceExVat,
+                                  vehicle.planKmThousandths,
                                 );
-                                if (confirmed) {
-                                  opex.deleteTransportVehicle(vehicle.vehicleId);
-                                }
+                                return rejection ? TRANSPORT_ERROR[rejection] : null;
                               }}
-                            >
-                              <IconTrash />
-                            </button>
-                          ) : null}
-                        </div>
-                      </th>
-                      <td
-                        className={`${valueCell} ${cellKindClassName[editable && !vehicle.deleted ? 'assigned' : 'computed']}`}
-                      >
-                        {editable && !vehicle.deleted ? (
-                          <QuantityCell
-                            label={`л/100 км, ${vehicle.name}`}
-                            value={vehicle.litersPer100KmThousandths}
-                            unit="л"
-                            onChange={(next) => {
-                              const rejection = opex.setTransportOwnPlan(
-                                selectedMonth,
-                                vehicle.vehicleId,
-                                next,
-                                vehicle.planFuelPriceExVat,
-                                vehicle.planKmThousandths,
-                              );
-                              return rejection ? TRANSPORT_ERROR[rejection] : null;
-                            }}
+                            />
+                          ) : (
+                            vehicle.litersPer100KmThousandths
+                          )}
+                        </td>
+                        <td
+                          className={`${valueCell} ${cellKindClassName[editable && !vehicle.deleted ? 'assigned' : 'computed']}`}
+                        >
+                          {editable && !vehicle.deleted ? (
+                            <MoneyCell
+                              label={`Цена топлива, ${vehicle.name}`}
+                              value={vehicle.planFuelPriceExVat}
+                              parse={parseOpexMoney}
+                              invalidMessage={TRANSPORT_ERROR.price}
+                              onChange={(next) => {
+                                const rejection = opex.setTransportOwnPlan(
+                                  selectedMonth,
+                                  vehicle.vehicleId,
+                                  vehicle.litersPer100KmThousandths,
+                                  next,
+                                  vehicle.planKmThousandths,
+                                );
+                                return rejection ? TRANSPORT_ERROR[rejection] : null;
+                              }}
+                            />
+                          ) : (
+                            <MoneyAmount amount={vehicle.planFuelPriceExVat} />
+                          )}
+                        </td>
+                        <td
+                          className={`${valueCell} ${cellKindClassName[editable && !vehicle.deleted ? 'assigned' : 'computed']}`}
+                        >
+                          {editable && !vehicle.deleted ? (
+                            <QuantityCell
+                              label={`План км, ${vehicle.name}`}
+                              value={vehicle.planKmThousandths}
+                              unit="км"
+                              onChange={(next) => {
+                                const rejection = opex.setTransportOwnPlan(
+                                  selectedMonth,
+                                  vehicle.vehicleId,
+                                  vehicle.litersPer100KmThousandths,
+                                  vehicle.planFuelPriceExVat,
+                                  next,
+                                );
+                                return rejection ? TRANSPORT_ERROR[rejection] : null;
+                              }}
+                            />
+                          ) : (
+                            vehicle.planKmThousandths
+                          )}
+                        </td>
+                        <td
+                          className={`${valueCell} ${cellKindClassName[editable && !vehicle.deleted ? 'assigned' : 'computed']}`}
+                        >
+                          <PercentCell
+                            label={`НДС топлива, ${vehicle.name}`}
+                            value={vehicle.fuelVatPercent}
+                            invalidMessage={TRANSPORT_ERROR.vat}
+                            onChange={
+                              editable && !vehicle.deleted
+                                ? (next) => {
+                                    const rejection = opex.setTransportVehicleFuelVat(vehicle.vehicleId, next);
+                                    return rejection ? TRANSPORT_ERROR[rejection] : null;
+                                  }
+                                : undefined
+                            }
                           />
-                        ) : (
-                          vehicle.litersPer100KmThousandths
-                        )}
-                      </td>
-                      <td
-                        className={`${valueCell} ${cellKindClassName[editable && !vehicle.deleted ? 'assigned' : 'computed']}`}
-                      >
-                        {editable && !vehicle.deleted ? (
-                          <MoneyCell
-                            label={`Цена топлива, ${vehicle.name}`}
-                            value={vehicle.planFuelPriceExVat}
-                            parse={parseOpexMoney}
-                            invalidMessage={TRANSPORT_ERROR.price}
-                            onChange={(next) => {
-                              const rejection = opex.setTransportOwnPlan(
-                                selectedMonth,
-                                vehicle.vehicleId,
-                                vehicle.litersPer100KmThousandths,
-                                next,
-                                vehicle.planKmThousandths,
-                              );
-                              return rejection ? TRANSPORT_ERROR[rejection] : null;
-                            }}
-                          />
-                        ) : (
-                          <MoneyAmount amount={vehicle.planFuelPriceExVat} />
-                        )}
-                      </td>
-                      <td
-                        className={`${valueCell} ${cellKindClassName[editable && !vehicle.deleted ? 'assigned' : 'computed']}`}
-                      >
-                        {editable && !vehicle.deleted ? (
-                          <QuantityCell
-                            label={`План км, ${vehicle.name}`}
-                            value={vehicle.planKmThousandths}
-                            unit="км"
-                            onChange={(next) => {
-                              const rejection = opex.setTransportOwnPlan(
-                                selectedMonth,
-                                vehicle.vehicleId,
-                                vehicle.litersPer100KmThousandths,
-                                vehicle.planFuelPriceExVat,
-                                next,
-                              );
-                              return rejection ? TRANSPORT_ERROR[rejection] : null;
-                            }}
-                          />
-                        ) : (
-                          vehicle.planKmThousandths
-                        )}
-                      </td>
-                      <td
-                        className={`${valueCell} ${cellKindClassName[editable && !vehicle.deleted ? 'assigned' : 'computed']}`}
-                      >
-                        <PercentCell
-                          label={`НДС топлива, ${vehicle.name}`}
-                          value={vehicle.fuelVatPercent}
-                          invalidMessage={TRANSPORT_ERROR.vat}
-                          onChange={
-                            editable && !vehicle.deleted
-                              ? (next) => {
-                                  const rejection = opex.setTransportVehicleFuelVat(vehicle.vehicleId, next);
-                                  return rejection ? TRANSPORT_ERROR[rejection] : null;
-                                }
-                              : undefined
-                          }
-                        />
-                      </td>
-                      <td className={`${valueCell} ${cellKindClassName.computed}`}>
-                        <MoneyAmount amount={vehicle.planAmountExVat} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                        <td className={`${valueCell} ${cellKindClassName.computed}`}>
+                          <MoneyAmount amount={vehicle.planAmountExVat} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </section>
         </div>
       </div>
