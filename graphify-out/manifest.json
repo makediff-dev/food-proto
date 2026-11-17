@@ -525,9 +525,9 @@
     "semantic_hash": ""
   },
   "src/features/shell/AppShell.tsx": {
-    "mtime": 1794903858.7755277,
-    "seen": 1794905816.0443032,
-    "ast_hash": "a16abbe096d009bc2580fc6c19612067",
+    "mtime": 1794918003.161177,
+    "seen": 1794918034.4303896,
+    "ast_hash": "cc613685204bbc4c741d88985d1cc418",
     "semantic_hash": ""
   },
   "src/features/shell/Dialog.tsx": {

@@ -100,7 +100,8 @@ import { SETTINGS_HREF, SETTINGS_TITLE } from '@/features/settings/paths';
 import { IconChevronDown, IconChevronRight, IconMenu, IconSettings } from '@/features/shell/Icons';
 import { VAT_REPORT_SUMMARY_HREF, VAT_REPORT_SUMMARY_TITLE } from '@/features/vat/paths';
 
-type NavKind = 'report' | 'input';
+/** report — отчёты; plan — ввод плана / нормативов; fact — ввод факта. */
+type NavKind = 'report' | 'plan' | 'fact';
 
 type NavItem = {
   href: string;
@@ -111,32 +112,36 @@ type NavItem = {
   salesJournal?: boolean;
 };
 
+function isInputNavKind(navKind: NavKind): boolean {
+  return navKind === 'plan' || navKind === 'fact';
+}
+
 const SALES_NAV: readonly NavItem[] = [
   { href: '/', label: SUMMARY_SECTION_TITLE, exact: true, navKind: 'report' },
   { href: '/sales', label: SALES_FACT_TITLE, exact: true, navKind: 'report' },
-  { href: '/planning', label: PLANNING_SECTION_TITLE, navKind: 'input' },
-  { href: '/sales/journal', label: SALES_JOURNAL_TITLE, salesJournal: true, navKind: 'input' },
+  { href: '/planning', label: PLANNING_SECTION_TITLE, navKind: 'plan' },
+  { href: '/sales/journal', label: SALES_JOURNAL_TITLE, salesJournal: true, navKind: 'fact' },
 ];
 
 const PRODUCTION_NAV: readonly NavItem[] = [
   { href: '/production', label: PRODUCTION_SUMMARY_TITLE, exact: true, navKind: 'report' },
   { href: '/production/fact', label: PRODUCTION_FACT_TITLE, navKind: 'report' },
-  { href: '/production/plan', label: PRODUCTION_PLAN_TITLE, navKind: 'input' },
-  { href: '/production/journal', label: PRODUCTION_JOURNAL_TITLE, navKind: 'input' },
+  { href: '/production/plan', label: PRODUCTION_PLAN_TITLE, navKind: 'plan' },
+  { href: '/production/journal', label: PRODUCTION_JOURNAL_TITLE, navKind: 'fact' },
 ];
 
 const RECIPES_NAV: readonly NavItem[] = [
   { href: RECIPES_COST_HREF, label: RECIPES_COST_TITLE, navKind: 'report' },
   { href: RECIPES_FINISHED_COST_HREF, label: RECIPES_FINISHED_COST_TITLE, navKind: 'report' },
-  { href: RECIPES_DERIVATIVES_HREF, label: RECIPES_DERIVATIVES_TITLE, exact: true, navKind: 'input' },
-  { href: RECIPES_FINISHED_HREF, label: RECIPES_FINISHED_TITLE, exact: true, navKind: 'input' },
+  { href: RECIPES_DERIVATIVES_HREF, label: RECIPES_DERIVATIVES_TITLE, exact: true, navKind: 'plan' },
+  { href: RECIPES_FINISHED_HREF, label: RECIPES_FINISHED_TITLE, exact: true, navKind: 'plan' },
 ];
 
 const MOVEMENT_NAV: readonly NavItem[] = [
   { href: '/movement', label: MOVEMENT_SUMMARY_TITLE, exact: true, navKind: 'report' },
   { href: '/movement/fact', label: MOVEMENT_FACT_TITLE, navKind: 'report' },
-  { href: '/movement/plan', label: MOVEMENT_PLAN_TITLE, navKind: 'input' },
-  { href: '/movement/inventory', label: MOVEMENT_INVENTORY_TITLE, navKind: 'input' },
+  { href: '/movement/plan', label: MOVEMENT_PLAN_TITLE, navKind: 'plan' },
+  { href: '/movement/inventory', label: MOVEMENT_INVENTORY_TITLE, navKind: 'fact' },
 ];
 
 const DERIVATIVE_MOVEMENT_NAV: readonly NavItem[] = [
@@ -149,26 +154,26 @@ const DERIVATIVE_MOVEMENT_NAV: readonly NavItem[] = [
   {
     href: DERIVATIVE_MOVEMENT_PLAN_HREF,
     label: DERIVATIVE_MOVEMENT_PLAN_TITLE,
-    navKind: 'input',
+    navKind: 'plan',
   },
   {
     href: DERIVATIVE_MOVEMENT_INVENTORY_HREF,
     label: DERIVATIVE_MOVEMENT_INVENTORY_TITLE,
-    navKind: 'input',
+    navKind: 'fact',
   },
   {
     href: DERIVATIVE_MOVEMENT_CONSUMPTION_HREF,
     label: DERIVATIVE_MOVEMENT_CONSUMPTION_TITLE,
-    navKind: 'input',
+    navKind: 'fact',
   },
 ];
 
 const MATERIALS_NAV: readonly NavItem[] = [
   { href: '/materials', label: MATERIALS_SUMMARY_TITLE, exact: true, navKind: 'report' },
-  { href: '/materials/plan', label: MATERIALS_PLAN_TITLE, navKind: 'input' },
-  { href: '/materials/inventory', label: MATERIALS_INVENTORY_TITLE, navKind: 'input' },
-  { href: '/materials/receipts', label: MATERIALS_RECEIPTS_TITLE, navKind: 'input' },
-  { href: MATERIALS_CONSUMPTION_HREF, label: MATERIALS_CONSUMPTION_TITLE, navKind: 'input' },
+  { href: '/materials/plan', label: MATERIALS_PLAN_TITLE, navKind: 'plan' },
+  { href: '/materials/inventory', label: MATERIALS_INVENTORY_TITLE, navKind: 'fact' },
+  { href: '/materials/receipts', label: MATERIALS_RECEIPTS_TITLE, navKind: 'fact' },
+  { href: MATERIALS_CONSUMPTION_HREF, label: MATERIALS_CONSUMPTION_TITLE, navKind: 'fact' },
 ];
 
 function buildOpexNav(promotedGroupCodes: readonly OpexGroupCode[]): NavItem[] {
@@ -188,19 +193,19 @@ function buildOpexNav(promotedGroupCodes: readonly OpexGroupCode[]): NavItem[] {
   }
 
   items.push(
-    { href: '/opex/hr/plan', label: `HR · ${OPEX_HR_PLAN_TITLE}`, navKind: 'input' },
-    { href: '/opex/transport/plan', label: `Транспорт · ${OPEX_TRANSPORT_PLAN_TITLE}`, navKind: 'input' },
+    { href: '/opex/hr/plan', label: `HR · ${OPEX_HR_PLAN_TITLE}`, navKind: 'plan' },
+    { href: '/opex/transport/plan', label: `Транспорт · ${OPEX_TRANSPORT_PLAN_TITLE}`, navKind: 'plan' },
   );
 
   for (const code of promotedGroupCodes) {
     items.push({
       href: opexGroupPlanHrefPath(code),
       label: `${opexGroupName(code)} · ${OPEX_OTHER_PLAN_TITLE}`,
-      navKind: 'input',
+      navKind: 'plan',
     });
   }
 
-  items.push({ href: '/opex/other/plan', label: `${OPEX_OTHER_TITLE} · ${OPEX_OTHER_PLAN_TITLE}`, navKind: 'input' });
+  items.push({ href: '/opex/other/plan', label: `${OPEX_OTHER_TITLE} · ${OPEX_OTHER_PLAN_TITLE}`, navKind: 'plan' });
 
   return items;
 }
@@ -228,36 +233,36 @@ function buildCashflowNav(promotedGroupCodes: readonly OpexGroupCode[]): NavItem
     {
       href: CREDIT_RESOURCES_PLAN_HREF,
       label: CREDIT_RESOURCES_PLAN_TITLE,
-      navKind: 'input',
+      navKind: 'plan',
     },
     {
       href: CASHFLOW_PLAN_HREF,
       label: CASHFLOW_PLAN_TITLE,
-      navKind: 'input',
+      navKind: 'plan',
     },
     {
       href: CREDIT_RESOURCES_FACT_HREF,
       label: CREDIT_RESOURCES_FACT_TITLE,
-      navKind: 'input',
+      navKind: 'fact',
     },
     {
       href: CASHFLOW_FACT_HREF,
       label: CASHFLOW_FACT_TITLE,
-      navKind: 'input',
+      navKind: 'fact',
     },
-    { href: OPEX_HR_FACT_HREF, label: `HR · ${OPEX_HR_FACT_TITLE}`, navKind: 'input' },
-    { href: OPEX_TRANSPORT_FACT_HREF, label: `Транспорт · ${OPEX_TRANSPORT_FACT_TITLE}`, navKind: 'input' },
+    { href: OPEX_HR_FACT_HREF, label: `HR · ${OPEX_HR_FACT_TITLE}`, navKind: 'fact' },
+    { href: OPEX_TRANSPORT_FACT_HREF, label: `Транспорт · ${OPEX_TRANSPORT_FACT_TITLE}`, navKind: 'fact' },
   ];
 
   for (const code of promotedGroupCodes) {
     items.push({
       href: opexGroupFactHrefPath(code),
       label: `${opexGroupName(code)} · ${OPEX_OTHER_FACT_TITLE}`,
-      navKind: 'input',
+      navKind: 'fact',
     });
   }
 
-  items.push({ href: OPEX_OTHER_FACT_HREF, label: OPEX_OTHER_FACT_NAV_LABEL, navKind: 'input' });
+  items.push({ href: OPEX_OTHER_FACT_HREF, label: OPEX_OTHER_FACT_NAV_LABEL, navKind: 'fact' });
 
   return items;
 }
@@ -326,7 +331,11 @@ function currentNavLabel(
 
 function navItemLinkClassName(current: boolean, navKind: NavKind): string {
   const kindAccent =
-    navKind === 'report' ? 'border-l-2 border-l-sky-400/40 pl-[1.375rem]' : 'border-l-2 border-l-mark/55 pl-[1.375rem]';
+    navKind === 'report'
+      ? 'border-l-2 border-l-sky-400/40 pl-[1.375rem]'
+      : navKind === 'plan'
+        ? 'border-l-2 border-l-caution/75 pl-[1.375rem]'
+        : 'border-l-2 border-l-negative/85 pl-[1.375rem]';
   const state = current ? 'bg-sidebar-active text-white' : 'text-sidebar-muted hover:bg-white/5 hover:text-white';
   return `relative py-1 pr-3 text-xs leading-5 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${kindAccent} ${state}`;
 }
@@ -358,7 +367,7 @@ function NavGroup({
 }) {
   const [collapsed, setCollapsed] = useState(true);
   const reportItems = items.filter((item) => item.navKind === 'report');
-  const inputItems = items.filter((item) => item.navKind === 'input');
+  const inputItems = items.filter((item) => isInputNavKind(item.navKind));
 
   return (
     <div className="pb-1">
