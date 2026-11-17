@@ -141,7 +141,6 @@ export function DerivativeConsumptionScreen({ month, day }: { month: string; day
     >
       <DerivativeConsumptionTable
         document={movement.document}
-        month={selectedMonth}
         day={selectedDay}
         editable={editable}
         onReal={realError}

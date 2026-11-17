@@ -1779,27 +1779,27 @@
     "semantic_hash": ""
   },
   "src/features/derivative-movement/DerivativeConsumptionScreen.tsx": {
-    "mtime": 1794909015.6295998,
-    "seen": 1794909135.7539058,
-    "ast_hash": "d887acc68fd1f732be25b370433bb1a0",
+    "mtime": 1794912589.6025467,
+    "seen": 1794912630.7020764,
+    "ast_hash": "164bacba63103dbd827bc5639fc9983f",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsConsumptionScreen.tsx": {
-    "mtime": 1794907692.483243,
-    "seen": 1794907803.610269,
-    "ast_hash": "03402b480a9db484296c2c7c1db8855a",
+    "mtime": 1794912588.4961343,
+    "seen": 1794912630.7020764,
+    "ast_hash": "638582419313ac101b9f5c67a71ded05",
     "semantic_hash": ""
   },
   "src/features/materials/MaterialsConsumptionTable.tsx": {
-    "mtime": 1794907667.5935404,
-    "seen": 1794907803.610269,
-    "ast_hash": "d46b0c40b0ac591b5b25bfb29602a35d",
+    "mtime": 1794912569.5199478,
+    "seen": 1794912630.7020764,
+    "ast_hash": "abcadd9ee37c0c9798205a04dab1c7a9",
     "semantic_hash": ""
   },
   "src/features/derivative-movement/DerivativeConsumptionTable.tsx": {
-    "mtime": 1794909039.7831118,
-    "seen": 1794909135.7539058,
-    "ast_hash": "51b9b964f9e9eb840d62895fce40b2bb",
+    "mtime": 1794912587.6363993,
+    "seen": 1794912630.7020764,
+    "ast_hash": "d3e6448296ee9c7205f83433a16688bf",
     "semantic_hash": ""
   }
 }

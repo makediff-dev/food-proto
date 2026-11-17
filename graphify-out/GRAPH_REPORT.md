@@ -1,17 +1,17 @@
 # Graph Report - food-proto  (2026-11-17)
 
 ## Corpus Check
-- 296 files · ~175,570 words
+- 296 files · ~175,495 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 8 file(s) not represented in the graph (top: .mdc 5, (none) 1, .ico 1)
 
 ## Summary
-- 2790 nodes · 11003 edges · 98 communities (91 shown, 7 thin omitted)
+- 2790 nodes · 10999 edges · 98 communities (91 shown, 7 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 69 edges (avg confidence: 0.91)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `2467356d`
+- Built from commit: `b9c0ee36`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -106,7 +106,7 @@
 - Отчет подневный продаж
 - SettingsScreen.tsx
 - layout.tsx
-- setMaterialConsumptionDayQuantity
+- derivativeConsumptionPrice
 - production-journal.ts
 - FinishedGoodsMonthTable.tsx
 - mock-property-tax.ts
@@ -204,8 +204,8 @@ Cohesion: 0.06
 Nodes (33): source, assist, actions, enabled, noUnusedImports, noUnusedVariables, css, parser (+25 more)
 
 ### Community 10 - "materials.ts"
-Cohesion: 0.08
-Nodes (53): Свод, Свод, costExVat(), componentUnitPriceInternal(), derivativeConsumptionPrice(), MaterialGroupId, MaterialReceiptLine, MaterialUnit (+45 more)
+Cohesion: 0.09
+Nodes (46): mockConsumptionDays(), costExVat(), MaterialReceiptLine, addMoney(), addMoneyNullable(), bookClosingQuantity(), calculatedConsumptionQuantityForMaterialDay(), closingMaterialQuantity() (+38 more)
 
 ### Community 11 - "movement-plan.ts"
 Cohesion: 0.11
@@ -476,8 +476,8 @@ Cohesion: 0.09
 Nodes (36): metadata, SalesJournalPage(), metadata, SalesFactPage(), monthDates(), saleTotals, workingSales(), workingSalesInMonth() (+28 more)
 
 ### Community 83 - "MaterialsPlanScreen.tsx"
-Cohesion: 0.16
-Nodes (13): MaterialsPlanPage(), metadata, Material, MATERIAL_GROUPS, MATERIAL_UNITS, MaterialWarehouseId, MaterialWarehouseMovement, EntryFormRow (+5 more)
+Cohesion: 0.11
+Nodes (19): MaterialsPlanPage(), metadata, Material, MATERIAL_GROUPS, MATERIAL_UNITS, MaterialGroupId, MaterialUnit, MaterialWarehouseId (+11 more)
 
 ### Community 84 - "mock-opex.ts"
 Cohesion: 0.05
@@ -495,9 +495,9 @@ Nodes (24): metadata, SettingsPage(), DOCUMENT_COLLECTION_KEYS, DocumentCollecti
 Cohesion: 0.18
 Nodes (10): metadata, onest, RootLayout(), unbounded, readRole(), ROLE_STORAGE_KEY, writeRole(), RoleProvider() (+2 more)
 
-### Community 90 - "setMaterialConsumptionDayQuantity"
-Cohesion: 0.23
-Nodes (12): mockConsumptionDays(), calculatedConsumptionQuantityForMaterialDay(), consumptionQuantity(), emptyMaterialConsumptionLine(), materialConsumptionDayRecord(), materialConsumptionDaysList(), productionPiecesForDay(), realConsumptionQuantityForMaterial() (+4 more)
+### Community 90 - "derivativeConsumptionPrice"
+Cohesion: 0.26
+Nodes (13): Свод, Свод, componentUnitPriceInternal(), derivativeConsumptionPrice(), componentUnitPrice(), emptyPlanLine(), materialConsumptionPrice(), materialMonthPlansList() (+5 more)
 
 ### Community 91 - "production-journal.ts"
 Cohesion: 0.18
@@ -545,7 +545,7 @@ _Questions this graph is uniquely positioned to answer:_
   _High betweenness centrality (0.027) - this node is a cross-community bridge._
 - **Should `next` be split into smaller, more focused modules?**
   _Cohesion score 0.11692307692307692 - nodes in this community are weakly interconnected._
-- **Why does `derivativeConsumptionPrice()` connect `materials.ts` to `sales-plan.ts`, `Предметная область`, `derivatives.ts`, `derivative-cost.ts`, `derivative-movement.ts`?**
+- **Why does `derivativeConsumptionPrice()` connect `derivativeConsumptionPrice` to `sales-plan.ts`, `Предметная область`, `derivatives.ts`, `derivative-cost.ts`, `derivative-movement.ts`?**
   _High betweenness centrality (0.025) - this node is a cross-community bridge._
 - **Should `OpexGroupPlanScreen.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.12010796221322537 - nodes in this community are weakly interconnected._

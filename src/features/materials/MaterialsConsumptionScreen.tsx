@@ -138,7 +138,6 @@ export function MaterialsConsumptionScreen({ month, day }: { month: string; day:
     >
       <MaterialsConsumptionTable
         document={materials.document}
-        month={selectedMonth}
         day={selectedDay}
         editable={editable}
         onReal={realError}

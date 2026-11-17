@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 
 import {
   calculatedConsumptionQuantityForDerivativeDay,
-  realConsumptionQuantityForDerivative,
   realConsumptionQuantityForDerivativeDay,
 } from '@/domain/derivative-movement';
 import { derivativesList } from '@/domain/derivatives';
@@ -40,7 +39,6 @@ type ConsumptionLine = {
   deleted: boolean;
   calculated: number;
   realDay: number;
-  realMonth: number;
 };
 
 type ConsumptionSection = {
@@ -75,7 +73,7 @@ function dayGridDerivatives(
   return [...active, ...archived].sort((left, right) => left.name.localeCompare(right.name, 'ru'));
 }
 
-function buildSections(document: PrototypeDocument, month: string, day: string): ConsumptionSection[] {
+function buildSections(document: PrototypeDocument, day: string): ConsumptionSection[] {
   return DERIVATIVE_WORKSHOPS.flatMap((workshop) => {
     const rows = dayGridDerivatives(document, workshop.id, day).map((row) => ({
       id: row.id,
@@ -84,7 +82,6 @@ function buildSections(document: PrototypeDocument, month: string, day: string):
       deleted: row.deletedAt !== null,
       calculated: calculatedConsumptionQuantityForDerivativeDay(document, day, row.id),
       realDay: realConsumptionQuantityForDerivativeDay(document, day, row.id),
-      realMonth: realConsumptionQuantityForDerivative(document, row.id, month),
     }));
     if (rows.length === 0) {
       return [];
@@ -95,18 +92,16 @@ function buildSections(document: PrototypeDocument, month: string, day: string):
 
 export function DerivativeConsumptionTable({
   document,
-  month,
   day,
   editable,
   onReal,
 }: {
   document: PrototypeDocument;
-  month: string;
   day: string;
   editable: boolean;
   onReal: (derivativeId: string, quantity: number) => string | null;
 }) {
-  const sections = useMemo(() => buildSections(document, month, day), [document, month, day]);
+  const sections = useMemo(() => buildSections(document, day), [document, day]);
 
   if (sections.length === 0) {
     return (
@@ -128,11 +123,8 @@ export function DerivativeConsumptionTable({
             <th scope="col" className={valueHead}>
               <ColumnLabel label="Расчёт" hint="Количество по рецепту на выпуск этого дня" />
             </th>
-            <th scope="col" className={valueHead}>
-              <ColumnLabel label="Реальный" />
-            </th>
             <th scope="col" className={`${columnHeadingClassName} ${tableBorder.rightThick}`}>
-              <ColumnLabel label="Накоплено за месяц" />
+              <ColumnLabel label="Реальный" />
             </th>
           </tr>
         </thead>
@@ -179,7 +171,6 @@ function SectionBlock({
           </div>
         </th>
         <td className={bandCell} />
-        <td className={bandCell} />
         <td className={bandEnd} />
       </tr>
       {open
@@ -222,7 +213,7 @@ function DerivativeRow({
       <td className={`${valueCell} ${cellKindClassName.computed}`}>
         <QuantityRead value={row.calculated} unit={row.unit} />
       </td>
-      <td className={`${valueCell} ${cellKindClassName[inputKind(editable)]}`}>
+      <td className={`${valueEnd} ${cellKindClassName[inputKind(editable)]}`}>
         {editable ? (
           <QuantityCell
             label={`Реальный расход, ${row.name}`}
@@ -234,9 +225,6 @@ function DerivativeRow({
         ) : (
           <QuantityRead value={row.realDay} unit={row.unit} />
         )}
-      </td>
-      <td className={`${valueEnd} ${cellKindClassName.computed}`}>
-        <QuantityRead value={row.realMonth} unit={row.unit} />
       </td>
     </tr>
   );

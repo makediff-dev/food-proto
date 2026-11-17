@@ -13,7 +13,6 @@ import {
 import {
   calculatedConsumptionQuantityForMaterialDay,
   materialsList,
-  realConsumptionQuantityForMaterial,
   realConsumptionQuantityForMaterialDay,
 } from '@/domain/materials';
 import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
@@ -42,7 +41,6 @@ type ConsumptionLine = {
   deleted: boolean;
   calculated: number;
   realDay: number;
-  realMonth: number;
 };
 
 type ConsumptionSection = {
@@ -83,7 +81,7 @@ function dayGridMaterials(
   return [...active, ...archived];
 }
 
-function buildSections(document: PrototypeDocument, month: string, day: string): ConsumptionSection[] {
+function buildSections(document: PrototypeDocument, day: string): ConsumptionSection[] {
   return MATERIAL_GROUPS.flatMap((group) =>
     MATERIAL_WAREHOUSES.map((warehouse) => ({
       key: `${group.id}:${warehouse.id}`,
@@ -96,7 +94,6 @@ function buildSections(document: PrototypeDocument, month: string, day: string):
         deleted: row.deletedAt !== null,
         calculated: calculatedConsumptionQuantityForMaterialDay(document, day, row.id),
         realDay: realConsumptionQuantityForMaterialDay(document, day, warehouse.id, row.id),
-        realMonth: realConsumptionQuantityForMaterial(document, month, warehouse.id, row.id),
       })),
     })),
   );
@@ -104,18 +101,16 @@ function buildSections(document: PrototypeDocument, month: string, day: string):
 
 export function MaterialsConsumptionTable({
   document,
-  month,
   day,
   editable,
   onReal,
 }: {
   document: PrototypeDocument;
-  month: string;
   day: string;
   editable: boolean;
   onReal: (warehouseId: MaterialWarehouseId, materialId: string, quantity: number) => string | null;
 }) {
-  const sections = useMemo(() => buildSections(document, month, day), [document, month, day]);
+  const sections = useMemo(() => buildSections(document, day), [document, day]);
 
   return (
     <div className={tableFrameClassName}>
@@ -129,11 +124,8 @@ export function MaterialsConsumptionTable({
             <th scope="col" className={valueHead}>
               <ColumnLabel label="Расчёт" hint="Количество по рецепту на выпуск этого дня" />
             </th>
-            <th scope="col" className={valueHead}>
-              <ColumnLabel label="Реальный" />
-            </th>
             <th scope="col" className={`${columnHeadingClassName} ${tableBorder.rightThick}`}>
-              <ColumnLabel label="Накоплено за месяц" />
+              <ColumnLabel label="Реальный" />
             </th>
           </tr>
         </thead>
@@ -180,7 +172,6 @@ function SectionBlock({
           </div>
         </th>
         <td className={bandCell} />
-        <td className={bandCell} />
         <td className={bandEnd} />
       </tr>
       {open && count === 0 ? (
@@ -188,7 +179,6 @@ function SectionBlock({
           <th scope="row" className={entityNameRowClassName('repeated')}>
             <span className="text-sm text-muted">Позиций нет. Добавьте наименование во вводе плана.</span>
           </th>
-          <td className={`${valueCell} ${cellKindClassName.computed}`} />
           <td className={`${valueCell} ${cellKindClassName.computed}`} />
           <td className={`${valueEnd} ${cellKindClassName.computed}`} />
         </tr>
@@ -233,7 +223,7 @@ function MaterialRow({
       <td className={`${valueCell} ${cellKindClassName.computed}`}>
         <QuantityRead value={row.calculated} unit={row.unit} />
       </td>
-      <td className={`${valueCell} ${cellKindClassName[inputKind(editable)]}`}>
+      <td className={`${valueEnd} ${cellKindClassName[inputKind(editable)]}`}>
         {editable ? (
           <QuantityCell
             label={`Реальный расход, ${row.name}`}
@@ -245,9 +235,6 @@ function MaterialRow({
         ) : (
           <QuantityRead value={row.realDay} unit={row.unit} />
         )}
-      </td>
-      <td className={`${valueEnd} ${cellKindClassName.computed}`}>
-        <QuantityRead value={row.realMonth} unit={row.unit} />
       </td>
     </tr>
   );
