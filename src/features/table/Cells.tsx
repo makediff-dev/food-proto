@@ -71,6 +71,13 @@ export function MoneyAmount({
   );
 }
 
+function editableDraft(value: number | null, format: (value: number) => string, blankIfZero: boolean): string {
+  if (value === null || (blankIfZero && value === 0)) {
+    return '';
+  }
+  return format(value);
+}
+
 /** Сумма в копейках. Без `onChange` — только показ; с `onChange` — правка по blur. */
 export function MoneyCell({
   label = 'Сумма',
@@ -82,6 +89,7 @@ export function MoneyCell({
   inputClassName = `${gridFieldClassName} text-ink`,
   unitClassName = 'shrink-0 text-sm text-ink',
   whole = false,
+  blankIfZero,
   onChange,
 }: {
   label?: string;
@@ -94,6 +102,8 @@ export function MoneyCell({
   unitClassName?: string;
   /** Выручка, Т-проток и себестоимость объёма — целые рубли. */
   whole?: boolean;
+  /** Ноль в инпуте пустой; пустой blur → 0. По умолчанию включено при `onChange`. */
+  blankIfZero?: boolean;
   onChange?: CellCommit;
 }) {
   if (value === null && !onChange) {
@@ -104,14 +114,17 @@ export function MoneyCell({
     return <MoneyAmount amount={value ?? 0} signed={signed} sense={sense} whole={whole} />;
   }
 
+  const blank = blankIfZero ?? true;
+
   return (
     <EditableNumber
       label={label}
-      value={value === null ? '' : formatMoneyDraft(value)}
+      value={editableDraft(value, formatMoneyDraft, blank)}
       inputMode="decimal"
       unit="₽"
       invalidMessage={invalidMessage}
       parse={parse}
+      blankIfZero={blank}
       inputClassName={inputClassName}
       unitClassName={unitClassName}
       onChange={onChange}
@@ -127,6 +140,7 @@ export function PercentCell({
   signed = false,
   fractionDigits = 2,
   invalidMessage = DEFAULT_PERCENT_ERROR,
+  blankIfZero,
   onChange,
 }: {
   label?: string;
@@ -136,6 +150,8 @@ export function PercentCell({
   /** Знаков после запятой, когда `scale` — сотые. Рентабельность — один. */
   fractionDigits?: 1 | 2;
   invalidMessage?: string;
+  /** Ноль в инпуте пустой; пустой blur → 0. По умолчанию включено при `onChange`. */
+  blankIfZero?: boolean;
   onChange?: CellCommit;
 }) {
   if (value === null && !onChange) {
@@ -154,14 +170,17 @@ export function PercentCell({
     );
   }
 
+  const blank = blankIfZero ?? true;
+
   return (
     <EditableNumber
       label={label}
-      value={value === null ? '' : String(value)}
+      value={editableDraft(value, String, blank)}
       inputMode="numeric"
       unit="%"
       invalidMessage={invalidMessage}
       parse={parsePercentWhole}
+      blankIfZero={blank}
       onChange={onChange}
     />
   );
@@ -175,6 +194,7 @@ export function HundredthsCell({
   sense = 'income',
   unit,
   invalidMessage = 'Укажите число с двумя знаками после запятой.',
+  blankIfZero,
   onChange,
 }: {
   label?: string;
@@ -183,6 +203,8 @@ export function HundredthsCell({
   sense?: VarianceSense;
   unit?: string;
   invalidMessage?: string;
+  /** Ноль в инпуте пустой; пустой blur → 0. По умолчанию включено при `onChange`. */
+  blankIfZero?: boolean;
   onChange?: CellCommit;
 }) {
   if (value === null && !onChange) {
@@ -201,14 +223,17 @@ export function HundredthsCell({
     );
   }
 
+  const blank = blankIfZero ?? true;
+
   return (
     <EditableNumber
       label={label}
-      value={value === null ? '' : formatMoneyDraft(value)}
+      value={editableDraft(value, formatMoneyDraft, blank)}
       inputMode="decimal"
       unit={unit}
       invalidMessage={invalidMessage}
       parse={parseSignedHundredths}
+      blankIfZero={blank}
       onChange={onChange}
     />
   );
@@ -223,6 +248,7 @@ export function IntegerCell({
   sense = 'income',
   allowNegative = false,
   invalidMessage = DEFAULT_INTEGER_ERROR,
+  blankIfZero,
   onChange,
 }: {
   label?: string;
@@ -233,6 +259,8 @@ export function IntegerCell({
   /** Разрешить отрицательный ввод (остаток на производстве). */
   allowNegative?: boolean;
   invalidMessage?: string;
+  /** Ноль в инпуте пустой; пустой blur → 0. По умолчанию включено при `onChange`. */
+  blankIfZero?: boolean;
   onChange?: CellCommit;
 }) {
   if (value === null && !onChange) {
@@ -251,14 +279,17 @@ export function IntegerCell({
     );
   }
 
+  const blank = blankIfZero ?? true;
+
   return (
     <EditableNumber
       label={label}
-      value={value === null ? '' : String(value)}
+      value={editableDraft(value, String, blank)}
       inputMode="numeric"
       unit={unit}
       invalidMessage={invalidMessage}
       parse={allowNegative ? parseSignedInteger : parseNonNegativeInteger}
+      blankIfZero={blank}
       onChange={onChange}
     />
   );
@@ -286,6 +317,7 @@ export function VatMoneyCell({
   sense = 'income',
   invalidMessage = DEFAULT_MONEY_ERROR,
   whole = false,
+  blankIfZero,
   onChangeWithVat,
   onChangeExVat,
 }: {
@@ -297,6 +329,8 @@ export function VatMoneyCell({
   invalidMessage?: string;
   /** Выручка и себестоимость объёма — целые рубли. */
   whole?: boolean;
+  /** Ноль в инпуте пустой; пустой blur → 0. По умолчанию включено при правке. */
+  blankIfZero?: boolean;
   onChangeWithVat?: CellCommit;
   onChangeExVat?: CellCommit;
 }) {
@@ -318,6 +352,7 @@ export function VatMoneyCell({
           sense={sense}
           invalidMessage={invalidMessage}
           whole={whole}
+          blankIfZero={blankIfZero}
           onChange={onChangeWithVat}
         />
       }
@@ -329,6 +364,7 @@ export function VatMoneyCell({
           sense={sense}
           invalidMessage={invalidMessage}
           whole={whole}
+          blankIfZero={blankIfZero}
           onChange={onChangeExVat}
         />
       }
@@ -344,6 +380,7 @@ export function ExVatMoneyCell({
   sense = 'income',
   invalidMessage = DEFAULT_MONEY_ERROR,
   whole = false,
+  blankIfZero,
   onChange,
 }: {
   label?: string;
@@ -352,6 +389,8 @@ export function ExVatMoneyCell({
   sense?: VarianceSense;
   invalidMessage?: string;
   whole?: boolean;
+  /** Ноль в инпуте пустой; пустой blur → 0. По умолчанию включено при `onChange`. */
+  blankIfZero?: boolean;
   onChange?: CellCommit;
 }) {
   if (value === null && !onChange) {
@@ -367,6 +406,7 @@ export function ExVatMoneyCell({
         sense={sense}
         invalidMessage={invalidMessage}
         whole={whole}
+        blankIfZero={blankIfZero}
         onChange={onChange}
       />
     </CaptionedCell>
@@ -380,6 +420,7 @@ function EditableNumber({
   unit,
   invalidMessage,
   parse,
+  blankIfZero = false,
   inputClassName = `${gridFieldClassName} text-ink`,
   unitClassName = 'shrink-0 text-sm text-ink',
   onChange,
@@ -390,6 +431,7 @@ function EditableNumber({
   unit?: string;
   invalidMessage: string;
   parse: (raw: string) => number | null;
+  blankIfZero?: boolean;
   inputClassName?: string;
   unitClassName?: string;
   onChange: CellCommit;
@@ -401,6 +443,18 @@ function EditableNumber({
   const shown = draft ?? value;
 
   function commit(raw: string) {
+    if (blankIfZero && raw.trim() === '') {
+      const rejection = onChange(0);
+      if (rejection) {
+        setError(rejection);
+        setDraft(raw);
+        return;
+      }
+      setDraft(null);
+      setError(null);
+      return;
+    }
+
     const parsed = parse(raw);
     if (parsed === null) {
       setError(invalidMessage);

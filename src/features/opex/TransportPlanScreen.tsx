@@ -150,7 +150,6 @@ export function TransportPlanScreen({ month }: { month: string }) {
                               label={`План, ${block.quantityUnit}, ${carrier.name}`}
                               value={carrier.planQuantityThousandths}
                               unit={block.quantityUnit}
-                              blankIfZero
                               onChange={(next) => {
                                 const rejection = opex.setTransportHirePlan(
                                   selectedMonth,
@@ -303,7 +302,6 @@ export function TransportPlanScreen({ month }: { month: string }) {
                             label={`л/100 км, ${vehicle.name}`}
                             value={vehicle.litersPer100KmThousandths}
                             unit="л"
-                            blankIfZero
                             onChange={(next) => {
                               const rejection = opex.setTransportOwnPlan(
                                 selectedMonth,
@@ -351,7 +349,6 @@ export function TransportPlanScreen({ month }: { month: string }) {
                             label={`План км, ${vehicle.name}`}
                             value={vehicle.planKmThousandths}
                             unit="км"
-                            blankIfZero
                             onChange={(next) => {
                               const rejection = opex.setTransportOwnPlan(
                                 selectedMonth,

@@ -6,9 +6,9 @@ import type { DerivativeMovementRow, DerivativeMovementSection } from '@/domain/
 import { MaterialNormDeviation } from '@/features/materials/MaterialNormDeviation';
 import { QuantityRead } from '@/features/materials/QuantityCell';
 import {
+  DERIVATIVE_RECEIPT_SUB_BANNERS,
   MATERIALS_CLOSING_SUB_BANNERS,
   MATERIALS_CONSUMPTION_SUB_BANNERS,
-  MATERIALS_RECEIPT_SUB_BANNERS,
   ReportSubBannerColumnHeaders,
 } from '@/features/movement/FinishedGoodsNormativeColumnHeading';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
@@ -94,7 +94,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
       {
         key: 'factReceipt',
         label: 'Кол-во',
-        hint: 'Пока журнала выпуска нет — тот же рекомендуемый объём',
+        hint: 'Сколько производных действительно произвели',
       },
       {
         key: 'factReceiptPrice',
@@ -102,7 +102,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
         hint: 'Себестоимость единицы по фактическим ценам расхода сырья',
       },
       { key: 'factReceiptCost', label: 'Стоимость' },
-      { key: 'receiptDeviation', label: 'Кол-во' },
+      { key: 'receiptDeviation', label: 'Кол-во', hint: 'Реальный − план' },
       { key: 'receiptDeviationPrice', label: 'Себест.' },
       { key: 'receiptDeviationCost', label: 'Стоимость' },
     ],
@@ -192,7 +192,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
 ];
 
 const DERIVATIVE_SUMMARY_SUB_BANNERS = [
-  ...MATERIALS_RECEIPT_SUB_BANNERS,
+  ...DERIVATIVE_RECEIPT_SUB_BANNERS,
   ...MATERIALS_CONSUMPTION_SUB_BANNERS,
   ...MATERIALS_CLOSING_SUB_BANNERS,
 ];
@@ -205,7 +205,7 @@ const COLUMN_KIND: Record<ColumnKey, CellKind> = {
   planReceipt: 'computed',
   planReceiptPrice: 'computed',
   planReceiptCost: 'computed',
-  factReceipt: 'computed',
+  factReceipt: 'repeated',
   factReceiptPrice: 'computed',
   factReceiptCost: 'computed',
   receiptDeviation: 'computed',
@@ -435,8 +435,8 @@ function WorkshopCell({ column, section }: { column: ColumnKey; section: Derivat
     return (
       <VatMoneyCell
         label="Стоимость отклонения инвентаризации"
-        withVat={section.closingInventoryDeviationCost.withVat}
-        exVat={section.closingInventoryDeviationCost.exVat}
+        withVat={section.closingInventoryDeviationCost?.withVat ?? null}
+        exVat={section.closingInventoryDeviationCost?.exVat ?? null}
         signed
       />
     );
@@ -652,8 +652,8 @@ function RowCell({ column, row }: { column: ColumnKey; row: DerivativeMovementRo
       return (
         <VatMoneyCell
           label="Стоимость отклонения инвентаризации"
-          withVat={row.closingInventoryDeviationCost.withVat}
-          exVat={row.closingInventoryDeviationCost.exVat}
+          withVat={row.closingInventoryDeviationCost?.withVat ?? null}
+          exVat={row.closingInventoryDeviationCost?.exVat ?? null}
           signed
         />
       );

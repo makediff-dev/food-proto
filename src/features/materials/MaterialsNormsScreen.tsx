@@ -122,7 +122,6 @@ function NormCell({
       label={label}
       value={quantity ?? 0}
       unit={unit}
-      blankIfZero
       onChange={(value) => onCommit(value === 0 ? null : value)}
     />
   );

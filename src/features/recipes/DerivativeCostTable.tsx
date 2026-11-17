@@ -45,7 +45,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
     label: 'Себестоимость за кг',
     columns: [
       { key: 'planCostPerKg', label: 'План', hint: 'По плановым ценам сырья, Rec&Calc' },
-      { key: 'factCostPerKg', label: 'Факт', hint: 'По фактическим ценам расхода сырья' },
+      { key: 'factCostPerKg', label: 'Факт', hint: 'По фактическим ценам и реальному расходу за месяц' },
       { key: 'costPerKgDeviation', label: 'Откл.' },
     ],
   },

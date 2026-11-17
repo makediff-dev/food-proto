@@ -28,9 +28,14 @@ import { plannedProductionVolumePieces } from '@/domain/finished-goods';
 import { ratioRound } from '@/domain/money';
 import { maxProductionEntryOccurredOn } from '@/domain/production-journal';
 import { isQuantityThousandths, QUANTITY_SCALE } from '@/domain/quantity';
-import { consumptionQuantityForComponent } from '@/domain/recipe-consumption';
+import { consumptionQuantityForComponent, factConsumptionQuantityForMaterial } from '@/domain/recipe-consumption';
 import { planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 import { MAX_PRICE_KOPECKS } from '@/domain/units';
+
+export {
+  calculatedConsumptionQuantityForMaterialDay,
+  factConsumptionQuantityForMaterial,
+} from '@/domain/recipe-consumption';
 
 export type MaterialNameRejection = 'empty' | 'too-long' | 'duplicate' | 'missing' | 'locked';
 
@@ -854,37 +859,12 @@ function deviationCostMoney(quantity: number, price: MaterialMoney): MaterialMon
   };
 }
 
-function productionPieces(document: PrototypeDocument, month: string, mode: 'plan' | 'fact'): Map<string, number> {
+function productionPieces(document: PrototypeDocument, month: string): Map<string, number> {
   const pieces = new Map<string, number>();
-  if (mode === 'plan') {
-    for (const product of document.products) {
-      const volume = plannedProductionVolumePieces(document, month, product.id);
-      if (volume !== 0) {
-        pieces.set(product.id, volume);
-      }
-    }
-    return pieces;
-  }
-
-  for (const entry of document.productionEntries ?? []) {
-    if (!entry.occurredOn.startsWith(`${month}-`)) {
-      continue;
-    }
-    for (const line of entry.lines) {
-      pieces.set(line.productId, (pieces.get(line.productId) ?? 0) + line.pieces);
-    }
-  }
-  return pieces;
-}
-
-function productionPiecesForDay(document: PrototypeDocument, occurredOn: string): Map<string, number> {
-  const pieces = new Map<string, number>();
-  for (const entry of document.productionEntries ?? []) {
-    if (entry.occurredOn !== occurredOn) {
-      continue;
-    }
-    for (const line of entry.lines) {
-      pieces.set(line.productId, (pieces.get(line.productId) ?? 0) + line.pieces);
+  for (const product of document.products) {
+    const volume = plannedProductionVolumePieces(document, month, product.id);
+    if (volume !== 0) {
+      pieces.set(product.id, volume);
     }
   }
   return pieces;
@@ -995,15 +975,6 @@ export function realConsumptionQuantityForMaterialDay(
   return day?.lines.find((line) => line.materialId === materialId)?.quantity ?? 0;
 }
 
-/** Расчётный расход позиции за день: рецепт × выпуск этого дня. */
-export function calculatedConsumptionQuantityForMaterialDay(
-  document: PrototypeDocument,
-  occurredOn: string,
-  materialId: string,
-): number {
-  return consumptionQuantity(document, materialId, productionPiecesForDay(document, occurredOn));
-}
-
 /**
  * Остаток на конец склада.
  * `DSM Meat!DP8 = L8 + BF8 − Q8` без возвратов и списаний.
@@ -1025,7 +996,7 @@ export function bookClosingQuantity(
   const opening = openingQuantityFor(document, month, warehouseId, materialId);
   const planLine = planLineFor(document, month, warehouseId, materialId);
   const planReceipt = planLine?.receiptQuantity ?? 0;
-  const planPieces = productionPieces(document, month, 'plan');
+  const planPieces = productionPieces(document, month);
   const planConsumption = consumptionQuantity(document, materialId, planPieces);
   return closingMaterialQuantity(opening, planReceipt, planConsumption);
 }
@@ -1043,7 +1014,6 @@ function movementRow(
   warehouseId: MaterialWarehouseId,
   material: Material,
   planPieces: ReadonlyMap<string, number>,
-  factPieces: ReadonlyMap<string, number>,
 ): MaterialMovementRow {
   const planLine = planLineFor(document, month, warehouseId, material.id);
   const priceWithVat = planLine?.priceWithVat ?? 0;
@@ -1052,7 +1022,7 @@ function movementRow(
   const receipt = receiptFact(document, month, warehouseId, material.id, material.vatPercent);
   const planReceiptQuantity = planLine?.receiptQuantity ?? 0;
   const planConsumptionQuantity = consumptionQuantity(document, material.id, planPieces);
-  const factConsumptionQuantity = consumptionQuantity(document, material.id, factPieces);
+  const factConsumptionQuantity = factConsumptionQuantityForMaterial(document, material.id, month);
   const realConsumptionQuantity = realConsumptionQuantityForMaterial(document, month, warehouseId, material.id);
   const bookClosing = closingMaterialQuantity(openingQuantity, planReceiptQuantity, planConsumptionQuantity);
   const currentClosing = closingMaterialQuantity(openingQuantity, receipt.quantity, realConsumptionQuantity);
@@ -1174,7 +1144,6 @@ function gridMaterials(
   warehouseId: MaterialWarehouseId,
   month: string,
   planPieces: ReadonlyMap<string, number>,
-  factPieces: ReadonlyMap<string, number>,
 ): Material[] {
   const materials = materialsList(document).filter(
     (item) => item.groupId === groupId && item.warehouseId === warehouseId,
@@ -1190,7 +1159,7 @@ function gridMaterials(
       return true;
     }
     const planConsumption = consumptionQuantity(document, item.id, planPieces);
-    const factConsumption = consumptionQuantity(document, item.id, factPieces);
+    const factConsumption = factConsumptionQuantityForMaterial(document, item.id, month);
     const realConsumption = realConsumptionQuantityForMaterial(document, month, warehouseId, item.id);
     return (
       openingQuantityFor(document, month, warehouseId, item.id) !== 0 ||
@@ -1331,8 +1300,7 @@ function sumRows(rows: readonly MaterialMovementRow[]): MaterialMovementTotals {
 
 /** Движение четырёх групп. Склад 1 и склад 2 не складываются. */
 export function materialMovementMonth(document: PrototypeDocument, month: string): MaterialMovementMonth {
-  const planPieces = productionPieces(document, month, 'plan');
-  const factPieces = productionPieces(document, month, 'fact');
+  const planPieces = productionPieces(document, month);
 
   return {
     month,
@@ -1340,8 +1308,8 @@ export function materialMovementMonth(document: PrototypeDocument, month: string
       groupId: group.id,
       name: group.name,
       warehouses: MATERIAL_WAREHOUSES.map((warehouse) => {
-        const rows = gridMaterials(document, group.id, warehouse.id, month, planPieces, factPieces).map((material) =>
-          movementRow(document, month, warehouse.id, material, planPieces, factPieces),
+        const rows = gridMaterials(document, group.id, warehouse.id, month, planPieces).map((material) =>
+          movementRow(document, month, warehouse.id, material, planPieces),
         );
         return {
           warehouseId: warehouse.id,

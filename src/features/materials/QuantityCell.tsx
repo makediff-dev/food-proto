@@ -31,7 +31,7 @@ export function QuantityCell({
   value,
   unit,
   allowNegative = false,
-  blankIfZero = false,
+  blankIfZero = true,
   onChange,
 }: {
   label: string;

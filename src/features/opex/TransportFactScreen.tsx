@@ -162,7 +162,6 @@ export function TransportFactScreen({ month, day }: { month: string; day: string
                                 label={`Кол-во, ${carrier.name}`}
                                 value={values.quantityThousandths}
                                 unit={block.quantityUnit}
-                                blankIfZero
                                 onChange={(next) => {
                                   const rejection = opex.setTransportHireDay(
                                     selectedDay,
@@ -239,7 +238,6 @@ export function TransportFactScreen({ month, day }: { month: string; day: string
                               label={`Спидометр, ${vehicle.name}`}
                               value={values.odometerThousandths}
                               unit="км"
-                              blankIfZero
                               onChange={(next) => {
                                 const rejection = opex.setTransportOwnDay(
                                   selectedDay,

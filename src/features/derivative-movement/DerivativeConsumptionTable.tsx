@@ -5,6 +5,7 @@ import { type CSSProperties, useMemo, useState } from 'react';
 import {
   calculatedConsumptionQuantityForDerivativeDay,
   realConsumptionQuantityForDerivativeDay,
+  realReceiptQuantityForDerivativeDay,
 } from '@/domain/derivative-movement';
 import { derivativesList } from '@/domain/derivatives';
 import {
@@ -16,6 +17,8 @@ import {
 import { QuantityCell, QuantityRead } from '@/features/materials/QuantityCell';
 import { IconChevronDown, IconChevronRight } from '@/features/shell/Icons';
 import {
+  blockCornerClassName,
+  blockHeadingClassName,
   ColumnLabel,
   categoryBandClassName,
   categoryNameClassName,
@@ -24,6 +27,7 @@ import {
   columnDividerClassName,
   columnHeadingClassName,
   entityNameRowClassName,
+  keepWithNext,
   nameHeadingClassName,
   ProductIndex,
   stickyCategoryCellClassName,
@@ -39,6 +43,7 @@ type ConsumptionLine = {
   name: string;
   unit: Derivative['unit'];
   deleted: boolean;
+  realReceiptDay: number;
   calculated: number;
   realDay: number;
 };
@@ -70,7 +75,10 @@ function dayGridDerivatives(
   const items = derivativesList(document).filter((item) => item.workshopId === workshopId);
   const active = items.filter((item) => item.deletedAt === null);
   const archived = items.filter(
-    (item) => item.deletedAt !== null && realConsumptionQuantityForDerivativeDay(document, occurredOn, item.id) !== 0,
+    (item) =>
+      item.deletedAt !== null &&
+      (realReceiptQuantityForDerivativeDay(document, occurredOn, item.id) !== 0 ||
+        realConsumptionQuantityForDerivativeDay(document, occurredOn, item.id) !== 0),
   );
   return [...active, ...archived].sort((left, right) => left.name.localeCompare(right.name, 'ru'));
 }
@@ -82,6 +90,7 @@ function buildSections(document: PrototypeDocument, day: string): ConsumptionSec
       name: row.name,
       unit: row.unit,
       deleted: row.deletedAt !== null,
+      realReceiptDay: realReceiptQuantityForDerivativeDay(document, day, row.id),
       calculated: calculatedConsumptionQuantityForDerivativeDay(document, day, row.id),
       realDay: realConsumptionQuantityForDerivativeDay(document, day, row.id),
     }));
@@ -96,11 +105,13 @@ export function DerivativeConsumptionTable({
   document,
   day,
   editable,
+  onReceipt,
   onReal,
 }: {
   document: PrototypeDocument;
   day: string;
   editable: boolean;
+  onReceipt: (derivativeId: string, quantity: number) => string | null;
   onReal: (derivativeId: string, quantity: number) => string | null;
 }) {
   const sections = useMemo(() => buildSections(document, day), [document, day]);
@@ -120,14 +131,29 @@ export function DerivativeConsumptionTable({
         <caption className="sr-only">{`Расход в производстве, ${day}`}</caption>
         <thead ref={headRef} className={stickyHeadClassName}>
           <tr>
+            <th className={`sticky left-0 z-40 ${blockCornerClassName} ${tableBorder.rightThick}`} />
+            <th scope="colgroup" className={`${blockHeadingClassName} ${tableBorder.rightThick}`}>
+              {keepWithNext('Произведено производных')}
+            </th>
+            <th colSpan={2} scope="colgroup" className={`${blockHeadingClassName} ${tableBorder.rightThick}`}>
+              {keepWithNext('Расход в производство')}
+            </th>
+          </tr>
+          <tr>
             <th scope="col" className={`sticky left-0 z-40 ${nameHeadingClassName}`}>
               <ColumnLabel label="Производная" />
+            </th>
+            <th scope="col" className={`${columnHeadingClassName} ${tableBorder.rightThick}`}>
+              <ColumnLabel label="Реальный" hint="Сколько производных действительно произвели за этот день" />
             </th>
             <th scope="col" className={valueHead}>
               <ColumnLabel label="Расчёт" hint="Количество по рецепту на выпуск этого дня" />
             </th>
             <th scope="col" className={`${columnHeadingClassName} ${tableBorder.rightThick}`}>
-              <ColumnLabel label="Реальный" />
+              <ColumnLabel
+                label="Реальный"
+                hint="Сколько производных действительно списали в производство за этот день"
+              />
             </th>
           </tr>
         </thead>
@@ -138,6 +164,7 @@ export function DerivativeConsumptionTable({
               section={section}
               editable={editable}
               categoryStickyStyle={categoryStickyStyle}
+              onReceipt={onReceipt}
               onReal={onReal}
             />
           ))}
@@ -151,11 +178,13 @@ function SectionBlock({
   section,
   editable,
   categoryStickyStyle,
+  onReceipt,
   onReal,
 }: {
   section: ConsumptionSection;
   editable: boolean;
   categoryStickyStyle: CSSProperties | undefined;
+  onReceipt: (derivativeId: string, quantity: number) => string | null;
   onReal: (derivativeId: string, quantity: number) => string | null;
 }) {
   const [open, setOpen] = useState(true);
@@ -185,6 +214,7 @@ function SectionBlock({
             </span>
           </div>
         </th>
+        <td className={`${bandEnd} ${stickyCategoryCellClassName}`} style={categoryStickyStyle} />
         <td className={`${bandCell} ${stickyCategoryCellClassName}`} style={categoryStickyStyle} />
         <td className={`${bandEnd} ${stickyCategoryCellClassName}`} style={categoryStickyStyle} />
       </tr>
@@ -195,6 +225,7 @@ function SectionBlock({
               row={row}
               index={index + 1}
               editable={editable && !row.deleted}
+              onReceipt={(quantity) => onReceipt(row.id, quantity)}
               onReal={(quantity) => onReal(row.id, quantity)}
             />
           ))
@@ -207,11 +238,13 @@ function DerivativeRow({
   row,
   index,
   editable,
+  onReceipt,
   onReal,
 }: {
   row: ConsumptionLine;
   index: number;
   editable: boolean;
+  onReceipt: (quantity: number) => string | null;
   onReal: (quantity: number) => string | null;
 }) {
   return (
@@ -225,18 +258,24 @@ function DerivativeRow({
           </span>
         </span>
       </th>
+      <td className={`${valueEnd} ${cellKindClassName[inputKind(editable)]}`}>
+        {editable ? (
+          <QuantityCell
+            label={`Реальный выпуск, ${row.name}`}
+            value={row.realReceiptDay}
+            unit={row.unit}
+            onChange={onReceipt}
+          />
+        ) : (
+          <QuantityRead value={row.realReceiptDay} unit={row.unit} />
+        )}
+      </td>
       <td className={`${valueCell} ${cellKindClassName.computed}`}>
         <QuantityRead value={row.calculated} unit={row.unit} />
       </td>
       <td className={`${valueEnd} ${cellKindClassName[inputKind(editable)]}`}>
         {editable ? (
-          <QuantityCell
-            label={`Реальный расход, ${row.name}`}
-            value={row.realDay}
-            unit={row.unit}
-            blankIfZero
-            onChange={onReal}
-          />
+          <QuantityCell label={`Реальный расход, ${row.name}`} value={row.realDay} unit={row.unit} onChange={onReal} />
         ) : (
           <QuantityRead value={row.realDay} unit={row.unit} />
         )}

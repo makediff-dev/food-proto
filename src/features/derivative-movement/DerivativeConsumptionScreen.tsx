@@ -94,6 +94,11 @@ export function DerivativeConsumptionScreen({ month, day }: { month: string; day
     );
   }
 
+  function receiptError(derivativeId: string, quantity: number): string | null {
+    const rejection = movement.setReceiptDay(selectedDay, derivativeId, quantity, today);
+    return rejection ? DERIVATIVE_CONSUMPTION_ERROR[rejection] : null;
+  }
+
   function realError(derivativeId: string, quantity: number): string | null {
     const rejection = movement.setConsumptionDay(selectedDay, derivativeId, quantity, today);
     return rejection ? DERIVATIVE_CONSUMPTION_ERROR[rejection] : null;
@@ -145,6 +150,7 @@ export function DerivativeConsumptionScreen({ month, day }: { month: string; day
           document={movement.document}
           day={selectedDay}
           editable={editable}
+          onReceipt={receiptError}
           onReal={realError}
         />
       </div>

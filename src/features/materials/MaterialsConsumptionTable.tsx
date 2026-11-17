@@ -240,13 +240,7 @@ function MaterialRow({
       </td>
       <td className={`${valueEnd} ${cellKindClassName[inputKind(editable)]}`}>
         {editable ? (
-          <QuantityCell
-            label={`Реальный расход, ${row.name}`}
-            value={row.realDay}
-            unit={row.unit}
-            blankIfZero
-            onChange={onReal}
-          />
+          <QuantityCell label={`Реальный расход, ${row.name}`} value={row.realDay} unit={row.unit} onChange={onReal} />
         ) : (
           <QuantityRead value={row.realDay} unit={row.unit} />
         )}

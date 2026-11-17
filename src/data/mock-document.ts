@@ -19,6 +19,7 @@ import { mockPropertyTaxMonths, mockPropertyTaxPayments } from '@/data/mock-prop
 import {
   calculatedConsumptionQuantityForDerivativeDay,
   setDerivativeConsumptionDayQuantity,
+  setDerivativeReceiptDayQuantity,
 } from '@/domain/derivative-movement';
 import {
   catalogCategories,
@@ -624,6 +625,33 @@ function mockConsumptionDays(base: PrototypeDocument): {
   let document = base;
 
   for (const occurredOn of days) {
+    const derivatives = document.derivatives ?? [];
+    for (let pass = 0; pass < derivatives.length; pass += 1) {
+      let changed = false;
+      for (const derivative of derivatives) {
+        const calculated = calculatedConsumptionQuantityForDerivativeDay(document, occurredOn, derivative.id);
+        if (calculated <= 0) {
+          continue;
+        }
+        const receiptQuantity = calculated;
+        const consumptionQuantity = derivative.id === 'derivative-cutlet' ? boostTenPercent(calculated) : calculated;
+        const nextDoc = setDerivativeConsumptionDayQuantity(
+          setDerivativeReceiptDayQuantity(document, occurredOn, derivative.id, receiptQuantity, today),
+          occurredOn,
+          derivative.id,
+          consumptionQuantity,
+          today,
+        );
+        if (nextDoc !== document) {
+          document = nextDoc;
+          changed = true;
+        }
+      }
+      if (!changed) {
+        break;
+      }
+    }
+
     for (const warehouse of MATERIAL_WAREHOUSES) {
       for (const material of materialsList(document).filter((item) => item.warehouseId === warehouse.id)) {
         const calculated = calculatedConsumptionQuantityForMaterialDay(document, occurredOn, material.id);
@@ -634,15 +662,6 @@ function mockConsumptionDays(base: PrototypeDocument): {
           warehouse.id === 'warehouse-1' && material.id === 'material-beef' ? boostTenPercent(calculated) : calculated;
         document = setMaterialConsumptionDayQuantity(document, occurredOn, warehouse.id, material.id, quantity, today);
       }
-    }
-
-    for (const derivative of document.derivatives ?? []) {
-      const calculated = calculatedConsumptionQuantityForDerivativeDay(document, occurredOn, derivative.id);
-      if (calculated <= 0) {
-        continue;
-      }
-      const quantity = derivative.id === 'derivative-cutlet' ? boostTenPercent(calculated) : calculated;
-      document = setDerivativeConsumptionDayQuantity(document, occurredOn, derivative.id, quantity, today);
     }
   }
 

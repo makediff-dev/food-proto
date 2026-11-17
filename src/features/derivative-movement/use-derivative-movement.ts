@@ -12,6 +12,7 @@ import {
   setDerivativeNormRejection,
   setDerivativeOpening,
   setDerivativeOpeningRejection,
+  setDerivativeReceiptDayQuantity,
 } from '@/domain/derivative-movement';
 
 export function useDerivativeMovement() {
@@ -40,6 +41,21 @@ export function useDerivativeMovement() {
         return rejection;
       }
       store.updateDocument((current) => setDerivativeNorm(current, month, derivativeId, field, value, today));
+      return null;
+    },
+    setReceiptDay(
+      occurredOn: string,
+      derivativeId: string,
+      quantity: number,
+      today: Date,
+    ): DerivativeConsumptionRejection | null {
+      const rejection = setDerivativeConsumptionDayRejection(store.document, occurredOn, derivativeId, quantity, today);
+      if (rejection) {
+        return rejection;
+      }
+      store.updateDocument((current) =>
+        setDerivativeReceiptDayQuantity(current, occurredOn, derivativeId, quantity, today),
+      );
       return null;
     },
     setConsumptionDay(

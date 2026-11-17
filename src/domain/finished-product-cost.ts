@@ -5,6 +5,7 @@ import { type MaterialMoney, materialById, materialConsumptionPrice, materialPla
 import { ratioRound } from '@/domain/money';
 import { productByIdOrNull, productRecipeSections } from '@/domain/products';
 import { QUANTITY_SCALE } from '@/domain/quantity';
+import { effectiveFactLineQuantity } from '@/domain/recipe-consumption';
 
 export type FinishedProductCostMode = 'plan' | 'fact';
 
@@ -68,7 +69,11 @@ export function productBatchCost(
       continue;
     }
     const componentPrice = componentUnitPrice(document, line.componentKind, line.componentId, month, mode);
-    const lineCost = costForQuantity(componentPrice, line.quantity);
+    const quantity =
+      mode === 'fact'
+        ? effectiveFactLineQuantity(document, month, line.componentKind, line.componentId, line.quantity)
+        : line.quantity;
+    const lineCost = costForQuantity(componentPrice, quantity);
     batchWithVat += lineCost.withVat;
     batchExVat += lineCost.exVat;
   }
@@ -157,8 +162,10 @@ export type FinishedProductCostLineContribution = {
   componentId: string;
   name: string;
   unit: string;
-  /** Тысячные доли единицы компонента в партии. */
+  /** Плановое количество единицы компонента в партии по рецепту, тысячные доли. */
   quantity: number;
+  /** Фактическое эффективное количество с учётом перерасхода за месяц, тысячные доли. */
+  factQuantity: number;
   planUnitPrice: MaterialMoney;
   factUnitPrice: MaterialMoney;
   planContribution: MaterialMoney;
@@ -212,7 +219,14 @@ export function finishedProductCostDetail(
     const planUnitPrice = componentUnitPrice(document, line.componentKind, line.componentId, month, 'plan');
     const factUnitPrice = componentUnitPrice(document, line.componentKind, line.componentId, month, 'fact');
     const planContribution = costForQuantity(planUnitPrice, line.quantity);
-    const factContribution = costForQuantity(factUnitPrice, line.quantity);
+    const factQuantity = effectiveFactLineQuantity(
+      document,
+      month,
+      line.componentKind,
+      line.componentId,
+      line.quantity,
+    );
+    const factContribution = costForQuantity(factUnitPrice, factQuantity);
     if (
       planContribution.withVat === 0 &&
       planContribution.exVat === 0 &&
@@ -229,6 +243,7 @@ export function finishedProductCostDetail(
       name,
       unit,
       quantity: line.quantity,
+      factQuantity,
       planUnitPrice,
       factUnitPrice,
       planContribution,

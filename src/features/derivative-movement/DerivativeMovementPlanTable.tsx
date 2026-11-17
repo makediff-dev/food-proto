@@ -53,7 +53,10 @@ const COLUMN_KIND: Record<ColumnKey, CellKind> = {
   recommended: 'computed',
 };
 
-export function derivativeNormRangeInvalid(minQuantity: number, maxQuantity: number): boolean {
+export function derivativeNormRangeInvalid(minQuantity: number | null, maxQuantity: number | null): boolean {
+  if (minQuantity === null || maxQuantity === null) {
+    return false;
+  }
   return minQuantity > maxQuantity;
 }
 
@@ -220,7 +223,7 @@ function RowCell({
       return editable ? (
         <QuantityCell
           label={`Минимум ${row.name}`}
-          value={row.minQuantity}
+          value={row.minQuantity ?? 0}
           unit={unit}
           allowNegative
           onChange={(value) => onNorm(row.derivativeId, 'minQuantity', value)}
@@ -232,7 +235,7 @@ function RowCell({
       return editable ? (
         <QuantityCell
           label={`Максимум ${row.name}`}
-          value={row.maxQuantity}
+          value={row.maxQuantity ?? 0}
           unit={unit}
           allowNegative
           onChange={(value) => onNorm(row.derivativeId, 'maxQuantity', value)}

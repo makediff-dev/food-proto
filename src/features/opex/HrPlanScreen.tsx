@@ -349,7 +349,6 @@ function OutsourcingPlanRow({
             label={`План, часы, ${row.departmentName}`}
             value={row.planHoursThousandths}
             unit="ч"
-            blankIfZero
             onChange={(next) => onChange(row.departmentId, next, row.planRateExVat, row.vatPercent)}
           />
         ) : (

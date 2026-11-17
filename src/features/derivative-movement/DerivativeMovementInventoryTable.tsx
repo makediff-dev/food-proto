@@ -159,7 +159,7 @@ function DerivativeRow({
         {canEdit ? (
           <QuantityCell
             label={`Остаток на конец ${row.name}`}
-            value={row.inventoryClosingQuantity}
+            value={row.inventoryClosingQuantity ?? 0}
             unit={row.unit}
             allowNegative
             onChange={(value) => onClosing(row.derivativeId, value)}

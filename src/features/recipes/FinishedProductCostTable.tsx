@@ -49,7 +49,7 @@ const COLUMN_GROUPS: { label: string; columns: { key: ColumnKey; label: string; 
     label: 'Себестоимость за шт',
     columns: [
       { key: 'planCostPerPiece', label: 'План', hint: 'По плановым ценам сырья, Rec&Calc Final Products' },
-      { key: 'factCostPerPiece', label: 'Факт', hint: 'По фактическим ценам расхода сырья' },
+      { key: 'factCostPerPiece', label: 'Факт', hint: 'По фактическим ценам и реальному расходу за месяц' },
       { key: 'costPerPieceDeviation', label: 'Откл.' },
     ],
   },

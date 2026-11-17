@@ -497,8 +497,8 @@ function GridInput({
 export function emptySaleLineDraft(): SaleLineDraft {
   return {
     id: `sale-line:${crypto.randomUUID()}`,
-    pieces: '0',
+    pieces: '',
     price: '',
-    amount: formatMoneyDraft(0),
+    amount: '',
   };
 }

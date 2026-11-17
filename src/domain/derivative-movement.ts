@@ -17,10 +17,26 @@ import type { MaterialMoney } from '@/domain/materials';
 import { ratioRound } from '@/domain/money';
 import { maxProductionEntryOccurredOn } from '@/domain/production-journal';
 import { isQuantityThousandths, QUANTITY_SCALE } from '@/domain/quantity';
-import { consumptionQuantityForComponent } from '@/domain/recipe-consumption';
+import {
+  consumptionQuantityForComponent,
+  derivativeConsumptionDaysList,
+  factConsumptionQuantityForDerivative,
+  realConsumptionQuantityForDerivative,
+  realReceiptQuantityForDerivative,
+} from '@/domain/recipe-consumption';
 import { planMonthOpen, shiftMonth } from '@/domain/sales-plan';
 
 export { derivativeConsumptionPrice } from '@/domain/derivative-cost';
+export {
+  calculatedConsumptionQuantityForDerivativeDay,
+  derivativeConsumptionDaysList,
+  factConsumptionQuantityForDerivative,
+  factProductionVolumePiecesForProduct,
+  realConsumptionQuantityForDerivative,
+  realConsumptionQuantityForDerivativeDay,
+  realReceiptQuantityForDerivative,
+  realReceiptQuantityForDerivativeDay,
+} from '@/domain/recipe-consumption';
 
 export type DerivativeOpeningRejection = 'month' | 'closed' | 'derivative' | 'locked' | 'quantity';
 
@@ -37,7 +53,6 @@ export type DerivativeMovementRow = {
   openingQuantity: number;
   /**
    * План прихода (выпуска) на месяц: рекомендуемый объём.
-   * Отдельного журнала выпуска производных нет.
    */
   planReceiptQuantity: number;
   /** Плановая цена 1 единицы прихода — как плановая цена расхода. */
@@ -45,19 +60,18 @@ export type DerivativeMovementRow = {
   /** Плановая стоимость прихода: плановая цена × план прихода. */
   planReceiptCost: MaterialMoney;
   /**
-   * Факт прихода (выпуска) на месяц.
-   * Пока журнала нет — тот же рекомендуемый объём, что и в плане (как в расчётном остатке на конец).
+   * Реальный приход (выпуск) на месяц: сумма дневного ввода за месяц.
    */
   factReceiptQuantity: number;
   /** Фактическая цена 1 единицы прихода — как фактическая цена расхода. */
   factReceiptPrice: MaterialMoney;
-  /** Фактическая стоимость прихода: фактическая цена × факт прихода. */
+  /** Реальная стоимость прихода: фактическая цена × реальный приход. */
   factReceiptCost: MaterialMoney;
-  /** Отклонение количества прихода: факт − план. */
+  /** Отклонение количества прихода: реальный − план. */
   receiptDeviationQuantity: number;
   /** Отклонение цены прихода: факт − план. */
   receiptDeviationPrice: MaterialMoney;
-  /** Отклонение стоимости прихода: факт − план. */
+  /** Отклонение стоимости прихода: реальный − план. */
   receiptDeviationCost: MaterialMoney;
   /** План расхода на выпуск месяца, тысячные доли единицы производной. */
   planConsumptionQuantity: number;
@@ -98,28 +112,30 @@ export type DerivativeMovementRow = {
   currentClosingDeviationQuantity: number;
   /** Стоимость отклонения расчётного конца: отклонение × фактическая цена расхода. */
   currentClosingDeviationCost: MaterialMoney;
-  /** Факт инвентаризации на конец, тысячные доли. Нет строки — 0. */
-  inventoryClosingQuantity: number;
+  /** Факт инвентаризации на конец, тысячные доли. Нет строки — пусто. */
+  inventoryClosingQuantity: number | null;
   /** Была ли правка инвентаризации по этой производной. */
   hasInventoryLine: boolean;
-  /** Отклонение инвентаризации: факт − план. Нет строки инвентаризации — 0. */
-  closingDeviationQuantity: number;
-  /** Стоимость отклонения инвентаризации. Нет строки — 0. */
-  closingInventoryDeviationCost: MaterialMoney;
-  /** Нормативный минимум, тысячные доли. Нет записи — 0. */
-  minQuantity: number;
-  /** Нормативный максимум, тысячные доли. Нет записи — 0. */
-  maxQuantity: number;
+  /** Отклонение инвентаризации: факт − план. Нет строки инвентаризации — пусто. */
+  closingDeviationQuantity: number | null;
+  /** Стоимость отклонения инвентаризации. Нет строки — пусто. */
+  closingInventoryDeviationCost: MaterialMoney | null;
+  /** Нормативный минимум, тысячные доли. Нет записи — пусто. */
+  minQuantity: number | null;
+  /** Нормативный максимум, тысячные доли. Нет записи — пусто. */
+  maxQuantity: number | null;
   /**
    * Отклонение ниже минимума (отрицательное) или 0.
    * Запас — факт инвентаризации, если вводили, иначе план конца.
+   * Нет норматива — пусто.
    */
-  belowMinQuantity: number;
+  belowMinQuantity: number | null;
   /**
    * Отклонение выше максимума (положительное) или 0.
    * Запас — факт инвентаризации, если вводили, иначе план конца.
+   * Нет норматива — пусто.
    */
-  aboveMaxQuantity: number;
+  aboveMaxQuantity: number | null;
   /**
    * Рекомендуемый объём выпуска производной на месяц:
    * план расхода + (мин + макс) / 2 − остаток на начало (не меньше 0).
@@ -151,8 +167,8 @@ export type DerivativeMovementSection = {
   consumptionToPlanDeviationCost: MaterialMoney;
   /** Сумма стоимости отклонения расчётного конца по цеху. */
   currentClosingDeviationCost: MaterialMoney;
-  /** Сумма стоимости отклонения инвентаризации по цеху. */
-  closingInventoryDeviationCost: MaterialMoney;
+  /** Сумма стоимости отклонения инвентаризации по цеху. Нет ни одной строки — пусто. */
+  closingInventoryDeviationCost: MaterialMoney | null;
   /** Сумма стоимости остатка на конец по цеху. */
   closingCost: MaterialMoney;
 };
@@ -186,103 +202,21 @@ export function planConsumptionQuantityForDerivative(
   );
 }
 
-/** Фактический объём выпуска товара за месяц из журнала выпуска, шт. Нет выпуска — 0. */
-export function factProductionVolumePiecesForProduct(
-  document: PrototypeDocument,
-  productId: string,
-  month: string,
-): number {
-  let pieces = 0;
-  const prefix = `${month}-`;
-  for (const entry of document.productionEntries ?? []) {
-    if (!entry.occurredOn.startsWith(prefix)) {
-      continue;
-    }
-    for (const line of entry.lines) {
-      if (line.productId === productId) {
-        pieces += line.pieces;
-      }
-    }
-  }
-  return pieces;
-}
-
-/**
- * Расчётный факт расхода производной за месяц: те же рецепты, что у плана,
- * объём — фактический выпуск месяца из журнала.
- * Тысячные доли единицы производной (шт или кг).
- */
-export function factConsumptionQuantityForDerivative(
-  document: PrototypeDocument,
-  derivativeId: string,
-  month: string,
-): number {
-  return consumptionQuantityForComponent(document, { kind: 'derivative', id: derivativeId }, (productId) =>
-    factProductionVolumePiecesForProduct(document, productId, month),
-  );
-}
-
-export function derivativeConsumptionDaysList(document: PrototypeDocument): DerivativeConsumptionDay[] {
-  return document.derivativeConsumptionDays ?? [];
-}
-
-/** Реальный расход производной за месяц: сумма дневного ввода. */
-export function realConsumptionQuantityForDerivative(
-  document: PrototypeDocument,
-  derivativeId: string,
-  month: string,
-): number {
-  let total = 0;
-  for (const day of derivativeConsumptionDaysList(document)) {
-    if (!day.occurredOn.startsWith(`${month}-`)) {
-      continue;
-    }
-    for (const line of day.lines) {
-      if (line.derivativeId === derivativeId) {
-        total += line.quantity;
-      }
-    }
-  }
-  return total;
-}
-
-/** Реальный расход производной за один день. Нет строки — 0. */
-export function realConsumptionQuantityForDerivativeDay(
-  document: PrototypeDocument,
-  occurredOn: string,
-  derivativeId: string,
-): number {
-  const day = derivativeConsumptionDaysList(document).find((item) => item.occurredOn === occurredOn);
-  return day?.lines.find((line) => line.derivativeId === derivativeId)?.quantity ?? 0;
-}
-
-/** Расчётный расход производной за день: рецепт × выпуск этого дня. */
-export function calculatedConsumptionQuantityForDerivativeDay(
-  document: PrototypeDocument,
-  occurredOn: string,
-  derivativeId: string,
-): number {
-  return consumptionQuantityForComponent(document, { kind: 'derivative', id: derivativeId }, (productId) => {
-    let pieces = 0;
-    for (const entry of document.productionEntries ?? []) {
-      if (entry.occurredOn !== occurredOn) {
-        continue;
-      }
-      for (const line of entry.lines) {
-        if (line.productId === productId) {
-          pieces += line.pieces;
-        }
-      }
-    }
-    return pieces;
-  });
-}
-
 function sumMoney(left: MaterialMoney, right: MaterialMoney): MaterialMoney {
   return {
     withVat: left.withVat + right.withVat,
     exVat: left.exVat + right.exVat,
   };
+}
+
+function sumMoneyNullable(left: MaterialMoney | null, right: MaterialMoney | null): MaterialMoney | null {
+  if (right === null) {
+    return left;
+  }
+  if (left === null) {
+    return right;
+  }
+  return sumMoney(left, right);
 }
 
 function subtractMoney(left: MaterialMoney, right: MaterialMoney): MaterialMoney {
@@ -429,7 +363,11 @@ function normForMonth(document: PrototypeDocument, month: string): DerivativeNor
   return derivativeNormsList(document).find((item) => item.month === month) ?? null;
 }
 
-/** Норматив производной на месяц. Нет записи — нули. */
+export function hasStoredDerivativeNormLine(document: PrototypeDocument, month: string, derivativeId: string): boolean {
+  return normForMonth(document, month)?.lines.some((item) => item.derivativeId === derivativeId) ?? false;
+}
+
+/** Норматив производной на месяц. Нет записи — нули (для формул прихода и рекомендации). */
 export function normForDerivative(
   document: PrototypeDocument,
   month: string,
@@ -597,6 +535,7 @@ function buildRow(
   const realConsumptionCost = costForQuantity(factConsumptionPrice, realConsumptionQuantity);
   const inventoryClosingQuantity = inventoryQuantityForDerivative(document, month, item.id);
   const hasInventoryLine = hasStoredDerivativeInventoryLine(document, month, item.id);
+  const hasNormLine = hasStoredDerivativeNormLine(document, month, item.id);
   const norm = normForDerivative(document, month, item.id);
   const recommendedQuantity = recommendedDerivativeVolumeQuantity(
     openingQuantity,
@@ -607,17 +546,18 @@ function buildRow(
   const planReceiptQuantity = recommendedQuantity;
   const planReceiptPrice = planConsumptionPrice;
   const planReceiptCost = costForQuantity(planReceiptPrice, planReceiptQuantity);
-  const factReceiptQuantity = recommendedQuantity;
+  const factReceiptQuantity = realReceiptQuantityForDerivative(document, item.id, month);
   const factReceiptPrice = factConsumptionPrice;
   const factReceiptCost = costForQuantity(factReceiptPrice, factReceiptQuantity);
   const bookClosingQuantity = openingQuantity + planReceiptQuantity - planConsumptionQuantity;
   const currentClosingQuantity = openingQuantity + factReceiptQuantity - realConsumptionQuantity;
   const currentClosingDeviationQuantity = currentClosingQuantity - bookClosingQuantity;
   const currentClosingDeviationCost = costForQuantity(factConsumptionPrice, currentClosingDeviationQuantity);
-  const closingDeviationQuantity = hasInventoryLine ? inventoryClosingQuantity - bookClosingQuantity : 0;
-  const closingInventoryDeviationCost = hasInventoryLine
-    ? costForQuantity(factConsumptionPrice, closingDeviationQuantity)
-    : ZERO_MONEY;
+  const closingDeviationQuantity = hasInventoryLine ? inventoryClosingQuantity - bookClosingQuantity : null;
+  const closingInventoryDeviationCost =
+    hasInventoryLine && closingDeviationQuantity !== null
+      ? costForQuantity(factConsumptionPrice, closingDeviationQuantity)
+      : null;
   const stockForNorm = hasInventoryLine ? inventoryClosingQuantity : bookClosingQuantity;
   const stockForClosingCost = hasInventoryLine ? inventoryClosingQuantity : bookClosingQuantity;
   const metrics = derivativeNormMetrics(
@@ -661,14 +601,14 @@ function buildRow(
     currentClosingQuantity,
     currentClosingDeviationQuantity,
     currentClosingDeviationCost,
-    inventoryClosingQuantity,
+    inventoryClosingQuantity: hasInventoryLine ? inventoryClosingQuantity : null,
     hasInventoryLine,
     closingDeviationQuantity,
     closingInventoryDeviationCost,
-    minQuantity: norm.minQuantity,
-    maxQuantity: norm.maxQuantity,
-    belowMinQuantity: metrics.belowMinQuantity,
-    aboveMaxQuantity: metrics.aboveMaxQuantity,
+    minQuantity: hasNormLine ? norm.minQuantity : null,
+    maxQuantity: hasNormLine ? norm.maxQuantity : null,
+    belowMinQuantity: hasNormLine ? metrics.belowMinQuantity : null,
+    aboveMaxQuantity: hasNormLine ? metrics.aboveMaxQuantity : null,
     recommendedQuantity: metrics.recommendedQuantity,
     closingCost: costForQuantity(factConsumptionPrice, stockForClosingCost),
   };
@@ -699,8 +639,8 @@ export function derivativeMovementMonth(document: PrototypeDocument, month: stri
           ZERO_MONEY,
         ),
         closingInventoryDeviationCost: rows.reduce(
-          (sum, row) => sumMoney(sum, row.closingInventoryDeviationCost),
-          ZERO_MONEY,
+          (sum: MaterialMoney | null, row) => sumMoneyNullable(sum, row.closingInventoryDeviationCost),
+          null,
         ),
         closingCost: rows.reduce((sum, row) => sumMoney(sum, row.closingCost), ZERO_MONEY),
       };
@@ -723,6 +663,7 @@ function emptyDerivativeConsumptionLine(derivativeId: string, occurredOn: string
   return {
     id: `derivative-consumption-line:${occurredOn}:${derivativeId}`,
     derivativeId,
+    receiptQuantity: 0,
     quantity: 0,
   };
 }
@@ -754,28 +695,28 @@ export function setDerivativeConsumptionDayRejection(
   return null;
 }
 
-/**
- * Пишет реальный расход производной за день.
- * Ноль снимает строку; пустой день вырезается из документа.
- */
-export function setDerivativeConsumptionDayQuantity(
+function setDerivativeDayField(
   document: PrototypeDocument,
   occurredOn: string,
   derivativeId: string,
-  quantity: number,
+  field: 'receiptQuantity' | 'quantity',
+  value: number,
   today: Date,
 ): PrototypeDocument {
-  if (setDerivativeConsumptionDayRejection(document, occurredOn, derivativeId, quantity, today)) {
+  if (setDerivativeConsumptionDayRejection(document, occurredOn, derivativeId, value, today)) {
     return document;
   }
 
   const existing = derivativeConsumptionDayRecord(document, occurredOn);
-  const keep = quantity > 0;
+  const baseLine =
+    existing?.lines.find((line) => line.derivativeId === derivativeId) ??
+    emptyDerivativeConsumptionLine(derivativeId, occurredOn);
   const nextLine: DerivativeConsumptionDayLine = {
-    ...(existing?.lines.find((line) => line.derivativeId === derivativeId) ??
-      emptyDerivativeConsumptionLine(derivativeId, occurredOn)),
-    quantity,
+    ...baseLine,
+    receiptQuantity: baseLine.receiptQuantity ?? 0,
+    [field]: value,
   };
+  const keep = (nextLine.receiptQuantity ?? 0) > 0 || nextLine.quantity > 0;
 
   if (!existing) {
     if (!keep) {
@@ -804,4 +745,32 @@ export function setDerivativeConsumptionDayQuantity(
       item.id === existing.id ? { ...item, lines } : item,
     ),
   };
+}
+
+/**
+ * Пишет реальный выпуск (приход) производной за день.
+ * Пустая строка (и выпуск, и расход равны 0) снимается; пустой день вырезается из документа.
+ */
+export function setDerivativeReceiptDayQuantity(
+  document: PrototypeDocument,
+  occurredOn: string,
+  derivativeId: string,
+  quantity: number,
+  today: Date,
+): PrototypeDocument {
+  return setDerivativeDayField(document, occurredOn, derivativeId, 'receiptQuantity', quantity, today);
+}
+
+/**
+ * Пишет реальный расход производной за день.
+ * Пустая строка (и выпуск, и расход равны 0) снимается; пустой день вырезается из документа.
+ */
+export function setDerivativeConsumptionDayQuantity(
+  document: PrototypeDocument,
+  occurredOn: string,
+  derivativeId: string,
+  quantity: number,
+  today: Date,
+): PrototypeDocument {
+  return setDerivativeDayField(document, occurredOn, derivativeId, 'quantity', quantity, today);
 }

@@ -165,8 +165,8 @@ function groupTotals(rows: readonly EntryFormRow[]): EntryFormTotals {
 export function emptyProductionEntryLineDraft(priceWithVat = 0): ProductionEntryLineDraft {
   return {
     id: `production-entry-line:${crypto.randomUUID()}`,
-    pieces: '0',
-    price: formatMoneyDraft(priceWithVat),
+    pieces: '',
+    price: priceWithVat === 0 ? '' : formatMoneyDraft(priceWithVat),
   };
 }
 

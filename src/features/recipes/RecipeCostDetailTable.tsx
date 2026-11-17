@@ -24,6 +24,7 @@ export type RecipeCostDetailLine = {
   name: string;
   unit: string;
   quantity: number;
+  factQuantity: number;
   planUnitPrice: { withVat: number; exVat: number };
   factUnitPrice: { withVat: number; exVat: number };
   planContribution: { withVat: number; exVat: number };
@@ -43,14 +44,27 @@ export type RecipeCostDetailExtraUnitRow = {
   deviation: { withVat: number; exVat: number };
 };
 
-const COLUMNS = [
-  { key: 'quantity', label: 'Кол-во' },
+const COLUMNS: {
+  key: 'quantity' | 'factQuantity' | 'planPrice' | 'factPrice' | 'planContribution' | 'factContribution' | 'deviation';
+  label: string;
+  hint?: string;
+}[] = [
+  { key: 'quantity', label: 'Кол-во план', hint: 'Норма закладки на партию по рецепту' },
+  {
+    key: 'factQuantity',
+    label: 'Кол-во факт',
+    hint: 'На партию с учётом отношения реального расхода компонента к расчётному за месяц',
+  },
   { key: 'planPrice', label: 'Цена план' },
   { key: 'factPrice', label: 'Цена факт' },
   { key: 'planContribution', label: 'Вклад план' },
-  { key: 'factContribution', label: 'Вклад факт' },
+  {
+    key: 'factContribution',
+    label: 'Вклад факт',
+    hint: 'Кол-во факт × Цена факт',
+  },
   { key: 'deviation', label: 'Откл.' },
-] as const;
+];
 
 type ColumnKey = (typeof COLUMNS)[number]['key'];
 
@@ -78,7 +92,8 @@ export function RecipeCostDetailTable({
   /** Вложенная таблица под строкой свода: без собственной рамки и sticky-шапки, в край ячейки. */
   embedded?: boolean;
 }) {
-  const quantityTotal = sumQuantity(lines);
+  const quantityTotal = sumQuantity(lines, (line) => line.quantity);
+  const factQuantityTotal = sumQuantity(lines, (line) => line.factQuantity);
   const planContribution = sumMoney(lines.map((line) => line.planContribution));
   const factContribution = sumMoney(lines.map((line) => line.factContribution));
   const contributionDeviation = sumMoney(lines.map((line) => line.contributionDeviation));
@@ -94,7 +109,7 @@ export function RecipeCostDetailTable({
             </th>
             {COLUMNS.map((column) => (
               <th key={column.key} scope="col" className={`${columnHeadingClassName} ${columnEdgeClass(column.key)}`}>
-                <ColumnLabel label={column.label} />
+                <ColumnLabel label={column.label} hint={column.hint} />
               </th>
             ))}
           </tr>
@@ -112,6 +127,11 @@ export function RecipeCostDetailTable({
                 className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${cellKindClassName.repeated} ${columnEdgeClass('quantity')}`}
               >
                 <QuantityRead value={line.quantity} unit={line.unit} />
+              </td>
+              <td
+                className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${cellKindClassName.computed} ${columnEdgeClass('factQuantity')}`}
+              >
+                <QuantityRead value={line.factQuantity} unit={line.unit} />
               </td>
               <td
                 className={`w-px border-b border-b-line px-1.5 py-2 text-right align-middle ${cellKindClassName.computed} ${columnEdgeClass('planPrice')}`}
@@ -147,6 +167,13 @@ export function RecipeCostDetailTable({
             <td className={`${totalValueClassName} ${columnEdgeClass('quantity')}`}>
               {quantityTotal ? <QuantityRead value={quantityTotal.value} unit={quantityTotal.unit} /> : <Empty />}
             </td>
+            <td className={`${totalValueClassName} ${columnEdgeClass('factQuantity')}`}>
+              {factQuantityTotal ? (
+                <QuantityRead value={factQuantityTotal.value} unit={factQuantityTotal.unit} />
+              ) : (
+                <Empty />
+              )}
+            </td>
             <td className={`${totalValueClassName} ${columnEdgeClass('planPrice')}`}>
               <ExVatMoneyCell label="Цена план всего" value={unitCost.plan.exVat} />
             </td>
@@ -169,6 +196,7 @@ export function RecipeCostDetailTable({
                 {row.label}
               </th>
               <TotalEmpty edge="quantity" continued />
+              <TotalEmpty edge="factQuantity" continued />
               <td className={`${totalValueClassName} border-t-0 ${columnEdgeClass('planPrice')}`}>
                 <ExVatMoneyCell label={`${row.label} план`} value={row.plan.exVat} />
               </td>
@@ -204,7 +232,10 @@ function sumMoney(items: readonly { withVat: number; exVat: number }[]): { withV
   });
 }
 
-function sumQuantity(lines: readonly RecipeCostDetailLine[]): { value: number; unit: string } | null {
+function sumQuantity(
+  lines: readonly RecipeCostDetailLine[],
+  pick: (line: RecipeCostDetailLine) => number,
+): { value: number; unit: string } | null {
   if (lines.length === 0) {
     return null;
   }
@@ -213,7 +244,7 @@ function sumQuantity(lines: readonly RecipeCostDetailLine[]): { value: number; u
     return null;
   }
   return {
-    value: lines.reduce((sum, line) => sum + line.quantity, 0),
+    value: lines.reduce((sum, line) => sum + pick(line), 0),
     unit,
   };
 }

@@ -338,7 +338,6 @@ function OutsourcingFactRow({
             label={`Часы аутсорсинга, ${row.departmentName}`}
             value={values.hourThousandths}
             unit="ч"
-            blankIfZero
             onChange={(next) => onChange(next, values.rateExVat)}
           />
         ) : (

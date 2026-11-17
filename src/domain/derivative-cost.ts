@@ -9,7 +9,7 @@ import type { DerivativeUnit, DerivativeWorkshopId, PrototypeDocument } from '@/
 import { type MaterialMoney, materialById, materialConsumptionPrice, materialPlanPrice } from '@/domain/materials';
 import { ratioRound } from '@/domain/money';
 import { QUANTITY_SCALE } from '@/domain/quantity';
-import { derivativeBatchThousandths } from '@/domain/recipe-consumption';
+import { derivativeBatchThousandths, effectiveFactLineQuantity } from '@/domain/recipe-consumption';
 
 export type DerivativeCostMode = 'plan' | 'fact';
 
@@ -72,7 +72,11 @@ function derivativeBatchCostInternal(
       mode,
       visiting,
     );
-    const lineCost = costForQuantity(componentPrice, line.quantity);
+    const quantity =
+      mode === 'fact'
+        ? effectiveFactLineQuantity(document, month, line.componentKind, line.componentId, line.quantity)
+        : line.quantity;
+    const lineCost = costForQuantity(componentPrice, quantity);
     batchWithVat += lineCost.withVat;
     batchExVat += lineCost.exVat;
   }
@@ -223,8 +227,10 @@ export type DerivativeCostLineContribution = {
   componentId: string;
   name: string;
   unit: string;
-  /** Тысячные доли единицы компонента в партии. */
+  /** Плановое количество единицы компонента в партии по рецепту, тысячные доли. */
   quantity: number;
+  /** Фактическое эффективное количество с учётом перерасхода за месяц, тысячные доли. */
+  factQuantity: number;
   planUnitPrice: MaterialMoney;
   factUnitPrice: MaterialMoney;
   planContribution: MaterialMoney;
@@ -292,7 +298,14 @@ export function derivativeCostDetail(
       new Set([derivativeId]),
     );
     const planContribution = costForQuantity(planUnitPrice, line.quantity);
-    const factContribution = costForQuantity(factUnitPrice, line.quantity);
+    const factQuantity = effectiveFactLineQuantity(
+      document,
+      month,
+      line.componentKind,
+      line.componentId,
+      line.quantity,
+    );
+    const factContribution = costForQuantity(factUnitPrice, factQuantity);
     if (
       planContribution.withVat === 0 &&
       planContribution.exVat === 0 &&
@@ -309,6 +322,7 @@ export function derivativeCostDetail(
       name,
       unit,
       quantity: line.quantity,
+      factQuantity,
       planUnitPrice,
       factUnitPrice,
       planContribution,

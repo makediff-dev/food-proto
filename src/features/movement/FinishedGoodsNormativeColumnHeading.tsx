@@ -71,6 +71,21 @@ export const MATERIALS_RECEIPT_SUB_BANNERS: ReportSubBannerGroup[] = [
   },
 ];
 
+export const DERIVATIVE_RECEIPT_SUB_BANNERS: ReportSubBannerGroup[] = [
+  {
+    label: 'план',
+    keys: ['planReceipt', 'planReceiptPrice', 'planReceiptCost'],
+  },
+  {
+    label: 'реальный',
+    keys: ['factReceipt', 'factReceiptPrice', 'factReceiptCost'],
+  },
+  {
+    label: 'отклонение',
+    keys: ['receiptDeviation', 'receiptDeviationPrice', 'receiptDeviationCost'],
+  },
+];
+
 export const MATERIALS_CONSUMPTION_SUB_BANNERS: ReportSubBannerGroup[] = [
   {
     label: 'план',
