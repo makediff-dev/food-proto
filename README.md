@@ -7,8 +7,8 @@
 ## Запуск
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 Открыть [http://localhost:3000](http://localhost:3000).
@@ -21,4 +21,4 @@ npm run dev
 - [inputs/](inputs/) — место для файлов клиента.
 - [AGENTS.md](AGENTS.md) — короткие правила для агента.
 
-Проверка стиля: `npm run lint` и `npm run format` (Biome).
+Проверка стиля: `pnpm lint` и `pnpm format` (Biome).

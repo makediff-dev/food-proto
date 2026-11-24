@@ -17,11 +17,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Тестовый экран «Учёт» и поле `probe` удалены. Не возвращать.
 - Категории, товары и планы не стирать из документа — мягкое удаление (`deletedAt`). Продажу и запись выпуска удаляют насовсем. Правило — `.cursor/rules/soft-delete.mdc`.
 - Интерфейс русский, в основном чёрно-белый, с боковым меню. Плотность и меню — в правиле интерфейса.
-- После крупных правок запусти `npm run lint` и `npm run format` (Biome).
+- После крупных правок запусти `pnpm lint` и `pnpm format` (Biome).
 
 ## Cursor Cloud specific instructions
 
-- `portless` в `npm run dev` требует Node.js 24. Бинарник среды — `/opt/node-v24/bin`; его нужно ставить первым в `PATH`. Образ по умолчанию даёт Node 22, и с ним `portless` не стартует.
-- `npm ci` на текущем lockfile не проходит: нет необязательных `@emnapi/core` и `@emnapi/runtime`. Ставить зависимости так: `npm install`, затем вернуть `package-lock.json` из git.
+- Менеджер пакетов — pnpm (`packageManager` в `package.json`). Установка: `pnpm install`.
+- `portless` в `pnpm dev` требует Node.js 24. Бинарник среды — `/opt/node-v24/bin`; его нужно ставить первым в `PATH`. Образ по умолчанию даёт Node 22, и с ним `portless` не стартует.
 - Без TTY прокси не занимает 443. Скрипт старта поднимает HTTP-прокси на порту 1355. Приложение: http://food-proto.localhost:1355
-- Серверного учёта нет: числа живут в `localStorage`. Проверка — `npm run lint` и `npm run build`. Отдельного тест-раннера нет.
+- Серверного учёта нет: числа живут в `localStorage`. Проверка — `pnpm lint` и `pnpm build`. Отдельного тест-раннера нет.
