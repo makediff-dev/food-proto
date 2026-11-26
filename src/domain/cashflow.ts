@@ -418,13 +418,15 @@ function taxBlock(document: PrototypeDocument, month: string, days: readonly str
   const planTax = Math.max(0, summary.headline.plan.profitTax ?? 0);
   const factTax = taxPaymentMonthTotal(document, 'profit', month);
   const propertyTax = propertyTaxForMonth(document, month);
-  // Оплата или возврат: CashFlow!C141 «НДС», план E141 = TAX!D24, факт — taxPaymentDays kind vat.
-  // Отрицательное — к возмещению и уменьшает расходы, остаток денег растёт.
+  // Оплата или возврат: CashFlow!C141 «НДС».
+  // План E141 = TAX!D24 (с продаж − к зачету). Факт — taxPaymentDays kind vat, не факт отчёта по налогам.
+  // Отрицательная оплата — возврат: уменьшает расходы, остаток денег растёт.
   // Прибыль и имущество: план — свод / propertyTaxMonths; факт — дневные оплаты.
-  const vat = vatReportMonthView(document, month).payable;
+  const vatPlan = vatReportMonthView(document, month).payable.plan;
+  const vatPaid = taxPaymentMonthTotal(document, 'vat', month);
   const zeros = emptyDayFacts(days.length);
   return line('tax', 'Налоговые платежи (кроме зарплатных налогов)', 0, 0, zeros, [
-    line('tax:vat', 'НДС', vat.plan, vat.fact, taxKindDayFacts(document, days, 'vat')),
+    line('tax:vat', 'НДС', vatPlan, vatPaid, taxKindDayFacts(document, days, 'vat')),
     line('tax:profit', 'Налог на прибыль', planTax, factTax, taxKindDayFacts(document, days, 'profit')),
     line(
       'tax:property',

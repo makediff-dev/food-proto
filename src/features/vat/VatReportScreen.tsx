@@ -44,11 +44,6 @@ function varianceSense(id: string): 'income' | 'cost' {
   return id === 'deductible' || id.startsWith('deductible:') ? 'income' : 'cost';
 }
 
-/** Факт НДС к уплате вводят отдельно; разбивку по категориям в факте не показывают. */
-function hideVatCalcFact(id: string): boolean {
-  return id === 'sales' || id === 'deductible' || id.startsWith('deductible:');
-}
-
 function LineRows({
   line,
   depth,
@@ -98,7 +93,6 @@ function LineRows({
           line={line}
           amountFill={amountFill}
           varianceFill={varianceFill}
-          hideFact={hideVatCalcFact(line.id)}
           sticky={isGroup}
           categoryStickyStyle={categoryStickyStyle}
         />
@@ -123,14 +117,12 @@ function AmountCells({
   line,
   amountFill,
   varianceFill,
-  hideFact = false,
   sticky = false,
   categoryStickyStyle,
 }: {
   line: VatReportLine;
   amountFill: string;
   varianceFill: string;
-  hideFact?: boolean;
   sticky?: boolean;
   categoryStickyStyle?: CSSProperties;
 }) {
@@ -141,17 +133,15 @@ function AmountCells({
         <MoneyAmount amount={line.amounts.plan} />
       </td>
       <td className={`${valueCell} ${stickyClass} ${amountFill}`} style={sticky ? categoryStickyStyle : undefined}>
-        {hideFact ? null : <MoneyAmount amount={line.amounts.fact} />}
+        <MoneyAmount amount={line.amounts.fact} />
       </td>
       <td className={`${valueCellEnd} ${stickyClass} ${varianceFill}`} style={sticky ? categoryStickyStyle : undefined}>
-        {hideFact ? null : (
-          <MoneyCell
-            label={`Откл., ${line.name}`}
-            value={line.amounts.variance}
-            signed
-            sense={varianceSense(line.id)}
-          />
-        )}
+        <MoneyCell
+          label={`Откл., ${line.name}`}
+          value={line.amounts.variance}
+          signed
+          sense={varianceSense(line.id)}
+        />
       </td>
     </>
   );

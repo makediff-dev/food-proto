@@ -30,9 +30,9 @@ export interface VatReportMonthView {
    */
   deductible: VatReportLine;
   /**
-   * План: с продаж − к зачету (`TAX!D24`).
-   * Факт: сумма дневных оплат НДС (`taxPaymentDays`, kind `vat`), не расчёт к зачету.
-   * Отрицательное — к возмещению / возврат.
+   * С продаж − к зачету, план и факт (`TAX!D24` / `E24`).
+   * Отрицательное — к возмещению.
+   * Оплата НДС — в ДДС (`taxPaymentDays`, kind `vat`), не в этой строке.
    */
   payable: VatMoneySide;
   /**
@@ -103,9 +103,10 @@ export function vatReportMonthView(document: PrototypeDocument, month: string): 
   ];
   const deductible = line('deductible', 'НДС к зачету', 0, 0, deductibleChildren);
 
-  const payablePlan = sales.amounts.plan - deductible.amounts.plan;
-  const payableFact = taxPaymentMonthTotal(document, 'vat', month);
-  const payable = side(payablePlan, payableFact);
+  const payable = side(
+    sales.amounts.plan - deductible.amounts.plan,
+    sales.amounts.fact - deductible.amounts.fact,
+  );
   const payroll = payrollLine(document, month);
   const profitTaxPlan = Math.max(0, summary.headline.plan.profitTax ?? 0);
   const profitTaxFact = taxPaymentMonthTotal(document, 'profit', month);
